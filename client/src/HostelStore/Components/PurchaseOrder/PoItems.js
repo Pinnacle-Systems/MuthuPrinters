@@ -429,7 +429,6 @@ const PoItems = ({
                             return toast.info("Please select Tax Type", {
                               position: "top-center",
                             });
-                          console.log(taxTemplateId, "taxTemplate");
                           setCurrentSelectedIndex(index);
                         }}
                       >
