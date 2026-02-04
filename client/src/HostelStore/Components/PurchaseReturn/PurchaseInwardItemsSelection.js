@@ -79,7 +79,7 @@ const PurchaseInwardItemsSelection = ({
           hsnId: item.hsnId ?? "",
           poQty: item.poQty ?? "",
           balQty: item.balQty ?? "",
-          purchaseInwardId: item.purchaseInwardId ?? ""
+          purchaseInwardId: item.purchaseInwardId ?? "",
         };
 
         // If we have an empty row at this position, use it
@@ -123,7 +123,8 @@ const PurchaseInwardItemsSelection = ({
             removeItem.hsnId === item.hsnId &&
             removeItem.uomId === item.uomId &&
             removeItem.poQty === item.poQty &&
-            removeItem.balQty === item.balQty
+            removeItem.inwardQty === item.inwardQty &&
+            removeItem.purchaseInwardId === item.purchaseInwardId
           ),
       );
     });
@@ -136,7 +137,8 @@ const PurchaseInwardItemsSelection = ({
         checkItem.hsnId === item.hsnId &&
         checkItem.uomId === item.uomId &&
         checkItem.poQty === item.poQty &&
-        checkItem.balQty === item.balQty,
+        checkItem.inwardQty === item.inwardQty &&
+        checkItem.purchaseInwardId === item.purchaseInwardId,
     );
     if (!item) return false;
     return true;
@@ -226,22 +228,6 @@ const PurchaseInwardItemsSelection = ({
                     }}
                   />
                 </th>
-                <th className="px-1 py-1.5 border border-gray-300 text-xs  w-32">
-                  <label>Dc Date</label>
-                  <input
-                    type="text"
-                    className="text-black h-6 focus:outline-none border w-full border-gray-400 rounded-lg"
-                    placeholder="Search"
-                    value={searchDcDate}
-                    onChange={(e) => {
-                      setSearchDcDate(e.target.value);
-                    }}
-                    onFocus={(e) => {
-                      e.target.select();
-                    }}
-                  />
-                </th>
-
                 <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-96">
                   <label>Discription of Goods</label>
                 </th>
@@ -258,8 +244,14 @@ const PurchaseInwardItemsSelection = ({
                   <label>Inward Qty</label>
                 </th>
                 <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
-                  <label>Bal Qty</label>
+                  <label>Already Return Qty</label>
                 </th>
+                <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
+                  <label>Balance Qty</label>
+                </th>
+                {/* <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
+                  <label>Bal Qty</label>
+                </th> */}
               </tr>
             </thead>
 
@@ -303,11 +295,11 @@ const PurchaseInwardItemsSelection = ({
                         item?.PurchaseInward?.docDate,
                       )}
                     </td>
-                    <td className=" border border-gray-300 px-2 py-1 text-left text-xs">
+                    {/* <td className=" border border-gray-300 px-2 py-1 text-left text-xs">
                       {getDateFromDateTimeToDisplay(
                         item?.PurchaseInward?.dcDate,
                       )}
-                    </td>
+                    </td> */}
                     <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
                       {item?.StyleItem?.name}
                     </td>
@@ -322,6 +314,9 @@ const PurchaseInwardItemsSelection = ({
                     </td>
                     <td className=" border border-gray-300 text-[11px] text-right  py-1.5 px-2">
                       {item?.inwardQty}
+                    </td>
+                    <td className=" border border-gray-300 text-[11px] text-right  py-1.5 px-2">
+                      {item?.alreadyReturnQty}
                     </td>
                     <td className=" border border-gray-300 text-[11px] text-right  py-1.5 px-2">
                       {item?.balQty}

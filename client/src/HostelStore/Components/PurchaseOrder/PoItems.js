@@ -40,6 +40,11 @@ const PoItems = ({
       uomId: "",
       price: "",
       qty: "",
+      quoteVersion: id
+      ? isNewVersion
+        ? "New"
+        : quoteVersion
+      : 1,
     };
     setPoItems([...poItems, newRow]);
   };

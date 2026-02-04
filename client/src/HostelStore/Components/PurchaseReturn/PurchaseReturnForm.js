@@ -16,9 +16,7 @@ import {
   getCommonParams,
   isGridDatasValid,
 } from "../../../Utils/helper";
-import {
-  useGetPartyByIdQuery,
-} from "../../../redux/services/PartyMasterService";
+import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 import { toast } from "react-toastify";
 import { FiEdit2, FiSave } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
@@ -28,12 +26,14 @@ import tw from "../../../Utils/tailwind-react-pdf";
 import Modal from "../../../UiComponents/Modal";
 import { Loader } from "../../../Basic/components";
 import { dropDownListObject } from "../../../Utils/contructObject";
-import {
-  useGetBranchByIdQuery,
-} from "../../../redux/services/BranchMasterService";
+import { useGetBranchByIdQuery } from "../../../redux/services/BranchMasterService";
 import ReturnItems from "./ReturnItems";
 import { useGetLocationMasterQuery } from "../../../redux/services/LocationMasterService";
-import { useAddPurchaseReturnMutation, useGetPurchaseReturnByIdQuery, useUpdatePurchaseReturnMutation } from "../../../redux/services/PurchaseReturnService";
+import {
+  useAddPurchaseReturnMutation,
+  useGetPurchaseReturnByIdQuery,
+  useUpdatePurchaseReturnMutation,
+} from "../../../redux/services/PurchaseReturnService";
 
 const PurchaseReturnForm = ({
   onClose,
@@ -63,7 +63,7 @@ const PurchaseReturnForm = ({
   const [dcNo, setDcNo] = useState("");
   const [dcDate, setDcDate] = useState("");
   const [termsAndCondition, setTermsAndCondition] = useState("");
-  const [invNo, setInvNo] = useState("")
+  const [invNo, setInvNo] = useState("");
 
   const { userId, finYearId, branchId } = getCommonParams();
   const { data: supplierDetails } = useGetPartyByIdQuery(supplierId, {
@@ -103,15 +103,19 @@ const PurchaseReturnForm = ({
       setReturnType(data?.returnType || "General Purchase Inward");
       setLocationId(data?.Store ? data.Store.locationId : branchId);
       setStoreId(data?.storeId ? data.storeId : "");
-      setReturnItems(data?.purchaseReturnItems ? data?.purchaseReturnItems : []);
+      setReturnItems(
+        data?.purchaseReturnItems ? data?.purchaseReturnItems : [],
+      );
       setSupplierId(data?.supplierId || "");
       setDcDate(
         data?.dcDate ? moment.utc(data.dcDate).format("YYYY-MM-DD") : "",
       );
       setRemarks(data?.remarks || "");
       setDcNo(data?.dcNo ? data.dcNo : "");
-      setTermsAndCondition(data?.termsAndCondition ? data.termsAndCondition : "");
-      setInvNo(data?.invNo ? data?.invNo : "")
+      setTermsAndCondition(
+        data?.termsAndCondition ? data.termsAndCondition : "",
+      );
+      setInvNo(data?.invNo ? data?.invNo : "");
     },
     [id],
   );
@@ -139,7 +143,7 @@ const PurchaseReturnForm = ({
     termsAndCondition,
     returnItems: returnItems?.filter((po) => po.styleItemId),
     finYearId,
-    invNo
+    invNo,
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -258,7 +262,7 @@ const PurchaseReturnForm = ({
     if (nextProcess == "draft" && !id) {
       handleSubmitCustom(
         addData,
-         { ...data, draftSave: true },
+        { ...data, draftSave: true },
         "Added",
         nextProcess,
       );
@@ -408,6 +412,7 @@ const PurchaseReturnForm = ({
                   show={"isSupplier"}
                   required={true}
                   disabled={id}
+                  isSupplier={true}
                 />
               </div>
               <TextInput
@@ -498,7 +503,7 @@ const PurchaseReturnForm = ({
                 <span className="text-slate-600">Total Return Qty</span>
                 <span className="font-medium">
                   {returnItems
-                    .reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
+                    .reduce((sum, row) => sum + (Number(row.returnQty) || 0), 0)
                     .toFixed(2)}
                 </span>
               </div>

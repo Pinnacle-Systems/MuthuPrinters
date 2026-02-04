@@ -13,14 +13,15 @@ const TaxDetailsFullTemplate = ({
   handleInputChange,
   taxTypeId,
   id,
-  isNewVersion
+  isNewVersion,
 }) => {
   const substract = s;
   const [formulas, setFormulas] = useState([]);
+  console.log(poItems, "poItems");
 
   const { data, isLoading, isFetching } = useGetTaxTemplateByIdQuery(
     taxTypeId,
-    { skip: !taxTypeId }
+    { skip: !taxTypeId },
   );
 
   const {
@@ -30,11 +31,15 @@ const TaxDetailsFullTemplate = ({
   } = useGetTaxTermMasterQuery(taxTypeId);
 
   function getFormula(constant) {
-    const split = constant.split("_");
-    let name = split[0];
-    let value = split[1];
-    let formula = formulas.find((f) => f.name === name);
-    return formula ? formula[value.toLowerCase()] : "";
+    const [name, value] = constant.split("_");
+    const formula = formulas.find((f) => f.name === name);
+
+    if (!formula) return 0;
+
+    const result = formula[value.toLowerCase()];
+    return result === undefined || result === null || result === ""
+      ? 0
+      : result;
   }
 
   function getRegex(formula) {
@@ -44,36 +49,39 @@ const TaxDetailsFullTemplate = ({
     words.forEach((element) => {
       input = input.replace(element, getFormula(element.slice(1, -1)));
     });
+    // console.log(input, "input")
+
     return getRegex(input);
   }
 
   const getName = useCallback(
     (id) => {
       if (!taxTermMaster) return "";
-      let data = taxTermMaster.data.find(
-        (t) => parseInt(t.id) === parseInt(id)
+      let data = taxTermMaster?.data?.find(
+        (t) => parseInt(t.id) === parseInt(id),
       );
       if (!data) return "";
       return data.name;
     },
-    [taxTermMaster]
+    [taxTermMaster],
   );
 
   const getIsPoItem = useCallback(
     (id) => {
       if (!taxTermMaster) return false;
       let data = taxTermMaster.data.find(
-        (t) => parseInt(t.id) === parseInt(id)
+        (t) => parseInt(t.id) === parseInt(id),
       );
       if (!data) return false;
       return data.isPoWise;
     },
-    [taxTermMaster]
+    [taxTermMaster],
   );
+
   useEffect(() => {
     if (data && taxTermMaster) {
       setFormulas(
-        data.data.TaxTemplateDetails.map((f) => {
+        data?.data?.TaxTemplateDetails?.map((f) => {
           return {
             name: getName(f.taxTermId),
             isPowise: getIsPoItem(f.taxTermId),
@@ -81,7 +89,7 @@ const TaxDetailsFullTemplate = ({
             value: f.value,
             amount: f.amount,
           };
-        })
+        }),
       );
     }
   }, [
@@ -121,17 +129,23 @@ const TaxDetailsFullTemplate = ({
   let taxPercent = isNaN(parseFloat(row["taxPercent"]))
     ? 0
     : parseFloat(row["taxPercent"]);
+  // let taxPercent =  parseFloat(row["Yarn"]["hsnId"])  ?  findFromList(row["Yarn"]["hsnId"],hsnData,"tax")  : 0
+
   if (!taxTermMaster || !formulas) return <div>Tax Term Not Loaded</div>;
 
-  function add(...args) {
-    return args.reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
-  }
+  const safeEval = (expression) => {
+    try {
+      if (!expression) return 0;
+      return eval(expression);
+    } catch (e) {
+      console.error("Formula error:", expression);
+      return 0;
+    }
+  };
 
   return (
     <div
-      className={`${
-        Number.isInteger(index) ? "block" : "hidden"
-      } bg-gray-200 z-50 overflow-auto `}
+      className={`${Number.isInteger(index) ? "block" : "hidden"} bg-gray-200 z-50 overflow-auto `}
     >
       <div className=" flex text-sm justify-around text-center border-t border-r border-l border-gray-500 bo font-bold p-1">
         <span>Tax Details</span>
@@ -145,34 +159,11 @@ const TaxDetailsFullTemplate = ({
           </tr>
         </thead>
         <tbody>
-          <tr className="h-7">
-            <td className="border border-gray-500">Tax</td>
-            <td
-              className="border border-gray-500"
-              colSpan={2}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setCurrentSelectedIndex("");
-                }
-              }}
-            >
-              <input
-                type="text"
-                autoFocus
-               disabled={true}
-                className="h-7 w-full text-right"
-                value={taxPercent}
-                onChange={(e) => {
-                  handleInputChange(e.target.value, index, "taxPercent");
-                }}
-              />
-            </td>
-          </tr>
           <tr>
             <td className="border border-gray-500">Discount Type</td>
             <td className="border border-gray-500" colSpan={2}>
               <select
-               disabled={id ? !isNewVersion : readOnly}
+                disabled={id ? !isNewVersion : readOnly}
                 className="text-left w-full rounded h-8"
                 value={discountType}
                 onChange={(e) =>
@@ -180,7 +171,7 @@ const TaxDetailsFullTemplate = ({
                 }
                 autoFocus={true}
               >
-                <option hidden>Select</option>
+                <option value={""}>Select</option>
                 {discountTypes.map((option, index) => (
                   <option key={index} value={option.value}>
                     {option.show}
@@ -194,28 +185,51 @@ const TaxDetailsFullTemplate = ({
             <td className="border border-gray-500" colSpan={2}>
               <input
                 type="text"
-               disabled={id ? !isNewVersion : readOnly}
+                disabled={id ? !isNewVersion : readOnly || !discountType}
                 className="h-7 w-full text-right"
                 value={discountValue}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) =>
                   handleInputChange(e.target.value, index, "discountValue")
                 }
               />
             </td>
           </tr>
-
+          <tr className="h-7">
+            <td className="border border-gray-500">Tax</td>
+            <td
+              className="border border-gray-500"
+              colSpan={2}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setCurrentSelectedIndex("");
+                }
+              }}
+            >
+              <input
+                type="text"
+                disabled={readOnly}
+                className="h-7 w-full text-right"
+                value={taxPercent}
+                onChange={(e) => {
+                  handleInputChange(e.target.value, index, "taxPercent");
+                }}
+                onFocus={(e) => e.target.select()}
+              />
+            </td>
+          </tr>
           {formulas
-            // .filter((item) => !item.isPowise)
+            .filter((item) => !item.isPowise)
             .map((f, i) => (
               <tr key={i}>
                 <td className="border border-gray-500 font-semibold">
                   {f.displayName}
                 </td>
                 <td className="border border-gray-500 font-semibold text-right">
-                  {eval(getRegex(f.value))}
+                  {safeEval(getRegex(f.value))}
                 </td>
                 <td className="border border-gray-500 font-semibold text-right">
-                  {eval(getRegex(f.amount))}
+                  {safeEval(getRegex(f.amount))}
                 </td>
               </tr>
             ))}

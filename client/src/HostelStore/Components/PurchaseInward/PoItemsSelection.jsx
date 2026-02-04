@@ -220,22 +220,8 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
 
                                     />
                                 </th>
-                                <th className="px-1 py-1.5 border border-gray-300 text-xs  w-32">
-                                    <label>Due Date</label>
-                                    <input
-                                        type="text"
-                                        className="text-black h-6 focus:outline-none border w-full border-gray-400 rounded-lg"
-                                        placeholder="Search"
-                                        value={searchDueDate}
-                                        onChange={(e) => {
-                                            setDueDate(e.target.value);
-                                        }}
-                                        onFocus={(e) => { e.target.select() }}
 
-                                    /></th>
-
-
-                                <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-96">
+                                <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-80">
                                     <label>Discription of Goods</label>
                                     {/* <input
                                         type="text"
@@ -249,8 +235,21 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
 
                                     /> */}
                                 </th>
-                                <th className="px-1 py-1.5 border border-gray-300 text-xs  w-28">
-                                    <label>HSN</label>
+                                <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
+                                    <label>PO Qty</label>
+                                    {/* <input
+                                                        type="text"
+                                                        className="text-black h-6 focus:outline-none border w-full border-gray-400 rounded-lg"
+                                                        placeholder="Search"
+                                                        value={searchDueDate}
+                                                    // onChange={(e) => {
+                                                    //     setDueDate(e.target.value);
+                                                    // }}
+                                                    /> */}
+
+                                </th>
+                                <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
+                                    <label>Cancel Qty</label>
                                     {/* <input
                                         type="text"
                                         className="text-black h-6 focus:outline-none border w-full border-gray-400 rounded-lg"
@@ -259,7 +258,7 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                                     /> */}
                                 </th>
                                 <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
-                                    <label>Uom</label>
+                                    <label>Already Inward Qty</label>
                                     {/* <input
                                                         type="text"
                                                         className="text-black h-6 focus:outline-none border w-full border-gray-400 rounded-lg"
@@ -272,18 +271,9 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
 
                                 </th>
                                 <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
-                                    <label>Qty</label>
-                                    {/* <input
-                                                        type="text"
-                                                        className="text-black h-6 focus:outline-none border w-full border-gray-400 rounded-lg"
-                                                        placeholder="Search"
-                                                        value={searchDueDate}
-                                                    // onChange={(e) => {
-                                                    //     setDueDate(e.target.value);
-                                                    // }}
-                                                    /> */}
-
-                                </th>
+                                    <label>Already Return Qty</label></th>
+                                <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
+                                    <label>Balance Qty</label></th>
 
                                 <th className="px-4 py-1.5 border border-gray-300 text-xs  w-20">Price </th>
 
@@ -323,23 +313,28 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                                     <td className=" border border-gray-300 px-2 py-1 text-left text-xs">
                                         {getDateFromDateTimeToDisplay(item?.Po?.docDate)}
                                     </td>
-                                    <td className=" border border-gray-300 px-2 py-1 text-left text-xs">
-                                        {getDateFromDateTimeToDisplay(item?.Po?.dueDate)}
-                                    </td>
+
                                     <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
                                         {item?.StyleItem?.name}
                                     </td>
-                                    <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
-                                        {item?.Hsn?.name}
-                                    </td>
-                                    <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
-                                        {item?.Uom?.name}
-                                    </td>
                                     <td className=" border border-gray-300 text-[11px] text-right  py-1.5 px-2">
-                                        {parseFloat(item?.qty).toFixed(2)}
+                                        {parseFloat(item?.qty || 0).toFixed(2)}
                                     </td>
+                                    <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
+                                        {parseFloat(item?.cancelQty || 0).toFixed(2)}
+                                    </td>
+                                    <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
+                                        {parseFloat(item?.alreadyInwardQty || 0).toFixed(2)}
+                                    </td>
+                                     <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
+                                        {parseFloat(item?.alreadyReturnQty || 0).toFixed(2)}
+                                    </td>
+                                     <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
+                                        {parseFloat(item?.balQty || 0).toFixed(2)}
+                                    </td>
+
                                     <td className=" border border-gray-300 text-[11px] text-right  py-1.5 px-2">
-                                        {parseFloat(item?.price).toFixed(2)}
+                                        {parseFloat(item?.price|| 0).toFixed(2)}
                                     </td>
                                 </tr>
                             ))}

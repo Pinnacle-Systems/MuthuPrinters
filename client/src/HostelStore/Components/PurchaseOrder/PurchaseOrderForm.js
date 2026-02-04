@@ -577,6 +577,7 @@ const PurchaseOrderForm = ({
                   show={"isSupplier"}
                   required={true}
                   disabled={id}
+                  isSupplier={true}
                 />
               </div>
 
@@ -644,7 +645,7 @@ const PurchaseOrderForm = ({
                   <DropdownInput
                     name="Delivery To"
                     options={dropDownListObject(
-                      supplierList?.data?.filter((val) => val.isSupplier),
+                      supplierList?.data,
                       "partyCode",
                       "id",
                     )}

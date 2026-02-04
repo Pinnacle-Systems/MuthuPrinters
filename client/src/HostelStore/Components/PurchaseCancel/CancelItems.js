@@ -153,7 +153,7 @@ const CancelItems = ({
           <h2 className="font-medium text-slate-700">List Of Items</h2>
 
           <button
-            className="font-bold text-slate-700 bord ml-[790px] text-sm bg-blue-500 rounded rounded-md text-white px-2"
+            className="font-bold text-slate-700 bord ml-[1100px] text-sm bg-blue-500 rounded rounded-md text-white px-2"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -215,12 +215,12 @@ const CancelItems = ({
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
-                  Inward Qty
+                  Already Inward Qty
                 </th>
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
-                  Return Qty
+                  Already Return Qty
                 </th>
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
@@ -355,19 +355,19 @@ const CancelItems = ({
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
                           e.preventDefault();
                         if (e.key === "Delete") {
-                          handleInputChange("", index, "inwardQty");
+                          handleInputChange("", index, "alreadyInwardQty");
                         }
                       }}
                       min={"0"}
                       type="number"
                       className="text-right rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.inwardQty}
+                      value={row?.alreadyInwardQty}
                       onChange={(e) =>
-                        handleInputChange(e.target.value, index, "inwardQty")
+                        handleInputChange(e.target.value, index, "alreadyInwardQty")
                       }
                       onBlur={(e) => {
-                        handleInputChange(e.target.value, index, "inwardQty");
+                        handleInputChange(e.target.value, index, "alreadyInwardQty");
                       }}
                       disabled={true}
                     />
@@ -378,19 +378,19 @@ const CancelItems = ({
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
                           e.preventDefault();
                         if (e.key === "Delete") {
-                          handleInputChange("", index, "returnQty");
+                          handleInputChange("", index, "alreadyReturnQty");
                         }
                       }}
                       min={"0"}
                       type="number"
                       className="text-right rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.returnQty}
+                      value={row?.alreadyReturnQty}
                       onChange={(e) =>
-                        handleInputChange(e.target.value, index, "returnQty")
+                        handleInputChange(e.target.value, index, "alreadyReturnQty")
                       }
                       onBlur={(e) => {
-                        handleInputChange(e.target.value, index, "returnQty");
+                        handleInputChange(e.target.value, index, "alreadyReturnQty");
                       }}
                       disabled={true}
                     />
@@ -401,19 +401,19 @@ const CancelItems = ({
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
                           e.preventDefault();
                         if (e.key === "Delete") {
-                          handleInputChange("", index, "balQty");
+                          handleInputChange("", index, "balQtyCancel");
                         }
                       }}
                       min={"0"}
                       type="number"
                       className="text-right rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.balQty}
+                      value={row?.balQtyCancel}
                       onChange={(e) =>
-                        handleInputChange(e.target.value, index, "balQty")
+                        handleInputChange(e.target.value, index, "balQtyCancel")
                       }
                       onBlur={(e) => {
-                        handleInputChange(e.target.value, index, "balQty");
+                        handleInputChange(e.target.value, index, "balQtyCancel");
                       }}
                       disabled={true}
                     />
@@ -448,7 +448,7 @@ const CancelItems = ({
                         handleInputChange(e.target.value, index, "cancelQty")
                       }
                       onBlur={(e) => {
-                        const minQty = row.balQty;
+                        const minQty = row.balQtyCancel;
 
                         if (parseFloat(minQty) < parseFloat(e.target.value)) {
                           e.target.value = "";

@@ -258,10 +258,10 @@ const PurchaseItemsSelection = ({
                   <label>Po Qty</label>
                 </th>
                 <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
-                  <label>Inward Qty</label>
+                  <label>Already Inward Qty</label>
                 </th>
                 <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
-                  <label>Return Qty</label>
+                  <label>Already Return Qty</label>
                 </th>
                 <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
                   <label>Bal Qty</label>
@@ -322,13 +322,13 @@ const PurchaseItemsSelection = ({
                       {item?.poQty}
                     </td>
                     <td className=" border border-gray-300 text-[11px] text-right  py-1.5 px-2">
-                      {item?.inwardQty}
+                      {item?.alreadyInwardQty}
                     </td>
                     <td className=" border border-gray-300 text-[11px] text-right  py-1.5 px-2">
-                      {item?.returnQty}
+                      {item?.alreadyReturnQty}
                     </td>
                     <td className=" border border-gray-300 text-[11px] text-right  py-1.5 px-2">
-                      {item?.balQty}
+                      {item?.balQtyCancel}
                     </td>
                   </tr>
                 ))

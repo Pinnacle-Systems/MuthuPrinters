@@ -428,9 +428,52 @@ async function getOne(id) {
   //       styleId: { in: goodsStyleIds },
   //     },
   //   });
+  const itemsWithQty = await Promise.all(
+    data.inwardItems.map(async (item) => {
+      const cancelItems = await prisma.purchaseCancelItems.findMany({
+        where: {
+          styleItemId: item.styleItemId,
+          poId: item.poId,
+          uomId: item.uomId,
+          hsnId: item.hsnId,
+        },
+        select: {
+          cancelQty: true,
+        },
+      });
+
+      const cancelQty = cancelItems.reduce(
+        (sum, item) => sum + (item.cancelQty ?? 0),
+        0,
+      );
+      const inwardItems = await prisma.inwardItems.findMany({
+        where: {
+          styleItemId: item.styleItemId,
+          poId: item.poId,
+          uomId: item.uomId,
+          hsnId: item.hsnId,
+        },
+        select: {
+          purchaseInwardId: true,
+          inwardQty: true,
+        },
+      });
+
+      const inwardQty = inwardItems.reduce(
+        (sum, item) => sum + (item.inwardQty ?? 0),
+        0,
+      );
+      return {
+        ...item,
+        cancelQty,
+        alreadyInwardQty: inwardQty,
+        balQty: item.poQty - (inwardQty + cancelQty),
+      };
+    }),
+  );
   return {
     statusCode: 0,
-    data: data,
+    data: { ...data, inwardItems: itemsWithQty },
   };
 }
 
@@ -967,11 +1010,20 @@ function manualFilterSearchDataPurchaseInwardItems(
 }
 
 async function getAllDataPurInwardItems(data) {
-  let promises = data?.map(async (item) => {
-    let data = await getPurInwardItemById(item.id);
-    return data.data;
-  });
-  return Promise.all(promises);
+  // let promises = data?.map(async (item) => {
+  //   let data = await getPurInwardItemById(item.id);
+  //   return data.data;
+  // });
+  // return Promise.all(promises);
+  const results = await Promise.all(
+    data?.map(async (item) => {
+      const res = await getPurInwardItemById(item.id);
+      return res.data;
+    }),
+  );
+
+  // ✅ filter here
+  return results.filter((item) => item.balQty > 0);
 }
 
 async function getPurInwardItemById(id) {
@@ -1013,22 +1065,41 @@ async function getPurInwardItemById(id) {
       hsnId: data.hsnId,
     },
   });
-  const totalStkQty = await prisma.stock.aggregate({
+  const returnItems = await prisma.purchaseReturnItems.findMany({
     where: {
       styleItemId: data.styleItemId,
+      purchaseInwardId: data.purchaseInwardId,
       uomId: data.uomId,
       hsnId: data.hsnId,
     },
-    _sum: {
-      qty: true,
+    select: {
+      returnQty: true,
     },
   });
+
+  const returnQty = returnItems.reduce(
+    (sum, item) => sum + (item.returnQty ?? 0),
+    0,
+  );
+  // const totalStkQty = await prisma.stock.aggregate({
+  //   where: {
+  //     styleItemId: data.styleItemId,
+  //     uomId: data.uomId,
+  //     hsnId: data.hsnId,
+  //     invNo: data.invNo
+  //   },
+  //   _sum: {
+  //     qty: true,
+  //   },
+  // });
   return {
     statusCode: 0,
     data: {
       ...data,
       poQty: itemWithPoQty.qty,
-      balQty: totalStkQty._sum.qty,
+      alreadyReturnQty: returnQty,
+      // balQty: totalStkQty._sum.qty,
+      balQty: data.inwardQty - returnQty,
     },
   };
 }

@@ -134,7 +134,7 @@ const PurchaseCancelForm = ({
     termsAndCondition,
     cancelItems: cancelItems?.filter((po) => po.styleItemId),
     finYearId,
-    poType
+    poType,
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -217,7 +217,7 @@ const PurchaseCancelForm = ({
       return false;
     }
     let mandatoryFields = ["styleItemId", "hsnId", "uomId", "cancelQty"];
-    console.log(data,"dataaaaa")
+    console.log(data, "dataaaaa");
     if (
       !(
         data.poType &&
@@ -393,6 +393,7 @@ const PurchaseCancelForm = ({
                   show={"isSupplier"}
                   required={true}
                   disabled={id}
+                  isSupplier={true}
                 />
               </div>
               <TextInput
@@ -475,7 +476,7 @@ const PurchaseCancelForm = ({
                 <span className="text-slate-600">Total Cancel Qty</span>
                 <span className="font-medium">
                   {cancelItems
-                    .reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
+                    .reduce((sum, row) => sum + (Number(row.cancelQty) || 0), 0)
                     .toFixed(2)}
                 </span>
               </div>

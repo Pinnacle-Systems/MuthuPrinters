@@ -161,7 +161,7 @@ const InwardItems = ({
           <h2 className="font-medium text-slate-700">List Of Items</h2>
           {inwardType !== "Direct Inward" && (
             <button
-              className="font-bold text-slate-700 bord ml-[720px] text-sm bg-blue-500 rounded rounded-md text-white px-2"
+              className={`font-bold text-slate-700 bord ml-[1000px] text-sm bg-blue-500 rounded rounded-md text-white px-2`}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -218,7 +218,34 @@ const InwardItems = ({
                     Order Qty
                   </th>
                 )}
-
+                {inwardType !== "Direct Inward" && (
+                  <th
+                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                  >
+                    Cancel Qty
+                  </th>
+                )}
+                {inwardType !== "Direct Inward" && (
+                  <th
+                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                  >
+                    Already Inward Qty
+                  </th>
+                )}
+                {/* {inwardType !== "Direct Inward" && (
+                  <th
+                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                  >
+                    Already Return Qty
+                  </th>
+                )} */}
+                {inwardType !== "Direct Inward" && (
+                  <th
+                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                  >
+                    Balance Qty
+                  </th>
+                )}
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
@@ -338,6 +365,138 @@ const InwardItems = ({
                       />
                     </td>
                   )}
+                  {inwardType !== "Direct Inward" && (
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                      <input
+                        onKeyDown={(e) => {
+                          if (e.code === "Minus" || e.code === "NumpadSubtract")
+                            e.preventDefault();
+                          if (e.key === "Delete") {
+                            handleInputChange("", index, "cancelQty");
+                          }
+                        }}
+                        min={"0"}
+                        type="number"
+                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        onFocus={(e) => e.target.select()}
+                        value={row?.cancelQty}
+                        onChange={(e) =>
+                          handleInputChange(e.target.value, index, "cancelQty")
+                        }
+                        onBlur={(e) => {
+                          handleInputChange(e.target.value, index, "cancelQty");
+                        }}
+                        disabled={
+                          readOnly ||
+                          (row.stockQty ?? 0) > 0 ||
+                          inwardType !== "Direct Inward"
+                        }
+                      />
+                    </td>
+                  )}
+                  {inwardType !== "Direct Inward" && (
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                      <input
+                        onKeyDown={(e) => {
+                          if (e.code === "Minus" || e.code === "NumpadSubtract")
+                            e.preventDefault();
+                          if (e.key === "Delete") {
+                            handleInputChange("", index, "alreadyInwardQty");
+                          }
+                        }}
+                        min={"0"}
+                        type="number"
+                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        onFocus={(e) => e.target.select()}
+                        value={row?.alreadyInwardQty}
+                        onChange={(e) =>
+                          handleInputChange(
+                            e.target.value,
+                            index,
+                            "alreadyInwardQty",
+                          )
+                        }
+                        onBlur={(e) => {
+                          handleInputChange(
+                            e.target.value,
+                            index,
+                            "alreadyInwardQty",
+                          );
+                        }}
+                        disabled={
+                          readOnly ||
+                          (row.stockQty ?? 0) > 0 ||
+                          inwardType !== "Direct Inward"
+                        }
+                      />
+                    </td>
+                  )}
+                  {/* {inwardType !== "Direct Inward" && (
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                      <input
+                        onKeyDown={(e) => {
+                          if (e.code === "Minus" || e.code === "NumpadSubtract")
+                            e.preventDefault();
+                          if (e.key === "Delete") {
+                            handleInputChange("", index, "alreadyReturnQty");
+                          }
+                        }}
+                        min={"0"}
+                        type="number"
+                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        onFocus={(e) => e.target.select()}
+                        value={row?.alreadyReturnQty}
+                        onChange={(e) =>
+                          handleInputChange(
+                            e.target.value,
+                            index,
+                            "alreadyReturnQty",
+                          )
+                        }
+                        onBlur={(e) => {
+                          handleInputChange(
+                            e.target.value,
+                            index,
+                            "alreadyReturnQty",
+                          );
+                        }}
+                        disabled={
+                          readOnly ||
+                          (row.stockQty ?? 0) > 0 ||
+                          inwardType !== "Direct Inward"
+                        }
+                      />
+                    </td>
+                  )} */}
+                  {inwardType !== "Direct Inward" && (
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                      <input
+                        onKeyDown={(e) => {
+                          if (e.code === "Minus" || e.code === "NumpadSubtract")
+                            e.preventDefault();
+                          if (e.key === "Delete") {
+                            handleInputChange("", index, "balQty");
+                          }
+                        }}
+                        min={"0"}
+                        type="number"
+                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        onFocus={(e) => e.target.select()}
+                        value={row?.balQty}
+                        onChange={(e) =>
+                          handleInputChange(e.target.value, index, "balQty")
+                        }
+                        onBlur={(e) => {
+                          handleInputChange(e.target.value, index, "balQty");
+                        }}
+                        disabled={
+                          readOnly ||
+                          (row.stockQty ?? 0) > 0 ||
+                          inwardType !== "Direct Inward"
+                        }
+                      />
+                    </td>
+                  )}
                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
                     <input
                       id={`inwardQty-input-${index}`}
@@ -376,14 +535,14 @@ const InwardItems = ({
                         handleInputChange(e.target.value, index, "inwardQty")
                       }
                       onBlur={(e) => {
-                        const minQty = row.poQty;
+                        const minQty = row.balQty;
                         if (inwardType !== "Direct Inward") {
                           if (parseFloat(minQty) < parseFloat(e.target.value)) {
                             e.target.value = "";
                             Swal.fire({
                               icon: "warning",
                               title: "Invalid Qty",
-                              text: `Inward Qty cannot be More than Order Qty! - ${minQty}`,
+                              text: `Inward Qty cannot be More than Blance Qty! - ${minQty}`,
                               confirmButtonText: "OK",
                             });
                             return;
@@ -429,15 +588,24 @@ const InwardItems = ({
               <tr className="bg-gray-50 h-7 font-medium text-gray-800">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium text-[13px] py-0.5"
-                  colSpan={inwardType === "Direct Inward" ? 3 : 4}
+                  colSpan={inwardType === "Direct Inward" ? 4 : 4}
                 >
                   Total
                 </td>
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
-                  {inwardItems
-                    ?.reduce((sum, row) => sum + (Number(row.poQty) || 0), 0)
-                    .toFixed(2)}
-                </td>
+                {inwardType !== "Direct Inward" && (
+                  <>
+                    <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                      {inwardItems
+                        ?.reduce(
+                          (sum, row) => sum + (Number(row.poQty) || 0),
+                          0,
+                        )
+                        .toFixed(2)}
+                    </td>
+                    <td className="border border-gray-300 " colSpan={3}></td>
+                  </>
+                )}
+
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {inwardItems
                     ?.reduce(
@@ -446,7 +614,8 @@ const InwardItems = ({
                     )
                     .toFixed(2)}
                 </td>
-                <td className="border border-gray-300" colSpan={1}></td>
+
+                <td className="border border-gray-300"></td>
               </tr>
             </tfoot>
           </table>

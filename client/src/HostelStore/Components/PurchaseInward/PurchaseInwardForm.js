@@ -417,6 +417,7 @@ const PurchaseInwardForm = ({
                   show={"isSupplier"}
                   required={true}
                   disabled={id}
+                  isSupplier={true}
                 />
               </div>
               <TextInput

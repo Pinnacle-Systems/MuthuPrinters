@@ -503,7 +503,7 @@ async function create(body) {
             },
           },
           termsId: termsId ? parseInt(termsId) : null,
-          payTermId: parseInt(payTermId),
+          payTermId: payTermId ? parseInt(payTermId) : null,
         },
       });
       await createPoItems(tx, poItems, data, userId, branchId);
@@ -653,7 +653,7 @@ async function update(id, body) {
             }
           : undefined,
         termsId: termsId ? parseInt(termsId) : null,
-        payTermId: parseInt(payTermId),
+        payTermId: payTermId ? parseInt(payTermId) : null,
         poItems: {
           createMany: {
             data: poItems
@@ -773,11 +773,15 @@ function manualFilterSearchDataPoItems(
 }
 
 async function getAllDataPoItems(data) {
-  let promises = data?.map(async (item) => {
-    let data = await getPoItemById(item.id);
-    return data.data;
-  });
-  return Promise.all(promises);
+  const results = await Promise.all(
+    data?.map(async (item) => {
+      const res = await getPoItemById(item.id);
+      return res.data;
+    }),
+  );
+
+  // ✅ filter here
+  return results.filter((item) => item.balQty > 0);
 }
 
 async function getPoItemById(id) {
@@ -792,7 +796,6 @@ async function getPoItemById(id) {
   });
 
   if (!data) return NoRecordFound("Purchase Order");
-
   // 1️⃣ All inward rows
   const inwardItems = await prisma.inwardItems.findMany({
     where: {
@@ -809,6 +812,23 @@ async function getPoItemById(id) {
 
   const inwardQty = inwardItems.reduce(
     (sum, item) => sum + (item.inwardQty ?? 0),
+    0,
+  );
+
+  const cancelItems = await prisma.purchaseCancelItems.findMany({
+    where: {
+      styleItemId: data.styleItemId,
+      poId: data.poId,
+      uomId: data.uomId,
+      hsnId: data.hsnId,
+    },
+    select: {
+      cancelQty: true,
+    },
+  });
+
+  const cancelQty = cancelItems.reduce(
+    (sum, item) => sum + (item.cancelQty ?? 0),
     0,
   );
 
@@ -837,6 +857,7 @@ async function getPoItemById(id) {
       styleItemId: data.styleItemId,
       uomId: data.uomId,
       hsnId: data.hsnId,
+      invNo: data.invNo,
     },
     _sum: { qty: true },
   });
@@ -846,9 +867,11 @@ async function getPoItemById(id) {
     data: {
       ...data,
       poQty: data.qty,
-      inwardQty,
-      returnQty,
-      balQty: totalStkQty._sum.qty ?? 0,
+      cancelQty,
+      alreadyInwardQty: inwardQty,
+      alreadyReturnQty: returnQty,
+      balQty: data.qty - (inwardQty + cancelQty),
+      balQtyCancel:  data.qty - (inwardQty - returnQty)
     },
   };
 }

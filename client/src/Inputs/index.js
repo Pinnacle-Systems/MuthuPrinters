@@ -782,6 +782,7 @@ export const ReusableSearchableInput = forwardRef(
       show,
       name,
       disabled,
+      isSupplier = false
     },
     ref,
   ) => {
@@ -800,6 +801,8 @@ export const ReusableSearchableInput = forwardRef(
       isLoading: isPartyLoading,
       isFetching: isPartyFetching,
     } = useGetPartyQuery({ params: { companyId, userId } });
+
+    const filteredPartyList = isSupplier ? partyList?.data?.filter((item) => item.isSupplier === true) : partyList?.data 
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -845,10 +848,10 @@ export const ReusableSearchableInput = forwardRef(
     useEffect(() => {
       if (!partyList) return;
       if (!search) {
-        setFilteredPages(partyList?.data);
+        setFilteredPages(filteredPartyList);
       }
       setFilteredPages(
-        partyList?.data?.filter((page) => {
+        filteredPartyList?.filter((page) => {
           return page?.name?.toLowerCase().includes(search.toLowerCase());
         }),
       );
@@ -887,7 +890,6 @@ export const ReusableSearchableInput = forwardRef(
       };
     }, [isDropdownOpen]);
 
-    console.log(filteredPages, "filteredPages");
 
     return (
       <>

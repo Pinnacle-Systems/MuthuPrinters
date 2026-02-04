@@ -206,10 +206,19 @@ async function getOne(id) {
           qty: true,
         },
       });
+      const inwardQty = await prisma.inwardItems.findUnique({
+        where: {
+          id: item.purchaseInwardId,
+        },
+        include: {
+          inwardQty: true,
+        },
+      });
       return {
         ...item,
         balQty: stkQty._sum.qty + item.returnQty,
         poQty: poQty.qty,
+        inwardQty: inwardQty.inwardQty,
       };
     }),
   );

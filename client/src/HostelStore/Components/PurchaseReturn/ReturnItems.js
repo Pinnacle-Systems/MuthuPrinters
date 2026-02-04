@@ -147,7 +147,7 @@ const ReturnItems = ({
           <h2 className="font-medium text-slate-700">List Of Items</h2>
 
           <button
-            className="font-bold text-slate-700 bord ml-[790px] text-sm bg-blue-500 rounded rounded-md text-white px-2"
+            className="font-bold text-slate-700 bord ml-[980px] text-sm bg-blue-500 rounded rounded-md text-white px-2"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -199,9 +199,19 @@ const ReturnItems = ({
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
-                  Po Qty
+                  Order Qty
                 </th>
                 <th
+                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                >
+                  Inward Qty
+                </th>
+                 <th
+                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                >
+                  Already Return Qty
+                </th>
+                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
                   Balance Qty
@@ -325,6 +335,52 @@ const ReturnItems = ({
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
                           e.preventDefault();
                         if (e.key === "Delete") {
+                          handleInputChange("", index, "inwardQty");
+                        }
+                      }}
+                      min={"0"}
+                      type="number"
+                      className="text-right rounded py-1 px-1 w-full table-data-input"
+                      onFocus={(e) => e.target.select()}
+                      value={row?.inwardQty}
+                      onChange={(e) =>
+                        handleInputChange(e.target.value, index, "inwardQty")
+                      }
+                      onBlur={(e) => {
+                        handleInputChange(e.target.value, index, "inwardQty");
+                      }}
+                      disabled={true}
+                    />
+                  </td>
+                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <input
+                      onKeyDown={(e) => {
+                        if (e.code === "Minus" || e.code === "NumpadSubtract")
+                          e.preventDefault();
+                        if (e.key === "Delete") {
+                          handleInputChange("", index, "alreadyReturnQty");
+                        }
+                      }}
+                      min={"0"}
+                      type="number"
+                      className="text-right rounded py-1 px-1 w-full table-data-input"
+                      onFocus={(e) => e.target.select()}
+                      value={row?.alreadyReturnQty}
+                      onChange={(e) =>
+                        handleInputChange(e.target.value, index, "alreadyReturnQty")
+                      }
+                      onBlur={(e) => {
+                        handleInputChange(e.target.value, index, "alreadyReturnQty");
+                      }}
+                      disabled={true}
+                    />
+                  </td>
+                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <input
+                      onKeyDown={(e) => {
+                        if (e.code === "Minus" || e.code === "NumpadSubtract")
+                          e.preventDefault();
+                        if (e.key === "Delete") {
                           handleInputChange("", index, "balQty");
                         }
                       }}
@@ -436,9 +492,10 @@ const ReturnItems = ({
                 </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {returnItems
-                    ?.reduce((sum, row) => sum + (Number(row.balQty) || 0), 0)
+                    ?.reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
                     .toFixed(2)}
                 </td>
+                <td className="border border-gray-300"colSpan={2}></td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {returnItems
                     ?.reduce((sum, row) => sum + (Number(row.returnQty) || 0), 0)
