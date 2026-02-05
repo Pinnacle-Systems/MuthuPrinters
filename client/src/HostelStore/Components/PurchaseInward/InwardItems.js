@@ -154,6 +154,7 @@ const InwardItems = ({
           inwardItems={inwardItems}
           setInwardItems={setInwardItems}
           branchId={branchId}
+          inwardType={inwardType}
         />
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">
@@ -542,7 +543,7 @@ const InwardItems = ({
                             Swal.fire({
                               icon: "warning",
                               title: "Invalid Qty",
-                              text: `Inward Qty cannot be More than Blance Qty! - ${minQty}`,
+                              text: `Inward Qty cannot be More than Balance Qty! - ${minQty}`,
                               confirmButtonText: "OK",
                             });
                             return;

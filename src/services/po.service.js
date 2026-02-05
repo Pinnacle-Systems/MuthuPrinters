@@ -238,12 +238,23 @@ async function getOne(id) {
 
   // Assign updated PoItems back to PO object
   po.poItems = updatedItems;
+  const childRecordInward = await prisma.inwardItems.count({
+    where: {
+      poId: po.id,
+    },
+  });
+  const childRecordCancel = await prisma.purchaseCancelItems.count({
+    where: {
+      poId: po.id,
+    },
+  });
 
   return {
     statusCode: 0,
     data: {
       ...po,
-      childRecord,
+      childRecordInward: childRecordInward,
+      childRecordCancel: childRecordCancel
     },
   };
 }
@@ -755,9 +766,12 @@ async function remove(id) {
 function manualFilterSearchDataPoItems(
   searchPoDate,
   searchDueDate,
-  searchPoType,
+  searchInwardType,
   data,
 ) {
+  const inwardTypeKey = searchInwardType
+    ? searchInwardType.split(" ")[0].toUpperCase()
+    : "";
   return data.filter(
     (item) =>
       (searchPoDate
@@ -766,9 +780,7 @@ function manualFilterSearchDataPoItems(
       (searchDueDate
         ? String(getDateFromDateTime(item.Po.dueDate)).includes(searchDueDate)
         : true) &&
-      (searchPoType
-        ? item.Po.poType.toLowerCase().includes(searchPoType.toLowerCase())
-        : true),
+      (inwardTypeKey ? item.Po.poType.toUpperCase() === inwardTypeKey : true),
   );
 }
 
@@ -871,7 +883,7 @@ async function getPoItemById(id) {
       alreadyInwardQty: inwardQty,
       alreadyReturnQty: returnQty,
       balQty: data.qty - (inwardQty + cancelQty),
-      balQtyCancel:  data.qty - (inwardQty - returnQty)
+      balQtyCancel: data.qty - (inwardQty - returnQty),
     },
   };
 }
@@ -886,14 +898,8 @@ async function getPoItems(req) {
     dataPerPage,
     searchDocId,
     searchPoDate,
-    searchSupplierAliasName,
     searchInwardType,
     searchDueDate,
-    isPurchaseInwardFilter,
-    isPurchaseCancelFilter,
-    isPurchaseReturnFilter,
-    poInwardOrDirectInward,
-    poMaterial,
   } = req.query;
 
   let data;
@@ -934,10 +940,7 @@ async function getPoItems(req) {
       data,
     );
 
-    data = data?.filter(
-      (i) => i.Po.supplierId == supplierId,
-      // && i.Po.inwardType === po,
-    );
+    data = data?.filter((i) => i.Po.supplierId == supplierId);
 
     data = await getAllDataPoItems(data);
     // if (isPurchaseInwardFilter) {

@@ -56,6 +56,7 @@ export default function Form() {
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetStyleItemMasterByIdQuery(id, { skip: !id });
+  const [trigger, { data: LazyData }] = useLazyGetStyleItemMasterByIdQuery();
 
   const [addData] = useAddStyleItemMasterMutation();
   const [updateData] = useUpdateStyleItemMasterMutation();
@@ -178,6 +179,8 @@ export default function Form() {
   };
 
   const handleDelete = async (id, childRecord) => {
+        const { data } = await trigger(id);
+
     if (childRecord) {
       Swal.fire({
         icon: "error",

@@ -7,6 +7,7 @@ import {
     useAddPartyMutation,
     useUpdatePartyMutation,
     useDeletePartyMutation,
+    useLazyGetPartyByIdQuery,
 } from "../../../redux/services/PartyMasterService";
 
 import { useGetCityQuery } from "../../../redux/services/CityMasterService";
@@ -126,6 +127,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
         isFetching: isSingleFetching,
         isLoading: isSingleLoading,
     } = useGetPartyByIdQuery(id, { skip: !id });
+  const [trigger, { data: LazyData }] = useLazyGetPartyByIdQuery();
 
     const [addData] = useAddPartyMutation();
     const [updateData] = useUpdatePartyMutation();
@@ -161,7 +163,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
         setEmail(data?.email ? data?.email : "");
         setCity(data?.cityId ? data?.cityId : "");
         setIsSupplier((data?.isSupplier ? data.isSupplier : false));
-        setIsCustomer((data?.isCustomer ? data.isCustomer : true));
+        setIsCustomer( id ? (data?.isCustomer ? data.isCustomer : false) : true);
         setActive(id ? (data?.active ? data.active : false) : true);
         setContactMobile((data?.contactMobile ? data.contactMobile : ''));
         setlandMark(data?.landMark ? data?.landMark : '')
@@ -390,6 +392,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
             countryNameRef.current.focus();
         }
     }, [form]);
+    const alphaNum12 = /^[A-Z0-9]{15}$/;
     const saveData = (nextProcess) => {
         if (isBranch) {
             if (!parentId) {
@@ -421,6 +424,14 @@ export default function Form({ partyId, onCloseForm, childId }) {
             });
             return
         }
+       if (gstNo && !alphaNum12.test(gstNo.toUpperCase())) {
+  Swal.fire({
+    title: "Invalid GST Number",
+    text: "Must be exactly 15 alphanumeric characters",
+    icon: "error",
+  });
+  return;
+}
         if (!isCustomer && !isSupplier) {
             Swal.fire({
                 title: 'Please Select Customer or Supplier',
@@ -493,6 +504,8 @@ export default function Form({ partyId, onCloseForm, childId }) {
 
 
     const deleteData = async (id, childRecord) => {
+        const { data } = await trigger(id);
+
         if (childRecord) {
             Swal.fire({
                 icon: "error",
@@ -504,6 +517,13 @@ export default function Form({ partyId, onCloseForm, childId }) {
             if (!window.confirm("Are you sure to delete.   ..?")) {
                 return;
             }
+             if (data?.data?.childRecord > 0) {
+                    Swal.fire({
+                      icon: "error",
+                      title: "Child Record",
+                      text: "Data cannot be deleted!",
+                    });
+                  } else {
             try {
                 let deldata = await removeData(id).unwrap();
                 console.log(deldata, "deldata")
@@ -535,7 +555,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                 });
             } catch (error) {
                 toast.error("something went wrong");
-            }
+            }}
         }
     };
 
@@ -2417,7 +2437,17 @@ export default function Form({ partyId, onCloseForm, childId }) {
                                                                                     </span>
 
                                                                                     <button
-                                                                                        onClick={() => openPreview(item.filePath)}
+                                                                                         onClick={() => {
+                                if (item.filePath instanceof File) {
+                                window.open(
+                                    URL.createObjectURL(item.filePath))
+                                  
+                                } else {
+                                 window.open(
+                                    getImageUrlPath(item.filePath)
+                                  );
+                                }
+                              }}
                                                                                         className="text-blue-600 text-xs hover:underline"
                                                                                     >
                                                                                         View

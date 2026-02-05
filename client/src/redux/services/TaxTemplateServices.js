@@ -76,6 +76,7 @@ const TaxTemplateApi = createApi({
 export const {
   useGetTaxTemplateQuery,
   useGetTaxTemplateByIdQuery,
+  useLazyGetTaxTemplateByIdQuery,
   useAddTaxTemplateMutation,
   useUpdateTaxTemplateMutation,
   useDeleteTaxTemplateMutation,

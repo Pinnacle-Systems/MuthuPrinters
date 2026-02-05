@@ -467,13 +467,23 @@ async function getOne(id) {
         ...item,
         cancelQty,
         alreadyInwardQty: inwardQty,
-        balQty: item.poQty - (inwardQty + cancelQty),
+        // balQty: item.poQty - (inwardQty + cancelQty),
+        balQty: item.poQty - (inwardQty + cancelQty) + item.inwardQty,
       };
     }),
   );
+  const childRecordReturn = await prisma.purchaseReturnItems.count({
+    where: {
+      purchaseInwardId: data.id,
+    },
+  });
   return {
     statusCode: 0,
-    data: { ...data, inwardItems: itemsWithQty },
+    data: {
+      ...data,
+      inwardItems: itemsWithQty,
+      childRecord: childRecordReturn,
+    },
   };
 }
 
@@ -989,6 +999,11 @@ function manualFilterSearchDataPurchaseInwardItems(
   searchInwardType,
   data,
 ) {
+  const inwardTypeToSearch =
+    searchInwardType === "General Return"
+      ? "General Purchase Inward"
+      : "Order Purchase Inward";
+
   return data.filter(
     (item) =>
       (searchDocDate
@@ -1001,10 +1016,8 @@ function manualFilterSearchDataPurchaseInwardItems(
             searchDcDate,
           )
         : true) &&
-      (searchInwardType
-        ? item.PurchaseInward.inwardType
-            .toLowerCase()
-            .includes(searchInwardType.toLowerCase())
+      (inwardTypeToSearch
+        ? item.PurchaseInward.inwardType === inwardTypeToSearch
         : true),
   );
 }
@@ -1154,6 +1167,7 @@ async function getPurchaseInwardItems(req) {
       searchInwardType,
       data,
     );
+    console.log(data, "data");
 
     data = data?.filter((i) => i.PurchaseInward.supplierId == supplierId);
 

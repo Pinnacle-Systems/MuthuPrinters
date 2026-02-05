@@ -140,6 +140,7 @@ const ReturnItems = ({
           returnItems={returnItems}
           setReturnItems={setReturnItems}
           branchId={branchId}
+          returnType={returnType}
         />
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">
@@ -159,6 +160,13 @@ const ReturnItems = ({
                 Swal.fire({
                   icon: "success",
                   title: ` Choose Supplier`,
+                  showConfirmButton: false,
+                  timer: 2000,
+                });
+              } else if (!returnType) {
+                Swal.fire({
+                  icon: "success",
+                  title: ` Choose Return Type`,
                   showConfirmButton: false,
                   timer: 2000,
                 });
@@ -206,12 +214,12 @@ const ReturnItems = ({
                 >
                   Inward Qty
                 </th>
-                 <th
+                <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
                   Already Return Qty
                 </th>
-                 <th
+                <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
                   Balance Qty
@@ -352,7 +360,7 @@ const ReturnItems = ({
                       disabled={true}
                     />
                   </td>
-                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
                     <input
                       onKeyDown={(e) => {
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -367,15 +375,23 @@ const ReturnItems = ({
                       onFocus={(e) => e.target.select()}
                       value={row?.alreadyReturnQty}
                       onChange={(e) =>
-                        handleInputChange(e.target.value, index, "alreadyReturnQty")
+                        handleInputChange(
+                          e.target.value,
+                          index,
+                          "alreadyReturnQty",
+                        )
                       }
                       onBlur={(e) => {
-                        handleInputChange(e.target.value, index, "alreadyReturnQty");
+                        handleInputChange(
+                          e.target.value,
+                          index,
+                          "alreadyReturnQty",
+                        );
                       }}
                       disabled={true}
                     />
                   </td>
-                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
                     <input
                       onKeyDown={(e) => {
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -492,13 +508,19 @@ const ReturnItems = ({
                 </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {returnItems
-                    ?.reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
+                    ?.reduce(
+                      (sum, row) => sum + (Number(row.inwardQty) || 0),
+                      0,
+                    )
                     .toFixed(2)}
                 </td>
-                <td className="border border-gray-300"colSpan={2}></td>
+                <td className="border border-gray-300" colSpan={2}></td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {returnItems
-                    ?.reduce((sum, row) => sum + (Number(row.returnQty) || 0), 0)
+                    ?.reduce(
+                      (sum, row) => sum + (Number(row.returnQty) || 0),
+                      0,
+                    )
                     .toFixed(2)}
                 </td>
                 <td className="border border-gray-300" colSpan={1}></td>

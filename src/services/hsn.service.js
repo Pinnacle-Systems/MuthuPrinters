@@ -29,7 +29,7 @@ async function get(req) {
 
 
 async function getOne(id) {
-    const childRecord = await prisma.deliveryChallanItems.count({ where: { hsnId: parseInt(id) } });
+    const childRecord = await prisma.styleItem.count({ where: { hsnId: parseInt(id) } });
     const data = await prisma.hsn.findUnique({
         where: {
             id: parseInt(id)

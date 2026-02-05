@@ -10,7 +10,7 @@ import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMas
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
 import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices";
 import Swal from "sweetalert2";
-import { useDeletePoMutation } from "../../../redux/uniformService/PoServices.js";
+import { useDeletePoMutation, useLazyGetPoByIdQuery } from "../../../redux/uniformService/PoServices.js";
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
 import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterService.js";
 
@@ -28,7 +28,10 @@ export default function Form() {
     isLoading,
     isFetching,
   } = useGetTermsandCondtionsQuery({ params });
-
+  const [trigger, { data: singleData,
+    isFetching: isSingleFetching,
+    isLoading: isSingleLoading, }] =
+    useLazyGetPoByIdQuery();
   const handleView = (orderId) => {
     setId(orderId);
     setShowForm(true);
@@ -43,35 +46,52 @@ export default function Form() {
   const [removeData] = useDeletePoMutation();
   const handleDelete = async (id) => {
     setId(id);
+    const { data } = await trigger(id);
     if (id) {
       if (!window.confirm("Are you sure to delete...?")) {
         return;
       }
-      try {
-        let deldata = await removeData(id).unwrap();
-        if (deldata?.statusCode == 1) {
-          Swal.fire({
-            icon: "error",
-            title: "Child record Exists",
-            text: deldata.data?.message || "Data cannot be deleted!",
-          });
-          return;
-        }
-        setId("");
-        Swal.fire({
-          title: "Deleted Successfully",
-          icon: "success",
-          timer: 1000,
-        });
-        setShowForm(false);
-        // dispatch(StyleMasterApi.util.invalidateTags(["StyleMaster"]));
-      } catch (error) {
+      if (data?.data?.childRecordInward > 0) {
         Swal.fire({
           icon: "error",
-          title: "Submission error",
-          text: error.data?.message || "Something went wrong!",
+          title: "This Transaction used in Purchase Inward",
+          text: "Data cannot be deleted!",
         });
-        setShowForm(false);
+      }
+      else if (data?.data?.childRecordCancel > 0) {
+        Swal.fire({
+          icon: "error",
+          title: "This Transaction used in Purchase Cancel",
+          text: "Data cannot be deleted!",
+        });
+      }
+      else {
+        try {
+          let deldata = await removeData(id).unwrap();
+          if (deldata?.statusCode == 1) {
+            Swal.fire({
+              icon: "error",
+              title: "Child record Exists",
+              text: deldata.data?.message || "Data cannot be deleted!",
+            });
+            return;
+          }
+          setId("");
+          Swal.fire({
+            title: "Deleted Successfully",
+            icon: "success",
+            timer: 1000,
+          });
+          setShowForm(false);
+          // dispatch(StyleMasterApi.util.invalidateTags(["StyleMaster"]));
+        } catch (error) {
+          Swal.fire({
+            icon: "error",
+            title: "Submission error",
+            text: error.data?.message || "Something went wrong!",
+          });
+          setShowForm(false);
+        }
       }
     }
   };
@@ -89,7 +109,7 @@ export default function Form() {
   const { data: uomList } = useGetUnitOfMeasurementMasterQuery({ params });
   const { data: hsnList } =
     useGetHsnMasterQuery({ params });
-     const { data: payTermList } = useGetPaytermMasterQuery({ params });
+  const { data: payTermList } = useGetPaytermMasterQuery({ params });
 
   return (
     <>

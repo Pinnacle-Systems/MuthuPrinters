@@ -101,6 +101,7 @@ const PoApi = createApi({
 export const {
   useGetPoQuery,
   useGetPoByIdQuery,
+  useLazyGetPoByIdQuery,
   useGetPoItemsQuery,
   useGetPoItemByIdQuery,
   useAddPoMutation,

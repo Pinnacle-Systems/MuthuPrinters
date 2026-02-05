@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { findFromList, getDateFromDateTimeToDisplay } from '../../../Utils/helper';
 import { useGetPoItemsQuery } from '../../../redux/uniformService/PoServices';
 
-const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, supplierId }) => {
+const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, supplierId, inwardType }) => {
     const [localinwardItems, setLocalinwardItems] = useState([]);
     const [searchDocId, setSearchDocId] = useState("");
     const [searchPoDate, setPoDate] = useState("");
@@ -11,8 +11,9 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
     const [searchSupplier, setSearchSupplier] = useState("");
     const [dataPerPage, setDataPerPage] = useState("10");
     const [totalCount, setTotalCount] = useState(0);
+    const [searchInwardType, setsearchInwardType] = useState(inwardType)
     const [currentPageNumber, setCurrentPageNumber] = useState(1);
-    const searchFields = { searchDocId, searchPoDate, searchSupplier, searchPoType, searchDueDate }
+    const searchFields = { searchDocId, searchPoDate, searchSupplier, searchPoType, searchInwardType }
 
     useEffect(() => {
         setCurrentPageNumber(1);
@@ -326,15 +327,15 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                                     <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
                                         {parseFloat(item?.alreadyInwardQty || 0).toFixed(2)}
                                     </td>
-                                     <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
+                                    <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
                                         {parseFloat(item?.alreadyReturnQty || 0).toFixed(2)}
                                     </td>
-                                     <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
+                                    <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
                                         {parseFloat(item?.balQty || 0).toFixed(2)}
                                     </td>
 
                                     <td className=" border border-gray-300 text-[11px] text-right  py-1.5 px-2">
-                                        {parseFloat(item?.price|| 0).toFixed(2)}
+                                        {parseFloat(item?.price || 0).toFixed(2)}
                                     </td>
                                 </tr>
                             ))}

@@ -12,6 +12,7 @@ import {
     useAddUomMutation,
     useUpdateUomMutation,
     useDeleteUomMutation,
+    useLazyGetUomByIdQuery,
 } from '../../../redux/services/UomMasterService.js';
 import { Check, Power } from 'lucide-react';
 import Modal from '../../../UiComponents/Modal/index.js';
@@ -37,6 +38,7 @@ export default function Form() {
 
     const { data: allData, isLoading, isFetching } = useGetUomQuery({ params, searchParams: searchValue });
     const { data: singleData, isFetching: isSingleFetching, isLoading: isSingleLoading } = useGetUomByIdQuery(id, { skip: !id });
+  const [trigger, { data: LazyData }] = useLazyGetUomByIdQuery();
 
     const [addData] = useAddUomMutation();
     const [updateData] = useUpdateUomMutation();
@@ -129,6 +131,8 @@ export default function Form() {
     }
 
     const deleteData = async (id , childRecord) => {
+                const { data } = await trigger(id);
+
         if (childRecord) {
             Swal.fire({
                 icon: "error",
@@ -140,6 +144,13 @@ export default function Form() {
             if (!window.confirm("Are you sure to delete...?")) {
                 return
             }
+            if (data?.data?.childRecord > 0) {
+                    Swal.fire({
+                      icon: "error",
+                      title: "Child record Exists",
+                      text: "Data cannot be deleted!",
+                    });
+                  } else {
             try {
                 let returnData = await removeData(id).unwrap();
                 if (returnData.statusCode === 0) {
@@ -158,7 +169,7 @@ export default function Form() {
                 }
             } catch (error) {
                 toast.error("something went wrong")
-            }
+            }}
             ;
         }
     }

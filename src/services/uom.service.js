@@ -30,7 +30,7 @@ async function get(req) {
 
 
 async function getOne(id) {
-    const childRecord = await prisma.DeliveryChallanItems.count({ where: { uomId: parseInt(id) } });
+    const childRecord = await prisma.poItems.count({ where: { uomId: parseInt(id) } });
     // const childRecord = 0;
     const data = await prisma.uom.findUnique({
         where: {

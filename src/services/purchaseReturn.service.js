@@ -196,29 +196,41 @@ async function getOne(id) {
           qty: true,
         },
       });
-      const stkQty = await prisma.stock.aggregate({
+      const returnItems = await prisma.purchaseReturnItems.findMany({
         where: {
           styleItemId: item.styleItemId,
+          purchaseInwardId: item.purchaseInwardId,
           uomId: item.uomId,
           hsnId: item.hsnId,
         },
-        _sum: {
-          qty: true,
+        select: {
+          returnQty: true,
         },
       });
-      const inwardQty = await prisma.inwardItems.findUnique({
+
+      const returnQty = returnItems.reduce(
+        (sum, item) => sum + (item.returnQty ?? 0),
+        0,
+      );
+      const inwardQty = await prisma.inwardItems.findFirst({
         where: {
-          id: item.purchaseInwardId,
+          purchaseInwardId: item.purchaseInwardId,
+          styleItemId: item.styleItemId,
+          uomId: item.uomId,
+          hsnId: item.hsnId,
+          invNo: item.invNo,
         },
-        include: {
+        select: {
           inwardQty: true,
         },
       });
       return {
         ...item,
-        balQty: stkQty._sum.qty + item.returnQty,
+        // balQty: inwardQty.inwardQty - item.returnQty ,
+        balQty: inwardQty.inwardQty - returnQty + item.returnQty,
         poQty: poQty.qty,
-        inwardQty: inwardQty.inwardQty,
+        inwardQty: inwardQty?.inwardQty || 0,
+        alreadyReturnQty: returnQty,
       };
     }),
   );

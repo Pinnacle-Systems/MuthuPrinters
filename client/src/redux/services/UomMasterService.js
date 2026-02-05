@@ -82,6 +82,7 @@ const uomMasterApi = createApi({
 export const {
     useGetUomQuery,
     useGetUomByIdQuery,
+    useLazyGetUomByIdQuery,
     useAddUomMutation,
     useUpdateUomMutation,
     useDeleteUomMutation,

@@ -11,12 +11,13 @@ const PurchaseItemsSelection = ({
   setFillGrid,
   branchId,
   supplierId,
+  poType
 }) => {
   const [localcancelItems, setLocalCancelItems] = useState([]);
   const [searchDocId, setSearchDocId] = useState("");
   const [searchDocDate, setSearchDocDate] = useState("");
   const [searchDcDate, setSearchDcDate] = useState("");
-  const [searchInwardType, setSearchInwardType] = useState("");
+  const [searchInwardType, setSearchInwardType] = useState(poType);
   const [searchSupplier, setSearchSupplier] = useState("");
   const [dataPerPage, setDataPerPage] = useState("10");
   const [totalCount, setTotalCount] = useState(0);

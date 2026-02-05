@@ -230,22 +230,13 @@ async function getOne(id) {
 
         returnQty = returnAgg._sum.returnQty ?? 0;
       }
-      const stkQty = await prisma.stock.aggregate({
-        where: {
-          styleItemId: item.styleItemId,
-          uomId: item.uomId,
-          hsnId: item.hsnId,
-        },
-        _sum: {
-          qty: true,
-        },
-      });
+      
       return {
         ...item,
         poQty: poQty.qty,
-        inwardQty,
-        returnQty,
-        balQty: stkQty._sum.qty + item.cancelQty,
+        alreadyInwardQty: inwardQty,
+        alreadyReturnQty: returnQty,
+        balQtyCancel: poQty.qty - (inwardQty - returnQty),
       };
     }),
   );

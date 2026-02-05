@@ -10,7 +10,7 @@ import { Check, Power } from "lucide-react";
 import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import Swal from "sweetalert2";
-import { useAddHsnMasterMutation, useDeleteHsnMasterMutation, useGetHsnMasterByIdQuery, useGetHsnMasterQuery, useUpdateHsnMasterMutation } from "../../../redux/services/HsnMasterServices";
+import { useAddHsnMasterMutation, useDeleteHsnMasterMutation, useGetHsnMasterByIdQuery, useGetHsnMasterQuery, useLazyGetHsnMasterByIdQuery, useUpdateHsnMasterMutation } from "../../../redux/services/HsnMasterServices";
 
 
 export default function Form() {
@@ -39,6 +39,7 @@ export default function Form() {
         isLoading: isSingleLoading,
     } = useGetHsnMasterByIdQuery(id, { skip: !id });
 
+  const [trigger, { data: LazyData }] = useLazyGetHsnMasterByIdQuery();
 
     const [addData] = useAddHsnMasterMutation();
     const [updateData] = useUpdateHsnMasterMutation();
@@ -135,6 +136,7 @@ export default function Form() {
     };
 
     const deleteData = async (id,childRecord) => {
+        const { data } = await trigger(id);
         if (childRecord) {
             Swal.fire({
                 icon: "error",
@@ -146,6 +148,13 @@ export default function Form() {
             if (!window.confirm("Are you sure to delete...?")) {
                 return;
             }
+              if (data?.data?.childRecord > 0) {
+                    Swal.fire({
+                      icon: "error",
+                      title: "Child record Exists",
+                      text: "Data cannot be deleted!",
+                    });
+                  } else {
             try {
                 await removeData(id)
                 setId("");
@@ -156,7 +165,7 @@ export default function Form() {
                 });
             } catch (error) {
                 toast.error("something went wrong");
-            }
+            }}
         }
     };
 

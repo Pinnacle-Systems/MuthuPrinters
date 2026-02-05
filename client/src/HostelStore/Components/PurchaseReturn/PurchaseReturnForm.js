@@ -29,11 +29,14 @@ import { dropDownListObject } from "../../../Utils/contructObject";
 import { useGetBranchByIdQuery } from "../../../redux/services/BranchMasterService";
 import ReturnItems from "./ReturnItems";
 import { useGetLocationMasterQuery } from "../../../redux/services/LocationMasterService";
-import {
+import purchaseReturnApi, {
   useAddPurchaseReturnMutation,
   useGetPurchaseReturnByIdQuery,
   useUpdatePurchaseReturnMutation,
 } from "../../../redux/services/PurchaseReturnService";
+import { useDispatch } from "react-redux";
+import purchaseInwardEntryApi from "../../../redux/uniformService/PurchaseInwardEntry";
+import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
 
 const PurchaseReturnForm = ({
   onClose,
@@ -87,6 +90,7 @@ const PurchaseReturnForm = ({
 
   const [addData] = useAddPurchaseReturnMutation();
   const [updateData] = useUpdatePurchaseReturnMutation();
+  const dispatch = useDispatch();
 
   const { data: branchdata } = useGetBranchByIdQuery(branchId, {
     skip: !branchId,
@@ -100,7 +104,7 @@ const PurchaseReturnForm = ({
           ? moment.utc(data.docDate).format("YYYY-MM-DD")
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
-      setReturnType(data?.returnType || "General Purchase Inward");
+      setReturnType(data?.returnType || "Purchase Return");
       setLocationId(data?.Store ? data.Store.locationId : branchId);
       setStoreId(data?.storeId ? data.storeId : "");
       setReturnItems(
@@ -278,6 +282,11 @@ const PurchaseReturnForm = ({
     } else {
       handleSubmitCustom(addData, data, "Added", nextProcess);
     }
+    dispatch(
+      purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
+    );
+    dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
+    dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
   };
 
   const dateRef = useRef(null);

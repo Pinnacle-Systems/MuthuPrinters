@@ -17,7 +17,6 @@ const TaxDetailsFullTemplate = ({
 }) => {
   const substract = s;
   const [formulas, setFormulas] = useState([]);
-  console.log(poItems, "poItems");
 
   const { data, isLoading, isFetching } = useGetTaxTemplateByIdQuery(
     taxTypeId,

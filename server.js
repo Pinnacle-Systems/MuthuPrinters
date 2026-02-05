@@ -125,7 +125,10 @@ app.use("/termsconditions", termsAndCondition)
 app.use("/payTerm", payTerm);
 app.use("/location", location);
 
-
+app.get("/retreiveFile/:fileName", (req, res) => {
+  const { fileName } = req.params;
+  res.sendFile(__dirname + "/uploads/" + fileName);
+});
 
 
 const httpServer = createServer(app);

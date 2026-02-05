@@ -80,6 +80,7 @@ const TaxTermMasterApi = createApi({
 export const {
   useGetTaxTermMasterQuery,
   useGetTaxTermMasterByIdQuery,
+  useLazyGetTaxTermMasterByIdQuery,
   useAddTaxTermMasterMutation,
   useUpdateTaxTermMasterMutation,
   useDeleteTaxTermMasterMutation,

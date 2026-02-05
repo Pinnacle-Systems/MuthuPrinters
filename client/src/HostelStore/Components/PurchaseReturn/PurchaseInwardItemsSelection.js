@@ -11,12 +11,13 @@ const PurchaseInwardItemsSelection = ({
   setFillGrid,
   branchId,
   supplierId,
+  returnType,
 }) => {
   const [localReturnItems, setLocalReturnItems] = useState([]);
   const [searchDocId, setSearchDocId] = useState("");
   const [searchDocDate, setSearchDocDate] = useState("");
   const [searchDcDate, setSearchDcDate] = useState("");
-  const [searchInwardType, setSearchInwardType] = useState("");
+  const [searchInwardType, setSearchInwardType] = useState(returnType);
   const [searchSupplier, setSearchSupplier] = useState("");
   const [dataPerPage, setDataPerPage] = useState("10");
   const [totalCount, setTotalCount] = useState(0);

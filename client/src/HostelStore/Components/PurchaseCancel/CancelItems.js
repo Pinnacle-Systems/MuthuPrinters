@@ -146,6 +146,7 @@ const CancelItems = ({
           cancelItems={cancelItems}
           setCancelItems={setCancelItems}
           branchId={branchId}
+          poType={poType}
         />
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">

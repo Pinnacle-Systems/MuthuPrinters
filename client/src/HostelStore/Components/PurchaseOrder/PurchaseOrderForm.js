@@ -53,6 +53,11 @@ import {
 import { groupBy } from "lodash";
 import PoItems from "./PoItems";
 import PurchaseOrderPrintFormat from "./PrintFormat-PO";
+import { useDispatch } from "react-redux";
+import purchaseInwardEntryApi from "../../../redux/uniformService/PurchaseInwardEntry";
+import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
+import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
+
 const PurchaseOrderForm = ({
   onClose,
   id,
@@ -118,6 +123,7 @@ const PurchaseOrderForm = ({
 
   const [addData] = useAddPoMutation();
   const [updateData] = useUpdatePoMutation();
+  const dispatch = useDispatch();
 
   const { data: branchdata } = useGetBranchByIdQuery(branchId, {
     skip: !branchId,
@@ -329,6 +335,11 @@ const PurchaseOrderForm = ({
     } else {
       handleSubmitCustom(addData, data, "Added", nextProcess);
     }
+    dispatch(
+      purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
+    );
+    dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
+    dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
   };
 
   const dateRef = useRef(null);
@@ -394,7 +405,7 @@ const PurchaseOrderForm = ({
     ),
   ].sort((a, b) => a - b);
 
-   const handleKeyDown = (event) => {
+  const handleKeyDown = (event) => {
     let charCode = String.fromCharCode(event.which).toLowerCase();
     if ((event.ctrlKey || event.metaKey) && charCode === "s") {
       event.preventDefault();
@@ -420,6 +431,8 @@ const PurchaseOrderForm = ({
           taxTypeId={taxTemplateId}
           readOnly={readOnly}
           isSupplierOutside={isSupplierOutside()}
+          isNewVersion={isNewVersion}
+          quoteVersion={quoteVersion}
         />
       </Modal>
       <Modal
@@ -446,7 +459,7 @@ const PurchaseOrderForm = ({
           </button>
         </div>
       </div>
-      <div className="space-y-2 py-2"  onKeyDown={handleKeyDown}>
+      <div className="space-y-2 py-2" onKeyDown={handleKeyDown}>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
             <h2 className="font-medium text-slate-700 mb-2">Basic Details</h2>

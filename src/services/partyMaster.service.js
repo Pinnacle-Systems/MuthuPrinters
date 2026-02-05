@@ -184,7 +184,7 @@ export async function getNew(req) {
 
 
 async function getOne(id) {
-    const childRecord = await prisma.deliveryChallan.count({ where: { supplierId: parseInt(id) } });
+    const childRecord = await prisma.po.count({ where: { supplierId: parseInt(id) } });
 
     const data = await prisma.party.findUnique({
         where: {
@@ -315,7 +315,6 @@ async function create(body) {
         landMark, contact, designation, department, contactPersonEmail, contactNumber, alterContactNumber, bankname,
         bankBranchName, accountNumber, ifscCode, attachments, msmeNo, companyAlterNumber, partyCode, parentId, branchTypeId, isBranch
     } = await body
-    console.log(body, 'body')
 
     const data = await prisma.party.create(
         {

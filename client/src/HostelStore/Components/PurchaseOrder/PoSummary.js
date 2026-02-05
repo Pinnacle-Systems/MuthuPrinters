@@ -9,12 +9,17 @@ const PoSummary = ({
   setDiscountType,
   discountValue,
   setDiscountValue,
+  isNewVersion,
+  quoteVersion,
 }) => {
-  // =================== CALCULATIONS ===================
+  const visibleItems = poItems.filter((row) =>
+    isNewVersion
+      ? row.quoteVersion === "New"
+      : parseInt(row.quoteVersion) === parseInt(quoteVersion),
+  );
 
-  // 1️⃣ GROSS = price * qty
-  const grossAmount = poItems.reduce(
-    (sum, row) => sum + (Number(row.price) || 0) * (Number(row.qty) || 0),
+  const totalAmount = visibleItems.reduce(
+    (sum, row) => sum + (Number(row.taxable) || 0),
     0,
   );
 
@@ -25,22 +30,16 @@ const PoSummary = ({
   if (discountType === "Flat") {
     discountAmount = discountValueNum;
   } else if (discountType === "Percentage") {
-    discountAmount = (grossAmount * discountValueNum) / 100;
+    discountAmount = (totalAmount * discountValueNum) / 100;
   }
 
   // 3️⃣ NET & ROUNDING
-  const netValue = grossAmount - discountAmount;
-  const netAmount = Math.round(netValue);
-  const roundoff = netAmount - netValue;
 
-  const taxGroupWise = groupBy(poItems, "taxPercent");
+  const taxGroupWise = groupBy(visibleItems, "taxPercent");
   const displayTaxRows = Object.entries(taxGroupWise)
-    .filter(([taxPercent]) =>  Number(taxPercent) > 0) // ignore null / 0
+    .filter(([taxPercent]) => Number(taxPercent) > 0) // ignore null / 0
     .map(([taxPercent, items]) => {
-      const taxable = items.reduce(
-        (sum, item) => sum + item.qty * item.price,
-        0,
-      );
+      const taxable = items.reduce((sum, item) => sum + item.taxable, 0);
 
       const taxRate = Number(taxPercent);
       const halfTax = taxRate / 2;
@@ -53,6 +52,17 @@ const PoSummary = ({
         cgstAmount: (taxable * halfTax) / 100,
       };
     });
+
+  const totalTaxAmount = displayTaxRows.reduce(
+    (sum, tax) => sum + tax.sgstAmount + tax.cgstAmount,
+    0,
+  );
+  const grossAmount = totalAmount - discountAmount;
+
+  const netValue = grossAmount + totalTaxAmount;
+
+  const netAmount = Math.round(netValue);
+  const roundoff = netAmount - netValue;
 
   // =================== UI ===================
   return (
@@ -103,6 +113,22 @@ const PoSummary = ({
 
           {/* GROSS */}
           <tr>
+            <td className="border border-gray-500 font-semibold">Total</td>
+            <td />
+            <td className="border border-gray-500 text-right">
+              {totalAmount.toFixed(2)}
+            </td>
+          </tr>
+          <tr>
+            <td className="border border-gray-500 font-semibold">
+              Discount Amount
+            </td>
+            <td />
+            <td className="border border-gray-500 text-right">
+              {discountAmount.toFixed(2)}
+            </td>
+          </tr>
+          <tr>
             <td className="border border-gray-500 font-semibold">Gross</td>
             <td />
             <td className="border border-gray-500 text-right">
@@ -114,9 +140,7 @@ const PoSummary = ({
           {displayTaxRows.map((tax, index) => (
             <React.Fragment key={index}>
               <tr>
-                <td className="border border-gray-500 font-semibold">
-                  SGST
-                </td>
+                <td className="border border-gray-500 font-semibold">SGST</td>
                 <td className="border border-gray-500 text-right">
                   {tax.halfTax}
                 </td>
@@ -126,9 +150,7 @@ const PoSummary = ({
               </tr>
 
               <tr>
-                <td className="border border-gray-500 font-semibold">
-                  CGST
-                </td>
+                <td className="border border-gray-500 font-semibold">CGST</td>
                 <td className="border border-gray-500 text-right">
                   {tax.halfTax}
                 </td>
@@ -140,15 +162,6 @@ const PoSummary = ({
           ))}
 
           {/* DISCOUNT AMOUNT */}
-          <tr>
-            <td className="border border-gray-500 font-semibold">
-              Discount Amount
-            </td>
-            <td />
-            <td className="border border-gray-500 text-right">
-              {discountAmount.toFixed(2)}
-            </td>
-          </tr>
 
           {/* NET */}
           <tr>

@@ -6,6 +6,7 @@ import {
   useAddTaxTemplateMutation,
   useUpdateTaxTemplateMutation,
   useDeleteTaxTemplateMutation,
+  useLazyGetTaxTemplateByIdQuery,
 } from "../../../redux/services/TaxTemplateServices";
 import FormHeader from "../../../Basic/components/FormHeader";
 import FormReport from "../../../Basic/components/FormReportTemplate";
@@ -41,10 +42,10 @@ export default function Form() {
   const dispatch = useDispatch();
 
   const companyId = secureLocalStorage.getItem(
-    sessionStorage.getItem("sessionId") + "userCompanyId"
+    sessionStorage.getItem("sessionId") + "userCompanyId",
   );
   const userId = secureLocalStorage.getItem(
-    sessionStorage.getItem("sessionId") + "userId"
+    sessionStorage.getItem("sessionId") + "userId",
   );
   const params = {
     companyId,
@@ -61,7 +62,7 @@ export default function Form() {
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetTaxTemplateByIdQuery(id, { skip: !id });
-
+  const [trigger, { data: LazyData }] = useLazyGetTaxTemplateByIdQuery();
   const [addData] = useAddTaxTemplateMutation();
   const [updateData] = useUpdateTaxTemplateMutation();
   const [removeData] = useDeleteTaxTemplateMutation();
@@ -73,7 +74,7 @@ export default function Form() {
       setTaxTemplateDetails(data ? data?.TaxTemplateDetails : []);
       setActive(id ? (data?.active ? data.active : false) : true);
     },
-    [id]
+    [id],
   );
 
   useEffect(() => {
@@ -155,31 +156,41 @@ export default function Form() {
   };
 
   const deleteData = async (id) => {
+    const { data } = await trigger(id);
+
     if (id) {
       if (!window.confirm("Are you sure to delete...?")) {
         return;
       }
-      try {
-        await removeData(id);
-        setId("");
-        dispatch({
-          type: `TaxTermMaster/invalidateTags`,
-          payload: ["Tax Name"],
-        });
-        onNew();
-        setForm(false);
+      if (data?.data?.childRecord > 0) {
         Swal.fire({
-          title: "Deleted" + "  " + "Successfully",
-          icon: "success",
-          // draggable: true,
-          // timer: 1000,
-          // showConfirmButton: false,
-          // didOpen: () => {
-          //     Swal.showLoading();
-          // }
+          icon: "error",
+          title: "Child Record",
+          text: "Data cannot be deleted!",
         });
-      } catch (error) {
-        toast.error("something went wrong");
+      } else {
+        try {
+          await removeData(id);
+          setId("");
+          dispatch({
+            type: `TaxTermMaster/invalidateTags`,
+            payload: ["Tax Name"],
+          });
+          onNew();
+          setForm(false);
+          Swal.fire({
+            title: "Deleted" + "  " + "Successfully",
+            icon: "success",
+            // draggable: true,
+            // timer: 1000,
+            // showConfirmButton: false,
+            // didOpen: () => {
+            //     Swal.showLoading();
+            // }
+          });
+        } catch (error) {
+          toast.error("something went wrong");
+        }
       }
     }
   };

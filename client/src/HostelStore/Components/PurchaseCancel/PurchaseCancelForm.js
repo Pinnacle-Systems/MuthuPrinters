@@ -29,11 +29,14 @@ import { dropDownListObject } from "../../../Utils/contructObject";
 import { useGetBranchByIdQuery } from "../../../redux/services/BranchMasterService";
 import CancelItems from "./CancelItems";
 import { useGetLocationMasterQuery } from "../../../redux/services/LocationMasterService";
-import {
+import purchaseCancelApi, {
   useAddPurchaseCancelMutation,
   useGetPurchaseCancelByIdQuery,
   useUpdatePurchaseCancelMutation,
 } from "../../../redux/uniformService/PurchaseCancelService";
+import { useDispatch } from "react-redux";
+import purchaseInwardEntryApi from "../../../redux/uniformService/PurchaseInwardEntry";
+import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
 
 const PurchaseCancelForm = ({
   onClose,
@@ -85,6 +88,7 @@ const PurchaseCancelForm = ({
 
   const [addData] = useAddPurchaseCancelMutation();
   const [updateData] = useUpdatePurchaseCancelMutation();
+  const dispatch = useDispatch();
 
   const { data: branchdata } = useGetBranchByIdQuery(branchId, {
     skip: !branchId,
@@ -267,6 +271,11 @@ const PurchaseCancelForm = ({
     } else {
       handleSubmitCustom(addData, data, "Added", nextProcess);
     }
+    dispatch(
+      purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
+    );
+    dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
+    dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
   };
 
   const dateRef = useRef(null);

@@ -80,6 +80,7 @@ const HsnMasterApi = createApi({
 export const {
   useGetHsnMasterQuery,
   useGetHsnMasterByIdQuery,
+  useLazyGetHsnMasterByIdQuery,
   useAddHsnMasterMutation,
   useUpdateHsnMasterMutation,
   useDeleteHsnMasterMutation,

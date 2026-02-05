@@ -29,6 +29,7 @@ const PoItems = ({
     price: "",
     qty: "",
     quoteVersion: "New",
+    netAmount: 0,
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -40,15 +41,12 @@ const PoItems = ({
       uomId: "",
       price: "",
       qty: "",
-      quoteVersion: id
-      ? isNewVersion
-        ? "New"
-        : quoteVersion
-      : 1,
+      quoteVersion: id ? (isNewVersion ? "New" : quoteVersion) : 1,
+      netAmount: 0,
     };
     setPoItems([...poItems, newRow]);
   };
- const [triggerGetStyleItem, { data: styleData }] =
+  const [triggerGetStyleItem, { data: styleData }] =
     useLazyGetStyleItemMasterByIdQuery();
   const handleInputChange = async (value, index, field) => {
     // clone first
@@ -64,7 +62,7 @@ const PoItems = ({
 
         // 3️⃣ update fabricId
         newRows[index].hsnId = response?.data?.hsnId;
-        newRows[index].taxPercent = response?.data?.Hsn?.tax
+        newRows[index].taxPercent = response?.data?.Hsn?.tax;
         // 4️⃣ update again after API fetch
         setPoItems([...newRows]);
       } catch (e) {
@@ -176,6 +174,49 @@ const PoItems = ({
   }, [isNewVersion, quoteVersion]);
   let count = 1;
 
+  useEffect(() => {
+    // Recalculate net amount for all rows whenever dependent fields change
+    const updatedRows = poItems.map((row) => {
+      const price = parseFloat(row.price) || 0;
+      const qty = parseFloat(row.qty) || 0;
+      const taxPercent = parseFloat(row.taxPercent) || 0;
+      const discountValue = parseFloat(row.discountValue) || 0;
+      const discountType = row.discountType;
+
+      const gross = price * qty;
+
+      let discountAmount = 0;
+      if (discountType) {
+        if (discountType === "Flat") {
+          discountAmount = discountValue;
+        } else {
+          discountAmount = (gross * discountValue) / 100;
+        }
+      }
+
+      const taxable = gross - discountAmount;
+      const sgst = (taxable * (taxPercent / 2)) / 100;
+      const cgst = (taxable * (taxPercent / 2)) / 100;
+
+      const net = taxable + sgst + cgst;
+
+      return {
+        ...row,
+        netAmount: Math.round(net),
+        taxable: taxable,
+      };
+    });
+
+    // Only update if net amounts actually changed
+    const needsUpdate = updatedRows.some(
+      (row, index) => row.netAmount !== (poItems[index]?.netAmount || 0),
+    );
+
+    if (needsUpdate) {
+      setPoItems(updatedRows);
+    }
+  }, [poItems]); // This will run whenever poItems change
+
   return (
     <>
       <Modal
@@ -237,7 +278,12 @@ const PoItems = ({
                 <th
                   className={`w-28 px-1 py-2 text-center font-medium text-[13px] `}
                 >
-                  Gross
+                  Gross Amount
+                </th>
+                <th
+                  className={`w-28 px-1 py-2 text-center font-medium text-[13px] `}
+                >
+                  Net Amount
                 </th>
                 <th
                   className={`w-24 px-1 py-2 text-center font-medium text-[13px] `}
@@ -419,6 +465,19 @@ const PoItems = ({
                         disabled={true}
                       />
                     </td>
+                    <td className="py-0.5 border border-gray-300 text-[11px]">
+                      <input
+                        type="number"
+                        className="text-right rounded py-1 px-1 w-full"
+                        value={
+                          row?.netAmount !== undefined &&
+                          row?.netAmount !== null
+                            ? Number(row.netAmount).toFixed(2)
+                            : "0"
+                        }
+                        disabled
+                      />
+                    </td>
 
                     <td className=" py-0.5 border border-gray-300 text-[11px] text-right">
                       <button
@@ -472,33 +531,61 @@ const PoItems = ({
                 </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {poItems
-                    ?.filter(
-                      (item) =>
-                        Number(item.quoteVersion) === Number(quoteVersion),
+                    ?.filter((item) =>
+                      id
+                        ? isNewVersion
+                          ? item.quoteVersion === "New"
+                          : parseInt(item.quoteVersion) ===
+                            parseInt(quoteVersion)
+                        : true,
                     )
                     ?.reduce((sum, row) => sum + (Number(row.qty) || 0), 0)
                     .toFixed(2)}
                 </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {poItems
-                    ?.filter(
-                      (item) =>
-                        Number(item.quoteVersion) === Number(quoteVersion),
+                    ?.filter((item) =>
+                      id
+                        ? isNewVersion
+                          ? item.quoteVersion === "New"
+                          : parseInt(item.quoteVersion) ===
+                            parseInt(quoteVersion)
+                        : true,
                     )
                     ?.reduce((sum, row) => sum + (Number(row.price) || 0), 0)
                     .toFixed(2)}
                 </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {poItems
-                    ?.filter(
-                      (item) =>
-                        Number(item.quoteVersion) === Number(quoteVersion),
+                    ?.filter((item) =>
+                      id
+                        ? isNewVersion
+                          ? item.quoteVersion === "New"
+                          : parseInt(item.quoteVersion) ===
+                            parseInt(quoteVersion)
+                        : true,
                     )
                     ?.reduce((sum, row) => {
                       const qty = parseFloat(row.qty) || 0;
                       const price = parseFloat(row.price) || 0;
                       return sum + qty * price;
                     }, 0)
+                    .toFixed(2)}
+                </td>
+                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                  {poItems
+                    ?.filter((item) =>
+                      id
+                        ? isNewVersion
+                          ? item.quoteVersion === "New"
+                          : parseInt(item.quoteVersion) ===
+                            parseInt(quoteVersion)
+                        : true,
+                    )
+                    ?.reduce(
+                      (sum, row) => sum + (Number(row.netAmount) || 0),
+                      0,
+                    )
                     .toFixed(2)}
                 </td>
                 <td className="border border-gray-300" colSpan={2}></td>

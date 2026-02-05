@@ -5,6 +5,7 @@ import {
   useDeleteTaxTermMasterMutation,
   useGetTaxTermMasterByIdQuery,
   useGetTaxTermMasterQuery,
+  useLazyGetTaxTermMasterByIdQuery,
   useUpdateTaxTermMasterMutation,
 } from "../../../redux/services/TaxTermMasterServices";
 import Swal from "sweetalert2";
@@ -30,7 +31,7 @@ export default function Form() {
 
   const params = {
     companyId: secureLocalStorage.getItem(
-      sessionStorage.getItem("sessionId") + "userCompanyId"
+      sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
   const {
@@ -43,6 +44,7 @@ export default function Form() {
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetTaxTermMasterByIdQuery(id, { skip: !id });
+  const [trigger, { data: LazyData }] = useLazyGetTaxTermMasterByIdQuery();
 
   const [addData] = useAddTaxTermMasterMutation();
   const [updateData] = useUpdateTaxTermMasterMutation();
@@ -55,7 +57,7 @@ export default function Form() {
       setIsPowise(id ? (data?.isPoWise ? data.isPoWise : false) : false);
       setActive(id ? (data?.active ? data.active : false) : true);
     },
-    [id]
+    [id],
   );
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export default function Form() {
     isPoWise,
     active,
     companyId: secureLocalStorage.getItem(
-      sessionStorage.getItem("sessionId") + "userCompanyId"
+      sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
 
@@ -131,25 +133,35 @@ export default function Form() {
   };
 
   const deleteData = async (id) => {
+    const { data } = await trigger(id);
+
     if (id) {
       if (!window.confirm("Are you sure to delete...?")) {
         return;
       }
-      try {
-        await removeData(id);
-        setId("");
+      if (data?.data?.childRecord > 0) {
         Swal.fire({
-          title: "Deleted" + "  " + "Successfully",
-          icon: "success",
-          // draggable: true,
-          // timer: 1000,
-          // showConfirmButton: false,
-          // didOpen: () => {
-          //     Swal.showLoading();
-          // }
+          icon: "error",
+          title: "Child Record",
+          text: "Data cannot be deleted!",
         });
-      } catch (error) {
-        toast.error("something went wrong");
+      } else {
+        try {
+          await removeData(id);
+          setId("");
+          Swal.fire({
+            title: "Deleted" + "  " + "Successfully",
+            icon: "success",
+            // draggable: true,
+            // timer: 1000,
+            // showConfirmButton: false,
+            // didOpen: () => {
+            //     Swal.showLoading();
+            // }
+          });
+        } catch (error) {
+          toast.error("something went wrong");
+        }
       }
     }
   };
@@ -216,7 +228,6 @@ export default function Form() {
     console.log("Edit");
   };
 
-  
   const countryNameRef = useRef(null);
 
   useEffect(() => {

@@ -20,7 +20,6 @@ async function get(req) {
 
 
 async function getOne(id) {
-    const childRecord = 0;
     const data = await prisma.taxTemplate.findUnique({
         where: {
             id: parseInt(id)
@@ -29,6 +28,11 @@ async function getOne(id) {
             TaxTemplateDetails: true
         }
     })
+    const childRecord = await prisma.po.count({
+    where: {
+      taxTemplateId: data.id,
+    },
+  });
     if (!data) return NoRecordFound("taxTemplate");
     return { statusCode: 0, data: { ...data, ...{ childRecord } } };
 }
