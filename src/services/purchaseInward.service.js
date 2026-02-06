@@ -466,9 +466,9 @@ async function getOne(id) {
       return {
         ...item,
         cancelQty,
-        alreadyInwardQty: inwardQty,
-        // balQty: item.poQty - (inwardQty + cancelQty),
-        balQty: item.poQty - (inwardQty + cancelQty) + item.inwardQty,
+        alreadyInwardQty: item.inwardQty,
+        balQty: item.poQty - (inwardQty + cancelQty),
+        // balQty: item.poQty - (inwardQty + cancelQty) + item.inwardQty,
       };
     }),
   );

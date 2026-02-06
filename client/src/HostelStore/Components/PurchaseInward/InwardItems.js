@@ -31,6 +31,9 @@ const InwardItems = ({
     inwardQty: "",
     poQty: "",
     poId: "",
+    alreadyInwardQty:"",
+    cancelQty:"",
+    balQty:""
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -536,14 +539,14 @@ const InwardItems = ({
                         handleInputChange(e.target.value, index, "inwardQty")
                       }
                       onBlur={(e) => {
-                        const minQty = row.balQty;
+                        const minQty = row.balQty + row.alreadyInwardQty;
                         if (inwardType !== "Direct Inward") {
                           if (parseFloat(minQty) < parseFloat(e.target.value)) {
                             e.target.value = "";
                             Swal.fire({
                               icon: "warning",
                               title: "Invalid Qty",
-                              text: `Inward Qty cannot be More than Balance Qty! - ${minQty}`,
+                              text: `Inward Qty cannot be More than ${minQty} Qty! `,
                               confirmButtonText: "OK",
                             });
                             return;

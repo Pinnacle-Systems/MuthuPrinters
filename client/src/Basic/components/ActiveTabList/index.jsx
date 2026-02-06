@@ -60,6 +60,9 @@ const ActiveTabList = () => {
     "PRODUCT CATEGORY MASTER": <ProductCategoryMaster />,
     "PRODUCT MASTER": <ProductMaster />,
     "PURCHASE BILL ENTRY": <PurchaseBillEntry />,
+    "PURCHASE ORDER": <PurchaseOrder />,
+    "PURCHASE CANCEL": <PurchaseCancel />,
+    "PURCHASE INWARD": <PurchaseInward />,
     "CUSTOMER/SUPPLIER MASTER": <PartyMaster />,
     "SALES BILL ENTRY": <SalesBillEntry />,
     "PURCHASE RETURN": <PurchaseReturn />,
@@ -89,12 +92,9 @@ const ActiveTabList = () => {
     "HSN MASTER": <HsnMaster />,
     "BRANCH TYPE MASTER": <BranchTypeMaster />,
     "OPENING BALANCE": <OpeningBalance />,
-    "PURCHASE ORDER": <PurchaseOrder />,
     "TERMS & CONDTIONS MASTER": <TermsAndCondition />,
     "PAY TERM MASTER": <PayTermMaster />,
     "LOCATION MASTER": <LocationMaster />,
-    "PURCHASE INWARD": <PurchaseInward />,
-    "PURCHASE CANCEL": <PurchaseCancel/>
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;
