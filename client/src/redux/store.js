@@ -48,6 +48,7 @@ import {
   TermsAndConditionsMasterApi,
   purchaseInwardEntryApi,
   purchaseCancelApi,
+  purchaseBillEntryApi,
 } from "./uniformService";
 
 const commonReducers = {
@@ -96,6 +97,7 @@ const commonReducers = {
   [openingBalanceApi.reducerPath]: openingBalanceApi.reducer,
   locationMaster: LocationMasterApi.reducer,
   [purchaseInwardEntryApi.reducerPath]: purchaseInwardEntryApi.reducer,
+  [purchaseBillEntryApi.reducerPath]: purchaseBillEntryApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -142,6 +144,7 @@ const commonMiddleware = [
   PaytermMasterApi.middleware,
   LocationMasterApi.middleware,
   purchaseInwardEntryApi.middleware,
+  purchaseBillEntryApi.middleware,
 ];
 
 const store = configureStore({

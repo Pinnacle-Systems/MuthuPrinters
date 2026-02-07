@@ -15,7 +15,7 @@ import {
 } from "../../../Utils/helper";
 import ReactPaginate from "react-paginate";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
-import { useGetPurchaseInwardEntryQuery } from "../../../redux/uniformService/PurchaseInwardEntry";
+import { useGetPurchaseBillEntryQuery } from "../../../redux/uniformService/PurchaseBillEntryService";
 
 const PurchaseBillEntryFormReport = ({
   onClick,
@@ -68,7 +68,7 @@ const PurchaseBillEntryFormReport = ({
     data: allData,
     isFetching,
     isLoading,
-  } = useGetPurchaseInwardEntryQuery({
+  } = useGetPurchaseBillEntryQuery({
     params: {
       branchId,
       ...searchFields,
@@ -111,11 +111,10 @@ const PurchaseBillEntryFormReport = ({
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className={`px-3 py-1 rounded-md ${
-              currentPage === 1
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 rounded-md ${currentPage === 1
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-white text-gray-600 hover:bg-gray-100"
+              }`}
           >
             <FaChevronLeft className="inline" />
           </button>
@@ -136,11 +135,10 @@ const PurchaseBillEntryFormReport = ({
               <button
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
-                className={`px-3 py-1 rounded-md ${
-                  currentPage === pageNum
-                    ? "bg-indigo-800 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
+                className={`px-3 py-1 rounded-md ${currentPage === pageNum
+                  ? "bg-indigo-800 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
+                  }`}
               >
                 {pageNum}
               </button>
@@ -154,11 +152,10 @@ const PurchaseBillEntryFormReport = ({
           {totalPages > 5 && currentPage < totalPages - 2 && (
             <button
               onClick={() => handlePageChange(totalPages)}
-              className={`px-3 py-1 rounded-md ${
-                currentPage === totalPages
-                  ? "bg-indigo-800 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-              }`}
+              className={`px-3 py-1 rounded-md ${currentPage === totalPages
+                ? "bg-indigo-800 text-white"
+                : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
             >
               {totalPages}
             </button>
@@ -167,11 +164,10 @@ const PurchaseBillEntryFormReport = ({
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className={`px-3 py-1 rounded-md ${
-              currentPage === totalPages
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 rounded-md ${currentPage === totalPages
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-white text-gray-600 hover:bg-gray-100"
+              }`}
           >
             <FaChevronRight className="inline" />
           </button>
@@ -188,61 +184,23 @@ const PurchaseBillEntryFormReport = ({
       <>
         <div className="h-[100vh] rounded-lg bg-[#F1F1F0] shadow-sm">
           <div className="h-[68vh]">
-            <table className="">
+            <table className="table-fixed">
               <thead className="bg-gray-200 text-gray-800 ">
                 <tr className="">
                   <th className=" px-1 py-1.5  font-medium text-[13px]  text-gray-900  text-center  w-12">
                     <div className="">S No</div>
                   </th>
 
-                  <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
-                    <div>Inward No</div>
-                    {/* <input
-                                            type="text"
-                                            className="text-black h-5   w-full py-1.5  px-1 focus:outline-none border  border-gray-400 rounded-lg"
-                                            placeholder="Search"
-                                            value={serachDocNo}
-                                            onChange={(e) => {
-                                                setSerachDocNo(e.target.value);
-                                            }}
-                                        /> */}
-                  </th>
-                  <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
-                    <div>Inward Date</div>
-                    {/* <input
-                                            type="text"
-                                            className="text-black h-5   w-full py-1.5  px-1 focus:outline-none border  border-gray-400 rounded-lg"
-                                            placeholder="Search"
-                                            value={searchDate}
-                                            onChange={(e) => {
-                                                setSearchDate(e.target.value);
-                                            }}
-                                        /> */}
-                  </th>
-                  <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-40">
-                    <div>Inward Type</div>
-                    {/* <input
-                                            type="text"
-                                            className="text-black h-5   w-full py-1.5  px-1 focus:outline-none border  border-gray-400 rounded-lg"
-                                            placeholder="Search"
-                                            value={searchDate}
-                                            onChange={(e) => {
-                                                setSearchDate(e.target.value);
-                                            }}
-                                        /> */}
-                  </th>
+                  <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-44">
+                    <div>Purchase Bill Entry No</div>
 
+                  </th>
+                  <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-44">
+                    <div>Purchase Bill Entry Date</div>
+                  </th>
                   <th className="w-80  px-3   font-medium text-[13px] text-gray-900  text-center ">
                     <div>Supplier</div>
-                    {/* <input
-                                            type="text"
-                                            className="text-black h-5   w-full py-1.5  px-1 focus:outline-none border  border-gray-400 rounded-lg"
-                                            placeholder="Search"
-                                            value={searchClientName}
-                                            onChange={(e) => {
-                                                setSearchClientName(e.target.value);
-                                            }}
-                                        /> */}
+
                   </th>
                   <th className="w-14   px-3  font-medium text-[13px]  text-gray-900  text-center ">
                     <div>Actions</div>
@@ -253,7 +211,7 @@ const PurchaseBillEntryFormReport = ({
                     <div className="h-3"></div>
                   </th>
 
-                  <th className=" px-1 font-medium text-[13px] border  text-gray-900  text-center w-32">
+                  <th className=" px-1 font-medium text-[13px] border  text-gray-900  text-left ">
                     <input
                       type="text"
                       className="text-black h-5   w-full  px-1 focus:outline-none border  border-gray-400 rounded-md"
@@ -275,17 +233,7 @@ const PurchaseBillEntryFormReport = ({
                       }}
                     />
                   </th>
-                  <th className="  px-1 font-medium text-[13px]  text-gray-900  text-center w-40">
-                    <input
-                      type="text"
-                      className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
-                      placeholder="Search"
-                      value={searchInwardType}
-                      onChange={(e) => {
-                        setSearchInwardType(e.target.value);
-                      }}
-                    />
-                  </th>
+
                   <th className="w-80  px-1 font-medium text-[13px]  text-gray-900  text-center ">
                     <input
                       type="text"
@@ -321,21 +269,18 @@ const PurchaseBillEntryFormReport = ({
                         }}
                         tabIndex={0}
                         key={dataObj.id}
-                        className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${
-                          index % 2 === 0 ? "bg-white" : "bg-gray-100"
-                        }`}
-                        onClick={() => {onClick(dataObj.id)}}
+                        className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${index % 2 === 0 ? "bg-white" : "bg-gray-100"
+                          }`}
+                        onClick={() => { onClick(dataObj.id) }}
                       >
                         <td className="text-center ">{index + 1}</td>
 
-                        <td className="py-1.5 text-center">{dataObj.docId} </td>
+                        <td className="py-1.5 text-left pl-1">{dataObj.docId} </td>
 
                         <td className="py-1.5 text-left">
                           {getDateFromDateTimeToDisplay(dataObj.docDate)}
                         </td>
-                        <td className="py-1.5 text-left  ">
-                          {dataObj.inwardType}{" "}
-                        </td>
+                        
 
                         <td className="py-1.5 text-left">
                           {" "}

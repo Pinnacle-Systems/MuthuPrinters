@@ -48,5 +48,8 @@ export const UNIT_OF_MEASUREMENT_API = 'uom'
 export const TERMS_CONDITIONS_API = "termsconditions"
 export const PAY_TERM_API = "payTerm";
 
+export const PURCHASE_BILL_ENTRY_API = "purchaseBillEntry"
+
+
 
 

@@ -1,48 +1,39 @@
 import React, { useEffect, useState } from 'react'
-import { findFromList, getDateFromDateTimeToDisplay } from '../../../Utils/helper';
-import { useGetPoItemsQuery } from '../../../redux/uniformService/PoServices';
+import { getDateFromDateTimeToDisplay } from '../../../Utils/helper';
 import {
 
     useGetPurchaseInwardEntryForBillByIdQuery,
-    useGetPurInwardItemsQuery,
 
 } from "../../../redux/uniformService/PurchaseInwardEntry";
-import { useCallback } from 'react';
 
-const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, supplierId, inwardType, dcNo, invNo }) => {
+const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, supplierId, inwardType }) => {
     const [localinwardItems, setLocalinwardItems] = useState([]);
     const [searchDocId, setSearchDocId] = useState("");
-    const [searchPoDate, setPoDate] = useState("");
-    const [searchDueDate, setDueDate] = useState("");
-    const [searchPoType, setSearchPoType] = useState("");
-    const [searchSupplier, setSearchSupplier] = useState("");
+    const [searchPIDate, setPIDate] = useState("");
+    const [searchInvNo, setSearchInvNo] = useState("");
+    const [searchDcNo, setSearchDcNo] = useState("");
     const [dataPerPage, setDataPerPage] = useState("10");
     const [totalCount, setTotalCount] = useState(0);
-    const [searchInwardType, setsearchInwardType] = useState(inwardType)
     const [currentPageNumber, setCurrentPageNumber] = useState(1);
-    const searchFields = { searchDocId, searchPoDate }
-    const [purchaseInwardItems, setPurchaseInwardItems] = useState([])
+    const searchFields = { searchDocId, searchPIDate, searchInvNo, searchDcNo }
 
     useEffect(() => {
         setCurrentPageNumber(1);
     }, [
-        searchDocId, searchPoDate, searchSupplier, searchPoType, searchDueDate
+        searchDocId, searchPIDate, searchDcNo, searchInvNo
     ]);
 
 
 
     const { data: purchaseInwarddata } = useGetPurchaseInwardEntryForBillByIdQuery({
         params: {
-            dcNo,
-            invNo,
+
             branchId,
             supplierId,
-            ...searchFields, pagination: true
+            ...searchFields, pagination: true, dataPerPage, pageNumber: currentPageNumber,
         }
     })
-    console.log(purchaseInwarddata?.data, "purchaseInwarddata");
 
-    console.log(purchaseInwardItems, "purchaseInwardItems");
 
     const isRowEmpty = (row) =>
         !row.styleItemId &&
@@ -50,14 +41,8 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
         !row.hsnId &&
         !row.inwardQty
 
-    const data = purchaseInwarddata?.data
-    const list = Object.values(purchaseInwarddata?.data || {});
-    console.log(data, "datalist");
 
-    const datadoc = data?.data?.map((val) => val?.docId)
-    console.log(datadoc, "datadoc");
-
-    const rawPoItems = purchaseInwarddata || [];
+   
 
 
 
@@ -77,11 +62,14 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
             // 2️⃣ Fill empty rows with our items
             localinwardItems.forEach((item, i) => {
                 const newRow = {
-                    ...item,
+                    docId: item?.PurchaseInward?.docId ?? "",
+                    docdate: item?.PurchaseInward?.docDate ? getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate) : "",
+                    invNo: item?.PurchaseInward?.invNo ?? "",
+                    dcNo: item?.PurchaseInward?.dcNo ?? "",
                     styleItemId: item.styleItemId ?? "",
                     uomId: item.uomId ?? "",
                     hsnId: item.hsnId ?? "",
-                    inwardQty: item.qty ?? "",
+                    inwardQty: item.inwardQty ?? "",
                 };
 
                 // If we have an empty row at this position, use it
@@ -100,18 +88,11 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
         setFillGrid(false);
     }
 
-    function handleCancel() {
-        setLocalinwardItems([]);
-        setFillGrid(false);
-    }
-
-    // if (!data?.data || isFetching || isLoading) return <Loader />
 
     function addItem(item) {
         setLocalinwardItems(localInwardItems => {
             let newItems = structuredClone(localInwardItems);
             newItems.push(item);
-            // newItems = newItems?.map(j => { return { ...j, delQty: j.qty } })
             return newItems
         });
     }
@@ -127,12 +108,22 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                     removeItem.uomId === item.uomId
                     &&
                     removeItem.inwardQty === item.inwardQty
+                    &&
+                    getDateFromDateTimeToDisplay(removeItem?.PurchaseInward?.docDate) === getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate)
+                    &&
+                    removeItem?.PurchaseInward?.docId === item?.PurchaseInward?.docId
+                    &&
+                    removeItem?.PurchaseInward?.invNo === item?.PurchaseInward?.invNo
+                    &&
+                    removeItem?.PurchaseInward?.dcNo === item?.PurchaseInward?.dcNo
                 )
             )
         });
     }
 
     function isItemChecked(checkItem) {
+        console.log(checkItem, "checkItem")
+
         let item = localinwardItems.find(item =>
             checkItem.styleItemId === item.styleItemId
             &&
@@ -141,6 +132,16 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
             checkItem.uomId === item.uomId
             &&
             checkItem.inwardQty === item.inwardQty
+            &&
+            getDateFromDateTimeToDisplay(checkItem?.PurchaseInward?.docDate) === getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate)
+            &&
+            checkItem?.PurchaseInward?.docId === item?.PurchaseInward?.docId
+            &&
+            checkItem?.PurchaseInward?.invNo === item?.PurchaseInward?.invNo
+            &&
+            checkItem?.PurchaseInward?.dcNo === item?.PurchaseInward?.dcNo
+
+
         )
         if (!item) return false
         return true
@@ -154,29 +155,23 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
             removeItem(item)
         }
     }
-
-    function handleSelectAllChange(value) {
-        if (value) {
-            (rawPoItems ? rawPoItems : []).forEach(item => addItem(item))
-        } else {
-            (rawPoItems ? rawPoItems : []).forEach(item => removeItem(item))
-        }
-    }
-
-    function getSelectAll() {
-        return (rawPoItems ? rawPoItems : []).every(item => isItemChecked(item))
-    }
-    const inwardArray = Array.isArray(purchaseInwarddata?.data)
-        ? purchaseInwarddata.data
-        : Object.values(purchaseInwarddata?.data || {});
-
-
     const rows = Array.isArray(purchaseInwarddata?.data)
         ? purchaseInwarddata.data
         : [];
 
-    console.log(inwardArray, "jsdhfksd");
+    function getSelectAll() {
+        if (rows.length === 0) return false;
 
+        return rows.every(row => isItemChecked(row));
+    }
+    function handleSelectAllChange(value) {
+        if (value) {
+            (rows ? rows : []).forEach(item => addItem(item))
+        } else {
+            (rows ? rows : []).forEach(item => removeItem(item))
+        }
+    }
+    console.log(inwardItems, "inwardItemsinpoItemselection");
 
     return (
         <div
@@ -187,12 +182,7 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                 {/* HEADER */}
                 <div className="bg-gradient-to-r from-gray-400 to-gray-500 text-white px-4 py-2 flex justify-between items-center">
                     <h2 className="text-sm font-semibold tracking-wide">Purchase Inward Items</h2>
-                    {/* <button
-                        className="px-3 py-1 bg-white/20 border border-white/30 text-white rounded-md hover:bg-white/30 transition"
-                        onClick={handleDone}
-                    >
-                        Done
-                    </button> */}
+
                 </div>
 
                 {/* TABLE CONTENT */}
@@ -207,7 +197,7 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                                             type="checkbox"
                                             className="cursor-pointer"
                                             onChange={(e) => handleSelectAllChange(e.target.checked)}
-                                        // checked={getSelectAll()}
+                                            checked={getSelectAll()}
                                         />
                                     </div>
                                 </th>
@@ -231,13 +221,43 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                                         type="text"
                                         className="text-black h-6 focus:outline-none border  border-gray-400 rounded-lg w-full"
                                         placeholder="Search"
-                                        value={searchPoDate}
+                                        value={searchPIDate}
                                         onChange={(e) => {
-                                            setPoDate(e.target.value);
+                                            setPIDate(e.target.value);
                                         }}
                                         onFocus={(e) => { e.target.select() }}
 
                                     />
+                                </th>
+                                <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-28">
+                                    <label>Inv No</label>
+                                    <input
+                                        type="text"
+                                        className="text-black h-6 focus:outline-none border  border-gray-400 rounded-lg w-full"
+                                        placeholder="Search"
+                                        value={searchInvNo}
+                                        onChange={(e) => {
+                                            setSearchInvNo(e.target.value);
+                                        }}
+                                        onFocus={(e) => { e.target.select() }}
+
+                                    />
+
+                                </th>
+                                <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-28">
+                                    <label>Dc No</label>
+                                    <input
+                                        type="text"
+                                        className="text-black h-6 focus:outline-none border  border-gray-400 rounded-lg w-full"
+                                        placeholder="Search"
+                                        value={searchDcNo}
+                                        onChange={(e) => {
+                                            setSearchDcNo(e.target.value);
+                                        }}
+                                        onFocus={(e) => { e.target.select() }}
+
+                                    />
+
                                 </th>
 
                                 <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-80">
@@ -298,6 +318,12 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                                         {item?.PurchaseInward?.docDate ? getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate) : ""}
 
                                     </td>
+                                    <td className=" border border-gray-300 text-right text-[11px] py-1.5 px-2">
+                                        {item?.PurchaseInward?.invNo}
+                                    </td>
+                                    <td className=" border border-gray-300 text-right text-[11px] py-1.5 px-2">
+                                        {item?.PurchaseInward?.dcNo}
+                                    </td>
                                     <td className=" border border-gray-300 text-[11px] py-1.5 px-2">
                                         {item?.StyleItem?.name}
                                     </td>
@@ -308,12 +334,8 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                                         {item.Uom?.name}
                                     </td>
                                     <td className=" border text-right border-gray-300 text-[11px] py-1.5 px-2">
-                                        {item.inwardQty}
+                                        {item?.inwardQty}
                                     </td>
-
-
-
-
                                 </tr>
                             ))}
                         </tbody>

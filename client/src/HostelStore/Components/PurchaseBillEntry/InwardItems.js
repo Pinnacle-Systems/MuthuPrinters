@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import FxSelect from "../../../Inputs";
+import customInput from "../../../Inputs";
 import Swal from "sweetalert2";
 import Modal from "../../../UiComponents/Modal";
 import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
@@ -22,7 +23,11 @@ const InwardItems = ({
   branchId, dcNo, invNo
 }) => {
   const EMPTY_ROW = {
-    styleItemId: "",
+    purchaseBillEntryId:"",
+    docId: "",
+    docdate: "",
+    invNo: "",
+    dcNo: "", styleItemId: "",
     hsnId: "",
     uomId: "",
     inwardQty: "",
@@ -34,6 +39,11 @@ const InwardItems = ({
   const [fillGrid, setFillGrid] = useState(false);
   const addRow = () => {
     const newRow = {
+      purchaseBillEntryId:"",
+      docId: "",
+      docdate: "",
+      invNo: "",
+      dcNo: "",
       styleItemId: "",
       hsnId: "",
       uomId: "",
@@ -143,7 +153,7 @@ const InwardItems = ({
       <Modal
         isOpen={fillGrid}
         onClose={() => setFillGrid(false)}
-        widthClass={"w-[75%]"}
+        widthClass={"w-[85%]"}
       >
         <PoItemsSelection
           setFillGrid={setFillGrid}
@@ -159,31 +169,31 @@ const InwardItems = ({
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">
         <div className="flex items-center my-2">
-            <h2 className="font-medium text-slate-700">List Of Items</h2>
+          <h2 className="font-medium text-slate-700">List Of Items</h2>
 
-            <button
-              className={`font-bold text-slate-700 bord ml-[700px] text-sm bg-blue-500 rounded rounded-md text-white px-2`}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  setFillGrid(true);
-                }
-              }}
-              onClick={() => {
-                if (!supplierId) {
-                  Swal.fire({
-                    icon: "success",
-                    title: ` Choose Supplier`,
-                    showConfirmButton: false,
-                    timer: 2000,
-                  });
-                } else {
-                  setFillGrid(true);
-                }
-              }}
-            >
-              Fill Purchase Inward Items
-            </button>
+          <button
+            className={`font-bold text-slate-700 bord ml-[1200px] text-sm bg-blue-500 rounded rounded-md text-white px-2`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                setFillGrid(true);
+              }
+            }}
+            onClick={() => {
+              if (!supplierId) {
+                Swal.fire({
+                  icon: "success",
+                  title: ` Choose Supplier`,
+                  showConfirmButton: false,
+                  timer: 2000,
+                });
+              } else {
+                setFillGrid(true);
+              }
+            }}
+          >
+            Fill Purchase Inward Items
+          </button>
 
         </div>
         <div
@@ -196,6 +206,26 @@ const InwardItems = ({
                   className={`w-12 px-4 py-2 text-center font-medium text-[13px]`}
                 >
                   S.No
+                </th>
+                <th
+                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                >
+                  PI No
+                </th>
+                <th
+                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                >
+                  PI Date
+                </th>
+                <th
+                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                >
+                  Inv No
+                </th>
+                <th
+                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                >
+                  Dc No
                 </th>
                 <th
                   className={`w-96 px-2 py-2 text-center font-medium text-[13px]`}
@@ -212,10 +242,6 @@ const InwardItems = ({
                 >
                   UOM
                 </th>
-
-
-
-
 
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
@@ -238,13 +264,25 @@ const InwardItems = ({
                   <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
                     {index + 1}
                   </td>
+                  <td className="w-12 border border-gray-300 text-[11px]  text-left p-0.5">
+                    {row?.docId}
+                  </td>
+                  <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
+                    {row?.docdate}
+                  </td>
+                  <td className="w-12 border border-gray-300 text-[11px]  text-right pr-1 p-0.5">
+                    {row?.invNo}
+                  </td>
+                  <td className="w-12 border border-gray-300 text-[11px]  text-right  pr-1 p-0.5">
+                    {row?.dcNo}
+                  </td>
                   <td className=" text-[11px] border border-gray-300 text-left">
                     <FxSelect
                       inputId={`styleItemId-input-${index}`}
                       value={row.styleItemId}
-                      onChange={(val) =>
-                        handleInputChange(val, index, "styleItemId")
-                      }
+                      // onChange={(val) =>
+                      //   handleInputChange(val, index, "styleItemId")
+                      // }
                       options={(styleItemList?.data || [])
                         .filter((item) => item.active)
                         .map((item) => ({
@@ -253,20 +291,21 @@ const InwardItems = ({
                         }))}
                       readOnly={readOnly || inwardType !== "Direct Inward"}
                       placeholder=""
-                      onBlur={() =>
-                        handleInputChange(row.styleItemId, index, "styleItemId")
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Delete") {
-                          handleInputChange("", index, "styleItemId");
-                        }
-                      }}
+                    // onBlur={() =>
+                    //   handleInputChange(row.styleItemId, index, "styleItemId")
+                    // }
+                    // onKeyDown={(e) => {
+                    //   if (e.key === "Delete") {
+                    //     handleInputChange("", index, "styleItemId");
+                    //   }
+                    // }}
                     />
+
                   </td>
-                  <td className="py-0.5 border border-gray-300 text-[11px] ">
+                  <td className="py-0.5 border text-right border-gray-300 text-[11px] ">
                     <FxSelect
                       value={row.hsnId}
-                      onChange={(val) => handleInputChange(val, index, "hsnId")}
+                      // onChange={(val) => handleInputChange(val, index, "hsnId")}
                       options={(hsnList?.data || [])
                         .filter((item) => item.active)
                         .map((item) => ({
@@ -275,20 +314,20 @@ const InwardItems = ({
                         }))}
                       readOnly={readOnly || inwardType !== "Direct Inward"}
                       placeholder=""
-                      onBlur={() =>
-                        handleInputChange(row.hsnId, index, "hsnId")
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Delete") {
-                          handleInputChange("", index, "hsnId");
-                        }
-                      }}
+                    // onBlur={() =>
+                    //   handleInputChange(row.hsnId, index, "hsnId")
+                    // }
+                    // onKeyDown={(e) => {
+                    //   if (e.key === "Delete") {
+                    //     handleInputChange("", index, "hsnId");
+                    //   }
+                    // }}
                     />
                   </td>
                   <td className="py-0.5 border border-gray-300 text-[11px] ">
                     <FxSelect
                       value={row.uomId}
-                      onChange={(val) => handleInputChange(val, index, "uomId")}
+                      // onChange={(val) => handleInputChange(val, index, "uomId")}
                       options={(uomList?.data || [])
                         .filter((item) => item.active)
                         .map((item) => ({
@@ -297,82 +336,20 @@ const InwardItems = ({
                         }))}
                       readOnly={readOnly || inwardType !== "Direct Inward"}
                       placeholder=""
-                      onBlur={() =>
-                        handleInputChange(row.uomId, index, "uomId")
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Delete") {
-                          handleInputChange("", index, "uomId");
-                        }
-                      }}
+                    // onBlur={() =>
+                    //   handleInputChange(row.uomId, index, "uomId")
+                    // }
+                    // onKeyDown={(e) => {
+                    //   if (e.key === "Delete") {
+                    //     handleInputChange("", index, "uomId");
+                    //   }
+                    // }}
                     />
                   </td>
 
-                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
-                    <input
-                      id={`inwardQty-input-${index}`}
-                      onKeyDown={(e) => {
-                        if (e.code === "Minus" || e.code === "NumpadSubtract")
-                          e.preventDefault();
-                        if (e.key === "Delete") {
-                          handleInputChange("", index, "inwardQty");
-                        }
-                        if (e.key === "Enter") {
-                          e.preventDefault(); // prevent form submit or line break
-                          e.stopPropagation();
-                          if (inwardType !== "Direct Inward") {
-                            const nextQtyInput = document.querySelector(
-                              `#inwardQty-input-${index + 1}`,
-                            );
-                            if (nextQtyInput) {
-                              nextQtyInput.focus();
-                            }
-                          } else {
-                            const nextQtyInput = document.querySelector(
-                              `#styleItemId-input-${index + 1}`,
-                            );
-                            if (nextQtyInput) {
-                              nextQtyInput.focus();
-                            }
-                          }
-                        }
-                      }}
-                      min={"0"}
-                      type="number"
-                      className="text-right rounded py-1 px-1 w-full table-data-input"
-                      onFocus={(e) => e.target.select()}
-                      value={row?.inwardQty}
-                      onChange={(e) =>
-                        handleInputChange(e.target.value, index, "inwardQty")
-                      }
-                      onBlur={(e) => {
-                        const minQty = row.balQty;
-                        if (inwardType !== "Direct Inward") {
-                          if (parseFloat(minQty) < parseFloat(e.target.value)) {
-                            e.target.value = "";
-                            Swal.fire({
-                              icon: "warning",
-                              title: "Invalid Qty",
-                              text: `Inward Qty cannot be More than Balance Qty! - ${minQty}`,
-                              confirmButtonText: "OK",
-                            });
-                            return;
-                          }
-                        }
-                        if (e.target.value == 0) {
-                          e.target.value = "";
-                          Swal.fire({
-                            icon: "warning",
-                            title: "Invalid Qty",
-                            text: `Minimum Qty is 1`,
-                            confirmButtonText: "OK",
-                          });
-                          return;
-                        }
-                        handleInputChange(e.target.value, index, "inwardQty");
-                      }}
-                      disabled={readOnly || (row.stockQty ?? 0) > 0}
-                    />
+                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right pr-1">
+                    {row?.inwardQty}
+
                   </td>
 
                   <td className="w-2 border border-gray-300">
@@ -399,7 +376,7 @@ const InwardItems = ({
               <tr className="bg-gray-50 h-7 font-medium text-gray-800">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium text-[13px] py-0.5"
-                  colSpan={4}
+                  colSpan={8}
                 >
                   Total
                 </td>

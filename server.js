@@ -38,7 +38,8 @@ import {
   payTerm,
   location,
   purchaseInwardEntry,
-  purchaseCancel
+  purchaseCancel,
+  purchaseBillEntry
 } from './src/routes/index.js';
 
 import { socketMain } from './src/sockets/socket.js';
@@ -124,6 +125,7 @@ app.use("/po",po)
 app.use("/termsconditions", termsAndCondition)
 app.use("/payTerm", payTerm);
 app.use("/location", location);
+app.use("/purchaseBillEntry",purchaseBillEntry)
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;

@@ -23,40 +23,41 @@ model Page {
 }
 
 model Company {
-  id                 Int                  @id @default(autoincrement())
-  companyId          String               @unique @default(uuid())
-  name               String
-  code               String?
-  gstNo              String?
-  panNo              String?
-  contactName        String?
-  contactMobile      BigInt
-  contactEmail       String?
-  branch             Branch[]
-  country            Country[]
-  active             Boolean              @default(true)
-  Department         Department[]
-  Role               Role[]
-  Subscription       Subscription[]
-  finYear            FinYear[]
-  PartyCategory      PartyCategory[]
-  Party              Party[]
-  ProductBrand       ProductBrand[]
-  ProductCategory    ProductCategory[]
-  Product            Product[]
-  PurchaseBill       PurchaseBill[]
-  SalesBill          SalesBill[]
-  PurchaseReturn     PurchaseReturn[]
-  SalesReturn        SalesReturn[]
-  Uom                Uom[]
-  OpeningStock       OpeningStock[]
-  TaxTerm            TaxTerm[]
-  TaxTemplate        TaxTemplate[]
-  PartyBranch        PartyBranch[]
-  openingBalances    OpeningBalance[]
-  payTerms           PayTerm[]
-  termsAndConditions TermsAndConditions[]
-  locations          Location[]
+  id                  Int                  @id @default(autoincrement())
+  companyId           String               @unique @default(uuid())
+  name                String
+  code                String?
+  gstNo               String?
+  panNo               String?
+  contactName         String?
+  contactMobile       BigInt
+  contactEmail        String?
+  branch              Branch[]
+  country             Country[]
+  active              Boolean              @default(true)
+  Department          Department[]
+  Role                Role[]
+  Subscription        Subscription[]
+  finYear             FinYear[]
+  PartyCategory       PartyCategory[]
+  Party               Party[]
+  ProductBrand        ProductBrand[]
+  ProductCategory     ProductCategory[]
+  Product             Product[]
+  PurchaseBill        PurchaseBill[]
+  SalesBill           SalesBill[]
+  PurchaseReturn      PurchaseReturn[]
+  SalesReturn         SalesReturn[]
+  Uom                 Uom[]
+  OpeningStock        OpeningStock[]
+  TaxTerm             TaxTerm[]
+  TaxTemplate         TaxTemplate[]
+  PartyBranch         PartyBranch[]
+  openingBalances     OpeningBalance[]
+  payTerms            PayTerm[]
+  termsAndConditions  TermsAndConditions[]
+  locations           Location[]
+  purchaseBillEntries PurchaseBillEntry[]
 }
 
 model Subscription {
@@ -104,6 +105,7 @@ model Branch {
   locations             Location[]
   purchaseInwardReturns PurchaseInwardReturn[]
   purchaseCancels       PurchaseCancel[]
+  purchaseBillEntries   PurchaseBillEntry[]
 }
 
 model UserOnBranch {
@@ -175,6 +177,9 @@ model User {
   purchaseInwardReturnsUpdatedBy PurchaseInwardReturn[] @relation(name: "updatedBy")
   purchaseCancelsCreatedBy       PurchaseCancel[]       @relation(name: "createdBy")
   purchaseCancelsUpdatedBy       PurchaseCancel[]       @relation(name: "updatedBy")
+  PurchaseBillEntryCreatedBy     PurchaseBillEntry[]    @relation(name: "createdBy")
+  PurchaseBillEntryUpdatedBy     PurchaseBillEntry[]    @relation(name: "updatedBy")
+  purchaseBillEntries            PurchaseBillEntry[]
 }
 
 model Employee {
@@ -227,15 +232,16 @@ model Employee {
 }
 
 model FinYear {
-  id              Int               @id @default(autoincrement())
-  from            DateTime
-  to              DateTime
-  Company         Company?          @relation(fields: [companyId], references: [id])
-  companyId       Int?
-  active          Boolean           @default(true)
-  DeliveryChallan DeliveryChallan[]
-  DeliveryInvoice DeliveryInvoice[]
-  openingBalances OpeningBalance[]
+  id                  Int                 @id @default(autoincrement())
+  from                DateTime
+  to                  DateTime
+  Company             Company?            @relation(fields: [companyId], references: [id])
+  companyId           Int?
+  active              Boolean             @default(true)
+  DeliveryChallan     DeliveryChallan[]
+  DeliveryInvoice     DeliveryInvoice[]
+  openingBalances     OpeningBalance[]
+  purchaseBillEntries PurchaseBillEntry[]
 }
 
 model EmployeeCategory {
@@ -419,6 +425,7 @@ model Party {
   purchaseInwards       PurchaseInward[]
   purchaseInwardReturns PurchaseInwardReturn[]
   purchaseCancels       PurchaseCancel[]
+  purchaseBillEntries   PurchaseBillEntry[]
 }
 
 model PartyBranch {
@@ -530,17 +537,18 @@ model Uom {
   Product                Product[]
   ProductUomPriceDetails ProductUomPriceDetails[]
 
-  PoReturnItems        PoReturnItems[]
-  SalesBillItems       SalesBillItems[]
-  SalesReturn          SalesReturn[]
-  SalesReturnItems     SalesReturnItems[]
-  DeliveryChallanItems DeliveryChallanItems[]
-  DeliveryInvoiceItems DeliveryInvoiceItems[]
-  poItems              PoItems[]
-  inwardItems          InwardItems[]
-  stocks               Stock[]
-  purchaseReturnItems  PurchaseReturnItems[]
-  purchaseCancelItems  PurchaseCancelItems[]
+  PoReturnItems          PoReturnItems[]
+  SalesBillItems         SalesBillItems[]
+  SalesReturn            SalesReturn[]
+  SalesReturnItems       SalesReturnItems[]
+  DeliveryChallanItems   DeliveryChallanItems[]
+  DeliveryInvoiceItems   DeliveryInvoiceItems[]
+  poItems                PoItems[]
+  inwardItems            InwardItems[]
+  stocks                 Stock[]
+  purchaseReturnItems    PurchaseReturnItems[]
+  purchaseCancelItems    PurchaseCancelItems[]
+  purchaseBillEntryItems PurchaseBillEntryItems[]
 }
 
 model ProductUomPriceDetails {
@@ -851,20 +859,21 @@ model Style {
 }
 
 model StyleItem {
-  id                   Int                    @id @default(autoincrement())
-  name                 String?
-  aliasName            String?
-  code                 String?
-  active               Boolean?               @default(false)
-  DeliveryChallanItems DeliveryChallanItems[]
-  DeliveryInvoiceItems DeliveryInvoiceItems[]
-  poItems              PoItems[]
-  inwardItems          InwardItems[]
-  stocks               Stock[]
-  Hsn                  Hsn?                   @relation(fields: [hsnId], references: [id])
-  hsnId                Int?
-  purchaseReturnItems  PurchaseReturnItems[]
-  purchaseCancelItems  PurchaseCancelItems[]
+  id                     Int                      @id @default(autoincrement())
+  name                   String?
+  aliasName              String?
+  code                   String?
+  active                 Boolean?                 @default(false)
+  DeliveryChallanItems   DeliveryChallanItems[]
+  DeliveryInvoiceItems   DeliveryInvoiceItems[]
+  poItems                PoItems[]
+  inwardItems            InwardItems[]
+  stocks                 Stock[]
+  Hsn                    Hsn?                     @relation(fields: [hsnId], references: [id])
+  hsnId                  Int?
+  purchaseReturnItems    PurchaseReturnItems[]
+  purchaseCancelItems    PurchaseCancelItems[]
+  purchaseBillEntryItems PurchaseBillEntryItems[]
 }
 
 model DeliveryChallan {
@@ -1053,18 +1062,19 @@ model TaxTemplateDetails {
 }
 
 model Hsn {
-  id                   Int                    @id @default(autoincrement())
-  name                 String
-  active               Boolean                @default(true)
-  tax                  String?
-  DeliveryChallanItems DeliveryChallanItems[]
-  DeliveryInvoiceItems DeliveryInvoiceItems[]
-  poItems              PoItems[]
-  inwardItems          InwardItems[]
-  stocks               Stock[]
-  styleItems           StyleItem[]
-  purchaseReturnItems  PurchaseReturnItems[]
-  purchaseCancelItems  PurchaseCancelItems[]
+  id                     Int                      @id @default(autoincrement())
+  name                   String
+  active                 Boolean                  @default(true)
+  tax                    String?
+  DeliveryChallanItems   DeliveryChallanItems[]
+  DeliveryInvoiceItems   DeliveryInvoiceItems[]
+  poItems                PoItems[]
+  inwardItems            InwardItems[]
+  stocks                 Stock[]
+  styleItems             StyleItem[]
+  purchaseReturnItems    PurchaseReturnItems[]
+  purchaseCancelItems    PurchaseCancelItems[]
+  purchaseBillEntryItems PurchaseBillEntryItems[]
 }
 
 model BranchType {
@@ -1339,4 +1349,45 @@ model PurchaseCancelItems {
   batchNo          String?
   invNo            String?
   poDocId          String?
+}
+
+model PurchaseBillEntry {
+  id                     Int                      @id @default(autoincrement())
+  docId                  String
+  docDate                DateTime?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  createdBy              User?                    @relation("createdBy", fields: [createdById], references: [id])
+  createdById            Int?
+  updatedBy              User?                    @relation("updatedBy", fields: [updatedById], references: [id])
+  updatedById            Int?
+  Branch                 Branch?                  @relation(fields: [branchId], references: [id])
+  branchId               Int?
+  finYear                FinYear?                 @relation(fields: [finYearId], references: [id])
+  finYearId              Int?
+  supplier               Party?                   @relation(fields: [supplierId], references: [id])
+  supplierId             Int?
+  Company                Company?                 @relation(fields: [companyId], references: [id])
+  companyId              Int?
+  remarks                String?                  @db.LongText
+  user                   User?                    @relation(fields: [userId], references: [id])
+  userId                 Int?
+  purchaseBillEntryItems PurchaseBillEntryItems[]
+}
+
+model PurchaseBillEntryItems {
+  id                  Int                @id @default(autoincrement())
+  PurchaseBillEntry   PurchaseBillEntry? @relation(fields: [purchaseBillEntryId], references: [id], onDelete: Cascade)
+  purchaseBillEntryId Int?
+  Uom                 Uom?               @relation(fields: [uomId], references: [id])
+  uomId               Int?
+  StyleItem           StyleItem?         @relation(fields: [styleItemId], references: [id])
+  styleItemId         Int?
+  Hsn                 Hsn?               @relation(fields: [hsnId], references: [id])
+  hsnId               Int?
+  inwardQty           Float?
+  invNo               String?
+  dcNo                String?
+  docId               String?
+  docDate             String?
 }

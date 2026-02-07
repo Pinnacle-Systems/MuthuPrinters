@@ -3,7 +3,7 @@ import { NoRecordFound } from "../configs/Responses.js";
 import {
   getYearShortCodeForFinYear,
   getYearShortCode,
-  getDateFromDateTime,
+  getDateFromDateTime, buildDateRange
 } from "../utils/helper.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
@@ -202,7 +202,7 @@ async function get(req) {
     totalCount,
   };
 }
-function manualFilterSearchDataPoItems(
+function manualFilterSearchDataPIItems(
   searchPoDate,
   searchDueDate,
   searchInwardType,
@@ -640,15 +640,16 @@ async function getPurchaseInwardBillEntryItems(req) {
     branchId,
     active,
     supplierId,
-    inwardType,
+    searchInvNo,
     pagination,
     dataPerPage,
     searchDocId,
-    searchPoDate,
+    searchPIDate,
     searchInwardType,
-    searchDueDate,
+    searchDcNo,
   } = req.query;
-console.log(supplierId,pagination,"paramsreceived");
+  console.log(supplierId, pagination, "paramsreceived");
+  const docDateFilter = buildDateRange(searchPIDate);
 
   let data;
   let totalCount;
@@ -656,11 +657,24 @@ console.log(supplierId,pagination,"paramsreceived");
     data = await prisma.inwardItems.findMany({
       where: {
         PurchaseInward: {
-          // docId: Boolean(searchDocId)
-          //   ? {
-          //     contains: searchDocId,
-          //   }
-          //   : undefined,
+          docId: Boolean(searchDocId)
+            ? {
+              contains: searchDocId,
+            }
+            : undefined,
+          invNo: searchInvNo
+            ? {
+              contains: searchInvNo,
+            }
+            : undefined,
+          dcNo: Boolean(searchDcNo)
+            ? {
+              contains: searchDcNo,
+            }
+            : undefined,
+          docDate: docDateFilter,
+
+
           supplierId: supplierId ? parseInt(supplierId) : undefined,
         },
       },
@@ -669,7 +683,9 @@ console.log(supplierId,pagination,"paramsreceived");
           select: {
             supplierId: true,
             docDate: true,
-            docId: true
+            docId: true,
+            invNo: true,
+            dcNo: true
             // dueDate: true,
             // poType: true,
           },
@@ -683,7 +699,7 @@ console.log(supplierId,pagination,"paramsreceived");
 
       },
     });
-   
+
 
     data = data?.filter((i) => i.PurchaseInward.supplierId == supplierId);
 

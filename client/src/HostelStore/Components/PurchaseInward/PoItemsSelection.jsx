@@ -158,6 +158,7 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
         return (poItems ? poItems : []).every(item => isItemChecked(item))
     }
 
+console.log(inwardItems,"inwardItemscheckPo");
 
     return (
         <div

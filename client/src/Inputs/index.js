@@ -34,17 +34,17 @@ export const handleOnChange = (event, setValue) => {
 
   setValue(
     valueBeforeCursor +
-      inputValue.slice(inputSelectionStart, inputSelectionEnd) +
-      valueAfterCursor,
+    inputValue.slice(inputSelectionStart, inputSelectionEnd) +
+    valueAfterCursor,
   );
 
   // Set the cursor position to the end of the input value
   setTimeout(() => {
     event.target.setSelectionRange(
       valueBeforeCursor.length +
-        inputValue.slice(inputSelectionStart, inputSelectionEnd).length,
+      inputValue.slice(inputSelectionStart, inputSelectionEnd).length,
       valueBeforeCursor.length +
-        inputValue.slice(inputSelectionStart, inputSelectionEnd).length,
+      inputValue.slice(inputSelectionStart, inputSelectionEnd).length,
     );
   });
 };
@@ -69,7 +69,7 @@ export const MultiSelectDropdown = ({
         className={`focus:outline-none  border border-gray-500 rounded text-black  ${inputClass}`}
         options={options}
         value={selected}
-        onChange={readOnly ? () => {} : setSelected}
+        onChange={readOnly ? () => { } : setSelected}
         labelledBy="Select"
       />
     </div>
@@ -134,11 +134,10 @@ export const TextInput = forwardRef(
           className={`w-full px-3 py-1 text-xs border border-gray-300 rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm
-          ${
-            readOnly || disabled
+          ${readOnly || disabled
               ? "bg-gray-100 text-gray-500 cursor-not-allowed"
               : "bg-white hover:border-gray-400"
-          }
+            }
           ${className}`}
           autoFocus={autoFocus}
           onKeyDown={onKeyDown}
@@ -266,7 +265,7 @@ export const DropdownInput = forwardRef(
   (
     {
       name,
-      beforeChange = () => {},
+      beforeChange = () => { },
       onBlur = null,
       options,
       value,
@@ -646,7 +645,7 @@ export const DropdownWithSearch = ({
     });
 
     return () => {
-      dropDownElement.removeEventListener("keydown", () => {});
+      dropDownElement.removeEventListener("keydown", () => { });
     };
   }, [currentIndex]);
 
@@ -666,11 +665,11 @@ export const DropdownWithSearch = ({
         values={
           value
             ? [
-                {
-                  id: value,
-                  name: findFromList(value, options || [], "name"),
-                },
-              ]
+              {
+                id: value,
+                name: findFromList(value, options || [], "name"),
+              },
+            ]
             : []
         }
         onChange={(value) => {
@@ -719,8 +718,7 @@ export function ReusableInput({
         disabled={disabled}
         className={`w-full px-2 py-1 text-xs border border-slate-300 rounded-md 
           focus:border-indigo-300 focus:outline-none transition-all duration-200
-          hover:border-slate-400 ${
-            readOnly || disabled ? "bg-slate-100" : ""
+          hover:border-slate-400 ${readOnly || disabled ? "bg-slate-100" : ""
           } ${className}`}
         autoFocus={autoFocus}
       />
@@ -758,8 +756,7 @@ export function ReusableInputNew({
         disabled={disabled}
         className={`w-full px-2 py-1 text-xs border border-slate-300 rounded-md 
           focus:border-indigo-300 focus:outline-none transition-all duration-200
-          hover:border-slate-400 ${
-            readOnly || disabled ? "bg-slate-100" : ""
+          hover:border-slate-400 ${readOnly || disabled ? "bg-slate-100" : ""
           } ${className}`}
       />
     </div>
@@ -802,7 +799,7 @@ export const ReusableSearchableInput = forwardRef(
       isFetching: isPartyFetching,
     } = useGetPartyQuery({ params: { companyId, userId } });
 
-    const filteredPartyList = isSupplier ? partyList?.data?.filter((item) => item.isSupplier === true) : partyList?.data 
+    const filteredPartyList = isSupplier ? partyList?.data?.filter((item) => item.isSupplier === true) : partyList?.data
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -1132,7 +1129,7 @@ export const DropdownInputNew = forwardRef(
   (
     {
       name,
-      beforeChange = () => {},
+      beforeChange = () => { },
       onBlur = null,
       options,
       value,
@@ -1250,11 +1247,10 @@ export const ReusableTable = ({
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className={`px-3 py-1 rounded-md ${
-              currentPage === 1
+            className={`px-3 py-1 rounded-md ${currentPage === 1
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "bg-white text-gray-600 hover:bg-gray-100"
-            }`}
+              }`}
           >
             <FaChevronLeft className="inline" />
           </button>
@@ -1275,11 +1271,10 @@ export const ReusableTable = ({
               <button
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
-                className={`px-3 py-1 rounded-md ${
-                  currentPage === pageNum
+                className={`px-3 py-1 rounded-md ${currentPage === pageNum
                     ? "bg-indigo-800 text-white"
                     : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
+                  }`}
               >
                 {pageNum}
               </button>
@@ -1293,11 +1288,10 @@ export const ReusableTable = ({
           {totalPages > 5 && currentPage < totalPages - 2 && (
             <button
               onClick={() => handlePageChange(totalPages)}
-              className={`px-3 py-1 rounded-md ${
-                currentPage === totalPages
+              className={`px-3 py-1 rounded-md ${currentPage === totalPages
                   ? "bg-indigo-800 text-white"
                   : "bg-white text-gray-600 hover:bg-gray-100"
-              }`}
+                }`}
             >
               {totalPages}
             </button>
@@ -1306,11 +1300,10 @@ export const ReusableTable = ({
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className={`px-3 py-1 rounded-md ${
-              currentPage === totalPages
+            className={`px-3 py-1 rounded-md ${currentPage === totalPages
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "bg-white text-gray-600 hover:bg-gray-100"
-            }`}
+              }`}
           >
             <FaChevronRight className="inline" />
           </button>
@@ -1330,9 +1323,8 @@ export const ReusableTable = ({
                   {columns?.map((column, index) => (
                     <th
                       key={index}
-                      className={` font-medium text-gray-900 py-2 text-[12px] px-8 text-center uppercase  ${
-                        column.header !== "" ? "border-r border-white/50" : ""
-                      } `}
+                      className={` font-medium text-gray-900 py-2 text-[12px] px-8 text-center uppercase  ${column.header !== "" ? "border-r border-white/50" : ""
+                        } `}
                     >
                       {column.header}
                     </th>
@@ -1358,9 +1350,8 @@ export const ReusableTable = ({
                   currentItems?.map((item, index) => (
                     <tr
                       key={item.id}
-                      className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${
-                        index % 2 === 0 ? "bg-white" : "bg-gray-100"
-                      }`}
+                      className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${index % 2 === 0 ? "bg-white" : "bg-gray-100"
+                        }`}
                     >
                       {columns?.map((column, colIndex) => (
                         <td
@@ -2565,11 +2556,10 @@ export const DateInputNew = forwardRef(
       <div className="grid-cols-1 md:grid-cols-3 items-center md:px-1">
         {name && (
           <label
-            className={`block  font-bold text-slate-700 mb-1 text-xs ${
-              required
+            className={`block  font-bold text-slate-700 mb-1 text-xs ${required
                 ? 'after:content-["*"] after:ml-0.5 after:text-red-500'
                 : ""
-            }`}
+              }`}
           >
             {name}
           </label>
@@ -2638,10 +2628,9 @@ export const TextAreaNew = ({
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm  resize-y
 
-          ${
-            readOnly || disabled
-              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-              : "bg-white hover:border-gray-400"
+          ${readOnly || disabled
+            ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+            : "bg-white hover:border-gray-400"
           }
           ${inputClass}`}
       ></textarea>
@@ -3076,7 +3065,42 @@ export const customStyles = {
     paddingBottom: 0,
   }),
 };
-
+export   function CustomInput({
+  value,
+  onChange,
+  options,
+  placeholder = "",
+  readOnly = false,
+  onBlur,
+  onKeyDown,
+  inputId,
+}) {
+  return (
+    <Select
+      styles={customStyles}
+      onInputChange={(value, { action }) => {
+        if (action === "input-change") {
+          return value.toUpperCase(); //  force uppercase typing
+        }
+        return value;
+      }}
+      components={{
+        DropdownIndicator: () => null,
+        IndicatorSeparator: () => null, // remove separator
+      }}
+      isClearable
+      isDisabled={readOnly}
+      options={options}
+      value={options.find((opt) => opt.value === value) || null}
+      onChange={(selected) => onChange(selected?.value || "")}
+      onBlur={onBlur}
+      onKeyDown={onKeyDown}
+      placeholder={placeholder}
+      menuPortalTarget={document.body}
+      inputId={inputId}
+    />
+  );
+}
 export default function FxSelect({
   value,
   onChange,
@@ -3113,3 +3137,5 @@ export default function FxSelect({
     />
   );
 }
+
+

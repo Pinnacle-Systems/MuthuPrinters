@@ -1,9 +1,9 @@
-import {  FaFileAlt } from "react-icons/fa";
+import { FaFileAlt } from "react-icons/fa";
 
 import {
 
   DateInputNew,
- 
+
   ReusableInput,
   ReusableSearchableInput,
   TextInput,
@@ -18,16 +18,16 @@ import {
 
 import { toast } from "react-toastify";
 import { FiEdit2, FiSave } from "react-icons/fi";
-import { HiOutlineRefresh} from "react-icons/hi";
+import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 
 
 import InwardItems from "./InwardItems";
 import purchaseInwardEntryApi, {
-  useAddPurchaseInwardEntryMutation,
-  useGetPurchaseInwardEntryByIdQuery,
-  useUpdatePurchaseInwardEntryMutation,
-} from "../../../redux/uniformService/PurchaseInwardEntry";
+  useAddPurchaseBillEntryMutation,
+  useGetPurchaseBillEntryByIdQuery,
+  useUpdatePurchaseBillEntryMutation,
+} from "../../../redux/uniformService/PurchaseBillEntryService";
 import { useDispatch } from "react-redux";
 import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
 import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
@@ -60,17 +60,17 @@ const PurchaseBillEntryForm = ({
   const [vehicleNo, setVehicleNo] = useState("");
   const [invNo, setInvNo] = useState("");
 
-  const { userId, finYearId, branchId } = getCommonParams();
+  const { userId, finYearId, branchId, companyId } = getCommonParams();
 
 
   const {
     data: singleData,
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
-  } = useGetPurchaseInwardEntryByIdQuery(id, { skip: !id });
+  } = useGetPurchaseBillEntryByIdQuery(id, { skip: !id });
 
-  const [addData] = useAddPurchaseInwardEntryMutation();
-  const [updateData] = useUpdatePurchaseInwardEntryMutation();
+  const [addData] = useAddPurchaseBillEntryMutation();
+  const [updateData] = useUpdatePurchaseBillEntryMutation();
   const dispatch = useDispatch();
 
 
@@ -82,18 +82,19 @@ const PurchaseBillEntryForm = ({
           ? moment.utc(data.docDate).format("YYYY-MM-DD")
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
-      setInwardType(data?.inwardType || "General Purchase Inward");
-      setLocationId(data?.Store ? data.Store.locationId : branchId);
-      setStoreId(data?.storeId ? data.storeId : "");
-      setInwardItems(data?.inwardItems ? data?.inwardItems : []);
+
+      const mappedInwardItems = data?.purchaseBillEntryItems?.map((val) => ({
+        ...val,
+        docdate: moment.utc(val?.docDate).format("DD-MM-YYYY") || "",
+        styleItemId: val?.StyleItem?.id,
+        uomId: val?.Uom?.id,
+        hsnId: val?.Hsn?.id
+
+      })) || []
+      setInwardItems(mappedInwardItems);
       setSupplierId(data?.supplierId || "");
-      setDcDate(
-        data?.dcDate ? moment.utc(data.dcDate).format("YYYY-MM-DD") : "",
-      );
+
       setRemarks(data?.remarks || "");
-      setDcNo(data?.dcNo ? data.dcNo : "");
-      setVehicleNo(data?.vehicleNo ? data.vehicleNo : "");
-      setInvNo(data?.invNo ? data?.invNo : "");
     },
     [id],
   );
@@ -107,22 +108,14 @@ const PurchaseBillEntryForm = ({
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
   let data = {
+    companyId, branchId, finYearId, userId,
     id,
     docDate,
-    branchId,
-    userId,
-    inwardType,
-    locationId,
-    storeId,
     supplierId,
-    dcNo,
-    dcDate,
-    remarks,
-    vehicleNo,
-    inwardItems: inwardItems?.filter((po) => po.styleItemId),
-    finYearId,
-    invNo,
+    remarks, vehicleNo,
+    inwardItems: inwardItems?.filter((val) => val?.styleItemId),
   };
+  console.log(inwardItems, "parentTable");
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
@@ -190,31 +183,29 @@ const PurchaseBillEntryForm = ({
     const filledItems = items.filter((item) => item.styleItemId);
     const duplicates = findDuplicates(filledItems);
     // duplicate check
-    if (duplicates.length > 0) {
-      const dup = duplicates[0]; // show first duplicate
-      Swal.fire({
-        icon: "warning",
-        title: "Duplicate Item Found",
-        html: `
-    Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},
-    HSN - ${findFromList(dup?.hsnId, hsnList?.data, "name")},
-  `,
-        confirmButtonText: "OK",
-      });
-      return false;
-    }
+  //   if (duplicates.length > 0) {
+  //     const dup = duplicates[0]; // show first duplicate
+  //     Swal.fire({
+  //       icon: "warning",
+  //       title: "Duplicate Item Found",
+  //       html: `
+  //   Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},
+  //   HSN - ${findFromList(dup?.hsnId, hsnList?.data, "name")},
+  // `,
+  //       confirmButtonText: "OK",
+  //     });
+  //     return false;
+  //   }
     let mandatoryFields = ["styleItemId", "hsnId", "uomId", "inwardQty"];
     if (
       !(
-        data.inwardType &&
-        data.locationId &&
-        data.storeId &&
-        data?.dcDate &&
-        data.dcNo &&
+
+
+
         data.supplierId &&
         isGridDatasValid(data?.inwardItems, false, mandatoryFields) &&
-        data?.inwardItems?.length !== 0 &&
-        data.invNo
+        data?.inwardItems?.length !== 0
+
       )
     ) {
       Swal.fire({
@@ -234,9 +225,9 @@ const PurchaseBillEntryForm = ({
     if (!validateData(data)) {
       return;
     }
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
-    }
+    // if (!window.confirm("Are you sure save the details ...?")) {
+    //   return;
+    // }
     if (nextProcess == "draft" && !id) {
       handleSubmitCustom(
         addData,
@@ -337,7 +328,7 @@ const PurchaseBillEntryForm = ({
                   nextRef={inputPartyRef}
                 />
               </div>
-              <div className="w-[250px]">
+              {/* <div className="w-[250px]">
                 <TextInput
                   name={"Inv No"}
                   value={invNo}
@@ -353,8 +344,8 @@ const PurchaseBillEntryForm = ({
                   setValue={setDcNo}
                   readOnly={readOnly}
                   required
-                /></div>
-              <div className="w-32">
+                /></div> */}
+              {/* <div className="w-32">
                 <DateInputNew
                   name="Dc Date"
                   value={dcDate}
@@ -363,7 +354,7 @@ const PurchaseBillEntryForm = ({
                   readOnly={readOnly}
                   type={"date"}
                 />
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
@@ -371,7 +362,7 @@ const PurchaseBillEntryForm = ({
 
 
 
-        <fieldset className="w-[70vw]">
+        <fieldset className="">
           <InwardItems
             id={id}
             inwardItems={inwardItems}
@@ -389,7 +380,7 @@ const PurchaseBillEntryForm = ({
         </fieldset>
 
         <div className="grid grid-cols-3 gap-3">
-         
+
 
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
             <h2 className="font-medium text-slate-700 mb-2 text-base">
@@ -410,18 +401,7 @@ const PurchaseBillEntryForm = ({
               Qty Summary
             </h2>
 
-            {inwardType !== "Direct Inward" && (
-              <div className="space-y-1.5">
-                <div className="flex justify-between  text-sm">
-                  <span className="text-slate-600">Total Order Qty</span>
-                  <span className="font-medium">
-                    {inwardItems
-                      .reduce((sum, row) => sum + (Number(row.poQty) || 0), 0)
-                      .toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            )}
+           
             <div className="space-y-1.5">
               <div className="flex justify-between  text-sm">
                 <span className="text-slate-600">Total Inward Qty</span>

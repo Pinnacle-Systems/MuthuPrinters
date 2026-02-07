@@ -11,6 +11,18 @@ export const getDateFromDateTimeDB = (dateTime) => moment.utc(dateTime).format("
 export function getYearShortCodeForFinYear(fromDate, toDate) {
   return `${new Date(fromDate).getFullYear().toString().slice(2)}-${new Date(toDate).getFullYear().toString().slice(2)}`
 }
+export const buildDateRange = (dateStr) => {
+  if (!dateStr) return undefined;
+
+  const start = new Date(`${dateStr}T00:00:00.000`);
+  const end = new Date(`${dateStr}T23:59:59.999`);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return undefined;
+  }
+
+  return { gte: start, lt: end };
+};
 
 
 export function getItemFullNameFromShortCode(shortCode) {
