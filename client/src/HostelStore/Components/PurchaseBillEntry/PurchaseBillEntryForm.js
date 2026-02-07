@@ -50,6 +50,7 @@ const PurchaseBillEntryForm = ({
   );
   const [supplierId, setSupplierId] = useState("");
   const [inwardItems, setInwardItems] = useState([]);
+  const [tempItems,setTempItems] = useState([])
   const [remarks, setRemarks] = useState("");
   const [inwardType, setInwardType] = useState("General Purchase Inward");
   const [storeId, setStoreId] = useState("");
@@ -376,6 +377,7 @@ const PurchaseBillEntryForm = ({
             branchId={branchId}
             dcNo={dcNo}
             invNo={invNo}
+            setTempItems={setTempItems} tempItems={tempItems}
           />
         </fieldset>
 

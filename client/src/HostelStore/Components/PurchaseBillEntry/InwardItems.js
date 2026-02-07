@@ -7,10 +7,11 @@ import Modal from "../../../UiComponents/Modal";
 import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
 import PoItemsSelection from "./PoItemsSelection";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
+import { getDateFromDateTimeToDisplay } from "../../../Utils/helper";
 
 const InwardItems = ({
   id,
-  inwardItems,
+  inwardItems, tempItems, setTempItems,
   setInwardItems,
   readOnly,
   params,
@@ -23,7 +24,7 @@ const InwardItems = ({
   branchId, dcNo, invNo
 }) => {
   const EMPTY_ROW = {
-    purchaseBillEntryId:"",
+    purchaseBillEntryId: "",
     docId: "",
     docdate: "",
     invNo: "",
@@ -33,13 +34,14 @@ const InwardItems = ({
     inwardQty: "",
     poQty: "",
     poId: "",
+    checkId: ""
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
   const [fillGrid, setFillGrid] = useState(false);
   const addRow = () => {
     const newRow = {
-      purchaseBillEntryId:"",
+      purchaseBillEntryId: "",
       docId: "",
       docdate: "",
       invNo: "",
@@ -49,7 +51,8 @@ const InwardItems = ({
       uomId: "",
       inwardQty: "",
       poQty: "",
-      poId: "",
+      poId: "", checkId: ""
+
     };
     setInwardItems([...inwardItems, newRow]);
   };
@@ -134,6 +137,7 @@ const InwardItems = ({
       setInwardItems(Array.from({ length: 4 }, () => ({ ...EMPTY_ROW })));
     }
   }, [id, inwardItems]);
+  console.log(inwardItems, "inwrdsinparent");
 
   return (
     <>
@@ -162,8 +166,9 @@ const InwardItems = ({
           setInwardItems={setInwardItems}
           branchId={branchId}
           inwardType={inwardType}
-          dcNo={dcNo}
+          dcNo={dcNo} tempItems={tempItems} setTempItems={setTempItems}
           invNo={invNo}
+          onClose={() => setFillGrid(false)}
 
         />
       </Modal>
@@ -172,7 +177,8 @@ const InwardItems = ({
           <h2 className="font-medium text-slate-700">List Of Items</h2>
 
           <button
-            className={`font-bold text-slate-700 bord ml-[1200px] text-sm bg-blue-500 rounded rounded-md text-white px-2`}
+            className={`font-bold text-slate-700 bord ml-[1200px] text-sm bg-blue-500 rounded rounded-md text-white px-2
+              `}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -191,6 +197,7 @@ const InwardItems = ({
                 setFillGrid(true);
               }
             }}
+            disabled={id}
           >
             Fill Purchase Inward Items
           </button>
@@ -265,16 +272,16 @@ const InwardItems = ({
                     {index + 1}
                   </td>
                   <td className="w-12 border border-gray-300 text-[11px]  text-left p-0.5">
-                    {row?.docId}
+                    {row?.PurchaseInward?.docId}
                   </td>
                   <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
-                    {row?.docdate}
+                    {row?.PurchaseInward?.docDate ? getDateFromDateTimeToDisplay(row?.PurchaseInward?.docDate) : ""}
                   </td>
                   <td className="w-12 border border-gray-300 text-[11px]  text-right pr-1 p-0.5">
-                    {row?.invNo}
+                    {row?.PurchaseInward?.invNo}
                   </td>
                   <td className="w-12 border border-gray-300 text-[11px]  text-right  pr-1 p-0.5">
-                    {row?.dcNo}
+                    {row?.PurchaseInward?.dcNo}
                   </td>
                   <td className=" text-[11px] border border-gray-300 text-left">
                     <FxSelect

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { getDateFromDateTimeToDisplay } from '../../../Utils/helper';
 import {
 
@@ -6,7 +6,7 @@ import {
 
 } from "../../../redux/uniformService/PurchaseInwardEntry";
 
-const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, supplierId, inwardType }) => {
+const PoItemsSelection = ({ inwardItems=[], setInwardItems, setFillGrid, branchId, supplierId, tempItems, setTempItems, onClose }) => {
     const [localinwardItems, setLocalinwardItems] = useState([]);
     const [searchDocId, setSearchDocId] = useState("");
     const [searchPIDate, setPIDate] = useState("");
@@ -25,16 +25,82 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
 
 
 
-    const { data: purchaseInwarddata } = useGetPurchaseInwardEntryForBillByIdQuery({
-        params: {
+    const { data: purchaseInwarddata, isFetching: isSingleFetching,
+        isLoading: isSingleLoading, } = useGetPurchaseInwardEntryForBillByIdQuery({
+            params: {
 
-            branchId,
-            supplierId,
-            ...searchFields, pagination: true, dataPerPage, pageNumber: currentPageNumber,
+                branchId,
+                supplierId,
+                ...searchFields, pagination: true, dataPerPage, pageNumber: currentPageNumber,
+            }
+        })
+    const syncFormWithDb = useCallback((data) => {
+
+        setTempItems(data)
+
+    }, [supplierId]);
+
+    console.log(tempItems, "tempItemscheck");
+
+    useEffect(() => {
+        if (purchaseInwarddata?.data) {
+            syncFormWithDb(purchaseInwarddata?.data);
         }
-    })
+
+    }, [isSingleFetching, isSingleLoading, syncFormWithDb, purchaseInwarddata]);
+
+    function handleDonee() {
+        onClose()
+
+    }
+    function addItemm(id, obj) {
+        setInwardItems(prevItems => {
+            let newItems = structuredClone(prevItems);
+
+            const index = newItems?.findIndex(v => v?.styleItemId === "");
 
 
+            if (index !== -1) {
+                newItems[index] = obj;
+            } else {
+                newItems.push(obj);
+            }
+
+            return newItems;
+        });
+    }
+    function removeItemm(id) {
+        setInwardItems(localInwardItems => {
+            let newItems = structuredClone(localInwardItems);
+            newItems = newItems?.filter(item => parseInt(item.id) !== parseInt(id))
+            return newItems
+        });
+    }
+    function handleChangee(id, obj) {
+        console.log(id, "iddddd")
+
+        if (isItemAddedd(id)) {
+            removeItemm(id)
+        } else {
+            addItemm(id, obj)
+        }
+    }
+    function isItemAddedd(id) {
+        console.log(id, "id")
+
+        return (inwardItems || [])?.findIndex(item => parseInt(item?.id) === parseInt(id)) !== -1
+    }
+    function handleSelectAllChangee(value, inwardItems) {
+        if (value) {
+            inwardItems?.forEach(item => addItemm(item.id, item))
+        } else {
+            inwardItems?.forEach(item => removeItemm(item.id))
+        }
+    }
+
+    function getSelectAlll(inwardItems) {
+        return inwardItems?.every(item => isItemAddedd(item.id))
+    }
     const isRowEmpty = (row) =>
         !row.styleItemId &&
         !row.uomId &&
@@ -42,7 +108,7 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
         !row.inwardQty
 
 
-   
+
 
 
 
@@ -62,6 +128,8 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
             // 2️⃣ Fill empty rows with our items
             localinwardItems.forEach((item, i) => {
                 const newRow = {
+                    ...item,
+                    checkId: item?.id,
                     docId: item?.PurchaseInward?.docId ?? "",
                     docdate: item?.PurchaseInward?.docDate ? getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate) : "",
                     invNo: item?.PurchaseInward?.invNo ?? "",
@@ -125,21 +193,22 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
         console.log(checkItem, "checkItem")
 
         let item = localinwardItems.find(item =>
-            checkItem.styleItemId === item.styleItemId
-            &&
-            checkItem.hsnId === item.hsnId
-            &&
-            checkItem.uomId === item.uomId
-            &&
-            checkItem.inwardQty === item.inwardQty
-            &&
-            getDateFromDateTimeToDisplay(checkItem?.PurchaseInward?.docDate) === getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate)
-            &&
-            checkItem?.PurchaseInward?.docId === item?.PurchaseInward?.docId
-            &&
-            checkItem?.PurchaseInward?.invNo === item?.PurchaseInward?.invNo
-            &&
-            checkItem?.PurchaseInward?.dcNo === item?.PurchaseInward?.dcNo
+            // checkItem.styleItemId === item.styleItemId
+            // &&
+            // checkItem.hsnId === item.hsnId
+            // &&
+            // checkItem.uomId === item.uomId
+            // &&
+            // checkItem.inwardQty === item.inwardQty
+            // &&
+            // getDateFromDateTimeToDisplay(checkItem?.PurchaseInward?.docDate) === getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate)
+            // &&
+            // checkItem?.PurchaseInward?.docId === item?.PurchaseInward?.docId
+            // &&
+            // checkItem?.PurchaseInward?.invNo === item?.PurchaseInward?.invNo
+            // &&
+            // checkItem?.PurchaseInward?.dcNo === item?.PurchaseInward?.dcNo
+            checkItem?.checkId === item?.checkId
 
 
         )
@@ -196,8 +265,8 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                                         <input
                                             type="checkbox"
                                             className="cursor-pointer"
-                                            onChange={(e) => handleSelectAllChange(e.target.checked)}
-                                            checked={getSelectAll()}
+                                            onChange={(e) => handleSelectAllChangee(e.target.checked,tempItems ? tempItems : [])}
+                                            checked={getSelectAlll(tempItems ? tempItems : [])}
                                         />
                                     </div>
                                 </th>
@@ -285,26 +354,26 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                         </thead>
 
                         <tbody>
-                            {rows?.length === 0 ? (
+                            {tempItems?.length === 0 ? (
                                 <tr>
                                     <td colSpan={9} className="px-4 py-4 text-center text-gray-500">
                                         No data found
                                     </td>
                                 </tr>
-                            ) : rows?.map((item, index) => (
+                            ) : tempItems?.map((item, index) => (
                                 <tr
                                     key={index}
                                     className={`border-b hover:bg-gray-50 cursor-pointer ${isItemChecked(item) ? "bg-gray-50" : ""
                                         }`}
                                     onClick={() =>
-                                        handleCheckBoxChange(!isItemChecked(item), item)
+                                        handleChangee(item?.id, item)
                                     }
                                 >
                                     <td className="text-center py-2 border border-gray-300">
                                         <input
                                             type="checkbox"
                                             className="cursor-pointer"
-                                            checked={isItemChecked(item)}
+                                            checked={isItemAddedd(item.id,item)}
                                         />
                                     </td>
 
@@ -346,7 +415,7 @@ const PoItemsSelection = ({ inwardItems, setInwardItems, setFillGrid, branchId, 
                 <div className="flex justify-end p-3 bg-gray-50">
                     <button
                         className="px-4 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
-                        onClick={handleDone}
+                        onClick={handleDonee}
                     >
                         Done
                     </button>
