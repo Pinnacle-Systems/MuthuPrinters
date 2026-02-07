@@ -279,7 +279,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
     }
 
     const validateData = (data) => {
-        return data.name && data?.active && data?.address && data?.cityId && data?.pincode && data?.gstNo
+        return data.name && data?.active && data?.address && data?.cityId && data?.pincode && data?.gstNo && data?.partyCode
 
     }
 
@@ -1002,7 +1002,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
                                                 name="Code"
                                                 type="text"
                                                 value={partyCode}
-
                                                 setValue={setPartyCode}
                                                 readOnly={readOnly}
                                                 disabled={childRecord.current > 0}
@@ -1963,6 +1962,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                                                         name="Code"
                                                         type="text"
                                                         value={partyCode}
+                                                        required={true}
 
                                                         setValue={setPartyCode}
                                                         readOnly={readOnly}

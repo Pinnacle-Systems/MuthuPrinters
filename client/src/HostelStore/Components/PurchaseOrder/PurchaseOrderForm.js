@@ -659,7 +659,7 @@ const PurchaseOrderForm = ({
                     name="Delivery To"
                     options={dropDownListObject(
                       supplierList?.data,
-                      "partyCode",
+                      "name",
                       "id",
                     )}
                     value={deliveryToId}
