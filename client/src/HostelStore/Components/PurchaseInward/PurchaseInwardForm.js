@@ -188,6 +188,11 @@ const PurchaseInwardForm = ({
           toast.error(returnData?.message);
         }
       }
+      dispatch(
+        purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
+      );
+      dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
+      dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
     } catch (error) {
       console.log("handle");
     }
@@ -288,11 +293,6 @@ const PurchaseInwardForm = ({
     } else {
       handleSubmitCustom(addData, data, "Added", nextProcess);
     }
-    dispatch(
-      purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
-    );
-    dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
-    dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
   };
 
   const dateRef = useRef(null);

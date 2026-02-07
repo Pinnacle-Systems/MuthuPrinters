@@ -254,7 +254,7 @@ async function getOne(id) {
     data: {
       ...po,
       childRecordInward: childRecordInward,
-      childRecordCancel: childRecordCancel
+      childRecordCancel: childRecordCancel,
     },
   };
 }
@@ -792,8 +792,24 @@ async function getAllDataPoItems(data) {
     }),
   );
 
-  // ✅ filter here
-  return results.filter((item) => item.balQty > 0);
+  // 1️⃣ Find max quoteVersion per poId
+  const maxVersionByPo = {};
+
+  for (const item of results) {
+    const poId = item.poId;
+    if (!maxVersionByPo[poId] || item.quoteVersion > maxVersionByPo[poId]) {
+      maxVersionByPo[poId] = item.quoteVersion;
+    }
+  }
+
+  // 2️⃣ Keep only rows of max version AND balQty > 0
+  const finalResult = results.filter(
+    (item) =>
+      item.quoteVersion === maxVersionByPo[item.poId] && item.balQty > 0,
+  );
+
+  console.log(finalResult, "finalResult");
+  return finalResult;
 }
 
 async function getPoItemById(id) {
