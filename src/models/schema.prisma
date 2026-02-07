@@ -1229,6 +1229,7 @@ model InwardItems {
   poId             Int?
   batchNo          String?
   invNo            String?
+  dcNo             String?
 }
 
 model Location {

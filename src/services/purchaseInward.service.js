@@ -39,9 +39,8 @@ async function getNextDocId(
     )}/PI/1`;
 
     if (lastObject) {
-      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${
-        parseInt(lastObject.docId.split("/").at(-1)) + 1
-      }`;
+      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${parseInt(lastObject.docId.split("/").at(-1)) + 1
+        }`;
     }
 
     return newDocId;
@@ -99,13 +98,11 @@ async function getNextDocId(
 
           return currentNo > maxNo ? current.docId : max;
         }, null);
-        newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${
-          parseInt(maxDocId.split("/").at(-1)) + 1
-        }`;
+        newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${parseInt(maxDocId.split("/").at(-1)) + 1
+          }`;
       } else {
-        newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${
-          parseInt(lastObject.docId.split("/").at(-1)) + 1
-        }`;
+        newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${parseInt(lastObject.docId.split("/").at(-1)) + 1
+          }`;
       }
     }
     return newDocId;
@@ -143,22 +140,22 @@ async function get(req) {
       branchId: branchId ? parseInt(branchId) : undefined,
       AND: finYearDate
         ? [
-            {
-              createdAt: {
-                gte: finYearDate.startTime,
-              },
+          {
+            createdAt: {
+              gte: finYearDate.startTime,
             },
-            {
-              createdAt: {
-                lte: finYearDate.endTime,
-              },
+          },
+          {
+            createdAt: {
+              lte: finYearDate.endTime,
             },
-          ]
+          },
+        ]
         : undefined,
       docId: Boolean(serachDocNo)
         ? {
-            contains: serachDocNo,
-          }
+          contains: serachDocNo,
+        }
         : undefined,
       inwardType: Boolean(searchInwardType)
         ? { contains: searchInwardType }
@@ -205,7 +202,26 @@ async function get(req) {
     totalCount,
   };
 }
-
+function manualFilterSearchDataPoItems(
+  searchPoDate,
+  searchDueDate,
+  searchInwardType,
+  data,
+) {
+  const inwardTypeKey = searchInwardType
+    ? searchInwardType.split(" ")[0].toUpperCase()
+    : "";
+  return data.filter(
+    (item) =>
+      (searchPoDate
+        ? String(getDateFromDateTime(item.Po.docDate)).includes(searchPoDate)
+        : true) &&
+      (searchDueDate
+        ? String(getDateFromDateTime(item.Po.dueDate)).includes(searchDueDate)
+        : true) &&
+      (inwardTypeKey ? item.Po.poType.toUpperCase() === inwardTypeKey : true),
+  );
+}
 async function getOne(id) {
   const data = await prisma.purchaseInward.findUnique({
     where: {
@@ -486,7 +502,204 @@ async function getOne(id) {
     },
   };
 }
+async function getOneBillEntry(req) {
+  const { supplierId, dcNo } = req.query;
 
+  console.log(supplierId, "supplierIdreceived");
+
+  const data = await prisma.purchaseInward.findMany({
+    where: {
+      supplierId: parseInt(supplierId),
+    },
+    include: {
+      Store: {
+        select: {
+          locationId: true,
+          storeName: true,
+        },
+      },
+      Branch: {
+        select: {
+          branchName: true,
+        },
+      },
+      supplier: {
+        select: {
+          name: true,
+        },
+      },
+      inwardItems: {
+        include: {
+          Hsn: true, StyleItem: true, Uom: true,
+        }
+      },
+    },
+  });
+  if (!data) return NoRecordFound("Purchase Inward");
+
+  return {
+    statusCode: 0,
+    data: {
+      ...data,
+    },
+  };
+}
+async function getAllDataPoItems(data) {
+  const results = await Promise.all(
+    data?.map(async (item) => {
+      const res = await getPoItemById(item.id);
+      return res.data;
+    }),
+  );
+
+  // ✅ filter here
+  return results.filter((item) => item.balQty > 0);
+}
+async function getPoItemById(id) {
+  const data = await prisma.inwardItems.findUnique({
+    where: { id: parseInt(id) },
+    include: {
+      Po: { select: { docId: true, dueDate: true, docDate: true } },
+      Uom: { select: { name: true } },
+      StyleItem: { select: { name: true } },
+      Hsn: { select: { name: true } },
+    },
+  });
+
+  if (!data) return NoRecordFound("Purchase Order");
+  // 1️⃣ All inward rows
+  const inwardItems = await prisma.inwardItems.findMany({
+    where: {
+      styleItemId: data.styleItemId,
+      poId: data.poId,
+      uomId: data.uomId,
+      hsnId: data.hsnId,
+    },
+    select: {
+      purchaseInwardId: true,
+      inwardQty: true,
+    },
+  });
+
+  const inwardQty = inwardItems.reduce(
+    (sum, item) => sum + (item.inwardQty ?? 0),
+    0,
+  );
+  const cancelItems = await prisma.purchaseCancelItems.findMany({
+    where: {
+      styleItemId: data.styleItemId,
+      poId: data.poId,
+      uomId: data.uomId,
+      hsnId: data.hsnId,
+    },
+    select: {
+      cancelQty: true,
+    },
+  });
+
+  const cancelQty = cancelItems.reduce(
+    (sum, item) => sum + (item.cancelQty ?? 0),
+    0,
+  );
+
+  const inwardIds = inwardItems.map((i) => i.purchaseInwardId).filter(Boolean);
+
+  let returnQty = 0;
+
+  if (inwardIds.length > 0) {
+    const returnAgg = await prisma.purchaseReturnItems.aggregate({
+      where: {
+        styleItemId: data.styleItemId,
+        uomId: data.uomId,
+        hsnId: data.hsnId,
+        purchaseInwardId: { in: inwardIds },
+      },
+      _sum: { returnQty: true },
+    });
+
+    returnQty = returnAgg._sum.returnQty ?? 0;
+  }
+
+
+  return {
+    statusCode: 0,
+    data: {
+      ...data,
+      poQty: data.qty,
+      cancelQty,
+      alreadyInwardQty: inwardQty,
+      alreadyReturnQty: returnQty,
+      balQty: data.qty - (inwardQty + cancelQty),
+      balQtyCancel: data.qty - (inwardQty - returnQty),
+
+    },
+  };
+}
+async function getPurchaseInwardBillEntryItems(req) {
+  const {
+    branchId,
+    active,
+    supplierId,
+    inwardType,
+    pagination,
+    dataPerPage,
+    searchDocId,
+    searchPoDate,
+    searchInwardType,
+    searchDueDate,
+  } = req.query;
+console.log(supplierId,pagination,"paramsreceived");
+
+  let data;
+  let totalCount;
+  if (pagination) {
+    data = await prisma.inwardItems.findMany({
+      where: {
+        PurchaseInward: {
+          // docId: Boolean(searchDocId)
+          //   ? {
+          //     contains: searchDocId,
+          //   }
+          //   : undefined,
+          supplierId: supplierId ? parseInt(supplierId) : undefined,
+        },
+      },
+      include: {
+        PurchaseInward: {
+          select: {
+            supplierId: true,
+            docDate: true,
+            docId: true
+            // dueDate: true,
+            // poType: true,
+          },
+        },
+        // Uom: {
+        //   select: {
+        //     name: true,
+        //   },
+        // },
+        Hsn: true, StyleItem: true, Uom: true
+
+      },
+    });
+   
+
+    data = data?.filter((i) => i.PurchaseInward.supplierId == supplierId);
+
+    // data = await getAllDataPoItems(data);
+
+
+  } else {
+    data = await prisma.inwardItems.findMany({
+      where: {
+        branchId: branchId ? parseInt(branchId) : undefined,
+        active: active ? Boolean(active) : undefined,
+      },
+    });
+  }
+  return { statusCode: 0, data, totalCount };
+}
 async function create(req) {
   const {
     userId,
@@ -508,9 +721,9 @@ async function create(req) {
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-        finYearDate?.startDateStartTime,
-        finYearDate?.endDateEndTime,
-      )
+      finYearDate?.startDateStartTime,
+      finYearDate?.endDateEndTime,
+    )
     : "";
   let newDocId = await getNextDocId(
     branchId,
@@ -963,31 +1176,31 @@ async function getPurchaseDetailStock(req) {
     statusCode: 0,
     data: isMaterial
       ? data.map((d) => ({
-          invNo: d.invNo,
-          styleItemId: d.styleItemId,
-          fabricId: d.fabricId,
-          hsnId: d.hsnId,
-          uomId: d.uomId,
-          fabWidth: d.fabWidth,
-          fabMeter: d._sum.fabMeter,
-          accessoryId: d.accessoryId,
-          accessoryGroupId: d.accessoryGroupId,
-          uomId: d.uomId,
-          uomId: d.uomId,
-          qty: d._sum.qty,
-          styleId: d.styleId,
-          portionId: d.portionId,
-        }))
+        invNo: d.invNo,
+        styleItemId: d.styleItemId,
+        fabricId: d.fabricId,
+        hsnId: d.hsnId,
+        uomId: d.uomId,
+        fabWidth: d.fabWidth,
+        fabMeter: d._sum.fabMeter,
+        accessoryId: d.accessoryId,
+        accessoryGroupId: d.accessoryGroupId,
+        uomId: d.uomId,
+        uomId: d.uomId,
+        qty: d._sum.qty,
+        styleId: d.styleId,
+        portionId: d.portionId,
+      }))
       : data.map((d) => ({
-          invNo: purchaseData.invNo,
-          styleItemId: d.styleItemId,
-          fabricId: d.fabricId,
-          hsnId: d.hsnId,
-          uomId: d.uomId,
-          stkQty: d._sum.qty,
-          styleId: d.styleId,
-          styleNo: d.styleNo,
-        })),
+        invNo: purchaseData.invNo,
+        styleItemId: d.styleItemId,
+        fabricId: d.fabricId,
+        hsnId: d.hsnId,
+        uomId: d.uomId,
+        stkQty: d._sum.qty,
+        styleId: d.styleId,
+        styleNo: d.styleNo,
+      })),
     returnType: purchaseData.inwardType,
     supplierId: purchaseData.supplierId,
   };
@@ -1008,13 +1221,13 @@ function manualFilterSearchDataPurchaseInwardItems(
     (item) =>
       (searchDocDate
         ? String(getDateFromDateTime(item.PurchaseInward.docDate)).includes(
-            searchDocDate,
-          )
+          searchDocDate,
+        )
         : true) &&
       (searchDcDate
         ? String(getDateFromDateTime(item.PurchaseInward.dcDate)).includes(
-            searchDcDate,
-          )
+          searchDcDate,
+        )
         : true) &&
       (inwardTypeToSearch
         ? item.PurchaseInward.inwardType === inwardTypeToSearch
@@ -1138,8 +1351,8 @@ async function getPurchaseInwardItems(req) {
         PurchaseInward: {
           docId: Boolean(searchDocId)
             ? {
-                contains: searchDocId,
-              }
+              contains: searchDocId,
+            }
             : undefined,
           supplierId: supplierId ? parseInt(supplierId) : undefined,
         },
@@ -1244,4 +1457,5 @@ export {
   getPurchaseDetail,
   getPurchaseDetailStock,
   getPurchaseInwardItems,
+  getOneBillEntry, getPurchaseInwardBillEntryItems
 };

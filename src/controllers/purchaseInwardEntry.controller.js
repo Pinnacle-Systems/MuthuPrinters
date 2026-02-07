@@ -6,7 +6,7 @@ import {
   update as _update,
   remove as _remove,
   getPurchaseDetailStock as _getPurchaseDetail,
-  getPurchaseInwardItems as _getPurInwardItems,
+  getPurchaseInwardItems as _getPurInwardItems, getOneBillEntry as _getOneBillEntry,getPurchaseInwardBillEntryItems as _getPurchaseInwardBillEntryItems
 } from "../services/purchaseInward.service.js";
 
 async function get(req, res, next) {
@@ -98,6 +98,20 @@ async function getPurInwardItems(req, res, next) {
     console.error(`Error`, err.message);
   }
 }
+async function getOneBillEntry(req, res, next) {
+  try {
+    res.json(await _getOneBillEntry(req));
+  } catch (err) {
+    console.error(`Error`, err.message);
+  }
+}
+async function getPurchaseInwardBillEntryItems(req, res, next) {
+  try {
+    res.json(await _getPurchaseInwardBillEntryItems(req));
+  } catch (err) {
+    console.error(`Error`, err.message);
+  }
+}
 
 export {
   get,
@@ -107,4 +121,5 @@ export {
   remove,
   getPurchaseDetail,
   getPurInwardItems,
+  getOneBillEntry,getPurchaseInwardBillEntryItems
 };

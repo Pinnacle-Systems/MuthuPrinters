@@ -59,6 +59,19 @@ const purchaseInwardEntryApi = createApi({
       },
       providesTags: ["purchaseInwardEntry"],
     }),
+    getPurchaseInwardEntryForBillById: builder.query({
+      query: ({ params,}) => {
+        return {
+          url: `${PURCHASE_INWARD_ENTRY_API}/purchaseInwardEntryForBill`,
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+          params
+        };
+      },
+      providesTags: ["purchaseInwardEntry"],
+    }),
     getPurInwardItems: builder.query({
       query: ({ params }) => {
         return {
@@ -98,6 +111,7 @@ const purchaseInwardEntryApi = createApi({
       }),
       invalidatesTags: ["purchaseInwardEntry"],
     }),
+
   }),
 });
 
@@ -110,6 +124,7 @@ export const {
   useDeletePurchaseInwardEntryMutation,
   useLazyGetPurchaseDetailQuery,
   useGetPurInwardItemsQuery,
+  useGetPurchaseInwardEntryForBillByIdQuery
 } = purchaseInwardEntryApi;
 
 export default purchaseInwardEntryApi;

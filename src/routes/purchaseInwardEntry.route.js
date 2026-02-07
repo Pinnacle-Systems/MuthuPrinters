@@ -7,7 +7,7 @@ import {
   update,
   remove,
   getPurchaseDetail,
-  getPurInwardItems
+  getPurInwardItems,getOneBillEntry,getPurchaseInwardBillEntryItems
 } from "../controllers/purchaseInwardEntry.controller.js";
 
 router.post("/", create);
@@ -15,7 +15,8 @@ router.post("/", create);
 router.get("/", get);
 router.get('/purInwardItemDetails', getPurInwardItems);
 router.get("/purchaseDetail", getPurchaseDetail);
-
+// router.get("/purchaseInwardEntryForBill",getOneBillEntry)
+router.get("/purchaseInwardEntryForBill",getPurchaseInwardBillEntryItems)
 router.put("/:id", update);
 
 router.get("/:id", getOne);
