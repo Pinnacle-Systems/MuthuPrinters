@@ -31,9 +31,9 @@ const InwardItems = ({
     inwardQty: "",
     poQty: "",
     poId: "",
-    alreadyInwardQty:"",
-    cancelQty:"",
-    balQty:""
+    alreadyInwardQty: "",
+    cancelQty: "",
+    balQty: ""
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -130,6 +130,7 @@ const InwardItems = ({
       setInwardItems(Array.from({ length: 4 }, () => ({ ...EMPTY_ROW })));
     }
   }, [id, inwardItems]);
+  console.log(inwardItems, "inwardItemsinparent");
 
   return (
     <>
@@ -253,8 +254,14 @@ const InwardItems = ({
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
+                  Price
+                </th>
+                <th
+                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                >
                   Inward Qty
                 </th>
+
                 <th
                   className={`w-20 px-1 py-2 text-center font-medium text-[13px] `}
                 >
@@ -503,6 +510,34 @@ const InwardItems = ({
                   )}
                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
                     <input
+                      onKeyDown={(e) => {
+                        if (e.code === "Minus" || e.code === "NumpadSubtract")
+                          e.preventDefault();
+                        if (e.key === "Delete") {
+                          handleInputChange("", index, "price");
+                        }
+                      }}
+                      min={"0"}
+                      type="number"
+                      className="text-right rounded py-1 px-1 w-full table-data-input"
+                      onFocus={(e) => e.target.select()}
+                      value={parseFloat(row?.price).toFixed(2)}
+
+                      onChange={(e) =>
+                        handleInputChange(e.target.value, index, "price")
+                      }
+                      onBlur={(e) => {
+                        handleInputChange(e.target.value, index, "price");
+                      }}
+                      disabled={
+                        readOnly ||
+                        (row.stockQty ?? 0) > 0 ||
+                        inwardType !== "Direct Inward"
+                      }
+                    />
+                  </td>
+                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <input
                       id={`inwardQty-input-${index}`}
                       onKeyDown={(e) => {
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -609,7 +644,14 @@ const InwardItems = ({
                     <td className="border border-gray-300 " colSpan={3}></td>
                   </>
                 )}
-
+                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                  {inwardItems
+                    ?.reduce(
+                      (sum, row) => sum + (Number(row.price) || 0),
+                      0,
+                    )
+                    .toFixed(2)}
+                </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {inwardItems
                     ?.reduce(

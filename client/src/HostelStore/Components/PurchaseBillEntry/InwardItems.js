@@ -34,7 +34,7 @@ const InwardItems = ({
     inwardQty: "",
     poQty: "",
     poId: "",
-    checkId: ""
+
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -51,7 +51,7 @@ const InwardItems = ({
       uomId: "",
       inwardQty: "",
       poQty: "",
-      poId: "", checkId: ""
+      poId: "",
 
     };
     setInwardItems([...inwardItems, newRow]);
@@ -157,7 +157,7 @@ const InwardItems = ({
       <Modal
         isOpen={fillGrid}
         onClose={() => setFillGrid(false)}
-        widthClass={"w-[85%]"}
+        widthClass={"w-[95%] h-[80%]"}
       >
         <PoItemsSelection
           setFillGrid={setFillGrid}
@@ -177,7 +177,7 @@ const InwardItems = ({
           <h2 className="font-medium text-slate-700">List Of Items</h2>
 
           <button
-            className={`font-bold text-slate-700 bord ml-[1200px] text-sm bg-blue-500 rounded rounded-md text-white px-2
+            className={`font-bold text-slate-700 bord ml-[1080px] text-sm bg-blue-500 rounded rounded-md text-white px-2
               `}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -188,7 +188,7 @@ const InwardItems = ({
             onClick={() => {
               if (!supplierId) {
                 Swal.fire({
-                  icon: "success",
+                  icon: "warning",
                   title: ` Choose Supplier`,
                   showConfirmButton: false,
                   timer: 2000,
@@ -197,7 +197,7 @@ const InwardItems = ({
                 setFillGrid(true);
               }
             }}
-            disabled={id}
+            // disabled={id}
           >
             Fill Purchase Inward Items
           </button>
@@ -249,12 +249,17 @@ const InwardItems = ({
                 >
                   UOM
                 </th>
-
+                <th
+                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                >
+                  Price
+                </th>
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
                   Inward Qty
                 </th>
+
                 <th
                   className={`w-20 px-1 py-2 text-center font-medium text-[13px] `}
                 >
@@ -265,13 +270,14 @@ const InwardItems = ({
             <tbody>
               {(inwardItems ? inwardItems : [])?.map((row, index) => (
                 <tr
-                  className="border border-blue-gray-200 cursor-pointer "
+                  className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
+
                   key={index}
                 >
-                  <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
+                  <td className="w-12 border border-gray-300 text-[11px] py-1.5  text-center p-0.5">
                     {index + 1}
                   </td>
-                  <td className="w-12 border border-gray-300 text-[11px]  text-left p-0.5">
+                  <td className="w-12 border border-gray-300 text-[11px] pl-1  text-left p-0.5">
                     {row?.PurchaseInward?.docId}
                   </td>
                   <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
@@ -283,96 +289,42 @@ const InwardItems = ({
                   <td className="w-12 border border-gray-300 text-[11px]  text-right  pr-1 p-0.5">
                     {row?.PurchaseInward?.dcNo}
                   </td>
-                  <td className=" text-[11px] border border-gray-300 text-left">
-                    <FxSelect
-                      inputId={`styleItemId-input-${index}`}
-                      value={row.styleItemId}
-                      // onChange={(val) =>
-                      //   handleInputChange(val, index, "styleItemId")
-                      // }
-                      options={(styleItemList?.data || [])
-                        .filter((item) => item.active)
-                        .map((item) => ({
-                          label: item.name,
-                          value: item.id,
-                        }))}
-                      readOnly={readOnly || inwardType !== "Direct Inward"}
-                      placeholder=""
-                    // onBlur={() =>
-                    //   handleInputChange(row.styleItemId, index, "styleItemId")
-                    // }
-                    // onKeyDown={(e) => {
-                    //   if (e.key === "Delete") {
-                    //     handleInputChange("", index, "styleItemId");
-                    //   }
-                    // }}
-                    />
+                  <td className=" text-[11px] border pl-1 border-gray-300 text-left">
+                    {row?.StyleItem?.name}
 
                   </td>
-                  <td className="py-0.5 border text-right border-gray-300 text-[11px] ">
-                    <FxSelect
-                      value={row.hsnId}
-                      // onChange={(val) => handleInputChange(val, index, "hsnId")}
-                      options={(hsnList?.data || [])
-                        .filter((item) => item.active)
-                        .map((item) => ({
-                          label: item.name,
-                          value: item.id,
-                        }))}
-                      readOnly={readOnly || inwardType !== "Direct Inward"}
-                      placeholder=""
-                    // onBlur={() =>
-                    //   handleInputChange(row.hsnId, index, "hsnId")
-                    // }
-                    // onKeyDown={(e) => {
-                    //   if (e.key === "Delete") {
-                    //     handleInputChange("", index, "hsnId");
-                    //   }
-                    // }}
-                    />
-                  </td>
-                  <td className="py-0.5 border border-gray-300 text-[11px] ">
-                    <FxSelect
-                      value={row.uomId}
-                      // onChange={(val) => handleInputChange(val, index, "uomId")}
-                      options={(uomList?.data || [])
-                        .filter((item) => item.active)
-                        .map((item) => ({
-                          label: item.name,
-                          value: item.id,
-                        }))}
-                      readOnly={readOnly || inwardType !== "Direct Inward"}
-                      placeholder=""
-                    // onBlur={() =>
-                    //   handleInputChange(row.uomId, index, "uomId")
-                    // }
-                    // onKeyDown={(e) => {
-                    //   if (e.key === "Delete") {
-                    //     handleInputChange("", index, "uomId");
-                    //   }
-                    // }}
-                    />
-                  </td>
+                  <td className="py-0.5 border text-right pr-1 border-gray-300 text-[11px] ">
+                    {row.Hsn?.name}
 
+                  </td>
+                  <td className="py-0.5 border pl-1  border-gray-300 text-[11px] ">
+                    {row.Uom?.name}
+                  </td>
+                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right pr-1">
+                    {row?.price?.toFixed(2)}
+
+
+                  </td>
                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right pr-1">
                     {row?.inwardQty}
 
                   </td>
 
-                  <td className="w-2 border border-gray-300">
+
+                  <td className="w-2 border border-gray-300 bg-transparent">
                     <input
                       onContextMenu={(e) => {
                         if (!readOnly) {
                           handleRightClick(e, index, "");
                         }
                       }}
-                      className="w-full"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addRow();
-                        }
-                      }}
+                      className="w-full bg-transparent"
+                      // onKeyDown={(e) => {
+                      //   if (e.key === "Enter") {
+                      //     e.preventDefault();
+                      //     addRow();
+                      //   }
+                      // }}
                       disabled={readOnly}
                     />
                   </td>
@@ -392,7 +344,15 @@ const InwardItems = ({
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {inwardItems
                     ?.reduce(
-                      (sum, row) => sum + (Number(row.inwardQty) || 0),
+                      (sum, row) => sum + (Number(row?.price) || 0),
+                      0,
+                    )
+                    .toFixed(2)}
+                </td>
+                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                  {inwardItems
+                    ?.reduce(
+                      (sum, row) => sum + (Number(row?.inwardQty) || 0),
                       0,
                     )
                     .toFixed(2)}

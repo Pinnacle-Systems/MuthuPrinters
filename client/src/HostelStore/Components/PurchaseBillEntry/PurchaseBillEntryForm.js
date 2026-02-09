@@ -50,7 +50,7 @@ const PurchaseBillEntryForm = ({
   );
   const [supplierId, setSupplierId] = useState("");
   const [inwardItems, setInwardItems] = useState([]);
-  const [tempItems,setTempItems] = useState([])
+  const [tempItems, setTempItems] = useState([])
   const [remarks, setRemarks] = useState("");
   const [inwardType, setInwardType] = useState("General Purchase Inward");
   const [storeId, setStoreId] = useState("");
@@ -60,8 +60,10 @@ const PurchaseBillEntryForm = ({
   const [dcDate, setDcDate] = useState("");
   const [vehicleNo, setVehicleNo] = useState("");
   const [invNo, setInvNo] = useState("");
-
+  const [inwardArray, setInwardArray] = useState([])
+  const [netBillValue, setNetBillValue] = useState("")
   const { userId, finYearId, branchId, companyId } = getCommonParams();
+  const supplierRef = useRef(null);
 
 
   const {
@@ -80,18 +82,21 @@ const PurchaseBillEntryForm = ({
       setDocId(data?.docId ? data?.docId : "New");
       setDocDate(
         data?.docDate
-          ? moment.utc(data.docDate).format("YYYY-MM-DD")
+          ? moment.utc(data?.docDate)?.format("YYYY-MM-DD")
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
 
       const mappedInwardItems = data?.purchaseBillEntryItems?.map((val) => ({
         ...val,
-        docdate: moment.utc(val?.docDate).format("DD-MM-YYYY") || "",
-        styleItemId: val?.StyleItem?.id,
-        uomId: val?.Uom?.id,
-        hsnId: val?.Hsn?.id
+        // docdate: moment.utc(val?.purchaseInward?.docDate).format("DD-MM-YYYY") || "",
+        // styleItemId: val?.StyleItem?.id,
+        // uomId: val?.Uom?.id,
+        // hsnId: val?.Hsn?.id,
+        // price:val?.price?.toFixed(2)
 
       })) || []
+      console.log(mappedInwardItems, "mappedInwardItems");
+      setNetBillValue(parseFloat(data?.netBillValue)?.toFixed(2))
       setInwardItems(mappedInwardItems);
       setSupplierId(data?.supplierId || "");
 
@@ -113,8 +118,8 @@ const PurchaseBillEntryForm = ({
     id,
     docDate,
     supplierId,
-    remarks, vehicleNo,
-    inwardItems: inwardItems?.filter((val) => val?.styleItemId),
+    remarks, vehicleNo, netBillValue,
+    inwardItems: inwardItems?.filter((val) => val?.StyleItem?.id),
   };
   console.log(inwardItems, "parentTable");
 
@@ -142,6 +147,9 @@ const PurchaseBillEntryForm = ({
             setDocId("New");
             syncFormWithDb(undefined);
             // onNew();
+            setTimeout(() => {
+              supplierRef.current?.focus();
+            }, 0);
           }
           if (nextProcess == "close") {
             onClose();
@@ -176,48 +184,138 @@ const PurchaseBillEntryForm = ({
 
     return duplicates; // empty array = no duplicates
   };
+  const totalprice = inwardItems
+    .reduce((sum, row) => sum + (Number(row.price) || 0), 0)
+    .toFixed(2)
+
 
   const validateData = (data) => {
     const items = data?.inwardItems || [];
+    console.log(items, "cheekcingvalidation");
 
+    const isAmountMatched =
+      Number(netBillValue).toFixed(2) === Number(totalprice).toFixed(2);
+
+    if (!isAmountMatched) {
+      Swal.fire({
+        icon: "error",
+        title: "Amount Mismatch",
+        text: "Net Bill Value and Total Price do not match.",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+      return false;
+    }
     // remove blank rows
     const filledItems = items.filter((item) => item.styleItemId);
+    const hasAtLeastOneItem = items.some(
+      (item) => item.StyleItem?.id
+    );
     const duplicates = findDuplicates(filledItems);
     // duplicate check
-  //   if (duplicates.length > 0) {
-  //     const dup = duplicates[0]; // show first duplicate
-  //     Swal.fire({
-  //       icon: "warning",
-  //       title: "Duplicate Item Found",
-  //       html: `
-  //   Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},
-  //   HSN - ${findFromList(dup?.hsnId, hsnList?.data, "name")},
-  // `,
-  //       confirmButtonText: "OK",
-  //     });
-  //     return false;
-  //   }
+    //   if (duplicates.length > 0) {
+    //     const dup = duplicates[0]; // show first duplicate
+    //     Swal.fire({
+    //       icon: "warning",
+    //       title: "Duplicate Item Found",
+    //       html: `
+    //   Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},
+    //   HSN - ${findFromList(dup?.hsnId, hsnList?.data, "name")},
+    // `,
+    //       confirmButtonText: "OK",
+    //     });
+    //     return false;
+    //   }
+    const FIELD_LABELS = {
+      StyleItem: "Item",
+      Hsn: "HSN",
+      Uom: "UOM",
+      inwardQty: "Inward Quantity",
+    };
+
+    const findMissingField = (items) => {
+      for (let i = 0; i < items.length; i++) {
+        const row = items[i];
+
+        // only validate rows that have an Item selected
+        if (!row.StyleItem?.id) continue;
+
+        if (!row.Hsn?.id) {
+          return { rowIndex: i + 1, field: "Hsn" };
+        }
+
+        if (!row.Uom?.id) {
+          return { rowIndex: i + 1, field: "Uom" };
+        }
+
+        if (
+          row.inwardQty === null ||
+          row.inwardQty === undefined ||
+          row.inwardQty === ""
+        ) {
+          return { rowIndex: i + 1, field: "inwardQty" };
+        }
+      }
+      return null;
+    };
+
+
+
     let mandatoryFields = ["styleItemId", "hsnId", "uomId", "inwardQty"];
-    if (
-      !(
 
-
-
-        data.supplierId &&
-        isGridDatasValid(data?.inwardItems, false, mandatoryFields) &&
-        data?.inwardItems?.length !== 0
-
-      )
-    ) {
+    if (!data.supplierId) {
       Swal.fire({
-        // title: "Total percentage exceeds 100%",
-        title: "Please fill all required fields...!",
         icon: "error",
+        title: "Supplier is required",
         timer: 1500,
         showConfirmButton: false,
       });
       return false;
     }
+
+    if (!hasAtLeastOneItem) {
+      Swal.fire({
+        icon: "error",
+        title: "Please add at least one item",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      return false;
+    }
+
+    //  validate only filled rows
+    const missing = findMissingField(items);
+
+    if (missing) {
+      Swal.fire({
+        icon: "error",
+        title: "Missing Required Field",
+        text: `Row ${missing.rowIndex}: ${FIELD_LABELS[missing.field]} is required`,
+        timer: 2000,
+        showConfirmButton: false,
+      });
+      return false;
+    }
+    // if (
+    //   !(
+
+
+
+    //     data.supplierId &&
+    //     isGridDatasValid(data?.inwardItems, false, mandatoryFields) &&
+    //     data?.inwardItems?.length !== 0
+
+    //   )
+    // ) {
+    //   Swal.fire({
+    //     // title: "Total percentage exceeds 100%",
+    //     title: "Please fill all required fields...!",
+    //     icon: "error",
+    //     timer: 1500,
+    //     showConfirmButton: false,
+    //   });
+    //   return false;
+    // }
 
     return true;
   };
@@ -258,6 +356,7 @@ const PurchaseBillEntryForm = ({
   const dateRef = useRef(null);
   const inputPartyRef = useRef(null);
 
+
   const handleKeyDown = (event) => {
     let charCode = String.fromCharCode(event.which).toLowerCase();
     if ((event.ctrlKey || event.metaKey) && charCode === "s") {
@@ -265,6 +364,10 @@ const PurchaseBillEntryForm = ({
       saveData();
     }
   };
+  console.log(inwardItems, "inwardItemsvalidatecheck");
+  useEffect(() => {
+    supplierRef.current?.focus();
+  }, []);
 
   return (
     <>
@@ -314,9 +417,9 @@ const PurchaseBillEntryForm = ({
             <div className="flex gap-x-4">
               <div className="w-[500px]">
                 <ReusableSearchableInput
-                  label="Supplier Id"
+                  label="Supplier"
                   component="PartyMaster"
-                  placeholder="Search Supplier Id..."
+                  placeholder="Search Supplier"
                   optionList={supplierList?.data}
                   setSearchTerm={(value) => {
                     setSupplierId(value);
@@ -326,9 +429,40 @@ const PurchaseBillEntryForm = ({
                   required={true}
                   disabled={id}
                   isSupplier={true}
-                  nextRef={inputPartyRef}
+                  ref={supplierRef}
+
                 />
               </div>
+              <div className="w-[150px]">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Net Bill Value
+                </label>
+                <input
+                  // disabled={id}
+
+                  className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
+          focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+          transition-all duration-150 shadow-sm
+          ${readOnly
+                      ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                      : "bg-white hover:border-gray-400"
+                    }
+          `} type="number"
+                  value={netBillValue}
+                  onChange={(e) => setNetBillValue(e.target.value)}
+                  onBlur={(e) =>
+                    setNetBillValue(
+                      e.target.value
+                        ? Number(e.target.value).toFixed(2)
+                        : ""
+                    )
+                  }
+                />
+
+              </div>
+
+
+
               {/* <div className="w-[250px]">
                 <TextInput
                   name={"Inv No"}
@@ -403,8 +537,16 @@ const PurchaseBillEntryForm = ({
               Qty Summary
             </h2>
 
-           
+
             <div className="space-y-1.5">
+              <div className="flex justify-between  text-sm">
+                <span className="text-slate-600">Total Price</span>
+                <span className="font-medium">
+                  {inwardItems
+                    .reduce((sum, row) => sum + (Number(row.price) || 0), 0)
+                    .toFixed(2)}
+                </span>
+              </div>
               <div className="flex justify-between  text-sm">
                 <span className="text-slate-600">Total Inward Qty</span>
                 <span className="font-medium">

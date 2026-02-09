@@ -426,6 +426,7 @@ model Party {
   purchaseInwardReturns PurchaseInwardReturn[]
   purchaseCancels       PurchaseCancel[]
   purchaseBillEntries   PurchaseBillEntry[]
+  purchaseLedgers       PurchaseLedger[]
 }
 
 model PartyBranch {
@@ -1194,31 +1195,32 @@ model PayTerm {
 }
 
 model PurchaseInward {
-  id                  Int                   @id @default(autoincrement())
-  docId               String
-  docDate             DateTime?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  createdBy           User?                 @relation("createdBy", fields: [createdById], references: [id])
-  createdById         Int?
-  updatedBy           User?                 @relation("updatedBy", fields: [updatedById], references: [id])
-  updatedById         Int?
-  Branch              Branch?               @relation(fields: [branchId], references: [id])
-  branchId            Int?
-  dcNo                String?
-  dcDate              DateTime?             @db.Date
-  supplier            Party?                @relation(fields: [supplierId], references: [id])
-  supplierId          Int?
-  active              Boolean               @default(true)
-  vehicleNo           String?
-  remarks             String?               @db.LongText
-  inwardItems         InwardItems[]
-  inwardType          String?
-  Store               Location?             @relation(fields: [storeId], references: [id])
-  storeId             Int?
-  locationId          Int?
-  invNo               String?
-  purchaseReturnItems PurchaseReturnItems[]
+  id                     Int                      @id @default(autoincrement())
+  docId                  String
+  docDate                DateTime?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  createdBy              User?                    @relation("createdBy", fields: [createdById], references: [id])
+  createdById            Int?
+  updatedBy              User?                    @relation("updatedBy", fields: [updatedById], references: [id])
+  updatedById            Int?
+  Branch                 Branch?                  @relation(fields: [branchId], references: [id])
+  branchId               Int?
+  dcNo                   String?
+  dcDate                 DateTime?                @db.Date
+  supplier               Party?                   @relation(fields: [supplierId], references: [id])
+  supplierId             Int?
+  active                 Boolean                  @default(true)
+  vehicleNo              String?
+  remarks                String?                  @db.LongText
+  inwardItems            InwardItems[]
+  inwardType             String?
+  Store                  Location?                @relation(fields: [storeId], references: [id])
+  storeId                Int?
+  locationId             Int?
+  invNo                  String?
+  purchaseReturnItems    PurchaseReturnItems[]
+  purchaseBillEntryItems PurchaseBillEntryItems[]
 }
 
 model InwardItems {
@@ -1240,6 +1242,7 @@ model InwardItems {
   batchNo          String?
   invNo            String?
   dcNo             String?
+  price            Float?
 }
 
 model Location {
@@ -1372,13 +1375,17 @@ model PurchaseBillEntry {
   remarks                String?                  @db.LongText
   user                   User?                    @relation(fields: [userId], references: [id])
   userId                 Int?
+  netBillValue           Float?
   purchaseBillEntryItems PurchaseBillEntryItems[]
+  purchaseLedgers        PurchaseLedger[]
 }
 
 model PurchaseBillEntryItems {
   id                  Int                @id @default(autoincrement())
   PurchaseBillEntry   PurchaseBillEntry? @relation(fields: [purchaseBillEntryId], references: [id], onDelete: Cascade)
   purchaseBillEntryId Int?
+  PurchaseInward      PurchaseInward?    @relation(fields: [purchaseInwardId], references: [id])
+  purchaseInwardId    Int?
   Uom                 Uom?               @relation(fields: [uomId], references: [id])
   uomId               Int?
   StyleItem           StyleItem?         @relation(fields: [styleItemId], references: [id])
@@ -1390,4 +1397,17 @@ model PurchaseBillEntryItems {
   dcNo                String?
   docId               String?
   docDate             String?
+  price               Float?
+}
+
+model PurchaseLedger {
+  id                  Int                @id @default(autoincrement())
+  PurchaseBillEntry   PurchaseBillEntry? @relation(fields: [purchaseBillEntryId], references: [id], onDelete: Cascade)
+  purchaseBillEntryId Int?
+  netBillValue        Float?
+  supplier            Party?             @relation(fields: [supplierId], references: [id])
+  supplierId          Int?
+  docId               String?
+  docDate             DateTime?
+  remarks             String?            @db.LongText
 }

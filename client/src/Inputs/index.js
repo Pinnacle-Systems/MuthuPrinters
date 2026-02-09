@@ -1,5 +1,5 @@
 import validator from "validator";
-import React, { forwardRef, useEffect, useRef, useState } from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { MultiSelect } from "react-multi-select-component";
 import Select from "react-select";
 import { findFromList } from "../Utils/helper";
@@ -815,6 +815,26 @@ export const ReusableSearchableInput = forwardRef(
     const inputRef = useOutsideClick(() => {
       setIsListShow(false);
     });
+    const internalInputRef = useRef(null);
+
+    useImperativeHandle(ref, () => internalInputRef.current);
+    useEffect(() => {
+      const input = internalInputRef.current;
+      if (!input) return;
+
+      const handleFocus = () => {
+        if (disabled || readOnly) return;
+
+        setIsDropdownOpen(true);
+        setIsListShow(true);
+      };
+
+      input.addEventListener("focus", handleFocus);
+
+      return () => {
+        input.removeEventListener("focus", handleFocus);
+      };
+    }, [disabled, readOnly]);
 
     // close dropdown if click outside
     useEffect(() => {
@@ -938,14 +958,14 @@ export const ReusableSearchableInput = forwardRef(
                   }}
                   disabled={disabled || readOnly}
                   tabIndex={0}
-                  ref={ref}
+                  ref={internalInputRef}
                 />
               ) : (
                 <input
                   className="w-full pl-8 pr-2 py-1.5 text-xs border border-slate-300 rounded-md 
                   focus:border-indigo-300 focus:outline-none transition-all duration-200
                   hover:border-slate-400 text-gray-800"
-                  ref={ref} // ✅ parent gets this ref
+                  ref={internalInputRef} // ✅ parent gets this ref
                   placeholder={placeholder}
                   value={findFromList(searchTerm, optionList, "name")}
                   onKeyDown={(e) => {
@@ -1248,8 +1268,8 @@ export const ReusableTable = ({
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
             className={`px-3 py-1 rounded-md ${currentPage === 1
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-600 hover:bg-gray-100"
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-white text-gray-600 hover:bg-gray-100"
               }`}
           >
             <FaChevronLeft className="inline" />
@@ -1272,8 +1292,8 @@ export const ReusableTable = ({
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
                 className={`px-3 py-1 rounded-md ${currentPage === pageNum
-                    ? "bg-indigo-800 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-100"
+                  ? "bg-indigo-800 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
                   }`}
               >
                 {pageNum}
@@ -1289,8 +1309,8 @@ export const ReusableTable = ({
             <button
               onClick={() => handlePageChange(totalPages)}
               className={`px-3 py-1 rounded-md ${currentPage === totalPages
-                  ? "bg-indigo-800 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
+                ? "bg-indigo-800 text-white"
+                : "bg-white text-gray-600 hover:bg-gray-100"
                 }`}
             >
               {totalPages}
@@ -1301,8 +1321,8 @@ export const ReusableTable = ({
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
             className={`px-3 py-1 rounded-md ${currentPage === totalPages
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-600 hover:bg-gray-100"
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-white text-gray-600 hover:bg-gray-100"
               }`}
           >
             <FaChevronRight className="inline" />
@@ -2557,8 +2577,8 @@ export const DateInputNew = forwardRef(
         {name && (
           <label
             className={`block  font-bold text-slate-700 mb-1 text-xs ${required
-                ? 'after:content-["*"] after:ml-0.5 after:text-red-500'
-                : ""
+              ? 'after:content-["*"] after:ml-0.5 after:text-red-500'
+              : ""
               }`}
           >
             {name}
@@ -3065,7 +3085,7 @@ export const customStyles = {
     paddingBottom: 0,
   }),
 };
-export   function CustomInput({
+export function CustomInput({
   value,
   onChange,
   options,

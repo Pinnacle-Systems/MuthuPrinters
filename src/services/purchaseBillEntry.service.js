@@ -176,6 +176,7 @@ async function get(req) {
                     dcNo: true,
                     docId: true,
                     docDate: true,
+                    price: true
 
                 }
             },
@@ -231,6 +232,18 @@ async function getOne(id) {
                     dcNo: true,
                     docId: true,
                     docDate: true,
+                    price: true,
+
+                    PurchaseInward: {
+                        select: {
+                            docId: true,
+                            docDate: true,
+                            invNo: true,
+                            dcNo: true
+                        }
+
+                    }
+
 
                 }
             },
@@ -263,7 +276,7 @@ async function create(req) {
         docDate,
         supplierId,
         remarks,
-        inwardItems
+        inwardItems, netBillValue
     } = await req.body;
     let finYearDate = await getFinYearStartTimeEndTime(finYearId);
     const shortCode = finYearDate
@@ -292,6 +305,7 @@ async function create(req) {
                 userId: userId ? parseInt(userId) : undefined,
                 supplierId: parseInt(supplierId) ?? undefined,
                 remarks: remarks ?? "",
+                netBillValue: parseFloat(netBillValue) ?? null
             },
         });
         await createInwardItems(
@@ -300,6 +314,17 @@ async function create(req) {
             data,
             userId,
         );
+        await tx.purchaseLedger.create({
+            data: {
+                docId: newDocId ?? "",
+                docDate: docDate ? new Date(docDate) : null,
+                supplierId: parseInt(supplierId) ?? undefined,
+                remarks: remarks ?? "",
+                netBillValue: parseFloat(netBillValue) ?? null,
+                purchaseBillEntryId: parseInt(data.id) ?? undefined,
+
+            }
+        })
     });
     return { statusCode: 0, data };
 }
@@ -314,10 +339,11 @@ async function createInwardItems(
         const createdItem = await tx.purchaseBillEntryItems.create({
             data: {
                 purchaseBillEntryId: parseInt(data?.id) ?? undefined,
-                docId: val?.docId ?? "",
-                docDate: val?.docdate ?? "",
-                invNo: val?.invNo ? val?.invNo : "",
-                dcNo: val?.dcNo ? val?.dcNo : "",
+                purchaseInwardId: parseInt(val?.PurchaseInward?.id) ?? undefined,
+                docId: val?.PurchaseInward?.docId ?? "",
+                docDate: val?.PurchaseInward?.docDate ?? "",
+                invNo: val?.PurchaseInward?.invNo ? val?.PurchaseInward?.invNo : "",
+                dcNo: val?.PurchaseInward?.dcNo ? val?.PurchaseInward?.dcNo : "",
 
                 styleItemId: val?.styleItemId
                     ? parseInt(val.styleItemId)
@@ -326,6 +352,9 @@ async function createInwardItems(
                 hsnId: val?.hsnId ? parseInt(val.hsnId) : null,
                 inwardQty: val?.inwardQty
                     ? parseInt(val.inwardQty)
+                    : null,
+                price: val?.price
+                    ? parseInt(val.price)
                     : null,
 
             },
@@ -374,7 +403,7 @@ async function update(id, body) {
         docDate,
         supplierId,
         remarks,
-        inwardItems
+        inwardItems, netBillValue
     } = await body;
     let data;
     const dataFound = await prisma.purchaseBillEntry.findUnique({
@@ -408,6 +437,8 @@ async function update(id, body) {
                 userId: userId ? parseInt(userId) : undefined,
                 supplierId: parseInt(supplierId) ?? undefined,
                 remarks: remarks ?? "",
+                netBillValue: parseFloat(netBillValue) ?? null
+
             },
         });
         await updateinwardItems(
@@ -416,6 +447,25 @@ async function update(id, body) {
             data,
             userId,
         );
+        const ledger = await tx.purchaseLedger.findFirst({
+            where: {
+                purchaseBillEntryId: parseInt(data.id),
+            },
+        });
+
+        if (ledger) {
+            await tx.purchaseLedger.update({
+                where: { id: ledger.id },
+                data: {
+                    docDate: docDate ? new Date(docDate) : null,
+                    supplierId: parseInt(supplierId) ?? undefined,
+                    remarks: remarks ?? "",
+                    netBillValue: parseFloat(netBillValue) ?? null,
+                },
+            });
+        }
+
+
     });
     return { statusCode: 0, data };
 }
@@ -433,18 +483,21 @@ async function updateinwardItems(
                 where: { id: parseInt(val.id) },
                 data: {
                     purchaseBillEntryId: parseInt(data?.id) ?? undefined,
-                    docId: val?.docId ?? "",
-                    docDate: val?.docdate ?? "",
-                    invNo: val?.invNo ? val?.invNo : "",
-                    dcNo: val?.dcNo ? val?.dcNo : '',
+                    docId: val?.PurchaseInward?.docId ?? "",
+                    docDate: val?.PurchaseInward?.docDate ?? "",
+                    invNo: val?.PurchaseInward?.invNo ? val?.PurchaseInward?.invNo : "",
+                    dcNo: val?.PurchaseInward?.dcNo ? val?.PurchaseInward?.dcNo : "",
 
-                    styleItemId: val?.styleItemId
-                        ? parseInt(val.styleItemId)
+                    styleItemId: val?.StyleItem?.id
+                        ? parseInt(val?.StyleItem?.id)
                         : null,
-                    uomId: val?.uomId ? parseInt(val.uomId) : null,
-                    hsnId: val?.hsnId ? parseInt(val.hsnId) : null,
+                    uomId: val?.Uom?.id ? parseInt(val?.Uom?.id) : null,
+                    hsnId: val?.Hsn?.id ? parseInt(val?.Hsn?.id) : null,
                     inwardQty: val?.inwardQty
                         ? parseInt(val.inwardQty)
+                        : null,
+                    price: val?.price
+                        ? parseInt(val.price)
                         : null,
                 },
             });
@@ -502,18 +555,21 @@ async function updateinwardItems(
             const createdItem = await tx.purchaseBillEntryItems.create({
                 data: {
                     purchaseBillEntryId: parseInt(data?.id) ?? undefined,
-                    docId: val?.docId ?? "",
-                    docDate: val?.docdate ?? "",
-                    invNo: val?.invNo ? val?.invNo : "",
-                    dcNo: val?.dcNo ? val?.dcNo : "",
+                    docId: val?.PurchaseInward?.docId ?? "",
+                    docDate: val?.PurchaseInward?.docDate ?? "",
+                    invNo: val?.PurchaseInward?.invNo ? val?.PurchaseInward?.invNo : "",
+                    dcNo: val?.PurchaseInward?.dcNo ? val?.PurchaseInward?.dcNo : "",
 
-                    styleItemId: val?.styleItemId
-                        ? parseInt(val.styleItemId)
+                    styleItemId: val?.StyleItem?.id
+                        ? parseInt(val?.StyleItem?.id)
                         : null,
-                    uomId: val?.uomId ? parseInt(val.uomId) : null,
-                    hsnId: val?.hsnId ? parseInt(val.hsnId) : null,
+                    uomId: val?.Uom?.id ? parseInt(val?.Uom?.id) : null,
+                    hsnId: val?.Hsn?.id ? parseInt(val?.Hsn?.id) : null,
                     inwardQty: val?.inwardQty
                         ? parseInt(val.inwardQty)
+                        : null,
+                    price: val?.price
+                        ? parseInt(val.price)
                         : null,
                 },
             });

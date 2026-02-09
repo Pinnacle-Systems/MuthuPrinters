@@ -674,7 +674,6 @@ async function getPurchaseInwardBillEntryItems(req) {
             : undefined,
           docDate: docDateFilter,
 
-
           supplierId: supplierId ? parseInt(supplierId) : undefined,
         },
       },
@@ -685,7 +684,8 @@ async function getPurchaseInwardBillEntryItems(req) {
             docDate: true,
             docId: true,
             invNo: true,
-            dcNo: true
+            dcNo: true,            id:true,
+
             // dueDate: true,
             // poType: true,
           },
@@ -807,6 +807,7 @@ async function createInwardItems(
         inwardType: inwardType ? inwardType : "",
         poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
         invNo: invNo ? invNo : null,
+        price: stockDetail?.price ? parseInt(stockDetail.price) : null,
       },
     });
     await tx.stock.create({
@@ -825,6 +826,7 @@ async function createInwardItems(
         qty: stockDetail?.inwardQty ? parseInt(stockDetail.inwardQty) : null,
         inwardType: inwardType ? inwardType : "",
         invNo: invNo ? invNo : null,
+
       },
     });
     return createdItem;
@@ -957,6 +959,8 @@ async function updateinwardItems(
           inwardType: inwardType ? inwardType : "",
           poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
           invNo: invNo ? invNo : null,
+          price: stockDetail?.price ? parseInt(stockDetail.price) : null,
+
         },
       });
 
@@ -982,6 +986,7 @@ async function updateinwardItems(
               : null,
             inwardType: inwardType ? inwardType : "",
             invNo: invNo ? invNo : null,
+
           },
         });
       } else {
@@ -1003,6 +1008,7 @@ async function updateinwardItems(
               : null,
             inwardType: inwardType ? inwardType : "",
             invNo: invNo ? invNo : null,
+
           },
         });
       }
@@ -1025,6 +1031,8 @@ async function updateinwardItems(
           inwardType: inwardType ? inwardType : "",
           poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
           invNo: invNo ? invNo : null,
+          price: stockDetail?.price ? parseInt(stockDetail.price) : null,
+
         },
       });
 
@@ -1045,6 +1053,7 @@ async function updateinwardItems(
           qty: stockDetail?.inwardQty ? parseInt(stockDetail.inwardQty) : null,
           inwardType: inwardType ? inwardType : "",
           invNo: invNo ? invNo : null,
+
         },
       });
 

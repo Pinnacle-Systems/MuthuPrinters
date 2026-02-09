@@ -416,9 +416,9 @@ const PurchaseInwardForm = ({
             <div className="grid grid-cols-2 gap-1">
               <div className="col-span-2">
                 <ReusableSearchableInput
-                  label="Supplier Id"
+                  label="Supplier"
                   component="PartyMaster"
-                  placeholder="Search Supplier Id..."
+                  placeholder="Search Supplier"
                   optionList={supplierList?.data}
                   setSearchTerm={(value) => {
                     setSupplierId(value);
