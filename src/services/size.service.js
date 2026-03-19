@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from "../lib/prisma.js";
+
 import { NoRecordFound } from '../configs/Responses.js';
 
-const prisma = new PrismaClient()
 
 
 async function get(req) {
@@ -47,11 +47,11 @@ async function getSearch(req) {
 }
 
 async function create(body) {
-    const { name, companyId, active, accessory } = await body
+    const { name, companyId, active } = await body
     const data = await prisma.size.create(
         {
             data: {
-                name, companyId: parseInt(companyId), active, isAccessory: accessory
+                name, companyId: parseInt(companyId), active
             }
         }
     )
@@ -59,7 +59,7 @@ async function create(body) {
 }
 
 async function update(id, body) {
-    const { name, active, accessory } = await body
+    const { name, active } = await body
     const dataFound = await prisma.size.findUnique({
         where: {
             id: parseInt(id)
@@ -73,7 +73,6 @@ async function update(id, body) {
         data:
         {
             name, active, 
-            isAccessory: accessory
         },
     })
     return { statusCode: 0, data };

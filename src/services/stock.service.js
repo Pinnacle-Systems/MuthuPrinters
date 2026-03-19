@@ -1,8 +1,8 @@
-import { PrismaClient, Prisma } from '@prisma/client'
+import { prisma } from "../lib/prisma.js";
+
 import { NoRecordFound } from '../configs/Responses.js';
 import { getDateFromDateTime, getDateTimeRange, getStockProperty } from '../utils/helper.js';
 
-const prisma = new PrismaClient()
 
 const xprisma = prisma.$extends({
     result: {

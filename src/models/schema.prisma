@@ -58,6 +58,9 @@ model Company {
   termsAndConditions  TermsAndConditions[]
   locations           Location[]
   purchaseBillEntries PurchaseBillEntry[]
+  sizes               Size[]
+  gsms                Gsm[]
+  itemGroups          ItemGroup[]
 }
 
 model Subscription {
@@ -1410,4 +1413,28 @@ model PurchaseLedger {
   docId               String?
   docDate             DateTime?
   remarks             String?            @db.LongText
+}
+
+model Size {
+  id        Int      @id @default(autoincrement())
+  name      String
+  active    Boolean  @default(true)
+  Company   Company? @relation(fields: [companyId], references: [id])
+  companyId Int?
+}
+
+model Gsm {
+  id        Int      @id @default(autoincrement())
+  name      String
+  active    Boolean  @default(true)
+  Company   Company? @relation(fields: [companyId], references: [id])
+  companyId Int?
+}
+
+model ItemGroup {
+  id        Int      @id @default(autoincrement())
+  name      String
+  active    Boolean  @default(true)
+  Company   Company? @relation(fields: [companyId], references: [id])
+  companyId Int?
 }

@@ -38,3 +38,6 @@ export { default as BranchTypeMaster } from "./BranchTypeMaster";
 export { default as OpeningBalance } from "./OpeningBalance";
 export { default as PurchaseOrder } from "./PurchaseOrder";
 export { default as PurchaseInward } from "./PurchaseInward";
+export { default as ItemGroup } from "./ItemGroupMaster";
+export { default as Gsm } from "./GsmMaster";
+export { default as Size } from "./SizeMaster";

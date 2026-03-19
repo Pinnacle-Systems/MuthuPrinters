@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from "../lib/prisma.js";
+
 import { NoRecordFound } from '../configs/Responses.js';
 import { getPartyOverAllReport, getPartyLedgerReport, getPartyLedgerReportCus, getPartyPurchaseOverAllReport } from './partyLedger.js';
 
-const prisma = new PrismaClient()
 
 
 async function get(req) {

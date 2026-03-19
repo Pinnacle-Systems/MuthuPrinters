@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client'
+import { prisma } from "../lib/prisma.js";
+
 import { NoRecordFound } from '../configs/Responses.js';
 import { getTableRecordWithId } from '../utils/helperQueries.js';
 import { exclude, getDateFromDateTime, getDateFromDateTimeDB, getDateTimeRange, getDateTimeRangeForCurrentYear, getYearShortCode } from '../utils/helper.js';
 
-const prisma = new PrismaClient()
 
 
 async function getNextDocId(branchId) {

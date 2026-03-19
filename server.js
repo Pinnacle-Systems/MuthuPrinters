@@ -39,7 +39,10 @@ import {
   location,
   purchaseInwardEntry,
   purchaseCancel,
-  purchaseBillEntry
+  purchaseBillEntry,
+  size,
+  gsm,
+  itemGroup
 } from './src/routes/index.js';
 
 import { socketMain } from './src/sockets/socket.js';
@@ -103,6 +106,9 @@ app.use("/product", product);
 app.use("/purchaseBill", purchaseBill);
 app.use("/OpeningStock", OpeningStock);
 app.use("/color", color);
+app.use("/size",size);
+app.use("/gsm",gsm);
+app.use("/itemGroup",itemGroup)
 app.use("/purchaseInwardEntry", purchaseInwardEntry);
 app.use("/stock", stock);
 app.use("/salesBill", salesBill);

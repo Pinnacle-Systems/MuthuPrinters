@@ -1103,7 +1103,6 @@ export const TextInputNew = forwardRef(
     },
     ref,
   ) => {
-    console.log(ref, "countryNameRef");
     return (
       <div className={`mb-2 ${width}`}>
         {name && (
@@ -1122,9 +1121,7 @@ export const TextInputNew = forwardRef(
               : handleOnChange(e, setValue)
           }
           onKeyDown={(e) => {
-            if (e.key === " ") {
-              e.preventDefault();
-            }
+           
             if (e.key === "Enter" && nextRef?.current) {
               nextRef.current?.showPicker();
             }
@@ -1246,7 +1243,6 @@ export const ReusableTable = ({
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = data?.slice(indexOfFirstItem, indexOfLastItem);
 
-  console.log(data, "commonTable");
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -1935,7 +1931,6 @@ export const ReusableSearchableInputNewCustomerwithBranches = forwardRef(
       params: { companyId, userId, isAddessCombined: true },
     });
 
-    console.log(partyList, "partyList");
 
     /* ---------------------------------- STATE --------------------------------- */
 
@@ -2693,7 +2688,6 @@ export const ShowInvoicPendingCustomers = forwardRef(
     //   params: { companyId, userId, isAddessCombined: true , id ,supplierId },
     // });
 
-    console.log(partyList, "partyList");
 
     /* ---------------------------------- STATE --------------------------------- */
 

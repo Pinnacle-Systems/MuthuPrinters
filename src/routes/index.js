@@ -47,4 +47,7 @@ export { default as purchaseInwardEntry } from "./purchaseInwardEntry.route.js";
 export { default as openingBalance } from "./openingBalance.route.js";
 export { default as po } from "./po.route.js";
 export { default as payTerm } from "./payTerm.route.js";
-export { default as purchaseBillEntry } from './purchaseBillEntry.route.js'
+export { default as purchaseBillEntry } from "./purchaseBillEntry.route.js";
+export { default as itemGroup } from "./itemGroup.route.js";
+export { default as gsm } from "./gsm.route.js";
+export { default as size } from "./size.route.js";

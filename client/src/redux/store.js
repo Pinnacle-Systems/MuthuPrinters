@@ -36,6 +36,9 @@ import {
   t,
   PaytermMasterApi,
   LocationMasterApi,
+  sizeMasterApi,
+  ItemGroupMasterApi,
+  GsmMasterApi,
 } from "./services";
 import paymentApi from "./services/PaymentService";
 import StyleMasterApi from "./services/StyleMasterService";
@@ -76,6 +79,9 @@ const commonReducers = {
   StyleItemMaster: StyleItemMasterApi.reducer,
   DeliveryInvoice: DeliveryInvoiceApi.reducer,
   colorMaster: ColorMasterApi.reducer,
+  sizeMaster: sizeMasterApi.reducer,
+  ItemGroupMaster: ItemGroupMasterApi.reducer,
+  GsmMaster: GsmMasterApi.reducer,
   taxTermMaster: TaxTermMasterApi.reducer,
   taxTemplate: TaxTemplateApi.reducer,
   [openingStockApi.reducerPath]: openingStockApi.reducer,
@@ -145,6 +151,9 @@ const commonMiddleware = [
   LocationMasterApi.middleware,
   purchaseInwardEntryApi.middleware,
   purchaseBillEntryApi.middleware,
+  ItemGroupMasterApi.middleware,
+  GsmMasterApi.middleware,
+  sizeMasterApi.middleware,
 ];
 
 const store = configureStore({

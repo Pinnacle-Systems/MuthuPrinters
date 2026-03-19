@@ -364,7 +364,7 @@ export default function Form() {
                     <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
                       <div className="space-y-4 ">
                         <div className="grid grid-cols-2  gap-3  h-full">
-                          <fieldset className="my-1">
+                          <fieldset className="my-1 space-y-2">
                             <TextInputNew1
                               name="Color"
                               type="text"

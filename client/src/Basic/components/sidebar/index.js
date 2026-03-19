@@ -34,7 +34,6 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
 
   const { data: pageGroup } = useGetPageGroupQuery({ searchParams: "" })
 
-  console.log("pageGroup", pageGroup);
 
   const toggleNavMenu = () => {
     sethideNavBar(!hideNavBar);
@@ -60,7 +59,6 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
         params: { active: true },
       }).then(
         (result) => {
-          console.log("result", result.data.data);
           setAllowedPages(result.data.data);
         },
         (error) => {
@@ -130,11 +128,9 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
   const masters = allowedPages.filter((page) => page.type === "Masters")
   const mastersGroup = [...new Set(masters.map(page => page.pageGroupId))].map(pageId => { return { id: pageId, name: findElement(pageId, pageGroup?.data) , type : "Masters" } })
   const transactions = allowedPages.filter((page) => page.type === "Transactions")
-  console.log(transactions, "transactions")
   const transactionsGroup = [...new Set(transactions.map(page => page.pageGroupId))].map(pageId => { return { id: pageId, name: findElement(pageId, pageGroup?.data) ,type : "Modules" } })
   const reports = allowedPages.filter((page) => page.type === "Reports")
   const reportGroups = [...new Set(reports.map(page => page.pageGroupId))].map(pageId => { return { id: pageId, name: findElement(pageId, pageGroup?.data) } })
-  console.log(reportGroups, "reportGroups")
 
 
   const order = [
@@ -151,7 +147,6 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
   const sorted = order.map(name => transactionsGroup?.find(item => item.name === name))
     .filter(Boolean);
 
-  console.log(sorted, "sorted");
 
   const headers = [
 

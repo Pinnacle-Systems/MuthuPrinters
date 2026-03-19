@@ -16,24 +16,24 @@ export { default as productBrandMasterApi } from "./ProductBrandService";
 export { default as productCategoryMasterApi } from "./ProductCategoryServices";
 export { default as productMasterApi } from "./ProductMasterService";
 export { default as partyMasterApi } from "./PartyMasterService";
-export { default as partyCategoryMasterApi } from './PartyCategoryServices'
-export { default as purchaseBillApi } from './PurchaseBillService'
-export { default as openingStockApi } from './OpeningStockService'
+export { default as partyCategoryMasterApi } from "./PartyCategoryServices";
+export { default as purchaseBillApi } from "./PurchaseBillService";
+export { default as openingStockApi } from "./OpeningStockService";
 export { default as PaytermMasterApi } from "./payTermMasterService";
-export { default as stockApi } from './StockService'
-export { default as salesBillApi } from './SalesBillService'
-export { default as purchaseReturnApi } from './PurchaseReturnService'
-export { default as salesReturnApi } from './SalesReturnService'
-export { default as uomMasterApi } from "./UomMasterService"
-export {default as paymentApi} from "./PaymentService"
-export {default as DeliveryInvoiceApi} from "./DeliveryInvoiceService"
-export {default as ColorMasterApi} from "./ColorMasterService"
-export { default as TaxTermMasterApi } from './TaxTermMasterServices'
-export { default as TaxTemplateApi } from './TaxTemplateServices'
-export { default as HsnMasterApi } from './HsnMasterServices'
-export { default as branchTypeMasterApi } from './BranchTypeMaster'
+export { default as stockApi } from "./StockService";
+export { default as salesBillApi } from "./SalesBillService";
+export { default as purchaseReturnApi } from "./PurchaseReturnService";
+export { default as salesReturnApi } from "./SalesReturnService";
+export { default as uomMasterApi } from "./UomMasterService";
+export { default as paymentApi } from "./PaymentService";
+export { default as DeliveryInvoiceApi } from "./DeliveryInvoiceService";
+export { default as ColorMasterApi } from "./ColorMasterService";
+export { default as TaxTermMasterApi } from "./TaxTermMasterServices";
+export { default as TaxTemplateApi } from "./TaxTemplateServices";
+export { default as HsnMasterApi } from "./HsnMasterServices";
+export { default as branchTypeMasterApi } from "./BranchTypeMaster";
 export { default as LocationMasterApi } from "./LocationMasterService";
-export {default as openingBalanceApi} from './OpeningBalanceService'
-
-
-
+export { default as openingBalanceApi } from "./OpeningBalanceService";
+export { default as sizeMasterApi } from "./SizemasterService";
+export { default as ItemGroupMasterApi } from "./ItemGroupMasterService";
+export { default as GsmMasterApi } from "./GsmMasterService";

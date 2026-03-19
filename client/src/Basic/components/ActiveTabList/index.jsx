@@ -30,7 +30,10 @@ import {
   OpeningBalance,
   PurchaseOrder,
   PurchaseInward,
-  PurchaseCancel
+  PurchaseCancel,
+  ItemGroup,
+  Gsm,
+  Size
 } from "../../../HostelStore/Components";
 
 
@@ -95,6 +98,9 @@ const ActiveTabList = () => {
     "TERMS & CONDTIONS MASTER": <TermsAndCondition />,
     "PAY TERM MASTER": <PayTermMaster />,
     "LOCATION MASTER": <LocationMaster />,
+    "ITEM GROUP MASTER": <ItemGroup />,
+    "GSM MASTER": <Gsm />,
+    "SIZE MASTER": <Size />
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

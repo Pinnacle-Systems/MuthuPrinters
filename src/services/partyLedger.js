@@ -1,4 +1,5 @@
-import prisma from "../models/getPrisma.js";
+import { prisma } from "../lib/prisma.js";
+
 import moment from "moment"
 
 // export async function getPartyLedgerReport(partyId, startDate, endDate) {
