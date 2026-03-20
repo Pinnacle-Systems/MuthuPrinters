@@ -123,10 +123,6 @@ label {
     @apply even:bg-white odd:bg-gray-200 text-black text-xs;
   }
 
-  .table-data-input {
-    @apply  focus:bg-yellow-200;
-  }
-
   .table-data {
     @apply border-x border-gray-400 cursor-pointer;
   }
@@ -199,4 +195,15 @@ label {
 
 .swal-custom-height {
   min-height: 10px;   /* control height */
+}
+
+.custom-multiselect .dropdown-content {
+  max-height: 150px !important;
+  overflow-y: auto !important;
+}
+
+.custom-multiselect .dropdown-content .panel-content,
+.custom-multiselect .dropdown-content ul {
+  max-height: unset !important;
+  overflow: unset !important;
 }

@@ -1,7 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import { NoRecordFound } from "../configs/Responses.js";
 
-
 async function get(req) {
   const { companyId, active } = req.query;
 
@@ -62,21 +61,42 @@ async function getSearch(req) {
 }
 
 async function create(body) {
-  const { name, aliasName, active, code, hsnId } = await body;
+  const {
+    name,
+    aliasName,
+    active,
+    code,
+    hsnId,
+    uomId,
+    sizeTemplateId,
+    itemGroupId,
+  } = await body;
   const data = await prisma.styleItem.create({
     data: {
       name,
       aliasName,
       active,
       code,
-      hsnId: parseInt(hsnId),
+      hsnId: hsnId ? parseInt(hsnId) : undefined,
+      uomId:uomId ? parseInt(uomId) : undefined,
+      itemGroupId:  itemGroupId ? parseInt(itemGroupId) : undefined,
+      sizeTemplateId:  sizeTemplateId ? parseInt(sizeTemplateId) : undefined,
     },
   });
   return { statusCode: 0, data };
 }
 
 async function update(id, body) {
-  const { name, active, aliasName, code, hsnId } = await body;
+  const {
+    name,
+    active,
+    aliasName,
+    code,
+    hsnId,
+    uomId,
+    sizeTemplateId,
+    itemGroupId,
+  } = await body;
 
   const dataFound = await prisma.styleItem.findUnique({
     where: {
@@ -93,7 +113,10 @@ async function update(id, body) {
       aliasName,
       active,
       code,
-      hsnId: parseInt(hsnId),
+      hsnId: hsnId ? parseInt(hsnId) : undefined,
+       uomId: parseInt(uomId) ?? 0,
+      itemGroupId:  parseInt(itemGroupId) ?? 0,
+      sizeTemplateId:  parseInt(sizeTemplateId) ?? 0,
     },
   });
   return { statusCode: 0, data };

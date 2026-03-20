@@ -242,7 +242,6 @@ export const getCommonParams = () => ({
 })
 
 export function isGridDatasValid(datas, isRequiredAllData, mandatoryFields = []) {
-  console.log(mandatoryFields, "mandatory fields", datas, isRequiredAllData, "isRequiredAllData");
   if (isRequiredAllData) {
     let gridDatasValid = datas.every(obj =>
       Object.values(obj).every(value => value !== "" && value !== null && value !== 0))
@@ -298,7 +297,6 @@ export function amountInWords(amount) {
   const rupees = Math.floor(amount);
   const paise = Math.round((amount - rupees) * 100);
 
-  console.log(amount,"amount",rupees,"rupees","paise",paise)
 
   let words = `Rupees ${toWords(rupees)}`;
 

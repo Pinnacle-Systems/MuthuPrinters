@@ -88,15 +88,11 @@ const PurchaseOrderFormReport = ({
 
   const isLoadingIndicator = isLoading || isFetching;
 
-  console.log(allData, "entire");
-
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math?.ceil(allData?.data?.length / itemsPerPage);
   const indexOfLastItem = currentPage * parseInt(10);
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = allData?.data?.slice(indexOfFirstItem, indexOfLastItem);
-
-  console.log(indexOfLastItem, "indexOfLastItem");
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -344,7 +340,7 @@ const PurchaseOrderFormReport = ({
                         className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${
                           index % 2 === 0 ? "bg-white" : "bg-gray-100"
                         }`}
-                        onClick={() => {onClick(dataObj.id)}}
+                        onClick={() => dataObj.id}
                       >
                         <td className="text-center ">{index + 1}</td>
 

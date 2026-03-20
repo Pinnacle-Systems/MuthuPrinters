@@ -22,12 +22,14 @@ import useOutsideClick from "../CustomHooks/handleOutsideClick";
 import Modal from "../UiComponents/Modal";
 import DynamicRenderer from "../HostelStore/Components/DeliveryChallan/DynamicComponent";
 
-export const handleOnChange = (event, setValue) => {
+export const handleOnChange = (event, setValue,type) => {
   const inputValue = event.target.value;
   const inputSelectionStart = event.target.selectionStart;
   const inputSelectionEnd = event.target.selectionEnd;
 
-  const upperCaseValue = inputValue.toUpperCase();
+  const upperCaseValue =
+    type === "password" ? inputValue : inputValue.toUpperCase();
+
 
   const valueBeforeCursor = upperCaseValue.slice(0, inputSelectionStart);
   const valueAfterCursor = upperCaseValue.slice(inputSelectionEnd);
@@ -59,18 +61,54 @@ export const MultiSelectDropdown = ({
   tabIndex = null,
   className = "",
   inputClass,
+  disabled = false,
 }) => {
   return (
-    <div
-      className={`m-1 grid grid-cols-1 md:grid-cols-3 items-center z-0 md:my-0.5 md:py-3 data ${className}`}
-    >
-      <label className={`md:text-start flex ${labelName}`}>{name}</label>
+    <div className={`m-1  md:grid-cols-2 items-center z-0 data  ${className}`}>
+      <label
+        className={`md:text-start   block text-xs font-bold text-slate-700 mb-1${labelName}`}
+      >
+        {name}
+      </label>
       <MultiSelect
-        className={`focus:outline-none  border border-gray-500 rounded text-black  ${inputClass}`}
         options={options}
         value={selected}
-        onChange={readOnly ? () => { } : setSelected}
+        onChange={readOnly ? () => {} : setSelected}
         labelledBy="Select"
+        hasSelectAll={false}
+        styles={{
+          container: (base) => ({
+            ...base,
+            fontSize: "12px",
+            minHeight: "28px",
+          }),
+          control: (base) => ({
+            ...base,
+            padding: "2px",
+            borderRadius: "10px",
+            boxShadow: "none",
+            border: "1px solid #ccc",
+            minHeight: "28px",
+          }),
+          option: (base, state) => ({
+            ...base,
+            fontSize: "12px",
+            backgroundColor: state.isSelected ? "#e0e7ff" : "#fff",
+            padding: "4px 8px",
+          }),
+          chips: (base) => ({
+            ...base,
+            fontSize: "12px",
+            padding: "2px 4px",
+          }),
+          searchBox: (base) => ({
+            ...base,
+            fontSize: "12px",
+            padding: "2px",
+          }),
+        }}
+        className="custom-multiselect"
+        disabled={readOnly || disabled}
       />
     </div>
   );

@@ -42,7 +42,8 @@ import {
   purchaseBillEntry,
   size,
   gsm,
-  itemGroup
+  itemGroup,
+  Sizetemplate
 } from './src/routes/index.js';
 
 import { socketMain } from './src/sockets/socket.js';
@@ -132,7 +133,7 @@ app.use("/termsconditions", termsAndCondition)
 app.use("/payTerm", payTerm);
 app.use("/location", location);
 app.use("/purchaseBillEntry",purchaseBillEntry)
-
+app.use("/sizeTemplate",Sizetemplate)
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;
   res.sendFile(__dirname + "/uploads/" + fileName);

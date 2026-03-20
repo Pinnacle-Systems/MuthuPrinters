@@ -66,7 +66,7 @@ export default function FormReport({
                     ))}
                   </tr>
                 </thead>
-                <tbody className="border-2">{console.log(data,"data")}
+                <tbody className="border-2">
                   {data?.map((dataObj, index) => (
                     <tr key={index} className="border-2 table-row" onClick={()=> setId(dataObj.id)} >
                       {tableDataNames.map((data, index) => (

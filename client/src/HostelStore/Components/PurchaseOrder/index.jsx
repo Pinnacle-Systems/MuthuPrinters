@@ -13,6 +13,9 @@ import Swal from "sweetalert2";
 import { useDeletePoMutation, useLazyGetPoByIdQuery } from "../../../redux/uniformService/PoServices.js";
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
 import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterService.js";
+import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
+import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
+import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -110,6 +113,9 @@ export default function Form() {
   const { data: hsnList } =
     useGetHsnMasterQuery({ params });
   const { data: payTermList } = useGetPaytermMasterQuery({ params });
+  const { data: itemGroupList } = useGetItemGroupMasterQuery({ params });
+  const { data: sizeList } = useGetSizeMasterQuery({ params });
+  const { data: colorList } = useGetColorMasterQuery({ params });
 
   return (
     <>
@@ -167,7 +173,9 @@ export default function Form() {
           hsnList={hsnList}
           termsData={termsData}
           payTermList={payTermList}
-          onNew={onNew}
+          itemGroupList={itemGroupList}
+          sizeList={sizeList}
+          colorList={colorList}
         />
       )}
     </>

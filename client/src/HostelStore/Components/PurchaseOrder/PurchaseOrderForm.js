@@ -9,15 +9,7 @@ import {
   ReusableSearchableInput,
   TextInput,
 } from "../../../Inputs";
-import {
-  deliveryTypes,
-  MaterialType,
-  poMaterial,
-  poTypes,
-  purchaseType,
-  stockTransferType,
-  YarnMaterial,
-} from "../../../Utils/DropdownData";
+import { deliveryTypes, poTypes } from "../../../Utils/DropdownData";
 import { useCallback, useEffect, useRef, useState } from "react";
 import moment from "moment";
 import {
@@ -25,14 +17,10 @@ import {
   getCommonParams,
   isGridDatasValid,
 } from "../../../Utils/helper";
-import {
-  useGetPartyByIdQuery,
-  useGetPartyQuery,
-} from "../../../redux/services/PartyMasterService";
+import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 import { toast } from "react-toastify";
 import { FiEdit2, FiPrinter, FiSave } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
-import { FaWhatsapp } from "react-icons/fa6";
 import {
   useAddPoMutation,
   useDeletePoMutation,
@@ -73,7 +61,9 @@ const PurchaseOrderForm = ({
   branchList,
   hsnList,
   payTermList,
-  onNew,
+  itemGroupList,
+  sizeList,
+  colorList,
 }) => {
   const today = new Date();
 
@@ -99,11 +89,9 @@ const PurchaseOrderForm = ({
   const [docId, setDocId] = useState("");
   const [deliveryType, setDeliveryType] = useState("");
   const [deliveryToId, setDeliveryToId] = useState("");
-  const [showExtraCharge, setShowExtraCharge] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
-  const [tableDataView, setTableDataView] = useState(false);
   const [isNewVersion, setIsNewVersion] = useState(false);
-  const [quoteVersion, setQuoteVersion] = useState("1");
+  const [quoteVersion, setQuoteVersion] = useState("");
 
   const [requirementId, setRequirementId] = useState("");
 
@@ -112,8 +100,6 @@ const PurchaseOrderForm = ({
   const { data: supplierDetails } = useGetPartyByIdQuery(supplierId, {
     skip: !supplierId,
   });
-
-  const componentRef = useRef();
 
   const {
     data: singleData,
@@ -140,7 +126,22 @@ const PurchaseOrderForm = ({
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
 
-      setPoItems(data?.poItems ? data?.poItems : []);
+      setPoItems(
+        data?.poItems
+          ? data?.poItems
+          : Array.from({ length: 4 }, () => ({
+              styleItemId: "",
+              hsnId: "",
+              uomId: "",
+              price: "",
+              qty: "",
+              quoteVersion: 1,
+              netAmount: 0,
+              itemGroupId: "",
+              sizeId: "",
+              colorId: "",
+            })),
+      );
       setDocId(data?.docId ? data?.docId : "New");
       setDiscountType(data?.discountType || "Percentage");
       setTaxPercent(data?.taxPercent ? data?.taxPercent : "");
@@ -163,15 +164,15 @@ const PurchaseOrderForm = ({
       setTermsAndCondtion(data?.termsAndCondtion ? data?.termsAndCondtion : "");
       setTermsId(data?.termsId ? data?.termsId : "");
       setIsNewVersion(false);
-      setQuoteVersion(data?.quoteVersion || 1);
+      setQuoteVersion(data?.quoteVersion || "");
       setPayTermId(data?.payTermId ? data?.payTermId : "");
     },
     [id],
   );
 
   useEffect(() => {
-    if (id && singleData?.data) {
-      syncFormWithDb(singleData.data);
+    if (id) {
+      syncFormWithDb(singleData?.data);
     } else {
       syncFormWithDb(undefined);
     }
@@ -218,13 +219,16 @@ const PurchaseOrderForm = ({
           showConfirmButton: false,
           timer: 2000,
         });
-
+        dispatch(
+          purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
+        );
+        dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
+        dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
         if (returnData.statusCode === 0) {
           if (nextProcess == "new") {
-            setId(0);
+            setId("");
             setDocId("New");
             syncFormWithDb(undefined);
-            // onNew();
           }
           if (nextProcess == "close") {
             onClose();
@@ -245,7 +249,7 @@ const PurchaseOrderForm = ({
     items.forEach((row, index) => {
       const key = [
         row.styleItemId || "",
-        row.hsnId || "",
+        row.sizeId || "",
         row.quoteVersion || "",
       ].join("-");
 
@@ -254,7 +258,7 @@ const PurchaseOrderForm = ({
           firstIndex: seen.get(key),
           duplicateIndex: index,
           styleItemId: row.styleItemId,
-          hsnId: row.hsnId,
+          sizeId: row.sizeId,
         });
       } else {
         seen.set(key, index);
@@ -278,13 +282,13 @@ const PurchaseOrderForm = ({
         title: "Duplicate Item Found",
         html: `
     Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},
-    HSN - ${findFromList(dup?.hsnId, hsnList?.data, "name")},
+    Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")},
   `,
         confirmButtonText: "OK",
       });
       return false;
     }
-    let mandatoryFields = ["styleItemId", "hsnId", "uomId", "qty", "price"];
+    let mandatoryFields = ["styleItemId", "uomId", "qty", "price"];
     if (
       !(
         data?.dueDate &&
@@ -335,11 +339,6 @@ const PurchaseOrderForm = ({
     } else {
       handleSubmitCustom(addData, data, "Added", nextProcess);
     }
-    dispatch(
-      purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
-    );
-    dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
-    dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
   };
 
   const dateRef = useRef(null);
@@ -400,8 +399,14 @@ const PurchaseOrderForm = ({
   const quoteVersionOptions = [
     ...new Set(
       poItems
-        .filter((i) => i?.quoteVersion !== "New")
-        .map((i) => Number(i.quoteVersion)),
+        .filter(
+          (i) =>
+            i?.styleItemId && // ⬅️ only rows with actual data
+            i?.quoteVersion &&
+            i?.quoteVersion !== "New",
+        )
+        .map((i) => Number(i.quoteVersion))
+        .filter((n) => n > 0),
     ),
   ].sort((a, b) => a - b);
 
@@ -449,7 +454,6 @@ const PurchaseOrderForm = ({
           <h1 className="text-lg font-bold text-gray-800">Purchase Order</h1>
           <button
             onClick={() => {
-              // onNew();
               onClose();
             }}
             className="text-indigo-600 hover:text-indigo-700"
@@ -539,23 +543,7 @@ const PurchaseOrderForm = ({
                   />
                 </div>
               )}
-              {/* {id && (
-                <div className="col-span-1">
-                  <DropdownInput
-                    readOnly={true}
-                    name="Current Version"
-                    value={quoteVersion}
-                    setValue={(value) => setQuoteVersion(value)}
-                    options={[
-                      ...new Set(
-                        poItems
-                          .map((i) => i.quoteVersion),
-                      ),
-                    ].map((i) => ({ show: i, value: i }))}
-                  />
-                </div>
-              )} */}
-              {id && (
+              {Boolean(id) && quoteVersionOptions.length > 0 && (
                 <DropdownInput
                   readOnly={readOnly}
                   name="Current Version"
@@ -568,7 +556,6 @@ const PurchaseOrderForm = ({
                   className="w-full"
                 />
               )}
-              <div></div>
             </div>
           </div>
 
@@ -684,6 +671,9 @@ const PurchaseOrderForm = ({
             taxTemplateId={taxTemplateId}
             isNewVersion={isNewVersion}
             quoteVersion={quoteVersion}
+            itemGroupList={itemGroupList}
+            sizeList={sizeList}
+            colorList={colorList}
           />
         </fieldset>
 
@@ -754,7 +744,7 @@ const PurchaseOrderForm = ({
             </h2>
 
             <button
-              className="text-sm bg-sky-500 hover:text-white font-semibold hover:bg-sky-800 transition p-1 ml-5 rounded"
+              className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1 ml-5 rounded"
               onClick={() => {
                 if (!taxTemplateId) {
                   toast.info("Please Select Tax Template !", {
@@ -787,21 +777,8 @@ const PurchaseOrderForm = ({
               <HiOutlineRefresh className="w-4 h-4 mr-2" />
               Save & Close
             </button>
-            {/* <button
-              onClick={() => saveData("draft")}
-              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
-            >
-              <HiOutlineRefresh className="w-4 h-4 mr-2" />
-              Draft Save
-            </button> */}
           </div>
-
-          {/* Right Buttons */}
           <div className="flex gap-2 flex-wrap">
-            {/* <button className="bg-emerald-600 text-white px-4 py-1 rounded-md hover:bg-emerald-700 flex items-center text-sm">
-                                                   <FiShare2 className="w-4 h-4 mr-2" />
-                                                   Email
-                                               </button> */}
             {!id ||
               (readOnly && (
                 <button
@@ -813,14 +790,6 @@ const PurchaseOrderForm = ({
                 </button>
               ))}
 
-            {/* <button className="bg-emerald-600 text-white px-4 py-1 rounded-md hover:bg-emerald-700 flex items-center text-sm"
-              onClick={() => {
-                setPrintModalOpen(true)
-              }}
-            >
-              <FaEye className="w-4 h-4 mr-2" />
-              Preview
-            </button> */}
             <button
               className="bg-slate-600 text-white px-4 py-1 rounded-md hover:bg-slate-700 flex items-center text-sm"
               onClick={() => {

@@ -21,6 +21,9 @@ const PoItems = ({
   taxTemplateId,
   isNewVersion,
   quoteVersion,
+  itemGroupList,
+  sizeList,
+  colorList
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -30,6 +33,9 @@ const PoItems = ({
     qty: "",
     quoteVersion: "New",
     netAmount: 0,
+    itemGroupId: "",
+    sizeId: "",
+    colorId: "",
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -43,6 +49,9 @@ const PoItems = ({
       qty: "",
       quoteVersion: id ? (isNewVersion ? "New" : quoteVersion) : 1,
       netAmount: 0,
+      itemGroupId: "",
+      sizeId: "",
+      colorId: "",
     };
     setPoItems([...poItems, newRow]);
   };
@@ -63,6 +72,10 @@ const PoItems = ({
         // 3️⃣ update fabricId
         newRows[index].hsnId = response?.data?.hsnId;
         newRows[index].taxPercent = response?.data?.Hsn?.tax;
+        newRows[index].itemGroupId = response?.data?.itemGroupId;
+        newRows[index].sizeId = response?.data?.sizeId;
+        newRows[index].colorId = response?.data?.colorId;
+        newRows[index].uomId = response?.data?.uomId;
         // 4️⃣ update again after API fetch
         setPoItems([...newRows]);
       } catch (e) {
@@ -257,7 +270,17 @@ const PoItems = ({
                 <th
                   className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
                 >
-                  HSN/SAC
+                  Item Group
+                </th>
+                <th
+                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
+                >
+                  Size
+                </th>
+                <th
+                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
+                >
+                  Color
                 </th>
                 <th
                   className={`w-20 px-4 py-2 text-center font-medium text-[13px] `}
@@ -321,7 +344,7 @@ const PoItems = ({
                           handleInputChange(val, index, "styleItemId")
                         }
                         options={(styleItemList?.data || [])
-                          .filter((item) => item.active)
+                          .filter((item) => (id ? true : item.active))
                           .map((item) => ({
                             label: item.name,
                             value: item.id,
@@ -344,12 +367,40 @@ const PoItems = ({
                     </td>
                     <td className="py-0.5 border border-gray-300 text-[11px] ">
                       <FxSelect
-                        value={row.hsnId}
+                        value={row.itemGroupId}
                         onChange={(val) =>
-                          handleInputChange(val, index, "hsnId")
+                          handleInputChange(val, index, "itemGroupId")
                         }
-                        options={(hsnList?.data || [])
-                          .filter((item) => item.active)
+                        options={(itemGroupList?.data || [])
+                          .filter((item) => (id ? true : item.active))
+                          .map((item) => ({
+                            label: item.name,
+                            value: item.id,
+                          }))}
+                        readOnly={true}
+                        placeholder=""
+                        onBlur={() =>
+                          handleInputChange(
+                            row.itemGroupId,
+                            index,
+                            "itemGroupId",
+                          )
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Delete") {
+                            handleInputChange("", index, "itemGroupId");
+                          }
+                        }}
+                      />
+                    </td>
+                    <td className="py-0.5 border border-gray-300 text-[11px] ">
+                      <FxSelect
+                        value={row.sizeId}
+                        onChange={(val) =>
+                          handleInputChange(val, index, "sizeId")
+                        }
+                        options={(sizeList?.data || [])
+                          .filter((item) => (id ? true : item.active))
                           .map((item) => ({
                             label: item.name,
                             value: item.id,
@@ -357,11 +408,43 @@ const PoItems = ({
                         readOnly={id ? !isNewVersion : readOnly}
                         placeholder=""
                         onBlur={() =>
-                          handleInputChange(row.hsnId, index, "hsnId")
+                          handleInputChange(
+                            row.sizeId,
+                            index,
+                            "sizeId",
+                          )
                         }
                         onKeyDown={(e) => {
                           if (e.key === "Delete") {
-                            handleInputChange("", index, "hsnId");
+                            handleInputChange("", index, "sizeId");
+                          }
+                        }}
+                      />
+                    </td>
+                    <td className="py-0.5 border border-gray-300 text-[11px] ">
+                      <FxSelect
+                        value={row.colorId}
+                        onChange={(val) =>
+                          handleInputChange(val, index, "colorId")
+                        }
+                        options={(colorList?.data || [])
+                          .filter((item) => (id ? true : item.active))
+                          .map((item) => ({
+                            label: item.name,
+                            value: item.id,
+                          }))}
+                        readOnly={id ? !isNewVersion : readOnly}
+                        placeholder=""
+                        onBlur={() =>
+                          handleInputChange(
+                            row.colorId,
+                            index,
+                            "colorId",
+                          )
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Delete") {
+                            handleInputChange("", index, "colorId");
                           }
                         }}
                       />
@@ -378,7 +461,7 @@ const PoItems = ({
                             label: item.name,
                             value: item.id,
                           }))}
-                        readOnly={id ? !isNewVersion : readOnly}
+                        readOnly={true}
                         placeholder=""
                         onBlur={() =>
                           handleInputChange(row.uomId, index, "uomId")
@@ -525,7 +608,7 @@ const PoItems = ({
               <tr className="bg-gray-50 h-7 font-medium text-gray-800">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium text-[13px] py-0.5"
-                  colSpan={4}
+                  colSpan={6}
                 >
                   Total
                 </td>

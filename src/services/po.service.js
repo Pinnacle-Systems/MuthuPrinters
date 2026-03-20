@@ -1,6 +1,5 @@
 import { prisma } from "../lib/prisma.js";
 
-
 import { NoRecordFound } from "../configs/Responses.js";
 import {
   getDateFromDateTime,
@@ -552,6 +551,11 @@ async function createPoItems(tx, poItems, po) {
         taxPercent: itemDetails?.taxPercent
           ? parseInt(itemDetails.taxPercent)
           : null,
+        itemGroupId: itemDetails?.itemGroupId
+          ? parseInt(itemDetails.itemGroupId)
+          : null,
+        sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
+        colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
       },
     });
 
@@ -674,7 +678,7 @@ async function update(id, body) {
                 let newItem = {};
                 newItem["styleItemId"] = parseInt(temp["styleItemId"]);
                 newItem["uomId"] = temp["uomId"];
-                newItem["hsnId"] = parseInt(temp["hsnId"]);
+                newItem["hsnId"] = temp["hsnId"] ? parseInt(temp["hsnId"]) : null;
                 newItem["qty"] = parseFloat(temp["qty"]);
                 newItem["price"] = parseFloat(temp["price"]);
                 newItem["discountType"] = temp["discountType"];
@@ -683,6 +687,9 @@ async function update(id, body) {
                 );
                 newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
                 newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
+                newItem["itemGroupId"] = temp["itemGroupId"] ? parseInt(temp["itemGroupId"]) : null;
+                newItem["sizeId"] = temp["sizeId"] ? parseInt(temp["sizeId"]) : null;
+                newItem["colorId"] =temp["colorId"] ? parseInt(temp["colorId"]) : null;
                 return newItem;
               }),
           },

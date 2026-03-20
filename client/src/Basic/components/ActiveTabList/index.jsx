@@ -33,7 +33,8 @@ import {
   PurchaseCancel,
   ItemGroup,
   Gsm,
-  Size
+  Size,
+  SizeTemplate
 } from "../../../HostelStore/Components";
 
 
@@ -100,7 +101,8 @@ const ActiveTabList = () => {
     "LOCATION MASTER": <LocationMaster />,
     "ITEM GROUP MASTER": <ItemGroup />,
     "GSM MASTER": <Gsm />,
-    "SIZE MASTER": <Size />
+    "SIZE MASTER": <Size />,
+    "SIZE TEMPLATE MASTER": <SizeTemplate /> 
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

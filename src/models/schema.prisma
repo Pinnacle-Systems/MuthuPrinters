@@ -61,6 +61,7 @@ model Company {
   sizes               Size[]
   gsms                Gsm[]
   itemGroups          ItemGroup[]
+  sizeTemplates       SizeTemplate[]
 }
 
 model Subscription {
@@ -553,6 +554,8 @@ model Uom {
   purchaseReturnItems    PurchaseReturnItems[]
   purchaseCancelItems    PurchaseCancelItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
+  styles                 Style[]
+  styleItems             StyleItem[]
 }
 
 model ProductUomPriceDetails {
@@ -858,6 +861,14 @@ model Style {
   code      String?
 
   active               Boolean?               @default(false)
+  SizeTemplate         SizeTemplate?          @relation(fields: [sizeTemplateId], references: [id])
+  sizeTemplateId       Int?
+  ItemGroup            ItemGroup?             @relation(fields: [itemGroupId], references: [id])
+  itemGroupId          Int?
+  Uom                  Uom?                   @relation(fields: [uomId], references: [id])
+  uomId                Int?
+  Gsm                  Gsm?                   @relation(fields: [gsmId], references: [id])
+  gsmId                Int?
   DeliveryChallanItems DeliveryChallanItems[]
   DeliveryInvoiceItems DeliveryInvoiceItems[]
 }
@@ -868,6 +879,14 @@ model StyleItem {
   aliasName              String?
   code                   String?
   active                 Boolean?                 @default(false)
+  SizeTemplate           SizeTemplate?            @relation(fields: [sizeTemplateId], references: [id])
+  sizeTemplateId         Int?
+  ItemGroup              ItemGroup?               @relation(fields: [itemGroupId], references: [id])
+  itemGroupId            Int?
+  Uom                    Uom?                     @relation(fields: [uomId], references: [id])
+  uomId                  Int?
+  Gsm                    Gsm?                     @relation(fields: [gsmId], references: [id])
+  gsmId                  Int?
   DeliveryChallanItems   DeliveryChallanItems[]
   DeliveryInvoiceItems   DeliveryInvoiceItems[]
   poItems                PoItems[]
@@ -936,6 +955,7 @@ model Color {
   active               Boolean?               @default(true)
   DeliveryChallanItems DeliveryChallanItems[]
   DeliveryInvoiceItems DeliveryInvoiceItems[]
+  poItems              PoItems[]
 }
 
 model DeliveryInvoice {
@@ -1174,6 +1194,12 @@ model PoItems {
   discountValue Float?
   taxPercent    Float?
   quoteVersion  Int        @default(1)
+  Itemgroup     ItemGroup? @relation(fields: [itemGroupId], references: [id])
+  itemGroupId   Int?
+  Size          Size?      @relation(fields: [sizeId], references: [id])
+  sizeId        Int?
+  Color         Color?     @relation(fields: [colorId], references: [id])
+  colorId       Int?
 }
 
 model TermsAndConditions {
@@ -1416,25 +1442,51 @@ model PurchaseLedger {
 }
 
 model Size {
-  id        Int      @id @default(autoincrement())
-  name      String
-  active    Boolean  @default(true)
-  Company   Company? @relation(fields: [companyId], references: [id])
-  companyId Int?
+  id                Int                @id @default(autoincrement())
+  name              String
+  active            Boolean            @default(true)
+  Company           Company?           @relation(fields: [companyId], references: [id])
+  companyId         Int?
+  sizeTemplateLists SizeTemplateList[]
+  poItems           PoItems[]
 }
 
 model Gsm {
-  id        Int      @id @default(autoincrement())
-  name      String
-  active    Boolean  @default(true)
-  Company   Company? @relation(fields: [companyId], references: [id])
-  companyId Int?
+  id         Int         @id @default(autoincrement())
+  name       String
+  active     Boolean     @default(true)
+  Company    Company?    @relation(fields: [companyId], references: [id])
+  companyId  Int?
+  styles     Style[]
+  styleItems StyleItem[]
 }
 
 model ItemGroup {
-  id        Int      @id @default(autoincrement())
-  name      String
-  active    Boolean  @default(true)
-  Company   Company? @relation(fields: [companyId], references: [id])
-  companyId Int?
+  id         Int         @id @default(autoincrement())
+  name       String
+  active     Boolean     @default(true)
+  Company    Company?    @relation(fields: [companyId], references: [id])
+  companyId  Int?
+  styles     Style[]
+  styleItems StyleItem[]
+  poItems    PoItems[]
+}
+
+model SizeTemplate {
+  id               Int                @id @default(autoincrement())
+  name             String?
+  Company          Company?           @relation(fields: [companyId], references: [id])
+  companyId        Int?
+  active           Boolean?           @default(true)
+  SizeTemplateList SizeTemplateList[]
+  styles           Style[]
+  styleItems       StyleItem[]
+}
+
+model SizeTemplateList {
+  id             Int           @id @default(autoincrement())
+  SizeTemplate   SizeTemplate? @relation(fields: [sizeTemplateId], references: [id], onDelete: Cascade)
+  sizeTemplateId Int?
+  Size           Size?         @relation(fields: [sizeId], references: [id])
+  sizeId         Int?
 }

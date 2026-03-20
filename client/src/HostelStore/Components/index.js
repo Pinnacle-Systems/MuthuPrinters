@@ -41,3 +41,4 @@ export { default as PurchaseInward } from "./PurchaseInward";
 export { default as ItemGroup } from "./ItemGroupMaster";
 export { default as Gsm } from "./GsmMaster";
 export { default as Size } from "./SizeMaster";
+export {default as SizeTemplate} from "./SizeTemplateMaster"

@@ -21,6 +21,11 @@ import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { dropDownListObject } from "../../../Utils/contructObject";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices";
+import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices";
+import sizeTemplateApi, {
+  useGetSizeTemplateQuery,
+} from "../../../redux/services/SizeTemplateMaster";
+import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService";
 
 const MODEL = "Item Master";
 export default function Form() {
@@ -35,6 +40,9 @@ export default function Form() {
   const [hsnId, setHsnId] = useState("");
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
+  const [itemGroupId, setItemGroupId] = useState("");
+  const [sizeTemplateId, setSizeTemplateId] = useState("");
+  const [uomId, setUomId] = useState("");
 
   const params = {
     companyId: secureLocalStorage.getItem(
@@ -42,14 +50,15 @@ export default function Form() {
     ),
   };
   const { data: hsnList } = useGetHsnMasterQuery({ params });
+  const { data: uomList } = useGetUnitOfMeasurementMasterQuery({ params });
+  const { data: sizeTemplateList } = useGetSizeTemplateQuery({ params });
+  const { data: itemGroupList } = useGetItemGroupMasterQuery({ params });
 
   const {
     data: allData,
     isLoading,
     isFetching,
   } = useGetStyleItemMasterQuery({ params, searchParams: searchValue });
-
-  console.log(allData, "datatat");
 
   const {
     data: singleData,
@@ -76,6 +85,9 @@ export default function Form() {
         setActive(id ? (data?.active ?? false) : true);
         setAliasName(data?.aliasName ? data?.aliasName : "");
         setHsnId(data?.hsnId ? data?.hsnId : "");
+        setItemGroupId(data?.itemGroupId ? data?.itemGroupId : "");
+        setUomId(data?.uomId ? data?.uomId : "");
+        setSizeTemplateId(data?.sizeTemplateId ? data?.sizeTemplateId : "");
         childRecord.current = data?.childRecord ? data?.childRecord : 0;
       }
     },
@@ -95,10 +107,13 @@ export default function Form() {
     ),
     aliasName,
     hsnId,
+    itemGroupId,
+    sizeTemplateId,
+    uomId,
   };
 
   const validateData = (data) => {
-    if (data.name && data.hsnId) {
+    if (data.name && data.itemGroupId && data?.uomId) {
       return true;
     }
     return false;
@@ -178,16 +193,8 @@ export default function Form() {
     }
   };
 
-  const handleDelete = async (id, childRecord) => {
-        const { data } = await trigger(id);
-
-    if (childRecord) {
-      Swal.fire({
-        icon: "error",
-        title: "Child record Exists",
-      });
-      return;
-    }
+  const handleDelete = async (id) => {
+    const { data } = await trigger(id);
     if (id) {
       if (!window.confirm("Are you sure to delete...?")) {
         return;
@@ -327,7 +334,7 @@ export default function Form() {
         <Modal
           isOpen={form}
           form={form}
-          widthClass={"w-[600px] max-w-6xl h-[380px]"}
+          widthClass={"w-[800px] max-w-6xl h-[400px]"}
           onClose={() => {
             setForm(false);
           }}
@@ -397,38 +404,20 @@ export default function Form() {
                 <div className="lg:col-span- space-y-3">
                   <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
                     <fieldset className=" rounded mt-2">
-                      <div className="">
-                        <div className="flex flex-wrap justify-between">
-                          <div className="mb-3 w-[48%]">
-                            <TextInputNew1
-                              ref={countryNameRef}
-                              name="Item Name"
-                              type="text"
-                              value={name}
-                              setValue={setName}
-                              required={true}
-                              readOnly={readOnly}
-                              disabled={childRecord.current > 0}
-                            />
-                          </div>
-                          <div className="mb-3 w-[48%]">
-                            <DropdownInput
-                              name="HSN"
-                              options={dropDownListObject(
-                                hsnList ? hsnList?.data : [],
-                                "name",
-                                "id",
-                              )}
-                              value={hsnId}
-                              setValue={(value) => {
-                                setHsnId(value);
-                              }}
-                              required={true}
-                              readOnly={readOnly}
-                            />
-                          </div>
+                      <div className="w-full grid grid-cols-3 gap-3">
+                        <div className="mb-3">
+                          <TextInputNew1
+                            ref={countryNameRef}
+                            name="Item Name"
+                            type="text"
+                            value={name}
+                            setValue={setName}
+                            required={true}
+                            readOnly={readOnly}
+                            disabled={childRecord.current > 0}
+                          />
                         </div>
-                        <div className="mb-3 w-[48%]">
+                        <div className="mb-3">
                           <TextInputNew1
                             name="Alias Name"
                             type="text"
@@ -438,16 +427,93 @@ export default function Form() {
                             disabled={childRecord.current > 0}
                           />
                         </div>
-                        <div className="mb-5">
-                          <ToggleButton
-                            name="Status"
-                            options={statusDropdown}
-                            value={active}
-                            setActive={setActive}
+                        <div className="mb-3">
+                          <DropdownInput
+                            name="Item Group"
+                            options={dropDownListObject(
+                              id
+                                ? itemGroupList?.data
+                                : itemGroupList?.data?.filter(
+                                    (item) => item.active,
+                                  ),
+                              "name",
+                              "id",
+                            )}
+                            value={itemGroupId}
+                            setValue={(value) => {
+                              setItemGroupId(value);
+                            }}
+                            readOnly={readOnly}
+                            clear={true}
+                            required={true}
+                          />
+                        </div>
+                        <div className="mb-3">
+                          <DropdownInput
+                            name="UOM"
+                            options={dropDownListObject(
+                              id
+                                ? uomList?.data
+                                : uomList?.data?.filter((item) => item.active),
+                              "name",
+                              "id",
+                            )}
+                            value={uomId}
+                            setValue={(value) => {
+                              setUomId(value);
+                            }}
                             required={true}
                             readOnly={readOnly}
                           />
                         </div>
+                        <div className="mb-3">
+                          <DropdownInput
+                            name="Size Template"
+                            options={dropDownListObject(
+                              id
+                                ? sizeTemplateList?.data
+                                : sizeTemplateList?.data?.filter(
+                                    (item) => item.active,
+                                  ),
+                              "name",
+                              "id",
+                            )}
+                            value={sizeTemplateId}
+                            setValue={(value) => {
+                              setSizeTemplateId(value);
+                            }}
+                            readOnly={readOnly}
+                            clear={true}
+                          />
+                        </div>
+                        <div className="mb-3">
+                          <DropdownInput
+                            name="HSN"
+                            options={dropDownListObject(
+                              id
+                                ? hsnList?.data
+                                : hsnList?.data?.filter((item) => item.active),
+                              "name",
+                              "id",
+                            )}
+                            value={hsnId}
+                            setValue={(value) => {
+                              setHsnId(value);
+                            }}
+                            readOnly={readOnly}
+                            clear={true}
+                          />
+                        </div>
+                      </div>
+                      <div className="mb-5">
+                        <ToggleButton
+                          name="Status"
+                          options={statusDropdown}
+                          value={active}
+                          setActive={setActive}
+                          required={true}
+                          readOnly={readOnly}
+                        />
                       </div>
                     </fieldset>
                   </div>
