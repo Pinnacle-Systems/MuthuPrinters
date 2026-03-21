@@ -38,7 +38,6 @@ import { useGetPartyBranchByIdQuery } from "../../../redux/services/PartyBranchM
 
 export default function Form({ partyId, onCloseForm, childId }) {
 
-    console.log(partyId, "partyId", childId)
     const [form, setForm] = useState(false);
 
     const [readOnly, setReadOnly] = useState(false);
@@ -136,7 +135,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
 
 
     const syncFormWithDb = useCallback((data) => {
-        console.log(data, 'datadata')
 
         setPanNo(data?.panNo ? data?.panNo : "");
         setName(data?.name ? data?.name : "");
@@ -196,7 +194,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
         syncFormWithDb(singleData?.data);
     }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
-    console.log(childRecord, " data?.childRecord");
 
 
     const {
@@ -207,13 +204,11 @@ export default function Form({ partyId, onCloseForm, childId }) {
         skip: id
     });
 
-    console.log(id, "iddd", !branchId)
 
     const syncFormWithDbNew = useCallback((data) => {
 
         if (!parentId) return
 
-        console.log("HJittttttt")
 
         setPanNo(data?.panNo ? data?.panNo : "");
         // setAliasName(data?.aliasName ? data?.aliasName : "");
@@ -283,14 +278,12 @@ export default function Form({ partyId, onCloseForm, childId }) {
 
     }
 
-    console.log(data, "data")
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
         try {
             const formData = new FormData();
             for (let key in data) {
 
-                console.log(key, "key")
                 if (key == 'attachments') {
                     formData.append(key, JSON.stringify(data[key].map(i => ({ ...i, filePath: (i.filePath instanceof File) ? i.filePath.name : i.filePath }))));
                     data[key].forEach(option => {
@@ -302,7 +295,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
                     formData.append(key, data[key]);
                 }
             }
-            console.log(formData, "formData")
 
             let returnData;
             if (text === "Updated") {
@@ -352,11 +344,9 @@ export default function Form({ partyId, onCloseForm, childId }) {
         // setDueDate(moment.utc(today).format("YYYY-MM-DD"));
     }
 
-    console.log(attachments, "attachments")
 
 
     function handleInputChange(value, index, field) {
-        console.log(value, 'value', index, "index", field, "field")
 
         const newBlend = structuredClone(attachments);
         newBlend[index][field] = value;
@@ -365,7 +355,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
     };
 
     function deleteRow(index) {
-        console.log(index, "index");
 
         setAttachments(prev => prev.filter((_, i) => i !== index))
     }
@@ -500,7 +489,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
             handleSubmitCustom(addData, data, "Added", nextProcess);
         }
     }
-    console.log(childRecord, "childRecord");
 
 
     const deleteData = async (id, childRecord) => {
@@ -526,7 +514,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
                   } else {
             try {
                 let deldata = await removeData(id).unwrap();
-                console.log(deldata, "deldata")
                 if (deldata?.statusCode == 1) {
                     Swal.fire({
                         icon: 'error',
@@ -604,13 +591,11 @@ export default function Form({ partyId, onCloseForm, childId }) {
         setId(id);
         setForm(true);
         setReadOnly(true);
-        console.log("view");
     };
     const handleEdit = (id) => {
         setId(id);
         setForm(true);
         setReadOnly(false);
-        console.log("Edit");
     };
 
     const ACTIVE = (
@@ -663,7 +648,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
 
         // open branch modal if childId exists
         if (childId) {
-            console.log("Hit")
             setBranchModelOpen(true)
             setBranchForm(false)
             setBranchId(childId);
@@ -914,7 +898,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
                                                 )}
                                                 value={parentId}
                                                 setValue={(value) => {
-                                                    console.log(value, "value")
                                                     setParentId(value)
                                                     setName(findFromList(value, allData?.data, "name"))
 
@@ -1874,7 +1857,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
                                                         )}
                                                         value={parentId}
                                                         setValue={(value) => {
-                                                            console.log(value, "value")
                                                             setParentId(value)
                                                             setName(findFromList(value, allData?.data, "name"))
 

@@ -11,7 +11,16 @@ async function get(req) {
     include: {
       _count: {
         select: {
-          DeliveryChallanItems: true,
+          poItems: true,
+        },
+      },
+      SizeTemplate: {
+        select: {
+          SizeTemplateList: {
+            select: {
+              sizeId: true,
+            },
+          },
         },
       },
     },
@@ -20,7 +29,7 @@ async function get(req) {
     statusCode: 0,
     data: (data = data.map((color) => ({
       ...color,
-      childRecord: color?._count.DeliveryChallanItems > 0,
+      childRecord: color?._count.poItems > 0,
     }))),
   };
 }
@@ -78,9 +87,9 @@ async function create(body) {
       active,
       code,
       hsnId: hsnId ? parseInt(hsnId) : undefined,
-      uomId:uomId ? parseInt(uomId) : undefined,
-      itemGroupId:  itemGroupId ? parseInt(itemGroupId) : undefined,
-      sizeTemplateId:  sizeTemplateId ? parseInt(sizeTemplateId) : undefined,
+      uomId: uomId ? parseInt(uomId) : undefined,
+      itemGroupId: itemGroupId ? parseInt(itemGroupId) : undefined,
+      sizeTemplateId: sizeTemplateId ? parseInt(sizeTemplateId) : undefined,
     },
   });
   return { statusCode: 0, data };
@@ -114,9 +123,9 @@ async function update(id, body) {
       active,
       code,
       hsnId: hsnId ? parseInt(hsnId) : undefined,
-       uomId: parseInt(uomId) ?? 0,
-      itemGroupId:  parseInt(itemGroupId) ?? 0,
-      sizeTemplateId:  parseInt(sizeTemplateId) ?? 0,
+      uomId: parseInt(uomId) ?? 0,
+      itemGroupId: parseInt(itemGroupId) ?? 0,
+      sizeTemplateId: parseInt(sizeTemplateId) ?? 0,
     },
   });
   return { statusCode: 0, data };

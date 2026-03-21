@@ -45,6 +45,7 @@ import { useDispatch } from "react-redux";
 import purchaseInwardEntryApi from "../../../redux/uniformService/PurchaseInwardEntry";
 import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
 import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
+import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
 
 const PurchaseOrderForm = ({
   onClose,
@@ -135,7 +136,7 @@ const PurchaseOrderForm = ({
               uomId: "",
               price: "",
               qty: "",
-              quoteVersion: 1,
+              quoteVersion: quoteVersion,
               netAmount: 0,
               itemGroupId: "",
               sizeId: "",
@@ -342,8 +343,6 @@ const PurchaseOrderForm = ({
   };
 
   const dateRef = useRef(null);
-  const inputPartyRef = useRef(null);
-  const styleRef = useRef(null);
 
   useEffect(() => {
     if (dateRef.current && !id) {
@@ -391,7 +390,7 @@ const PurchaseOrderForm = ({
 
   function isSupplierOutside() {
     if (supplierDetails) {
-      return supplierDetails?.data?.City?.state?.name !== "TAMIL NADU";
+      return supplierDetails?.data?.City?.state?.name !== "TAMILNADU";
     }
     return false;
   }
@@ -418,6 +417,45 @@ const PurchaseOrderForm = ({
     }
   };
 
+  const { items: enrichedPoItems } =
+    calculateTaxWithHSNBreakupAndInsertIntoPoItems(
+      poItems,
+      isSupplierOutside(),
+      discountType,
+      discountValue,
+    );
+
+  const { items: _, ...totals } =
+    calculateTaxWithHSNBreakupAndInsertIntoPoItems(
+      poItems?.filter((i) => {
+        if (!i.styleItemId) return false;
+        if (!id) return true;
+        if (isNewVersion) return i.quoteVersion === "New";
+        return parseInt(i.quoteVersion) === parseInt(quoteVersion ?? "");
+      }),
+      isSupplierOutside(),
+      discountType,
+      discountValue,
+    );
+
+  function getTotalQty() {
+    const filtered = poItems?.filter((item) => {
+      if (!item.styleItemId) return false; // skip empty rows
+
+      if (!id) return true; // new entry — all rows
+
+      if (isNewVersion) return item.quoteVersion === "New";
+
+      return parseInt(item.quoteVersion) === parseInt(quoteVersion ?? "");
+    });
+
+    const qty = filtered?.reduce((acc, curr) => {
+      return acc + (parseFloat(curr?.qty) || 0); // ✅ parseFloat not parseInt
+    }, 0);
+
+    return parseFloat(qty || 0);
+  }
+
   return (
     <>
       <Modal
@@ -435,9 +473,11 @@ const PurchaseOrderForm = ({
           poItems={poItems}
           taxTypeId={taxTemplateId}
           readOnly={readOnly}
-          isSupplierOutside={isSupplierOutside()}
+          // isSupplierOutside={isSupplierOutside()}
           isNewVersion={isNewVersion}
           quoteVersion={quoteVersion}
+          totals={totals}
+          id={id}
         />
       </Modal>
       <Modal
@@ -498,8 +538,6 @@ const PurchaseOrderForm = ({
                 setValue={setDueDate}
                 type={"date"}
                 required={true}
-                // ref={dateRef}
-                // nextRef={inputPartyRef}
                 readOnly={readOnly}
               />
             </div>
@@ -569,7 +607,7 @@ const PurchaseOrderForm = ({
                   label="Supplier"
                   component="PartyMaster"
                   placeholder="Search Supplier ..."
-                  optionList={supplierList?.data}
+                  optionList={supplierList?.data?.filter((item) => item.isSupplier)}
                   setSearchTerm={(value) => {
                     setSupplierId(value);
                   }}
@@ -663,6 +701,7 @@ const PurchaseOrderForm = ({
           <PoItems
             id={id}
             poItems={poItems}
+            enrichedPoItems={enrichedPoItems}
             setPoItems={setPoItems}
             readOnly={readOnly}
             uomList={uomList}
@@ -737,8 +776,32 @@ const PurchaseOrderForm = ({
               placeholder="Additional notes..."
             />
           </div>
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
+            <div className="flex justify-between py-1 text-sm">
+              <span className="text-slate-600">Total Qty</span>
+              <span className="font-medium">
+                {parseFloat(getTotalQty()).toFixed(3)}
+              </span>
+            </div>
+            <div className="flex justify-between py-1 text-sm">
+              <span className="text-slate-600">Taxable Amount</span>
+              <span className="font-medium">
+                Rs.{parseFloat(totals?.taxable || 0).toFixed(2)}{" "}
+              </span>
+            </div>
+            {/* <div className="flex justify-between py-1 text-sm">
+                  <span className="text-slate-600">Tax Amount</span>
+                  <span className="font-medium">Rs.{taxDetails?.grossAmount}</span>
+                </div> */}
+            <div className="flex justify-between py-1 text-sm">
+              <span className="text-slate-600">Net Amount</span>
+              <span className="font-medium">
+                Rs.{parseFloat(totals?.net || 0).toFixed(2)}
+              </span>
+            </div>
+          </div>
 
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
+          {/* <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
             <h2 className="font-bold text-slate-800 mb-2 text-base">
               Po Summary
             </h2>
@@ -757,7 +820,7 @@ const PurchaseOrderForm = ({
             >
               View Po Summary
             </button>
-          </div>
+          </div> */}
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
@@ -789,7 +852,20 @@ const PurchaseOrderForm = ({
                   Edit
                 </button>
               ))}
-
+            <button
+              className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1  rounded"
+              onClick={() => {
+                if (!taxTemplateId) {
+                  toast.info("Please Select Tax Template !", {
+                    position: "top-center",
+                  });
+                  return;
+                }
+                setSummary(true);
+              }}
+            >
+              View Po Summary
+            </button>
             <button
               className="bg-slate-600 text-white px-4 py-1 rounded-md hover:bg-slate-700 flex items-center text-sm"
               onClick={() => {

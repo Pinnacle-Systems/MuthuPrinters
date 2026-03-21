@@ -8,10 +8,12 @@ import Modal from "../../../UiComponents/Modal";
 import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
 import { useMemo } from "react";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
+import { getUniqueArrayBySize } from "../../../Utils/helper";
 
 const PoItems = ({
   id,
   poItems,
+  enrichedPoItems,
   setPoItems,
   readOnly,
   params,
@@ -23,7 +25,7 @@ const PoItems = ({
   quoteVersion,
   itemGroupList,
   sizeList,
-  colorList
+  colorList,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -47,7 +49,7 @@ const PoItems = ({
       uomId: "",
       price: "",
       qty: "",
-      quoteVersion: id ? (isNewVersion ? "New" : quoteVersion) : 1,
+      quoteVersion: id ? (isNewVersion ? "New" : quoteVersion) : quoteVersion,
       netAmount: 0,
       itemGroupId: "",
       sizeId: "",
@@ -122,16 +124,6 @@ const PoItems = ({
     setContextMenu(null);
   };
 
-  const getVisibleRows = (rows) => {
-    if (!id) return rows;
-
-    return rows.filter((row) =>
-      isNewVersion
-        ? row.quoteVersion === "New"
-        : parseInt(row.quoteVersion) === parseInt(quoteVersion),
-    );
-  };
-
   useEffect(() => {
     setPoItems((prev) => {
       const requiredRows = 4;
@@ -144,7 +136,7 @@ const PoItems = ({
 
         const emptyRows = Array.from({ length: missing }, () => ({
           ...EMPTY_ROW,
-          quoteVersion: 1,
+          quoteVersion: quoteVersion,
         }));
 
         return [...prev, ...emptyRows];
@@ -187,48 +179,48 @@ const PoItems = ({
   }, [isNewVersion, quoteVersion]);
   let count = 1;
 
-  useEffect(() => {
-    // Recalculate net amount for all rows whenever dependent fields change
-    const updatedRows = poItems.map((row) => {
-      const price = parseFloat(row.price) || 0;
-      const qty = parseFloat(row.qty) || 0;
-      const taxPercent = parseFloat(row.taxPercent) || 0;
-      const discountValue = parseFloat(row.discountValue) || 0;
-      const discountType = row.discountType;
+  // useEffect(() => {
+  //   // Recalculate net amount for all rows whenever dependent fields change
+  //   const updatedRows = poItems.map((row) => {
+  //     const price = parseFloat(row.price) || 0;
+  //     const qty = parseFloat(row.qty) || 0;
+  //     const taxPercent = parseFloat(row.taxPercent) || 0;
+  //     const discountValue = parseFloat(row.discountValue) || 0;
+  //     const discountType = row.discountType;
 
-      const gross = price * qty;
+  //     const gross = price * qty;
 
-      let discountAmount = 0;
-      if (discountType) {
-        if (discountType === "Flat") {
-          discountAmount = discountValue;
-        } else {
-          discountAmount = (gross * discountValue) / 100;
-        }
-      }
+  //     let discountAmount = 0;
+  //     if (discountType) {
+  //       if (discountType === "Flat") {
+  //         discountAmount = discountValue;
+  //       } else {
+  //         discountAmount = (gross * discountValue) / 100;
+  //       }
+  //     }
 
-      const taxable = gross - discountAmount;
-      const sgst = (taxable * (taxPercent / 2)) / 100;
-      const cgst = (taxable * (taxPercent / 2)) / 100;
+  //     const taxable = gross - discountAmount;
+  //     const sgst = (taxable * (taxPercent / 2)) / 100;
+  //     const cgst = (taxable * (taxPercent / 2)) / 100;
 
-      const net = taxable + sgst + cgst;
+  //     const net = taxable + sgst + cgst;
 
-      return {
-        ...row,
-        netAmount: Math.round(net),
-        taxable: taxable,
-      };
-    });
+  //     return {
+  //       ...row,
+  //       netAmount: Math.round(net),
+  //       taxable: taxable,
+  //     };
+  //   });
 
-    // Only update if net amounts actually changed
-    const needsUpdate = updatedRows.some(
-      (row, index) => row.netAmount !== (poItems[index]?.netAmount || 0),
-    );
+  //   // Only update if net amounts actually changed
+  //   const needsUpdate = updatedRows.some(
+  //     (row, index) => row.netAmount !== (poItems[index]?.netAmount || 0),
+  //   );
 
-    if (needsUpdate) {
-      setPoItems(updatedRows);
-    }
-  }, [poItems]); // This will run whenever poItems change
+  //   if (needsUpdate) {
+  //     setPoItems(updatedRows);
+  //   }
+  // }, [poItems]); // This will run whenever poItems change
 
   return (
     <>
@@ -241,7 +233,7 @@ const PoItems = ({
           taxTypeId={taxTemplateId}
           currentIndex={currentSelectedIndex}
           setCurrentSelectedIndex={setCurrentSelectedIndex}
-          poItems={poItems}
+          poItems={enrichedPoItems || poItems}
           handleInputChange={handleInputChange}
           id={id}
           isNewVersion={isNewVersion}
@@ -303,11 +295,11 @@ const PoItems = ({
                 >
                   Gross Amount
                 </th>
-                <th
+                {/* <th
                   className={`w-28 px-1 py-2 text-center font-medium text-[13px] `}
                 >
                   Net Amount
-                </th>
+                </th> */}
                 <th
                   className={`w-24 px-1 py-2 text-center font-medium text-[13px] `}
                 >
@@ -399,7 +391,18 @@ const PoItems = ({
                         onChange={(val) =>
                           handleInputChange(val, index, "sizeId")
                         }
-                        options={(sizeList?.data || [])
+                        // options={(sizeList?.data || [])
+                        //   .filter((item) => (id ? true : item.active))
+                        //   .map((item) => ({
+                        //     label: item.name,
+                        //     value: item.id,
+                        //   }))}
+                        options={getUniqueArrayBySize(
+                          styleItemList?.data,
+                          sizeList?.data,
+                          "sizeId",
+                          row.styleItemId,
+                        )
                           .filter((item) => (id ? true : item.active))
                           .map((item) => ({
                             label: item.name,
@@ -408,11 +411,7 @@ const PoItems = ({
                         readOnly={id ? !isNewVersion : readOnly}
                         placeholder=""
                         onBlur={() =>
-                          handleInputChange(
-                            row.sizeId,
-                            index,
-                            "sizeId",
-                          )
+                          handleInputChange(row.sizeId, index, "sizeId")
                         }
                         onKeyDown={(e) => {
                           if (e.key === "Delete") {
@@ -436,11 +435,7 @@ const PoItems = ({
                         readOnly={id ? !isNewVersion : readOnly}
                         placeholder=""
                         onBlur={() =>
-                          handleInputChange(
-                            row.colorId,
-                            index,
-                            "colorId",
-                          )
+                          handleInputChange(row.colorId, index, "colorId")
                         }
                         onKeyDown={(e) => {
                           if (e.key === "Delete") {
@@ -548,7 +543,7 @@ const PoItems = ({
                         disabled={true}
                       />
                     </td>
-                    <td className="py-0.5 border border-gray-300 text-[11px]">
+                    {/* <td className="py-0.5 border border-gray-300 text-[11px]">
                       <input
                         type="number"
                         className="text-right rounded py-1 px-1 w-full"
@@ -560,7 +555,7 @@ const PoItems = ({
                         }
                         disabled
                       />
-                    </td>
+                    </td> */}
 
                     <td className=" py-0.5 border border-gray-300 text-[11px] text-right">
                       <button
@@ -655,7 +650,7 @@ const PoItems = ({
                     }, 0)
                     .toFixed(2)}
                 </td>
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                {/* <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {poItems
                     ?.filter((item) =>
                       id
@@ -670,7 +665,7 @@ const PoItems = ({
                       0,
                     )
                     .toFixed(2)}
-                </td>
+                </td> */}
                 <td className="border border-gray-300" colSpan={2}></td>
               </tr>
             </tfoot>

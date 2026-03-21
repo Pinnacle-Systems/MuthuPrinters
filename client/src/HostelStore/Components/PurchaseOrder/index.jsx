@@ -16,12 +16,17 @@ import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterS
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
+import purchaseInwardEntryApi from "../../../redux/uniformService/PurchaseInwardEntry";
+import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
+import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
+import StyleItemMasterApi from "../../../redux/services/StyleItemMasterService.js";
+import { useDispatch } from "react-redux";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
   const [id, setId] = useState("");
   const [readOnly, setReadOnly] = useState(false);
-  // const dispatch = useDispatch();
+  const dispatch = useDispatch();
   const { branchId, companyId, finYearId, userId } = getCommonParams()
   const params = {
     branchId, companyId, finYearId
@@ -86,7 +91,12 @@ export default function Form() {
             timer: 1000,
           });
           setShowForm(false);
-          // dispatch(StyleMasterApi.util.invalidateTags(["StyleMaster"]));
+          dispatch(StyleItemMasterApi.util.invalidateTags(["StyleItemMaster"]));
+          dispatch(
+            purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
+          );
+          dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
+          dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
         } catch (error) {
           Swal.fire({
             icon: "error",

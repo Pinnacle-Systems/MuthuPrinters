@@ -1,7 +1,9 @@
 import React, { useEffect } from "react";
 import { discountTypes } from "../../../Utils/DropdownData";
 import { numberToWords } from "number-to-words";
+import { numberToText } from "number-to-text";
 import { groupBy } from "lodash";
+
 const PoSummary = ({
   poItems = [],
   readOnly,
@@ -9,185 +11,153 @@ const PoSummary = ({
   setDiscountType,
   discountValue,
   setDiscountValue,
+  totals,
   isNewVersion,
-  quoteVersion,
+  id,
 }) => {
-  const visibleItems = poItems.filter((row) =>
-    isNewVersion
-      ? row.quoteVersion === "New"
-      : parseInt(row.quoteVersion) === parseInt(quoteVersion),
-  );
-
-  const totalAmount = visibleItems.reduce(
-    (sum, row) => sum + (Number(row.taxable) || 0),
-    0,
-  );
-
-  // 2️⃣ DISCOUNT
-  const discountValueNum = Number(discountValue) || 0;
-
-  let discountAmount = 0;
-  if (discountType === "Flat") {
-    discountAmount = discountValueNum;
-  } else if (discountType === "Percentage") {
-    discountAmount = (totalAmount * discountValueNum) / 100;
-  }
-
-  // 3️⃣ NET & ROUNDING
-
-  const taxGroupWise = groupBy(visibleItems, "taxPercent");
-  const displayTaxRows = Object.entries(taxGroupWise)
-    .filter(([taxPercent]) => Number(taxPercent) > 0) // ignore null / 0
-    .map(([taxPercent, items]) => {
-      const taxable = items.reduce((sum, item) => sum + item.taxable, 0);
-
-      const taxRate = Number(taxPercent);
-      const halfTax = taxRate / 2;
-
-      return {
-        taxPercent: taxRate,
-        halfTax,
-        taxable,
-        sgstAmount: (taxable * halfTax) / 100,
-        cgstAmount: (taxable * halfTax) / 100,
-      };
-    });
-
-  const totalTaxAmount = displayTaxRows.reduce(
-    (sum, tax) => sum + tax.sgstAmount + tax.cgstAmount,
-    0,
-  );
-  const grossAmount = totalAmount - discountAmount;
-
-  const netValue = grossAmount + totalTaxAmount;
-
-  const netAmount = Math.round(netValue);
-  const roundoff = netAmount - netValue;
-
-  // =================== UI ===================
   return (
-    <div className="bg-gray-200 rounded w-[500px]">
-      <table className="border border-gray-500 w-full text-xs table-fixed">
-        <thead>
-          <tr className="bg-gray-300">
-            <th className="border border-gray-500 p-1">Description</th>
-            <th className="border border-gray-500 p-1">Value</th>
-            <th className="border border-gray-500 p-1">Amount</th>
+    <div className={`bg-gray-200 rounded z-50 w-[500px] `}>
+      <table className="border border-gray-500 w-full text-xs text-start">
+        <thead className="border border-gray-500">
+          <tr>
+            <th className="w-36 border border-gray-500">Tax Details</th>
+            <th className="w-28 border border-gray-500">Value</th>
+            <th className="w-28 border border-gray-500">Amount</th>
           </tr>
         </thead>
-
         <tbody>
-          {/* DISCOUNT TYPE */}
+          <tr>
+            <td className="border border-gray-500 py-1.5">Gross Amount</td>
+            <td className="border border-gray-500 text-right" colSpan={2}>
+              {(totals?.gross).toFixed(2)}
+            </td>
+          </tr>
           <tr>
             <td className="border border-gray-500">Discount Type</td>
-            <td colSpan={2} className="border border-gray-500">
+            <td className="border border-gray-500" colSpan={2}>
               <select
-                disabled={readOnly}
+                autoFocus
+                name="type"
+                disabled={id ? !isNewVersion : readOnly}
+                className="text-left w-full rounded h-8"
                 value={discountType}
-                className="w-full h-8"
-                onChange={(e) => setDiscountType(e.target.value)}
-                autoFocus={true}
+                onChange={(e) => {
+                  setDiscountType(e.target.value);
+                }}
               >
-                {discountTypes.map((d, i) => (
-                  <option key={i} value={d.value}>
-                    {d.show}
+                <option value={""}>Select</option>
+                {discountTypes.map((option, index) => (
+                  <option key={index} value={option.value}>
+                    {option.show}
                   </option>
                 ))}
               </select>
             </td>
           </tr>
 
-          {/* DISCOUNT VALUE */}
-          <tr>
+          <tr className="h-7">
             <td className="border border-gray-500">Discount</td>
-            <td colSpan={2} className="border border-gray-500">
+            <td className="border border-gray-500">
               <input
-                type="number"
-                disabled={readOnly}
-                className="w-full h-7 text-right"
+                type="text"
+                name="value"
+                disabled={id ? !isNewVersion : readOnly || !discountType}
+                className="h-7 w-full"
                 value={discountValue}
-                onChange={(e) => setDiscountValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.code === "Minus" || e.code === "NumpadSubtract")
+                    e.preventDefault();
+                  if (e.key === "Delete") {
+                    setDiscountValue(0);
+                  }
+                }}
+                min={"0"}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  setDiscountValue(e.target.value);
+                }}
+              />
+            </td>
+            <td className="border border-gray-500">
+              <input
+                disabled
+                type="text"
+                name="value"
+                className="h-7 w-full text-right"
+                //  value={}
               />
             </td>
           </tr>
-
-          {/* GROSS */}
           <tr>
-            <td className="border border-gray-500 font-semibold">Total</td>
-            <td />
-            <td className="border border-gray-500 text-right">
-              {totalAmount.toFixed(2)}
+            <td className="border border-gray-500 py-1.5">Taxable Amount</td>
+            <td className="border border-gray-500 text-right" colSpan={2}>
+              {(totals?.taxable).toFixed(2)}
             </td>
           </tr>
-          <tr>
-            <td className="border border-gray-500 font-semibold">
-              Discount Amount
-            </td>
-            <td />
-            <td className="border border-gray-500 text-right">
-              {discountAmount.toFixed(2)}
-            </td>
-          </tr>
-          <tr>
-            <td className="border border-gray-500 font-semibold">Gross</td>
-            <td />
-            <td className="border border-gray-500 text-right">
-              {grossAmount.toFixed(2)}
-            </td>
-          </tr>
-
-          {/* DISPLAY ONLY – NO CALC IMPACT */}
-          {displayTaxRows.map((tax, index) => (
-            <React.Fragment key={index}>
-              <tr>
-                <td className="border border-gray-500 font-semibold">SGST</td>
-                <td className="border border-gray-500 text-right">
-                  {tax.halfTax}
-                </td>
-                <td className="border border-gray-500 text-right">
-                  {tax.sgstAmount.toFixed(2)}
-                </td>
-              </tr>
-
-              <tr>
-                <td className="border border-gray-500 font-semibold">CGST</td>
-                <td className="border border-gray-500 text-right">
-                  {tax.halfTax}
-                </td>
-                <td className="border border-gray-500 text-right">
-                  {tax.cgstAmount.toFixed(2)}
-                </td>
-              </tr>
-            </React.Fragment>
+          {totals?.slabBreakup?.map((i) => (
+            <tr className="h-7">
+              <td className="border border-gray-500">{i.tax} </td>
+              <td className="border border-gray-500" colSpan={2}>
+                <input
+                  disabled
+                  type="text"
+                  name="value"
+                  className="h-7 w-full text-right"
+                  value={i.amount.toFixed(2)}
+                />
+              </td>
+            </tr>
           ))}
-
-          {/* DISCOUNT AMOUNT */}
-
-          {/* NET */}
-          <tr>
-            <td className="border border-gray-500 font-semibold">Net</td>
-            <td />
-            <td className="border border-gray-500 text-right">
-              {netAmount.toFixed(2)}
+          <tr className="h-7">
+            <td className="border border-gray-500">IGST Amount</td>
+            <td className="border border-gray-500" colSpan={2}>
+              <input
+                disabled
+                type="text"
+                name="value"
+                className="h-7 w-full text-right"
+                value={0}
+              />
             </td>
           </tr>
-
-          {/* ROUNDOFF */}
-          <tr>
-            <td className="border border-gray-500 font-semibold">Roundoff</td>
-            <td />
-            <td className="border border-gray-500 text-right">
-              {roundoff.toFixed(2)}
+          <tr className="h-7">
+            <td className="border border-gray-500">Net Amount</td>
+            <td className="border border-gray-500" colSpan={2}>
+              <input
+                disabled
+                type="text"
+                name="value"
+                className="h-7 w-full text-right"
+                value={(totals?.net).toFixed(2)}
+              />
             </td>
           </tr>
-
-          {/* AMOUNT IN WORDS */}
-          <tr>
-            <td className="border border-gray-500 font-semibold">
-              Amount in Words
+          <tr className="h-7">
+            <td className="border border-gray-500">Round Off</td>
+            <td className="border border-gray-500" colSpan={2}>
+              <input
+                disabled
+                type="text"
+                name="value"
+                className="h-7 w-full text-right"
+                value={parseFloat(totals?.roundOff).toFixed(2)}
+              />
             </td>
-            <td colSpan={2} className="border border-gray-500 text-right">
-              {numberToWords.toWords(netAmount)} Only
+          </tr>
+          <tr className="h-7">
+            <td className="border border-gray-500">Amount in Words</td>
+            <td className="border border-gray-500" colSpan={2}>
+              <input
+                disabled
+                type="text"
+                name="value"
+                className="h-7 w-full text-right"
+                value={
+                  numberToWords
+                    .toWords(totals?.net || 0)
+                    .replace(/\b\w/g, (c) => c.toUpperCase()) + " Only"
+                }
+              />
             </td>
           </tr>
         </tbody>

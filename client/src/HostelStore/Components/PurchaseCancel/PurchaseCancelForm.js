@@ -37,6 +37,7 @@ import purchaseCancelApi, {
 import { useDispatch } from "react-redux";
 import purchaseInwardEntryApi from "../../../redux/uniformService/PurchaseInwardEntry";
 import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
+import { useGetPoItemsQuery } from "../../../redux/uniformService/PoServices";
 
 const PurchaseCancelForm = ({
   onClose,
@@ -50,6 +51,8 @@ const PurchaseCancelForm = ({
   branchList,
   hsnList,
   onNew,
+  sizeList,
+  colorList,
 }) => {
   const today = new Date();
 
@@ -63,6 +66,14 @@ const PurchaseCancelForm = ({
   const [storeId, setStoreId] = useState("");
   const [docId, setDocId] = useState("");
   const [locationId, setLocationId] = useState("");
+  const [tempItems, setTempItems] = useState([]);
+  const [searchDocId, setSearchDocId] = useState("");
+  const [searchDocDate, setSearchDocDate] = useState("");
+  const [searchInwardType, setSearchInwardType] = useState(poType);
+
+  const [dataPerPage, setDataPerPage] = useState("10");
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPageNumber, setCurrentPageNumber] = useState(1);
 
   const [termsAndCondition, setTermsAndCondition] = useState("");
 
@@ -125,6 +136,49 @@ const PurchaseCancelForm = ({
       syncFormWithDb(undefined);
     }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
+
+  const searchFields = {
+    searchDocId,
+    searchDocDate,
+    searchInwardType,
+  };
+
+  useEffect(() => {
+    setCurrentPageNumber(1);
+  }, [searchDocId, searchDocDate, searchInwardType]);
+
+  const {
+    data: poItemsData,
+    isLoading: isPoItemsLoading,
+    isFetching: isPoItemsFetching,
+  } = useGetPoItemsQuery({
+    params: {
+      branchId,
+      supplierId,
+      ...searchFields,
+      pagination: true,
+      dataPerPage,
+      pageNumber: currentPageNumber,
+    },
+  });
+
+  const syncFormWithDbItems = useCallback(
+    (data) => {
+      setTempItems(data);
+    },
+    [searchInwardType,supplierId],
+  );
+
+  useEffect(() => {
+    if (poItemsData?.data) {
+      syncFormWithDbItems(poItemsData?.data);
+    }
+  }, [
+    isPoItemsLoading,
+    isPoItemsFetching,
+    syncFormWithDbItems,
+    poItemsData,
+  ]);
 
   let data = {
     id,
@@ -441,6 +495,14 @@ const PurchaseCancelForm = ({
             poType={poType}
             supplierId={supplierId}
             branchId={branchId}
+            sizeList={sizeList}
+            colorList={colorList}
+            setTempItems={setTempItems}
+            tempItems={tempItems}
+            searchDocId={searchDocId}
+            setSearchDocId={setSearchDocId}
+            setSearchDocDate={setSearchDocDate}
+            searchDocDate={searchDocDate}
           />
         </fieldset>
 

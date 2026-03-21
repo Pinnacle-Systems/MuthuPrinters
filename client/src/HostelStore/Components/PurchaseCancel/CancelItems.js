@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
-import secureLocalStorage from "react-secure-storage";
-import { CLOSE_ICON, VIEW } from "../../../icons";
 import FxSelect from "../../../Inputs";
 import Swal from "sweetalert2";
-import { toast } from "react-toastify";
 import Modal from "../../../UiComponents/Modal";
-import { useMemo } from "react";
 import PurchaseItemsSelection from "./PurchaseItemsSelection";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
 
@@ -21,6 +17,14 @@ const CancelItems = ({
   poType,
   supplierId,
   branchId,
+  sizeList,
+  colorList,
+  setTempItems,
+  tempItems,
+  searchDocId,
+  setSearchDocId,
+  setSearchDocDate,
+  searchDocDate,
 }) => {
   const EMPTY_ROW = {
     poId: "",
@@ -33,6 +37,9 @@ const CancelItems = ({
     returnQty: "",
     balQty: "",
     cancelQty: "",
+    itemGroupId: "",
+    sizeId: "",
+    colorId: "",
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [fillGrid, setFillGrid] = useState(false);
@@ -48,6 +55,9 @@ const CancelItems = ({
       returnQty: "",
       balQty: "",
       cancelQty: "",
+      itemGroupId: "",
+      sizeId: "",
+      colorId: "",
     };
     setCancelItems([...cancelItems, newRow]);
   };
@@ -138,7 +148,7 @@ const CancelItems = ({
       <Modal
         isOpen={fillGrid}
         onClose={() => setFillGrid(false)}
-        widthClass={"w-[95%]"}
+        widthClass={"w-[90%] h-[85%]"}
       >
         <PurchaseItemsSelection
           setFillGrid={setFillGrid}
@@ -147,6 +157,12 @@ const CancelItems = ({
           setCancelItems={setCancelItems}
           branchId={branchId}
           poType={poType}
+          setTempItems={setTempItems}
+          tempItems={tempItems}
+          searchDocId={searchDocId}
+          setSearchDocId={setSearchDocId}
+          setSearchDocDate={setSearchDocDate}
+          searchDocDate={searchDocDate}
         />
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">
@@ -154,7 +170,7 @@ const CancelItems = ({
           <h2 className="font-medium text-slate-700">List Of Items</h2>
 
           <button
-            className="font-bold text-slate-700 bord ml-[1100px] text-sm bg-blue-500 rounded rounded-md text-white px-2"
+            className="font-bold  bord ml-[1230px] text-sm bg-blue-500 rounded-md text-white px-2"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -199,9 +215,14 @@ const CancelItems = ({
                   Description of Goods
                 </th>
                 <th
-                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
                 >
-                  HSN/SAC
+                  Size
+                </th>
+                <th
+                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
+                >
+                  Color
                 </th>
                 <th
                   className={`w-20 px-4 py-2 text-center font-medium text-[13px] `}
@@ -266,7 +287,7 @@ const CancelItems = ({
                         handleInputChange(val, index, "styleItemId")
                       }
                       options={(styleItemList?.data || [])
-                        .filter((item) => item.active)
+                        .filter((item) => (id ? true : item.active))
                         .map((item) => ({
                           label: item.name,
                           value: item.id,
@@ -285,10 +306,12 @@ const CancelItems = ({
                   </td>
                   <td className="py-0.5 border border-gray-300 text-[11px] ">
                     <FxSelect
-                      value={row.hsnId}
-                      onChange={(val) => handleInputChange(val, index, "hsnId")}
-                      options={(hsnList?.data || [])
-                        .filter((item) => item.active)
+                      value={row.sizeId}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "sizeId")
+                      }
+                      options={(sizeList?.data || [])
+                        .filter((item) => (id ? true : item.active))
                         .map((item) => ({
                           label: item.name,
                           value: item.id,
@@ -296,11 +319,35 @@ const CancelItems = ({
                       readOnly={true}
                       placeholder=""
                       onBlur={() =>
-                        handleInputChange(row.hsnId, index, "hsnId")
+                        handleInputChange(row.sizeId, index, "sizeId")
                       }
                       onKeyDown={(e) => {
                         if (e.key === "Delete") {
-                          handleInputChange("", index, "hsnId");
+                          handleInputChange("", index, "sizeId");
+                        }
+                      }}
+                    />
+                  </td>
+                  <td className="py-0.5 border border-gray-300 text-[11px] ">
+                    <FxSelect
+                      value={row.colorId}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "colorId")
+                      }
+                      options={(colorList?.data || [])
+                        .filter((item) => (id ? true : item.active))
+                        .map((item) => ({
+                          label: item.name,
+                          value: item.id,
+                        }))}
+                      readOnly={true}
+                      placeholder=""
+                      onBlur={() =>
+                        handleInputChange(row.colorId, index, "colorId")
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Delete") {
+                          handleInputChange("", index, "colorId");
                         }
                       }}
                     />
@@ -310,7 +357,7 @@ const CancelItems = ({
                       value={row.uomId}
                       onChange={(val) => handleInputChange(val, index, "uomId")}
                       options={(uomList?.data || [])
-                        .filter((item) => item.active)
+                        .filter((item) => (id ? true : item.active))
                         .map((item) => ({
                           label: item.name,
                           value: item.id,
@@ -365,10 +412,18 @@ const CancelItems = ({
                       onFocus={(e) => e.target.select()}
                       value={row?.alreadyInwardQty}
                       onChange={(e) =>
-                        handleInputChange(e.target.value, index, "alreadyInwardQty")
+                        handleInputChange(
+                          e.target.value,
+                          index,
+                          "alreadyInwardQty",
+                        )
                       }
                       onBlur={(e) => {
-                        handleInputChange(e.target.value, index, "alreadyInwardQty");
+                        handleInputChange(
+                          e.target.value,
+                          index,
+                          "alreadyInwardQty",
+                        );
                       }}
                       disabled={true}
                     />
@@ -388,10 +443,18 @@ const CancelItems = ({
                       onFocus={(e) => e.target.select()}
                       value={row?.alreadyReturnQty}
                       onChange={(e) =>
-                        handleInputChange(e.target.value, index, "alreadyReturnQty")
+                        handleInputChange(
+                          e.target.value,
+                          index,
+                          "alreadyReturnQty",
+                        )
                       }
                       onBlur={(e) => {
-                        handleInputChange(e.target.value, index, "alreadyReturnQty");
+                        handleInputChange(
+                          e.target.value,
+                          index,
+                          "alreadyReturnQty",
+                        );
                       }}
                       disabled={true}
                     />
@@ -414,7 +477,11 @@ const CancelItems = ({
                         handleInputChange(e.target.value, index, "balQtyCancel")
                       }
                       onBlur={(e) => {
-                        handleInputChange(e.target.value, index, "balQtyCancel");
+                        handleInputChange(
+                          e.target.value,
+                          index,
+                          "balQtyCancel",
+                        );
                       }}
                       disabled={true}
                     />
@@ -502,7 +569,7 @@ const CancelItems = ({
               <tr className="bg-gray-50 h-7 font-medium text-gray-800">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium text-[13px] py-0.5"
-                  colSpan={5}
+                  colSpan={6}
                 >
                   Total
                 </td>
@@ -529,10 +596,7 @@ const CancelItems = ({
                 </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {cancelItems
-                    ?.reduce(
-                      (sum, row) => sum + (Number(row.balQty) || 0),
-                      0,
-                    )
+                    ?.reduce((sum, row) => sum + (Number(row.balQty) || 0), 0)
                     .toFixed(2)}
                 </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">

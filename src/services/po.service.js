@@ -164,6 +164,9 @@ async function get(req) {
         },
       },
     },
+    orderBy: {
+      docId: "desc",
+    },
   });
   data = manualFilterSearchData(searchDate, searchDueDate, searchPoType, data);
   const totalCount = data.length;
@@ -678,7 +681,9 @@ async function update(id, body) {
                 let newItem = {};
                 newItem["styleItemId"] = parseInt(temp["styleItemId"]);
                 newItem["uomId"] = temp["uomId"];
-                newItem["hsnId"] = temp["hsnId"] ? parseInt(temp["hsnId"]) : null;
+                newItem["hsnId"] = temp["hsnId"]
+                  ? parseInt(temp["hsnId"])
+                  : null;
                 newItem["qty"] = parseFloat(temp["qty"]);
                 newItem["price"] = parseFloat(temp["price"]);
                 newItem["discountType"] = temp["discountType"];
@@ -687,9 +692,15 @@ async function update(id, body) {
                 );
                 newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
                 newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
-                newItem["itemGroupId"] = temp["itemGroupId"] ? parseInt(temp["itemGroupId"]) : null;
-                newItem["sizeId"] = temp["sizeId"] ? parseInt(temp["sizeId"]) : null;
-                newItem["colorId"] =temp["colorId"] ? parseInt(temp["colorId"]) : null;
+                newItem["itemGroupId"] = temp["itemGroupId"]
+                  ? parseInt(temp["itemGroupId"])
+                  : null;
+                newItem["sizeId"] = temp["sizeId"]
+                  ? parseInt(temp["sizeId"])
+                  : null;
+                newItem["colorId"] = temp["colorId"]
+                  ? parseInt(temp["colorId"])
+                  : null;
                 return newItem;
               }),
           },
@@ -828,6 +839,8 @@ async function getPoItemById(id) {
       Uom: { select: { name: true } },
       StyleItem: { select: { name: true } },
       Hsn: { select: { name: true } },
+      Size: { select: { name: true } },
+      Color: { select: { name: true } },
     },
   });
 
