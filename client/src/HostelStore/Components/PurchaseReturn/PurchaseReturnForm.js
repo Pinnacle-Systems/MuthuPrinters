@@ -35,7 +35,9 @@ import purchaseReturnApi, {
   useUpdatePurchaseReturnMutation,
 } from "../../../redux/services/PurchaseReturnService";
 import { useDispatch } from "react-redux";
-import purchaseInwardEntryApi from "../../../redux/uniformService/PurchaseInwardEntry";
+import purchaseInwardEntryApi, {
+  useGetPurInwardItemsQuery,
+} from "../../../redux/uniformService/PurchaseInwardEntry";
 import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
 
 const PurchaseReturnForm = ({
@@ -49,7 +51,8 @@ const PurchaseReturnForm = ({
   styleItemList,
   branchList,
   hsnList,
-  onNew,
+  sizeList,
+  colorList,
 }) => {
   const today = new Date();
 
@@ -67,11 +70,14 @@ const PurchaseReturnForm = ({
   const [dcDate, setDcDate] = useState("");
   const [termsAndCondition, setTermsAndCondition] = useState("");
   const [invNo, setInvNo] = useState("");
+  const [tempItems, setTempItems] = useState([]);
+  const [searchDocId, setSearchDocId] = useState("");
+  const [searchDocDate, setSearchDocDate] = useState("");
+  const [dataPerPage, setDataPerPage] = useState("10");
+  const [currentPageNumber, setCurrentPageNumber] = useState(1);
 
   const { userId, finYearId, branchId } = getCommonParams();
-  const { data: supplierDetails } = useGetPartyByIdQuery(supplierId, {
-    skip: !supplierId,
-  });
+
   const { data: locationData } = useGetLocationMasterQuery({
     params: { branchId },
   });
@@ -92,9 +98,47 @@ const PurchaseReturnForm = ({
   const [updateData] = useUpdatePurchaseReturnMutation();
   const dispatch = useDispatch();
 
-  const { data: branchdata } = useGetBranchByIdQuery(branchId, {
-    skip: !branchId,
+  const searchFields = {
+    searchDocId,
+    searchDocDate,
+  };
+
+  useEffect(() => {
+    setCurrentPageNumber(1);
+  }, [searchDocId, searchDocDate]);
+
+  const {
+    data: purInwardItemsData,
+    isLoading: isPurInwardItemsLoading,
+    isFetching: isPurInwardItemsFetching,
+  } = useGetPurInwardItemsQuery({
+    params: {
+      branchId,
+      supplierId,
+      ...searchFields,
+      pagination: true,
+      dataPerPage,
+      pageNumber: currentPageNumber,
+    },
   });
+
+  const syncFormWithDbItems = useCallback(
+    (data) => {
+      setTempItems(data);
+    },
+    [supplierId],
+  );
+
+  useEffect(() => {
+    if (purInwardItemsData?.data) {
+      syncFormWithDbItems(purInwardItemsData?.data);
+    }
+  }, [
+    isPurInwardItemsLoading,
+    isPurInwardItemsFetching,
+    syncFormWithDbItems,
+    purInwardItemsData,
+  ]);
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -192,14 +236,19 @@ const PurchaseReturnForm = ({
     const duplicates = [];
 
     items.forEach((row, index) => {
-      const key = [row.styleItemId || "", row.hsnId || ""].join("-");
+      const key = [
+        row.styleItemId || "",
+        row.sizeId || "",
+        row.colorId || "",
+      ].join("-");
 
       if (seen.has(key)) {
         duplicates.push({
           firstIndex: seen.get(key),
           duplicateIndex: index,
           styleItemId: row.styleItemId,
-          hsnId: row.hsnId,
+          sizeId: row.sizeId,
+          colorId: row.colorId,
         });
       } else {
         seen.set(key, index);
@@ -210,45 +259,49 @@ const PurchaseReturnForm = ({
   };
 
   const validateData = (data) => {
-    const items = data?.returnItems || [];
-
-    // remove blank rows
-    const filledItems = items.filter((item) => item.styleItemId);
+    const filledItems = (data?.returnItems || []).filter(
+      (item) => item.styleItemId,
+    );
     const duplicates = findDuplicates(filledItems);
-    // duplicate check
-    if (duplicates.length > 0) {
-      const dup = duplicates[0]; // show first duplicate
+    const dup = duplicates[0];
+
+    const checks = [
+      { condition: !data.returnType, title: "Return Type is required!" },
+      { condition: !data.locationId, title: "Location is required!" },
+      { condition: !data.storeId, title: "Location is required!" },
+      { condition: !data.supplierId, title: "Supplier is required!" },
+      { condition: !data.dcDate, title: "DC Date is required!" },
+      { condition: !data.dcNo, title: "DC No is required!" },
+      {
+        condition: filledItems.length === 0,
+        title: "Please add at least one item!",
+      },
+      {
+        condition: duplicates.length > 0,
+        title: "Duplicate Item Found!",
+        html: dup
+          ? `Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},  Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")}, Color - ${findFromList(dup?.colorId, colorList?.data, "name")}`
+          : "",
+      },
+      {
+        condition: !isGridDatasValid(data?.returnItems, false, [
+          "styleItemId",
+          "uomId",
+          "returnQty",
+        ]),
+        title: "Please fill all required item fields!",
+      },
+    ];
+
+    const failed = checks.find((c) => c.condition);
+    if (failed) {
       Swal.fire({
         icon: "warning",
-        title: "Duplicate Item Found",
-        html: `
-    Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},
-    HSN - ${findFromList(dup?.hsnId, hsnList?.data, "name")},
-  `,
+        title: failed.title,
+        html: failed.html,
+        timer: failed.html ? undefined : 1500,
+        showConfirmButton: !!failed.html,
         confirmButtonText: "OK",
-      });
-      return false;
-    }
-    let mandatoryFields = ["styleItemId", "hsnId", "uomId", "returnQty"];
-    if (
-      !(
-        data.returnType &&
-        data.locationId &&
-        data.storeId &&
-        data?.dcDate &&
-        data.dcNo &&
-        data.invNo &&
-        data.supplierId &&
-        isGridDatasValid(data?.returnItems, false, mandatoryFields) &&
-        data?.returnItems?.length !== 0
-      )
-    ) {
-      Swal.fire({
-        // title: "Total percentage exceeds 100%",
-        title: "Please fill all required fields...!",
-        icon: "error",
-        timer: 1500,
-        showConfirmButton: false,
       });
       return false;
     }
@@ -299,6 +352,12 @@ const PurchaseReturnForm = ({
       saveData();
     }
   };
+
+  useEffect(() => {
+    if (!id) {
+      setReturnItems([]);
+    }
+  }, [supplierId]);
 
   return (
     <>
@@ -391,13 +450,13 @@ const PurchaseReturnForm = ({
                   setReturnItems([]);
                 }}
               />
-              <TextInput
+              {/* <TextInput
                 name={"Inv No"}
                 value={invNo}
                 setValue={setInvNo}
                 readOnly={id}
                 required
-              />
+              /> */}
 
               <div></div>
             </div>
@@ -456,6 +515,14 @@ const PurchaseReturnForm = ({
             returnType={returnType}
             supplierId={supplierId}
             branchId={branchId}
+            sizeList={sizeList}
+            colorList={colorList}
+            setTempItems={setTempItems}
+            tempItems={tempItems}
+            searchDocId={searchDocId}
+            setSearchDocId={setSearchDocId}
+            setSearchDocDate={setSearchDocDate}
+            searchDocDate={searchDocDate}
           />
         </fieldset>
 

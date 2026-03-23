@@ -1,6 +1,6 @@
 import { useState } from "react";
 import PurchaseReturnForm from "./PurchaseReturnForm.js";
-import PurchaseReturnFormReport from "./PurchaseReturnFormReport.js"
+import PurchaseReturnFormReport from "./PurchaseReturnFormReport.js";
 import { getCommonParams } from "../../../Utils/helper.js";
 import { FaPlus } from "react-icons/fa";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
@@ -10,15 +10,19 @@ import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.
 import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices";
 import Swal from "sweetalert2";
 import { useDeletePurchaseReturnMutation } from "../../../redux/services/PurchaseReturnService.js";
+import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
+import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
   const [id, setId] = useState("");
   const [readOnly, setReadOnly] = useState(false);
   // const dispatch = useDispatch();
-  const { branchId, companyId, finYearId, userId } = getCommonParams()
+  const { branchId, companyId, finYearId, userId } = getCommonParams();
   const params = {
-    branchId, companyId, finYearId
+    branchId,
+    companyId,
+    finYearId,
   };
 
   const handleView = (orderId) => {
@@ -75,10 +79,13 @@ export default function Form() {
 
   const { data: supplierList } = useGetPartyQuery({ params: { ...params } });
   const { data: branchList } = useGetBranchQuery({ params: { ...params } });
-  const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { ...params } });
+  const { data: styleItemList } = useGetStyleItemMasterQuery({
+    params: { ...params },
+  });
   const { data: uomList } = useGetUnitOfMeasurementMasterQuery({ params });
-  const { data: hsnList } =
-    useGetHsnMasterQuery({ params });
+  const { data: hsnList } = useGetHsnMasterQuery({ params });
+  const { data: sizeList } = useGetSizeMasterQuery({ params });
+  const { data: colorList } = useGetColorMasterQuery({ params });
 
   return (
     <>
@@ -112,7 +119,7 @@ export default function Form() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             itemsPerPage={10}
-          // searchStyleId={searchStyleId}
+            // searchStyleId={searchStyleId}
           />
         </div>
       </div>
@@ -134,9 +141,10 @@ export default function Form() {
           styleItemList={styleItemList}
           hsnList={hsnList}
           onNew={onNew}
+          sizeList={sizeList}
+          colorList={colorList}
         />
       )}
     </>
   );
-
 }

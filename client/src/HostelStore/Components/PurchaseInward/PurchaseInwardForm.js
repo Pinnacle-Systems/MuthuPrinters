@@ -1,11 +1,8 @@
-import { FaEye, FaFileAlt } from "react-icons/fa";
+import { FaFileAlt } from "react-icons/fa";
 
 import {
-  CheckBox,
-  DateInput,
   DateInputNew,
   DropdownInput,
-  DropdownWithSearch,
   ReusableInput,
   ReusableSearchableInput,
   TextInput,
@@ -18,25 +15,11 @@ import {
   getCommonParams,
   isGridDatasValid,
 } from "../../../Utils/helper";
-import {
-  useGetPartyByIdQuery,
-  useGetPartyQuery,
-} from "../../../redux/services/PartyMasterService";
 import { toast } from "react-toastify";
-import { FiEdit2, FiPrinter, FiSave } from "react-icons/fi";
-import { HiOutlineRefresh, HiX } from "react-icons/hi";
-import { FaWhatsapp } from "react-icons/fa6";
+import { FiEdit2, FiSave } from "react-icons/fi";
+import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
-import { PDFViewer } from "@react-pdf/renderer";
-import tw from "../../../Utils/tailwind-react-pdf";
-import Modal from "../../../UiComponents/Modal";
-import { Loader } from "../../../Basic/components";
 import { dropDownListObject } from "../../../Utils/contructObject";
-import {
-  useGetBranchByIdQuery,
-  useGetBranchQuery,
-} from "../../../redux/services/BranchMasterService";
-import { groupBy } from "lodash";
 import InwardItems from "./InwardItems";
 import purchaseInwardEntryApi, {
   useAddPurchaseInwardEntryMutation,
@@ -47,6 +30,7 @@ import { useGetLocationMasterQuery } from "../../../redux/services/LocationMaste
 import { useDispatch } from "react-redux";
 import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
 import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
+import { useGetPoItemsQuery } from "../../../redux/uniformService/PoServices";
 
 const PurchaseInwardForm = ({
   onClose,
@@ -59,7 +43,8 @@ const PurchaseInwardForm = ({
   styleItemList,
   branchList,
   hsnList,
-  onNew,
+  sizeList,
+  colorList,
 }) => {
   const today = new Date();
 
@@ -77,11 +62,13 @@ const PurchaseInwardForm = ({
   const [dcDate, setDcDate] = useState("");
   const [vehicleNo, setVehicleNo] = useState("");
   const [invNo, setInvNo] = useState("");
+  const [tempItems, setTempItems] = useState([]);
+  const [searchDocId, setSearchDocId] = useState("");
+  const [searchDocDate, setSearchDocDate] = useState("");
+  const [dataPerPage, setDataPerPage] = useState("10");
+  const [currentPageNumber, setCurrentPageNumber] = useState(1);
 
   const { userId, finYearId, branchId } = getCommonParams();
-  const { data: supplierDetails } = useGetPartyByIdQuery(supplierId, {
-    skip: !supplierId,
-  });
   const { data: locationData } = useGetLocationMasterQuery({
     params: { branchId },
   });
@@ -102,9 +89,43 @@ const PurchaseInwardForm = ({
   const [updateData] = useUpdatePurchaseInwardEntryMutation();
   const dispatch = useDispatch();
 
-  const { data: branchdata } = useGetBranchByIdQuery(branchId, {
-    skip: !branchId,
+  const searchFields = {
+    searchDocId,
+    searchDocDate,
+  };
+
+  useEffect(() => {
+    setCurrentPageNumber(1);
+  }, [searchDocId, searchDocDate]);
+
+  const {
+    data: poItemsData,
+    isLoading: isPoItemsLoading,
+    isFetching: isPoItemsFetching,
+  } = useGetPoItemsQuery({
+    params: {
+      branchId,
+      supplierId,
+      ...searchFields,
+      pagination: true,
+      dataPerPage,
+      pageNumber: currentPageNumber,
+      poType: inwardType,
+    },
   });
+
+  const syncFormWithDbItems = useCallback(
+    (data) => {
+      setTempItems(data);
+    },
+    [inwardType, supplierId],
+  );
+
+  useEffect(() => {
+    if (poItemsData?.data) {
+      syncFormWithDbItems(poItemsData?.data);
+    }
+  }, [isPoItemsLoading, isPoItemsFetching, syncFormWithDbItems, poItemsData]);
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -173,7 +194,11 @@ const PurchaseInwardForm = ({
           showConfirmButton: false,
           timer: 2000,
         });
-
+        dispatch(
+          purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
+        );
+        dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
+        dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
         if (returnData.statusCode === 0) {
           if (nextProcess == "new") {
             setId(0);
@@ -188,11 +213,6 @@ const PurchaseInwardForm = ({
           toast.error(returnData?.message);
         }
       }
-      dispatch(
-        purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
-      );
-      dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
-      dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
     } catch (error) {
       console.log("handle");
     }
@@ -203,14 +223,19 @@ const PurchaseInwardForm = ({
     const duplicates = [];
 
     items.forEach((row, index) => {
-      const key = [row.styleItemId || "", row.hsnId || ""].join("-");
+      const key = [
+        row.styleItemId || "",
+        row.sizeId || "",
+        row.colorId || "",
+      ].join("-");
 
       if (seen.has(key)) {
         duplicates.push({
           firstIndex: seen.get(key),
           duplicateIndex: index,
           styleItemId: row.styleItemId,
-          hsnId: row.hsnId,
+          sizeId: row.sizeId,
+          colorId: row.colorId,
         });
       } else {
         seen.set(key, index);
@@ -222,44 +247,47 @@ const PurchaseInwardForm = ({
 
   const validateData = (data) => {
     const items = data?.inwardItems || [];
-
-    // remove blank rows
     const filledItems = items.filter((item) => item.styleItemId);
-    const duplicates = findDuplicates(filledItems);
-    // duplicate check
-    if (duplicates.length > 0) {
-      const dup = duplicates[0]; // show first duplicate
+
+    const checks = [
+      { condition: !data.inwardType, title: "Inward Type is required!" },
+      { condition: !data.locationId, title: "Location is required!" },
+      { condition: !data.storeId, title: "Location is required!" },
+      { condition: !data.invNo, title: "Invoice No is required!" },
+      { condition: !data.supplierId, title: "Supplier is required!" },
+      { condition: !data.dcNo, title: "DC No is required!" },
+      { condition: !data.dcDate, title: "DC Date is required!" },
+      {
+        condition: filledItems.length === 0,
+        title: "Please add at least one item!",
+      },
+      {
+        condition: !isGridDatasValid(data?.inwardItems, false, [
+          "styleItemId",
+          "uomId",
+          "inwardQty",
+        ]),
+        title: "Please fill all required item fields!",
+      },
+      {
+        condition: findDuplicates(filledItems).length > 0,
+        title: "Duplicate Item Found!",
+        html: (() => {
+          const dup = findDuplicates(filledItems)[0];
+          return `Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")}, Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")}, Color - ${findFromList(dup?.colorId, colorList?.data, "name")}`;
+        })(),
+      },
+    ];
+
+    const failed = checks.find((c) => c.condition);
+    if (failed) {
       Swal.fire({
         icon: "warning",
-        title: "Duplicate Item Found",
-        html: `
-    Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},
-    HSN - ${findFromList(dup?.hsnId, hsnList?.data, "name")},
-  `,
+        title: failed.title,
+        html: failed.html,
+        timer: failed.html ? undefined : 1500,
+        showConfirmButton: !!failed.html,
         confirmButtonText: "OK",
-      });
-      return false;
-    }
-    let mandatoryFields = ["styleItemId", "hsnId", "uomId", "inwardQty"];
-    if (
-      !(
-        data.inwardType &&
-        data.locationId &&
-        data.storeId &&
-        data?.dcDate &&
-        data.dcNo &&
-        data.supplierId &&
-        isGridDatasValid(data?.inwardItems, false, mandatoryFields) &&
-        data?.inwardItems?.length !== 0 &&
-        data.invNo
-      )
-    ) {
-      Swal.fire({
-        // title: "Total percentage exceeds 100%",
-        title: "Please fill all required fields...!",
-        icon: "error",
-        timer: 1500,
-        showConfirmButton: false,
       });
       return false;
     }
@@ -295,9 +323,6 @@ const PurchaseInwardForm = ({
     }
   };
 
-  const dateRef = useRef(null);
-  const inputPartyRef = useRef(null);
-
   const handleKeyDown = (event) => {
     let charCode = String.fromCharCode(event.which).toLowerCase();
     if ((event.ctrlKey || event.metaKey) && charCode === "s") {
@@ -305,6 +330,12 @@ const PurchaseInwardForm = ({
       saveData();
     }
   };
+
+  useEffect(() => {
+    if (!id) {
+      setInwardItems([]);
+    }
+  }, [supplierId]);
 
   return (
     <>
@@ -462,6 +493,14 @@ const PurchaseInwardForm = ({
             inwardType={inwardType}
             supplierId={supplierId}
             branchId={branchId}
+            sizeList={sizeList}
+            colorList={colorList}
+            setTempItems={setTempItems}
+            tempItems={tempItems}
+            searchDocId={searchDocId}
+            setSearchDocId={setSearchDocId}
+            setSearchDocDate={setSearchDocDate}
+            searchDocDate={searchDocDate}
           />
         </fieldset>
 

@@ -10,7 +10,6 @@ import {
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 
-
 async function getNextDocId(
   branchId,
   shortCode,
@@ -230,7 +229,7 @@ async function getOne(id) {
 
         returnQty = returnAgg._sum.returnQty ?? 0;
       }
-      
+
       return {
         ...item,
         poQty: poQty.qty,
@@ -352,6 +351,11 @@ async function createCancelItems(
         poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
         batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
         poDocId: stockDetail?.poDocId ? stockDetail?.poDocId : null,
+        itemGroupId: stockDetail?.itemGroupId
+          ? parseInt(stockDetail.itemGroupId)
+          : null,
+        sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+        colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
       },
     });
     return createdItem;
@@ -469,6 +473,11 @@ async function updateCancelGoods(
           poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
           batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
           poDocId: stockDetail?.poDocId ? stockDetail?.poDocId : null,
+          itemGroupId: stockDetail?.itemGroupId
+            ? parseInt(stockDetail.itemGroupId)
+            : null,
+          sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+          colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
         },
       });
 
@@ -490,6 +499,11 @@ async function updateCancelGoods(
           poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
           batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
           poDocId: stockDetail?.poDocId ? stockDetail?.poDocId : null,
+          itemGroupId: stockDetail?.itemGroupId
+            ? parseInt(stockDetail.itemGroupId)
+            : null,
+          sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+          colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
         },
       });
 

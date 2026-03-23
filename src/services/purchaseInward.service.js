@@ -4,7 +4,8 @@ import { NoRecordFound } from "../configs/Responses.js";
 import {
   getYearShortCodeForFinYear,
   getYearShortCode,
-  getDateFromDateTime, buildDateRange
+  getDateFromDateTime,
+  buildDateRange,
 } from "../utils/helper.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
@@ -39,8 +40,9 @@ async function getNextDocId(
     )}/PI/1`;
 
     if (lastObject) {
-      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${parseInt(lastObject.docId.split("/").at(-1)) + 1
-        }`;
+      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${
+        parseInt(lastObject.docId.split("/").at(-1)) + 1
+      }`;
     }
 
     return newDocId;
@@ -98,11 +100,13 @@ async function getNextDocId(
 
           return currentNo > maxNo ? current.docId : max;
         }, null);
-        newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${parseInt(maxDocId.split("/").at(-1)) + 1
-          }`;
+        newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${
+          parseInt(maxDocId.split("/").at(-1)) + 1
+        }`;
       } else {
-        newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${parseInt(lastObject.docId.split("/").at(-1)) + 1
-          }`;
+        newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${
+          parseInt(lastObject.docId.split("/").at(-1)) + 1
+        }`;
       }
     }
     return newDocId;
@@ -140,22 +144,22 @@ async function get(req) {
       branchId: branchId ? parseInt(branchId) : undefined,
       AND: finYearDate
         ? [
-          {
-            createdAt: {
-              gte: finYearDate.startTime,
+            {
+              createdAt: {
+                gte: finYearDate.startTime,
+              },
             },
-          },
-          {
-            createdAt: {
-              lte: finYearDate.endTime,
+            {
+              createdAt: {
+                lte: finYearDate.endTime,
+              },
             },
-          },
-        ]
+          ]
         : undefined,
       docId: Boolean(serachDocNo)
         ? {
-          contains: serachDocNo,
-        }
+            contains: serachDocNo,
+          }
         : undefined,
       inwardType: Boolean(searchInwardType)
         ? { contains: searchInwardType }
@@ -530,8 +534,10 @@ async function getOneBillEntry(req) {
       },
       inwardItems: {
         include: {
-          Hsn: true, StyleItem: true, Uom: true,
-        }
+          Hsn: true,
+          StyleItem: true,
+          Uom: true,
+        },
       },
     },
   });
@@ -620,7 +626,6 @@ async function getPoItemById(id) {
     returnQty = returnAgg._sum.returnQty ?? 0;
   }
 
-
   return {
     statusCode: 0,
     data: {
@@ -631,7 +636,6 @@ async function getPoItemById(id) {
       alreadyReturnQty: returnQty,
       balQty: data.qty - (inwardQty + cancelQty),
       balQtyCancel: data.qty - (inwardQty - returnQty),
-
     },
   };
 }
@@ -659,18 +663,18 @@ async function getPurchaseInwardBillEntryItems(req) {
         PurchaseInward: {
           docId: Boolean(searchDocId)
             ? {
-              contains: searchDocId,
-            }
+                contains: searchDocId,
+              }
             : undefined,
           invNo: searchInvNo
             ? {
-              contains: searchInvNo,
-            }
+                contains: searchInvNo,
+              }
             : undefined,
           dcNo: Boolean(searchDcNo)
             ? {
-              contains: searchDcNo,
-            }
+                contains: searchDcNo,
+              }
             : undefined,
           docDate: docDateFilter,
 
@@ -684,7 +688,8 @@ async function getPurchaseInwardBillEntryItems(req) {
             docDate: true,
             docId: true,
             invNo: true,
-            dcNo: true,            id:true,
+            dcNo: true,
+            id: true,
 
             // dueDate: true,
             // poType: true,
@@ -695,17 +700,15 @@ async function getPurchaseInwardBillEntryItems(req) {
         //     name: true,
         //   },
         // },
-        Hsn: true, StyleItem: true, Uom: true
-
+        Hsn: true,
+        StyleItem: true,
+        Uom: true,
       },
     });
-
 
     data = data?.filter((i) => i.PurchaseInward.supplierId == supplierId);
 
     // data = await getAllDataPoItems(data);
-
-
   } else {
     data = await prisma.inwardItems.findMany({
       where: {
@@ -737,9 +740,9 @@ async function create(req) {
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-      finYearDate?.startDateStartTime,
-      finYearDate?.endDateEndTime,
-    )
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
     : "";
   let newDocId = await getNextDocId(
     branchId,
@@ -776,6 +779,7 @@ async function create(req) {
       storeId,
       inwardType,
       invNo,
+      dcNo,
     );
   });
   return { statusCode: 0, data };
@@ -790,6 +794,7 @@ async function createInwardItems(
   storeId,
   inwardType,
   invNo,
+  dcNo,
 ) {
   const promises = inwardItems?.map(async (stockDetail, index) => {
     const createdItem = await tx.inwardItems.create({
@@ -808,6 +813,12 @@ async function createInwardItems(
         poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
         invNo: invNo ? invNo : null,
         price: stockDetail?.price ? parseInt(stockDetail.price) : null,
+        itemGroupId: stockDetail?.itemGroupId
+          ? parseInt(stockDetail.itemGroupId)
+          : null,
+        sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+        colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
+        dcNo: dcNo ? dcNo : null,
       },
     });
     await tx.stock.create({
@@ -826,7 +837,11 @@ async function createInwardItems(
         qty: stockDetail?.inwardQty ? parseInt(stockDetail.inwardQty) : null,
         inwardType: inwardType ? inwardType : "",
         invNo: invNo ? invNo : null,
-
+        itemGroupId: stockDetail?.itemGroupId
+          ? parseInt(stockDetail.itemGroupId)
+          : null,
+        sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+        colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
       },
     });
     return createdItem;
@@ -925,6 +940,7 @@ async function update(id, body) {
       storeId,
       inwardType,
       invNo,
+      dcNo,
     );
   });
   return { statusCode: 0, data };
@@ -939,6 +955,7 @@ async function updateinwardItems(
   storeId,
   inwardType,
   invNo,
+  dcNo,
 ) {
   const promises = inwardItems?.map(async (stockDetail) => {
     if (stockDetail.id) {
@@ -960,7 +977,12 @@ async function updateinwardItems(
           poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
           invNo: invNo ? invNo : null,
           price: stockDetail?.price ? parseInt(stockDetail.price) : null,
-
+          itemGroupId: stockDetail?.itemGroupId
+            ? parseInt(stockDetail.itemGroupId)
+            : null,
+          sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+          colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
+          dcNo: dcNo ? dcNo : null,
         },
       });
 
@@ -986,7 +1008,13 @@ async function updateinwardItems(
               : null,
             inwardType: inwardType ? inwardType : "",
             invNo: invNo ? invNo : null,
-
+            itemGroupId: stockDetail?.itemGroupId
+              ? parseInt(stockDetail.itemGroupId)
+              : null,
+            sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+            colorId: stockDetail?.colorId
+              ? parseInt(stockDetail.colorId)
+              : null,
           },
         });
       } else {
@@ -1008,7 +1036,13 @@ async function updateinwardItems(
               : null,
             inwardType: inwardType ? inwardType : "",
             invNo: invNo ? invNo : null,
-
+            itemGroupId: stockDetail?.itemGroupId
+              ? parseInt(stockDetail.itemGroupId)
+              : null,
+            sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+            colorId: stockDetail?.colorId
+              ? parseInt(stockDetail.colorId)
+              : null,
           },
         });
       }
@@ -1032,7 +1066,12 @@ async function updateinwardItems(
           poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
           invNo: invNo ? invNo : null,
           price: stockDetail?.price ? parseInt(stockDetail.price) : null,
-
+          itemGroupId: stockDetail?.itemGroupId
+            ? parseInt(stockDetail.itemGroupId)
+            : null,
+          sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+          colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
+          dcNo: dcNo ? dcNo : null,
         },
       });
 
@@ -1053,7 +1092,11 @@ async function updateinwardItems(
           qty: stockDetail?.inwardQty ? parseInt(stockDetail.inwardQty) : null,
           inwardType: inwardType ? inwardType : "",
           invNo: invNo ? invNo : null,
-
+          itemGroupId: stockDetail?.itemGroupId
+            ? parseInt(stockDetail.itemGroupId)
+            : null,
+          sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+          colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
         },
       });
 
@@ -1201,31 +1244,31 @@ async function getPurchaseDetailStock(req) {
     statusCode: 0,
     data: isMaterial
       ? data.map((d) => ({
-        invNo: d.invNo,
-        styleItemId: d.styleItemId,
-        fabricId: d.fabricId,
-        hsnId: d.hsnId,
-        uomId: d.uomId,
-        fabWidth: d.fabWidth,
-        fabMeter: d._sum.fabMeter,
-        accessoryId: d.accessoryId,
-        accessoryGroupId: d.accessoryGroupId,
-        uomId: d.uomId,
-        uomId: d.uomId,
-        qty: d._sum.qty,
-        styleId: d.styleId,
-        portionId: d.portionId,
-      }))
+          invNo: d.invNo,
+          styleItemId: d.styleItemId,
+          fabricId: d.fabricId,
+          hsnId: d.hsnId,
+          uomId: d.uomId,
+          fabWidth: d.fabWidth,
+          fabMeter: d._sum.fabMeter,
+          accessoryId: d.accessoryId,
+          accessoryGroupId: d.accessoryGroupId,
+          uomId: d.uomId,
+          uomId: d.uomId,
+          qty: d._sum.qty,
+          styleId: d.styleId,
+          portionId: d.portionId,
+        }))
       : data.map((d) => ({
-        invNo: purchaseData.invNo,
-        styleItemId: d.styleItemId,
-        fabricId: d.fabricId,
-        hsnId: d.hsnId,
-        uomId: d.uomId,
-        stkQty: d._sum.qty,
-        styleId: d.styleId,
-        styleNo: d.styleNo,
-      })),
+          invNo: purchaseData.invNo,
+          styleItemId: d.styleItemId,
+          fabricId: d.fabricId,
+          hsnId: d.hsnId,
+          uomId: d.uomId,
+          stkQty: d._sum.qty,
+          styleId: d.styleId,
+          styleNo: d.styleNo,
+        })),
     returnType: purchaseData.inwardType,
     supplierId: purchaseData.supplierId,
   };
@@ -1246,13 +1289,13 @@ function manualFilterSearchDataPurchaseInwardItems(
     (item) =>
       (searchDocDate
         ? String(getDateFromDateTime(item.PurchaseInward.docDate)).includes(
-          searchDocDate,
-        )
+            searchDocDate,
+          )
         : true) &&
       (searchDcDate
         ? String(getDateFromDateTime(item.PurchaseInward.dcDate)).includes(
-          searchDcDate,
-        )
+            searchDcDate,
+          )
         : true) &&
       (inwardTypeToSearch
         ? item.PurchaseInward.inwardType === inwardTypeToSearch
@@ -1376,8 +1419,8 @@ async function getPurchaseInwardItems(req) {
         PurchaseInward: {
           docId: Boolean(searchDocId)
             ? {
-              contains: searchDocId,
-            }
+                contains: searchDocId,
+              }
             : undefined,
           supplierId: supplierId ? parseInt(supplierId) : undefined,
         },
@@ -1482,5 +1525,6 @@ export {
   getPurchaseDetail,
   getPurchaseDetailStock,
   getPurchaseInwardItems,
-  getOneBillEntry, getPurchaseInwardBillEntryItems
+  getOneBillEntry,
+  getPurchaseInwardBillEntryItems,
 };

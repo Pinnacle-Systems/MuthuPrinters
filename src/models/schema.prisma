@@ -719,6 +719,12 @@ model Stock {
   batchNo               String?
   PurchaseReturnItems   PurchaseReturnItems? @relation(fields: [purchaseReturnItemsId], references: [id], onDelete: Cascade)
   purchaseReturnItemsId Int?
+  Itemgroup             ItemGroup?           @relation(fields: [itemGroupId], references: [id])
+  itemGroupId           Int?
+  Size                  Size?                @relation(fields: [sizeId], references: [id])
+  sizeId                Int?
+  Color                 Color?               @relation(fields: [colorId], references: [id])
+  colorId               Int?
 }
 
 model SalesBill {
@@ -950,12 +956,17 @@ model DeliveryChallanItems {
 }
 
 model Color {
-  id                   Int                    @id @default(autoincrement())
-  name                 String?
-  active               Boolean?               @default(true)
-  DeliveryChallanItems DeliveryChallanItems[]
-  DeliveryInvoiceItems DeliveryInvoiceItems[]
-  poItems              PoItems[]
+  id                     Int                      @id @default(autoincrement())
+  name                   String?
+  active                 Boolean?                 @default(true)
+  DeliveryChallanItems   DeliveryChallanItems[]
+  DeliveryInvoiceItems   DeliveryInvoiceItems[]
+  poItems                PoItems[]
+  purchaseCancelItems    PurchaseCancelItems[]
+  purchaseBillEntryItems PurchaseBillEntryItems[]
+  purchaseReturnItems    PurchaseReturnItems[]
+  inwardItems            InwardItems[]
+  stocks                 Stock[]
 }
 
 model DeliveryInvoice {
@@ -1272,6 +1283,12 @@ model InwardItems {
   invNo            String?
   dcNo             String?
   price            Float?
+  Itemgroup        ItemGroup?      @relation(fields: [itemGroupId], references: [id])
+  itemGroupId      Int?
+  Size             Size?           @relation(fields: [sizeId], references: [id])
+  sizeId           Int?
+  Color            Color?          @relation(fields: [colorId], references: [id])
+  colorId          Int?
 }
 
 model Location {
@@ -1336,6 +1353,12 @@ model PurchaseReturnItems {
   purchaseInwardId       Int?
   batchNo                String?
   invNo                  String?
+  Itemgroup              ItemGroup?            @relation(fields: [itemGroupId], references: [id])
+  itemGroupId            Int?
+  Size                   Size?                 @relation(fields: [sizeId], references: [id])
+  sizeId                 Int?
+  Color                  Color?                @relation(fields: [colorId], references: [id])
+  colorId                Int?
   stocks                 Stock[]
 }
 
@@ -1381,6 +1404,12 @@ model PurchaseCancelItems {
   batchNo          String?
   invNo            String?
   poDocId          String?
+  Itemgroup        ItemGroup?      @relation(fields: [itemGroupId], references: [id])
+  itemGroupId      Int?
+  Size             Size?           @relation(fields: [sizeId], references: [id])
+  sizeId           Int?
+  Color            Color?          @relation(fields: [colorId], references: [id])
+  colorId          Int?
 }
 
 model PurchaseBillEntry {
@@ -1427,6 +1456,12 @@ model PurchaseBillEntryItems {
   docId               String?
   docDate             String?
   price               Float?
+  Itemgroup           ItemGroup?         @relation(fields: [itemGroupId], references: [id])
+  itemGroupId         Int?
+  Size                Size?              @relation(fields: [sizeId], references: [id])
+  sizeId              Int?
+  Color               Color?             @relation(fields: [colorId], references: [id])
+  colorId             Int?
 }
 
 model PurchaseLedger {
@@ -1442,13 +1477,18 @@ model PurchaseLedger {
 }
 
 model Size {
-  id                Int                @id @default(autoincrement())
-  name              String
-  active            Boolean            @default(true)
-  Company           Company?           @relation(fields: [companyId], references: [id])
-  companyId         Int?
-  sizeTemplateLists SizeTemplateList[]
-  poItems           PoItems[]
+  id                     Int                      @id @default(autoincrement())
+  name                   String
+  active                 Boolean                  @default(true)
+  Company                Company?                 @relation(fields: [companyId], references: [id])
+  companyId              Int?
+  sizeTemplateLists      SizeTemplateList[]
+  poItems                PoItems[]
+  purchaseCancelItems    PurchaseCancelItems[]
+  purchaseBillEntryItems PurchaseBillEntryItems[]
+  purchaseReturnItems    PurchaseReturnItems[]
+  inwardItems            InwardItems[]
+  stocks                 Stock[]
 }
 
 model Gsm {
@@ -1462,14 +1502,19 @@ model Gsm {
 }
 
 model ItemGroup {
-  id         Int         @id @default(autoincrement())
-  name       String
-  active     Boolean     @default(true)
-  Company    Company?    @relation(fields: [companyId], references: [id])
-  companyId  Int?
-  styles     Style[]
-  styleItems StyleItem[]
-  poItems    PoItems[]
+  id                     Int                      @id @default(autoincrement())
+  name                   String
+  active                 Boolean                  @default(true)
+  Company                Company?                 @relation(fields: [companyId], references: [id])
+  companyId              Int?
+  styles                 Style[]
+  styleItems             StyleItem[]
+  poItems                PoItems[]
+  purchaseCancelItems    PurchaseCancelItems[]
+  purchaseBillEntryItems PurchaseBillEntryItems[]
+  purchaseReturnItems    PurchaseReturnItems[]
+  inwardItems            InwardItems[]
+  stocks                 Stock[]
 }
 
 model SizeTemplate {

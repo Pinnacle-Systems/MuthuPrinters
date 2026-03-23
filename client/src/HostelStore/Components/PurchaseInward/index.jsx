@@ -10,6 +10,8 @@ import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.
 import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices";
 import Swal from "sweetalert2";
 import { useDeletePurchaseInwardEntryMutation, useLazyGetPurchaseInwardEntryByIdQuery } from "../../../redux/uniformService/PurchaseInwardEntry.js";
+import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
+import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -91,6 +93,8 @@ export default function Form() {
   const { data: uomList } = useGetUnitOfMeasurementMasterQuery({ params });
   const { data: hsnList } =
     useGetHsnMasterQuery({ params });
+  const { data: sizeList } = useGetSizeMasterQuery({ params });
+  const { data: colorList } = useGetColorMasterQuery({ params });
 
   return (
     <>
@@ -146,6 +150,8 @@ export default function Form() {
           styleItemList={styleItemList}
           hsnList={hsnList}
           onNew={onNew}
+          sizeList={sizeList}
+          colorList={colorList}
         />
       )}
     </>

@@ -1,10 +1,9 @@
-import { useState } from "react";
 import { getDateFromDateTimeToDisplay } from "../../../Utils/helper";
 
 const PurchaseItemsSelection = ({
-  cancelItems,
+  cancelItems = [],
   setCancelItems,
-  setFillGrid,
+  onClose,
   setTempItems,
   tempItems,
   searchDocId,
@@ -12,7 +11,6 @@ const PurchaseItemsSelection = ({
   setSearchDocDate,
   searchDocDate,
 }) => {
-
   const EMPTY_ROW = {
     poId: "",
     poDocId: "",
@@ -29,13 +27,6 @@ const PurchaseItemsSelection = ({
     colorId: "",
   };
 
-  const isRowEmpty = (row) =>
-    !row.styleItemId && !row.uomId && !row.hsnId && !row.poQty && !row.balQty;
-
-  // ✅ display source is tempItems — from parent API
-  const displayItems = tempItems || [];
-
-  // ✅ addItem — fills empty row first, then appends (reference pattern)
   function addItem(item) {
     setCancelItems((prev) => {
       let newItems = structuredClone(prev);
@@ -48,9 +39,6 @@ const PurchaseItemsSelection = ({
         inwardQty: item.inwardQty ?? "",
         returnQty: item.returnQty ?? "",
         balQty: item.balQty ?? "",
-        balQtyCancel: item.balQtyCancel ?? "",
-        alreadyInwardQty: item.alreadyInwardQty ?? "",
-        alreadyReturnQty: item.alreadyReturnQty ?? "",
         poId: item.poId ?? "",
         poDocId: item?.Po?.docId ?? "",
         sizeId: item.sizeId ?? "",
@@ -59,7 +47,7 @@ const PurchaseItemsSelection = ({
 
       // find first empty row and fill it
       const emptyIndex = newItems.findIndex(
-        (v) => !v.styleItemId || v.styleItemId === null
+        (v) => !v.styleItemId || v.styleItemId === null,
       );
 
       if (emptyIndex !== -1) {
@@ -72,19 +60,9 @@ const PurchaseItemsSelection = ({
     });
   }
 
-  // ✅ removeItem — removes from cancelItems, keeps minimum 3 rows
-  function removeItem(removeItem) {
+  function removeItem(id) {
     setCancelItems((prev) => {
-      let updated = prev.filter(
-        (item) =>
-          !(
-            removeItem.styleItemId === item.styleItemId &&
-            removeItem.hsnId === item.hsnId &&
-            removeItem.uomId === item.uomId &&
-            removeItem.poQty === item.poQty &&
-            removeItem.balQty === item.balQty
-          ),
-      );
+      let updated = prev.filter((item) => String(item.id) !== String(id));
 
       // ensure minimum 3 rows
       while (updated.length < 3) {
@@ -95,50 +73,36 @@ const PurchaseItemsSelection = ({
     });
   }
 
-  // ✅ isItemChecked — checks cancelItems directly (reference pattern)
-  function isItemChecked(checkItem) {
-    return (cancelItems || []).findIndex(
-      (item) =>
-        item.styleItemId &&
-        String(item.styleItemId) === String(checkItem.styleItemId) &&
-        String(item.poId) === String(checkItem.poId) &&
-        String(item.sizeId) === String(checkItem.sizeId) &&
-        String(item.colorId) === String(checkItem.colorId)
-    ) !== -1;
-  }
-
-  // ✅ toggle — same as reference handleChangee
-  function handleCheckBoxChange(value, item) {
-    if (value) addItem(item);
-    else removeItem(item);
-  }
-
-  // ✅ select all uses displayItems
-  function handleSelectAllChange(value) {
+  function handleSelectAllChange(value, cancelItems) {
     if (value) {
-      (displayItems || []).forEach((item) => {
-        if (!isItemChecked(item)) addItem(item);
-      });
+      cancelItems?.forEach((item) => addItem(item));
     } else {
-      (displayItems || []).forEach((item) => removeItem(item));
+      cancelItems?.forEach((item) => removeItem(item.id));
     }
   }
 
-  function getSelectAll() {
-    return (
-      (displayItems || []).length > 0 &&
-      (displayItems || []).every((item) => isItemChecked(item))
-    );
+  function getSelectAll(cancelItems) {
+    return cancelItems?.every((item) => isItemAddedd(item.id));
   }
 
-  // ✅ Done — just close, items already in cancelItems
-  function handleDone() {
-    setFillGrid(false);
+  function handleChangee(id, obj) {
+    if (isItemAddedd(id)) {
+      removeItem(id);
+    } else {
+      addItem(obj);
+    }
+  }
+
+  function isItemAddedd(id) {
+    return (
+      (cancelItems || [])?.findIndex(
+        (item) => parseInt(item?.id) === parseInt(id),
+      ) !== -1
+    );
   }
 
   return (
     <div className="h-full flex flex-col bg-[#f1f1f0]">
-
       {/* HEADER */}
       <div className="border-b py-2 px-4 mx-3 flex justify-between items-center sticky top-0 z-10 bg-white mt-3">
         <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
@@ -146,7 +110,7 @@ const PurchaseItemsSelection = ({
         </h2>
         <button
           type="button"
-          onClick={handleDone}
+          onClick={onClose}
           className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                      border border-green-600 flex items-center gap-1 text-xs"
         >
@@ -162,7 +126,6 @@ const PurchaseItemsSelection = ({
               <table className="w-full border-collapse table-fixed">
                 <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
                   <tr>
-
                     {/* SELECT ALL */}
                     <th className="px-2 py-1 w-10 border border-gray-300">
                       <div className="flex flex-col items-center">
@@ -172,8 +135,13 @@ const PurchaseItemsSelection = ({
                         <input
                           type="checkbox"
                           className="cursor-pointer"
-                          onChange={(e) => handleSelectAllChange(e.target.checked)}
-                          checked={getSelectAll()}
+                          onChange={(e) =>
+                            handleSelectAllChange(
+                              e.target.checked,
+                              tempItems ? tempItems : [],
+                            )
+                          }
+                          checked={getSelectAll(tempItems ? tempItems : [])}
                         />
                       </div>
                     </th>
@@ -236,7 +204,7 @@ const PurchaseItemsSelection = ({
                 </thead>
 
                 <tbody>
-                  {displayItems?.length === 0 ? (
+                  {tempItems?.length === 0 ? (
                     <tr>
                       <td
                         colSpan={12}
@@ -246,25 +214,19 @@ const PurchaseItemsSelection = ({
                       </td>
                     </tr>
                   ) : (
-                    displayItems.map((item, index) => (
+                    tempItems.map((item, index) => (
                       <tr
                         key={index}
                         className={`${
-                          isItemChecked(item)
-                            ? "bg-blue-50"
-                            : index % 2 === 0
-                            ? "bg-white"
-                            : "bg-gray-100"
+                          index % 2 === 0 ? "bg-white" : "bg-gray-100"
                         } border-b cursor-pointer hover:bg-gray-50`}
-                        onClick={() =>
-                          handleCheckBoxChange(!isItemChecked(item), item)
-                        }
+                        onClick={() => handleChangee(item?.id, item)}
                       >
                         <td className="text-center py-2 border border-gray-300">
                           <input
                             type="checkbox"
                             className="cursor-pointer"
-                            checked={isItemChecked(item)}
+                             checked={isItemAddedd(item.id)}
                             readOnly
                           />
                         </td>

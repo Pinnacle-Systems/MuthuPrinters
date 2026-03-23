@@ -251,7 +251,7 @@ const PurchaseOrderForm = ({
       const key = [
         row.styleItemId || "",
         row.sizeId || "",
-        row.quoteVersion || "",
+        row.colorId || "",
       ].join("-");
 
       if (seen.has(key)) {
@@ -260,6 +260,7 @@ const PurchaseOrderForm = ({
           duplicateIndex: index,
           styleItemId: row.styleItemId,
           sizeId: row.sizeId,
+          colorId: row.colorId,
         });
       } else {
         seen.set(key, index);
@@ -270,43 +271,49 @@ const PurchaseOrderForm = ({
   };
 
   const validateData = (data) => {
-    const items = data?.poItems || [];
-
-    // remove blank rows
-    const filledItems = items.filter((item) => item.styleItemId);
+    const filledItems = (data?.poItems || []).filter(
+      (item) => item.styleItemId,
+    );
     const duplicates = findDuplicates(filledItems);
-    // duplicate check
-    if (duplicates.length > 0) {
-      const dup = duplicates[0]; // show first duplicate
+    const dup = duplicates[0];
+
+    const checks = [
+      { condition: !data.dueDate, title: "Due Date is required!" },
+      { condition: !data.poType, title: "PO Type is required!" },
+      { condition: !data.taxTemplateId, title: "Tax Template is required!" },
+      { condition: !data.supplierId, title: "Supplier is required!" },
+      { condition: !data.deliveryType, title: "Delivery Type is required!" },
+      {
+        condition: filledItems.length === 0,
+        title: "Please add at least one item!",
+      },
+      {
+        condition: !isGridDatasValid(data?.poItems, false, [
+          "styleItemId",
+          "uomId",
+          "qty",
+          "price",
+        ]),
+        title: "Please fill all required item fields!",
+      },
+      {
+        condition: duplicates.length > 0,
+        title: "Duplicate Item Found!",
+        html: dup
+          ? `Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")}, Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")}, Color - ${findFromList(dup?.colorId, colorList?.data, "name")}`
+          : "",
+      },
+    ];
+
+    const failed = checks.find((c) => c.condition);
+    if (failed) {
       Swal.fire({
         icon: "warning",
-        title: "Duplicate Item Found",
-        html: `
-    Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},
-    Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")},
-  `,
+        title: failed.title,
+        html: failed.html,
+        timer: failed.html ? undefined : 1500,
+        showConfirmButton: !!failed.html,
         confirmButtonText: "OK",
-      });
-      return false;
-    }
-    let mandatoryFields = ["styleItemId", "uomId", "qty", "price"];
-    if (
-      !(
-        data?.dueDate &&
-        data.poType &&
-        data.taxTemplateId &&
-        data.supplierId &&
-        data.deliveryType &&
-        isGridDatasValid(data?.poItems, false, mandatoryFields) &&
-        data?.poItems?.length !== 0
-      )
-    ) {
-      Swal.fire({
-        // title: "Total percentage exceeds 100%",
-        title: "Please fill all required fields...!",
-        icon: "error",
-        timer: 1500,
-        showConfirmButton: false,
       });
       return false;
     }
@@ -607,7 +614,9 @@ const PurchaseOrderForm = ({
                   label="Supplier"
                   component="PartyMaster"
                   placeholder="Search Supplier ..."
-                  optionList={supplierList?.data?.filter((item) => item.isSupplier)}
+                  optionList={supplierList?.data?.filter(
+                    (item) => item.isSupplier,
+                  )}
                   setSearchTerm={(value) => {
                     setSupplierId(value);
                   }}

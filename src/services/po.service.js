@@ -783,18 +783,18 @@ async function remove(id) {
 }
 
 function manualFilterSearchDataPoItems(
-  searchPoDate,
+  searchDocDate,
   searchDueDate,
-  searchInwardType,
+  poType,
   data,
 ) {
-  const inwardTypeKey = searchInwardType
-    ? searchInwardType.split(" ")[0].toUpperCase()
+  const inwardTypeKey = poType
+    ? poType.split(" ")[0].toUpperCase()
     : "";
   return data.filter(
     (item) =>
-      (searchPoDate
-        ? String(getDateFromDateTime(item.Po.docDate)).includes(searchPoDate)
+      (searchDocDate
+        ? String(getDateFromDateTime(item.Po.docDate)).includes(searchDocDate)
         : true) &&
       (searchDueDate
         ? String(getDateFromDateTime(item.Po.dueDate)).includes(searchDueDate)
@@ -934,9 +934,10 @@ async function getPoItems(req) {
     pagination,
     dataPerPage,
     searchDocId,
-    searchPoDate,
+    searchDocDate,
     searchInwardType,
     searchDueDate,
+    poType
   } = req.query;
 
   let data;
@@ -971,9 +972,9 @@ async function getPoItems(req) {
       },
     });
     data = manualFilterSearchDataPoItems(
-      searchPoDate,
+      searchDocDate,
       searchDueDate,
-      searchInwardType,
+      poType,
       data,
     );
 

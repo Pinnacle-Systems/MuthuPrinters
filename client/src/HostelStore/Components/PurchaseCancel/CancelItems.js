@@ -148,10 +148,9 @@ const CancelItems = ({
       <Modal
         isOpen={fillGrid}
         onClose={() => setFillGrid(false)}
-        widthClass={"w-[90%] h-[85%]"}
+        widthClass={"w-[90%] h-[90%]"}
       >
         <PurchaseItemsSelection
-          setFillGrid={setFillGrid}
           supplierId={supplierId}
           cancelItems={cancelItems}
           setCancelItems={setCancelItems}
@@ -163,6 +162,7 @@ const CancelItems = ({
           setSearchDocId={setSearchDocId}
           setSearchDocDate={setSearchDocDate}
           searchDocDate={searchDocDate}
+          onClose={() => setFillGrid(false)}
         />
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">

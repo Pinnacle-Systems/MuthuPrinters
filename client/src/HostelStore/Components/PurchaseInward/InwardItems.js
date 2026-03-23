@@ -1,12 +1,8 @@
-import { useEffect, useState } from "react";
-import secureLocalStorage from "react-secure-storage";
-import { CLOSE_ICON, VIEW } from "../../../icons";
+import { useEffect, useRef, useState } from "react";
 import FxSelect from "../../../Inputs";
 import Swal from "sweetalert2";
-import { toast } from "react-toastify";
 import Modal from "../../../UiComponents/Modal";
 import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
-import { useMemo } from "react";
 import PoItemsSelection from "./PoItemsSelection";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
 
@@ -23,6 +19,14 @@ const InwardItems = ({
   inwardType,
   supplierId,
   branchId,
+  sizeList,
+  colorList,
+  setTempItems,
+  tempItems,
+  searchDocId,
+  setSearchDocId,
+  setSearchDocDate,
+  searchDocDate,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -32,12 +36,19 @@ const InwardItems = ({
     poQty: "",
     poId: "",
     alreadyInwardQty: "",
+    alreadyReturnQty: "",
     cancelQty: "",
-    balQty: ""
+    balQty: "",
+    itemGroupId: "",
+    sizeId: "",
+    colorId: "",
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
   const [fillGrid, setFillGrid] = useState(false);
+
+  const skipFocusRef = useRef(false);
+
   const addRow = () => {
     const newRow = {
       styleItemId: "",
@@ -46,6 +57,9 @@ const InwardItems = ({
       inwardQty: "",
       poQty: "",
       poId: "",
+      itemGroupId: "",
+      sizeId: "",
+      colorId: "",
     };
     setInwardItems([...inwardItems, newRow]);
   };
@@ -65,6 +79,10 @@ const InwardItems = ({
 
         // 3️⃣ update fabricId
         newRows[index].hsnId = response?.data?.hsnId;
+        newRows[index].itemGroupId = response?.data?.itemGroupId;
+        newRows[index].sizeId = response?.data?.sizeId;
+        newRows[index].colorId = response?.data?.colorId;
+        newRows[index].uomId = response?.data?.uomId;
         // 4️⃣ update again after API fetch
         setInwardItems([...newRows]);
       } catch (e) {
@@ -130,7 +148,6 @@ const InwardItems = ({
       setInwardItems(Array.from({ length: 4 }, () => ({ ...EMPTY_ROW })));
     }
   }, [id, inwardItems]);
-  console.log(inwardItems, "inwardItemsinparent");
 
   return (
     <>
@@ -150,23 +167,29 @@ const InwardItems = ({
       <Modal
         isOpen={fillGrid}
         onClose={() => setFillGrid(false)}
-        widthClass={"w-[95%]"}
+        widthClass={"w-[90%] h-[90%]"}
       >
         <PoItemsSelection
-          setFillGrid={setFillGrid}
           supplierId={supplierId}
           inwardItems={inwardItems}
           setInwardItems={setInwardItems}
           branchId={branchId}
           inwardType={inwardType}
+          setTempItems={setTempItems}
+          tempItems={tempItems}
+          searchDocId={searchDocId}
+          setSearchDocId={setSearchDocId}
+          setSearchDocDate={setSearchDocDate}
+          searchDocDate={searchDocDate}
+          onClose={() => setFillGrid(false)}
         />
       </Modal>
-      <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">
+      <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm min-h-[270px] overflow-auto  w-full">
         <div className="flex items-center my-2">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
-          {inwardType !== "Direct Inward" && (
+          {inwardType !== "Direct Inward" && !id && (
             <button
-              className={`font-bold text-slate-700 bord ml-[1000px] text-sm bg-blue-500 rounded rounded-md text-white px-2`}
+              className={`font-bold bord ml-[1250px] text-sm bg-blue-500 rounded-md text-white px-2`}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -191,7 +214,7 @@ const InwardItems = ({
           )}
         </div>
         <div
-          className={`w-full min-h-[180px] max-h-[180px] overflow-y-auto  my-2`}
+          className={`w-full min-h-[205px] max-h-[205px] overflow-y-auto  my-2`}
         >
           <table className=" border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
@@ -207,9 +230,14 @@ const InwardItems = ({
                   Description of Goods
                 </th>
                 <th
-                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
                 >
-                  HSN/SAC
+                  Size
+                </th>
+                <th
+                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
+                >
+                  Color
                 </th>
                 <th
                   className={`w-20 px-4 py-2 text-center font-medium text-[13px] `}
@@ -237,13 +265,13 @@ const InwardItems = ({
                     Already Inward Qty
                   </th>
                 )}
-                {/* {inwardType !== "Direct Inward" && (
+                {inwardType !== "Direct Inward" && (
                   <th
                     className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                   >
                     Already Return Qty
                   </th>
-                )} */}
+                )}
                 {inwardType !== "Direct Inward" && (
                   <th
                     className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
@@ -251,11 +279,6 @@ const InwardItems = ({
                     Balance Qty
                   </th>
                 )}
-                <th
-                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                >
-                  Price
-                </th>
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
@@ -286,7 +309,7 @@ const InwardItems = ({
                         handleInputChange(val, index, "styleItemId")
                       }
                       options={(styleItemList?.data || [])
-                        .filter((item) => item.active)
+                        .filter((item) => (id ? true : item.active))
                         .map((item) => ({
                           label: item.name,
                           value: item.id,
@@ -305,10 +328,12 @@ const InwardItems = ({
                   </td>
                   <td className="py-0.5 border border-gray-300 text-[11px] ">
                     <FxSelect
-                      value={row.hsnId}
-                      onChange={(val) => handleInputChange(val, index, "hsnId")}
-                      options={(hsnList?.data || [])
-                        .filter((item) => item.active)
+                      value={row.sizeId}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "sizeId")
+                      }
+                      options={(sizeList?.data || [])
+                        .filter((item) => (id ? true : item.active))
                         .map((item) => ({
                           label: item.name,
                           value: item.id,
@@ -316,11 +341,35 @@ const InwardItems = ({
                       readOnly={readOnly || inwardType !== "Direct Inward"}
                       placeholder=""
                       onBlur={() =>
-                        handleInputChange(row.hsnId, index, "hsnId")
+                        handleInputChange(row.sizeId, index, "sizeId")
                       }
                       onKeyDown={(e) => {
                         if (e.key === "Delete") {
-                          handleInputChange("", index, "hsnId");
+                          handleInputChange("", index, "sizeId");
+                        }
+                      }}
+                    />
+                  </td>
+                  <td className="py-0.5 border border-gray-300 text-[11px] ">
+                    <FxSelect
+                      value={row.colorId}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "colorId")
+                      }
+                      options={(colorList?.data || [])
+                        .filter((item) => (id ? true : item.active))
+                        .map((item) => ({
+                          label: item.name,
+                          value: item.id,
+                        }))}
+                      readOnly={readOnly || inwardType !== "Direct Inward"}
+                      placeholder=""
+                      onBlur={() =>
+                        handleInputChange(row.colorId, index, "colorId")
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Delete") {
+                          handleInputChange("", index, "colorId");
                         }
                       }}
                     />
@@ -330,12 +379,12 @@ const InwardItems = ({
                       value={row.uomId}
                       onChange={(val) => handleInputChange(val, index, "uomId")}
                       options={(uomList?.data || [])
-                        .filter((item) => item.active)
+                        .filter((item) => (id ? true : item.active))
                         .map((item) => ({
                           label: item.name,
                           value: item.id,
                         }))}
-                      readOnly={readOnly || inwardType !== "Direct Inward"}
+                      readOnly={true}
                       placeholder=""
                       onBlur={() =>
                         handleInputChange(row.uomId, index, "uomId")
@@ -442,7 +491,7 @@ const InwardItems = ({
                       />
                     </td>
                   )}
-                  {/* {inwardType !== "Direct Inward" && (
+                  {inwardType !== "Direct Inward" && (
                     <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
                       <input
                         onKeyDown={(e) => {
@@ -478,7 +527,7 @@ const InwardItems = ({
                         }
                       />
                     </td>
-                  )} */}
+                  )}
                   {inwardType !== "Direct Inward" && (
                     <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
                       <input
@@ -508,7 +557,7 @@ const InwardItems = ({
                       />
                     </td>
                   )}
-                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                  {/* <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
                     <input
                       onKeyDown={(e) => {
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -522,7 +571,6 @@ const InwardItems = ({
                       className="text-right rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
                       value={parseFloat(row?.price).toFixed(2)}
-
                       onChange={(e) =>
                         handleInputChange(e.target.value, index, "price")
                       }
@@ -535,34 +583,38 @@ const InwardItems = ({
                         inwardType !== "Direct Inward"
                       }
                     />
-                  </td>
+                  </td> */}
                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
                     <input
                       id={`inwardQty-input-${index}`}
                       onKeyDown={(e) => {
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
                           e.preventDefault();
+
                         if (e.key === "Delete") {
                           handleInputChange("", index, "inwardQty");
                         }
+
                         if (e.key === "Enter") {
-                          e.preventDefault(); // prevent form submit or line break
+                          e.preventDefault();
                           e.stopPropagation();
-                          if (inwardType !== "Direct Inward") {
-                            const nextQtyInput = document.querySelector(
-                              `#inwardQty-input-${index + 1}`,
-                            );
-                            if (nextQtyInput) {
-                              nextQtyInput.focus();
+                          skipFocusRef.current = false; // reset flag before blur fires
+
+                          setTimeout(() => {
+                            if (!skipFocusRef.current) {
+                              if (inwardType !== "Direct Inward") {
+                                const next = document.querySelector(
+                                  `#inwardQty-input-${index + 1}`,
+                                );
+                                if (next) next.focus();
+                              } else {
+                                const next = document.querySelector(
+                                  `#styleItemId-input-${index + 1}`,
+                                );
+                                if (next) next.focus();
+                              }
                             }
-                          } else {
-                            const nextQtyInput = document.querySelector(
-                              `#styleItemId-input-${index + 1}`,
-                            );
-                            if (nextQtyInput) {
-                              nextQtyInput.focus();
-                            }
-                          }
+                          }, 100);
                         }
                       }}
                       min={"0"}
@@ -575,20 +627,24 @@ const InwardItems = ({
                       }
                       onBlur={(e) => {
                         const minQty = row.balQty + row.alreadyInwardQty;
+
                         if (inwardType !== "Direct Inward") {
                           if (parseFloat(minQty) < parseFloat(e.target.value)) {
                             e.target.value = "";
+                            skipFocusRef.current = true; // 🚩 Swal will open, block focus
                             Swal.fire({
                               icon: "warning",
                               title: "Invalid Qty",
-                              text: `Inward Qty cannot be More than ${minQty} Qty! `,
+                              text: `Inward Qty cannot be More than ${minQty} Qty!`,
                               confirmButtonText: "OK",
                             });
                             return;
                           }
                         }
+
                         if (e.target.value == 0) {
                           e.target.value = "";
+                          skipFocusRef.current = true; // 🚩 Swal will open, block focus
                           Swal.fire({
                             icon: "warning",
                             title: "Invalid Qty",
@@ -597,6 +653,7 @@ const InwardItems = ({
                           });
                           return;
                         }
+
                         handleInputChange(e.target.value, index, "inwardQty");
                       }}
                       disabled={readOnly || (row.stockQty ?? 0) > 0}
@@ -627,7 +684,7 @@ const InwardItems = ({
               <tr className="bg-gray-50 h-7 font-medium text-gray-800">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium text-[13px] py-0.5"
-                  colSpan={inwardType === "Direct Inward" ? 4 : 4}
+                  colSpan={5}
                 >
                   Total
                 </td>
@@ -641,17 +698,9 @@ const InwardItems = ({
                         )
                         .toFixed(2)}
                     </td>
-                    <td className="border border-gray-300 " colSpan={3}></td>
+                    <td className="border border-gray-300 " colSpan={4}></td>
                   </>
                 )}
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
-                  {inwardItems
-                    ?.reduce(
-                      (sum, row) => sum + (Number(row.price) || 0),
-                      0,
-                    )
-                    .toFixed(2)}
-                </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {inwardItems
                     ?.reduce(

@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
-import secureLocalStorage from "react-secure-storage";
-import { CLOSE_ICON, VIEW } from "../../../icons";
 import FxSelect from "../../../Inputs";
 import Swal from "sweetalert2";
-import { toast } from "react-toastify";
 import Modal from "../../../UiComponents/Modal";
-import { useMemo } from "react";
 import PurchaseInwardItemsSelection from "./PurchaseInwardItemsSelection";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
 
@@ -14,14 +10,19 @@ const ReturnItems = ({
   returnItems,
   setReturnItems,
   readOnly,
-  params,
   styleItemList,
   uomList,
-  hsnList,
-  taxTemplateId,
   returnType,
   supplierId,
   branchId,
+  sizeList,
+  colorList,
+  setTempItems,
+  tempItems,
+  searchDocId,
+  setSearchDocId,
+  setSearchDocDate,
+  searchDocDate,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -31,6 +32,9 @@ const ReturnItems = ({
     poQty: "",
     balQty: "",
     purchaseInwardId: "",
+    itemGroupId: "",
+    sizeId: "",
+    colorId: "",
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [fillGrid, setFillGrid] = useState(false);
@@ -42,6 +46,9 @@ const ReturnItems = ({
       returnQty: "",
       poQty: "",
       purchaseInwardId: "",
+      itemGroupId: "",
+      sizeId: "",
+      colorId: "",
     };
     setReturnItems([...returnItems, newRow]);
   };
@@ -132,15 +139,21 @@ const ReturnItems = ({
       <Modal
         isOpen={fillGrid}
         onClose={() => setFillGrid(false)}
-        widthClass={"w-[95%]"}
+        widthClass={"w-[90%] h-[90%]"}
       >
         <PurchaseInwardItemsSelection
-          setFillGrid={setFillGrid}
           supplierId={supplierId}
           returnItems={returnItems}
           setReturnItems={setReturnItems}
           branchId={branchId}
           returnType={returnType}
+          setTempItems={setTempItems}
+          tempItems={tempItems}
+          searchDocId={searchDocId}
+          setSearchDocId={setSearchDocId}
+          setSearchDocDate={setSearchDocDate}
+          searchDocDate={searchDocDate}
+          onClose={() => setFillGrid(false)}
         />
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">
@@ -148,7 +161,7 @@ const ReturnItems = ({
           <h2 className="font-medium text-slate-700">List Of Items</h2>
 
           <button
-            className="font-bold text-slate-700 bord ml-[980px] text-sm bg-blue-500 rounded rounded-md text-white px-2"
+            className="font-bold  bord ml-[1125px] text-sm bg-blue-500 rounded-md text-white px-2"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
@@ -195,9 +208,14 @@ const ReturnItems = ({
                   Description of Goods
                 </th>
                 <th
-                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
                 >
-                  HSN/SAC
+                  Size
+                </th>
+                <th
+                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
+                >
+                  Color
                 </th>
                 <th
                   className={`w-20 px-4 py-2 text-center font-medium text-[13px] `}
@@ -253,7 +271,7 @@ const ReturnItems = ({
                         handleInputChange(val, index, "styleItemId")
                       }
                       options={(styleItemList?.data || [])
-                        .filter((item) => item.active)
+                        .filter((item) => (id ? true : item.active))
                         .map((item) => ({
                           label: item.name,
                           value: item.id,
@@ -272,10 +290,12 @@ const ReturnItems = ({
                   </td>
                   <td className="py-0.5 border border-gray-300 text-[11px] ">
                     <FxSelect
-                      value={row.hsnId}
-                      onChange={(val) => handleInputChange(val, index, "hsnId")}
-                      options={(hsnList?.data || [])
-                        .filter((item) => item.active)
+                      value={row.sizeId}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "sizeId")
+                      }
+                      options={(sizeList?.data || [])
+                        .filter((item) => (id ? true : item.active))
                         .map((item) => ({
                           label: item.name,
                           value: item.id,
@@ -283,11 +303,35 @@ const ReturnItems = ({
                       readOnly={true}
                       placeholder=""
                       onBlur={() =>
-                        handleInputChange(row.hsnId, index, "hsnId")
+                        handleInputChange(row.sizeId, index, "sizeId")
                       }
                       onKeyDown={(e) => {
                         if (e.key === "Delete") {
-                          handleInputChange("", index, "hsnId");
+                          handleInputChange("", index, "sizeId");
+                        }
+                      }}
+                    />
+                  </td>
+                  <td className="py-0.5 border border-gray-300 text-[11px] ">
+                    <FxSelect
+                      value={row.colorId}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "colorId")
+                      }
+                      options={(colorList?.data || [])
+                        .filter((item) => (id ? true : item.active))
+                        .map((item) => ({
+                          label: item.name,
+                          value: item.id,
+                        }))}
+                      readOnly={true}
+                      placeholder=""
+                      onBlur={() =>
+                        handleInputChange(row.colorId, index, "colorId")
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Delete") {
+                          handleInputChange("", index, "colorId");
                         }
                       }}
                     />
@@ -297,7 +341,7 @@ const ReturnItems = ({
                       value={row.uomId}
                       onChange={(val) => handleInputChange(val, index, "uomId")}
                       options={(uomList?.data || [])
-                        .filter((item) => item.active)
+                        .filter((item) => (id ? true : item.active))
                         .map((item) => ({
                           label: item.name,
                           value: item.id,
@@ -497,7 +541,7 @@ const ReturnItems = ({
               <tr className="bg-gray-50 h-7 font-medium text-gray-800">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium text-[13px] py-0.5"
-                  colSpan={returnType === "Direct Inward" ? 3 : 4}
+                  colSpan={5}
                 >
                   Total
                 </td>
