@@ -1,10 +1,9 @@
-import { FaEye, FaFileAlt } from "react-icons/fa";
+import {  FaFileAlt } from "react-icons/fa";
 
 import {
   CheckBox,
   DateInputNew,
   DropdownInput,
-  DropdownWithSearch,
   ReusableInput,
   ReusableSearchableInput,
   TextInput,
@@ -23,7 +22,6 @@ import { FiEdit2, FiPrinter, FiSave } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
 import {
   useAddPoMutation,
-  useDeletePoMutation,
   useGetPoByIdQuery,
   useUpdatePoMutation,
 } from "../../../redux/uniformService/PoServices";
@@ -31,21 +29,16 @@ import Swal from "sweetalert2";
 import { PDFViewer } from "@react-pdf/renderer";
 import tw from "../../../Utils/tailwind-react-pdf";
 import Modal from "../../../UiComponents/Modal";
-import { Loader } from "../../../Basic/components";
 import { dropDownListObject } from "../../../Utils/contructObject";
 import PoSummary from "./PoSummary";
 import {
   useGetBranchByIdQuery,
-  useGetBranchQuery,
 } from "../../../redux/services/BranchMasterService";
 import { groupBy } from "lodash";
 import PoItems from "./PoItems";
 import PurchaseOrderPrintFormat from "./PrintFormat-PO";
-import { useDispatch } from "react-redux";
-import purchaseInwardEntryApi from "../../../redux/uniformService/PurchaseInwardEntry";
-import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
-import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
 import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
+import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 
 const PurchaseOrderForm = ({
   onClose,
@@ -110,11 +103,6 @@ const PurchaseOrderForm = ({
 
   const [addData] = useAddPoMutation();
   const [updateData] = useUpdatePoMutation();
-  const dispatch = useDispatch();
-
-  const { data: branchdata } = useGetBranchByIdQuery(branchId, {
-    skip: !branchId,
-  });
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -220,11 +208,7 @@ const PurchaseOrderForm = ({
           showConfirmButton: false,
           timer: 2000,
         });
-        dispatch(
-          purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
-        );
-        dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
-        dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
+        invalidatePurchaseModule();
         if (returnData.statusCode === 0) {
           if (nextProcess == "new") {
             setId("");
@@ -278,11 +262,12 @@ const PurchaseOrderForm = ({
     const dup = duplicates[0];
 
     const checks = [
-      { condition: !data.dueDate, title: "Due Date is required!" },
+      { condition: !data.dueDate, title: "Delivery Date is required!" },
       { condition: !data.poType, title: "PO Type is required!" },
       { condition: !data.taxTemplateId, title: "Tax Template is required!" },
       { condition: !data.supplierId, title: "Supplier is required!" },
       { condition: !data.deliveryType, title: "Delivery Type is required!" },
+      { condition: !data.deliveryToId, title: "Delivery To is required!" },
       {
         condition: filledItems.length === 0,
         title: "Please add at least one item!",

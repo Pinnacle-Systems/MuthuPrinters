@@ -21,6 +21,7 @@ import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
 import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
 import StyleItemMasterApi from "../../../redux/services/StyleItemMasterService.js";
 import { useDispatch } from "react-redux";
+import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -92,11 +93,7 @@ export default function Form() {
           });
           setShowForm(false);
           dispatch(StyleItemMasterApi.util.invalidateTags(["StyleItemMaster"]));
-          dispatch(
-            purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
-          );
-          dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
-          dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
+          invalidatePurchaseModule();
         } catch (error) {
           Swal.fire({
             icon: "error",

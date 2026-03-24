@@ -157,6 +157,9 @@ async function get(req) {
         },
       },
     },
+    orderBy: {
+      docId: "desc",
+    },
   });
   data = manualFilterSearchData(searchDocDate, data);
   const totalCount = data.length;
@@ -190,6 +193,9 @@ async function getOne(id) {
           poId: item.poId,
           uomId: item.uomId,
           hsnId: item.hsnId,
+          itemGroupId: item.itemGroupId,
+          sizeId: item.sizeId,
+          colorId: item.colorId,
         },
         select: {
           qty: true,
@@ -201,6 +207,9 @@ async function getOne(id) {
           poId: item.poId,
           uomId: item.uomId,
           hsnId: item.hsnId,
+          itemGroupId: item.itemGroupId,
+          sizeId: item.sizeId,
+          colorId: item.colorId,
         },
         select: {
           inwardQty: true,
@@ -219,10 +228,13 @@ async function getOne(id) {
       if (inwardIds.length > 0) {
         const returnAgg = await prisma.purchaseReturnItems.aggregate({
           where: {
-            styleItemId: data.styleItemId,
-            uomId: data.uomId,
-            hsnId: data.hsnId,
+            styleItemId: item.styleItemId,
+            uomId: item.uomId,
+            hsnId: item.hsnId,
             purchaseInwardId: { in: inwardIds },
+            itemGroupId: item.itemGroupId,
+            sizeId: item.sizeId,
+            colorId: item.colorId,
           },
           _sum: { returnQty: true },
         });
@@ -230,12 +242,28 @@ async function getOne(id) {
         returnQty = returnAgg._sum.returnQty ?? 0;
       }
 
+      const cancelAgg = await prisma.purchaseCancelItems.aggregate({
+        where: {
+          styleItemId: item.styleItemId,
+          poId: item.poId,
+          uomId: item.uomId,
+          hsnId: item.hsnId,
+          itemGroupId: item.itemGroupId,
+          sizeId: item.sizeId,
+          colorId: item.colorId,
+          purchaseCancelId: { not: data.id },
+        },
+        _sum: { cancelQty: true },
+      });
+      const alreadyCancelQty = cancelAgg?._sum?.cancelQty ?? 0;
+
       return {
         ...item,
-        poQty: poQty.qty,
+        poQty: poQty.qty ?? 0,
         alreadyInwardQty: inwardQty,
         alreadyReturnQty: returnQty,
-        balQtyCancel: poQty.qty - (inwardQty - returnQty),
+        alreadyCancelQty,
+        balQty: (poQty?.qty ?? 0) - (alreadyCancelQty + inwardQty) + returnQty,
       };
     }),
   );

@@ -12,6 +12,7 @@ import Swal from "sweetalert2";
 import { useDeletePurchaseCancelMutation } from "../../../redux/uniformService/PurchaseCancelService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
+import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -59,8 +60,8 @@ export default function Form() {
           icon: "success",
           timer: 1000,
         });
+        invalidatePurchaseModule();
         setShowForm(false);
-        // dispatch(StyleMasterApi.util.invalidateTags(["StyleMaster"]));
       } catch (error) {
         Swal.fire({
           icon: "error",

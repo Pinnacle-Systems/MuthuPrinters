@@ -25,11 +25,16 @@ const PurchaseItemsSelection = ({
     itemGroupId: "",
     sizeId: "",
     colorId: "",
+    alreadyCancelQty: "",
   };
 
   function addItem(item) {
     setCancelItems((prev) => {
       let newItems = structuredClone(prev);
+      const alreadyExists = newItems.some(
+        (v) => parseInt(v.id) === parseInt(item.id),
+      );
+      if (alreadyExists) return prev;
       const newRow = {
         ...item,
         styleItemId: item.styleItemId ?? "",
@@ -43,6 +48,8 @@ const PurchaseItemsSelection = ({
         poDocId: item?.Po?.docId ?? "",
         sizeId: item.sizeId ?? "",
         colorId: item.colorId ?? "",
+        itemGroupId: item.itemGroupId ?? "",
+        alreadyCancelQty: item?.alreadyCancelQty ?? "",
       };
 
       // find first empty row and fill it
@@ -179,7 +186,7 @@ const PurchaseItemsSelection = ({
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-56">
                       Description of Goods
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-28">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
                       Size
                     </th>
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-28">
@@ -188,16 +195,19 @@ const PurchaseItemsSelection = ({
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
                       UOM
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 text-right">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 ">
                       PO Qty
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-24 text-right">
-                      Already Inward
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
+                      Already Cancel Qty
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-24 text-right">
-                      Already Return
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-24 ">
+                      Already Inward Qty
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 text-right">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-24 ">
+                      Already Return Qty
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 ">
                       Bal Qty
                     </th>
                   </tr>
@@ -226,7 +236,7 @@ const PurchaseItemsSelection = ({
                           <input
                             type="checkbox"
                             className="cursor-pointer"
-                             checked={isItemAddedd(item.id)}
+                            checked={isItemAddedd(item.id)}
                             readOnly
                           />
                         </td>
@@ -260,19 +270,21 @@ const PurchaseItemsSelection = ({
                         </td>
 
                         <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">
-                          {item?.poQty}
+                          {parseFloat(item?.poQty || 0).toFixed(2)}
+                        </td>
+                        <td className=" border border-gray-300 text-[11px] text-right  py-1.5 px-2">
+                          {parseFloat(item?.alreadyCancelQty || 0).toFixed(2)}
+                        </td>
+                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">
+                          {parseFloat(item?.alreadyInwardQty || 0).toFixed(2)}
                         </td>
 
                         <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">
-                          {item?.alreadyInwardQty}
+                          {parseFloat(item?.alreadyReturnQty || 0).toFixed(2)}
                         </td>
 
                         <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">
-                          {item?.alreadyReturnQty}
-                        </td>
-
-                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">
-                          {item?.balQtyCancel}
+                          {parseFloat(item?.balQty || 0).toFixed(2)}
                         </td>
                       </tr>
                     ))

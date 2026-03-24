@@ -8,7 +8,7 @@ import {
   TextInput,
 } from "../../../Inputs";
 import { inwardTypes } from "../../../Utils/DropdownData";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect,  useState } from "react";
 import moment from "moment";
 import {
   findFromList,
@@ -21,16 +21,14 @@ import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { dropDownListObject } from "../../../Utils/contructObject";
 import InwardItems from "./InwardItems";
-import purchaseInwardEntryApi, {
+import {
   useAddPurchaseInwardEntryMutation,
   useGetPurchaseInwardEntryByIdQuery,
   useUpdatePurchaseInwardEntryMutation,
 } from "../../../redux/uniformService/PurchaseInwardEntry";
 import { useGetLocationMasterQuery } from "../../../redux/services/LocationMasterService";
-import { useDispatch } from "react-redux";
-import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
-import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
 import { useGetPoItemsQuery } from "../../../redux/uniformService/PoServices";
+import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 
 const PurchaseInwardForm = ({
   onClose,
@@ -87,7 +85,6 @@ const PurchaseInwardForm = ({
 
   const [addData] = useAddPurchaseInwardEntryMutation();
   const [updateData] = useUpdatePurchaseInwardEntryMutation();
-  const dispatch = useDispatch();
 
   const searchFields = {
     searchDocId,
@@ -194,11 +191,7 @@ const PurchaseInwardForm = ({
           showConfirmButton: false,
           timer: 2000,
         });
-        dispatch(
-          purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
-        );
-        dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
-        dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
+        invalidatePurchaseModule();
         if (returnData.statusCode === 0) {
           if (nextProcess == "new") {
             setId(0);

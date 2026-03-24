@@ -11,39 +11,52 @@ const PurchaseInwardItemsSelection = ({
   searchDocDate,
   setSearchDocDate,
 }) => {
-
   const EMPTY_ROW = {
-    styleItemId: "", uomId: "", hsnId: "",
-    poQty: "", balQty: "", purchaseInwardId: "",
+    styleItemId: "",
+    hsnId: "",
+    uomId: "",
+    returnQty: "",
+    poQty: "",
+    balQty: "",
+    purchaseInwardId: "",
+    itemGroupId: "",
+    sizeId: "",
+    colorId: "",
   };
 
   // ─── Selection Logic ──────────────────────────────────────────────────────
 
-  function isItemAdded(item) {
-    return (returnItems || []).findIndex(
-      (r) =>
-        r.styleItemId === item.styleItemId &&
-        r.hsnId === item.hsnId &&
-        r.uomId === item.uomId &&
-        r.poQty === item.poQty &&
-        r.inwardQty === item.inwardQty &&
-        r.purchaseInwardId === item.purchaseInwardId
-    ) !== -1;
+  function isItemAddedd(id) {
+    return (
+      (returnItems || [])?.findIndex(
+        (item) => parseInt(item?.id) === parseInt(id),
+      ) !== -1
+    );
   }
 
   function addItem(item) {
     setReturnItems((prev) => {
       let newItems = structuredClone(prev);
+      const alreadyExists = newItems.some(
+        (v) => parseInt(v.id) === parseInt(item.id),
+      );
+      if (alreadyExists) return prev;
       const newRow = {
         ...item,
-        styleItemId:      item.styleItemId      ?? "",
-        uomId:            item.uomId            ?? "",
-        hsnId:            item.hsnId            ?? "",
-        poQty:            item.poQty            ?? "",
-        balQty:           item.balQty           ?? "",
+        styleItemId: item.styleItemId ?? "",
+        uomId: item.uomId ?? "",
+        hsnId: item.hsnId ?? "",
+        poQty: item.poQty ?? "",
+        balQty: item.balQty ?? "",
         purchaseInwardId: item.purchaseInwardId ?? "",
+        returnQty: item.returnQty ?? "",
+        sizeId: item.sizeId ?? "",
+        colorId: item.colorId ?? "",
+        itemGroupId: item.itemGroupId ?? "",
       };
-      const emptyIndex = newItems.findIndex((v) => !v.styleItemId || v.styleItemId === null);
+      const emptyIndex = newItems.findIndex(
+        (v) => !v.styleItemId || v.styleItemId === null,
+      );
       if (emptyIndex !== -1) {
         newItems[emptyIndex] = newRow;
       } else {
@@ -53,45 +66,43 @@ const PurchaseInwardItemsSelection = ({
     });
   }
 
-  function removeItem(item) {
+  function removeItem(id) {
     setReturnItems((prev) => {
-      let updated = prev.filter(
-        (r) =>
-          !(
-            r.styleItemId      === item.styleItemId &&
-            r.hsnId            === item.hsnId &&
-            r.uomId            === item.uomId &&
-            r.poQty            === item.poQty &&
-            r.inwardQty        === item.inwardQty &&
-            r.purchaseInwardId === item.purchaseInwardId
-          )
-      );
-      while (updated.length < 3) updated.push({ ...EMPTY_ROW });
+      let updated = prev.filter((item) => String(item.id) !== String(id));
+
+      // ensure minimum 3 rows
+      while (updated.length < 3) {
+        updated.push({ ...EMPTY_ROW });
+      }
+
       return updated;
     });
   }
 
-  function handleChange(item) {
-    isItemAdded(item) ? removeItem(item) : addItem(item);
-  }
-
-  function handleSelectAllChange(value) {
+  function handleSelectAllChange(value, retunrnItems) {
     if (value) {
-      (tempItems || []).forEach((item) => addItem(item));
+      retunrnItems?.forEach((item) => addItem(item));
     } else {
-      (tempItems || []).forEach((item) => removeItem(item));
+      retunrnItems?.forEach((item) => removeItem(item.id));
     }
   }
 
-  function getSelectAll() {
-    return tempItems.length > 0 && tempItems.every((item) => isItemAdded(item));
+  function getSelectAll(returnItems) {
+    return returnItems?.every((item) => isItemAddedd(item.id));
+  }
+
+  function handleChangee(id, obj) {
+    if (isItemAddedd(id)) {
+      removeItem(id);
+    } else {
+      addItem(obj);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="h-full flex flex-col bg-[#f1f1f0]">
-
       {/* HEADER */}
       <div className="border-b py-2 px-4 mx-3 flex justify-between items-center sticky top-0 z-10 bg-white mt-3">
         <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
@@ -117,16 +128,25 @@ const PurchaseInwardItemsSelection = ({
                   <tr>
                     <th className="px-2 py-1 w-10 border border-gray-300">
                       <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-medium mb-[2px]">Select</span>
+                        <span className="text-[10px] font-medium mb-[2px]">
+                          Select
+                        </span>
                         <input
                           type="checkbox"
                           className="cursor-pointer"
-                          onChange={(e) => handleSelectAllChange(e.target.checked)}
-                          checked={getSelectAll()}
+                          onChange={(e) =>
+                            handleSelectAllChange(
+                              e.target.checked,
+                              tempItems ? tempItems : [],
+                            )
+                          }
+                          checked={getSelectAll(tempItems ? tempItems : [])}
                         />
                       </div>
                     </th>
-                    <th className="border border-gray-300 px-2 py-1 text-center text-xs w-10">S No</th>
+                    <th className="border border-gray-300 px-2 py-1 text-center text-xs w-10">
+                      S No
+                    </th>
                     <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-24">
                       <label>Inward No</label>
                       <input
@@ -149,20 +169,40 @@ const PurchaseInwardItemsSelection = ({
                         onChange={(e) => setSearchDocDate(e.target.value)}
                       />
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-56">Description of Goods</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-28">HSN</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16">UOM</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 text-right">PO Qty</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 text-right">Inward Qty</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-24 text-right">Already Return Qty</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 text-right">Balance Qty</th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-56">
+                      Description of Goods
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-28">
+                      Size
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-28">
+                      Color
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16">
+                      UOM
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 ">
+                      PO Qty
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 ">
+                      Inward Qty
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-24 ">
+                      Already Return Qty
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 ">
+                      Balance Qty
+                    </th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {tempItems.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="px-4 py-4 text-center text-gray-500">
+                      <td
+                        colSpan={11}
+                        className="px-4 py-4 text-center text-gray-500"
+                      >
                         No data found
                       </td>
                     </tr>
@@ -171,23 +211,53 @@ const PurchaseInwardItemsSelection = ({
                       <tr
                         key={index}
                         className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border-b cursor-pointer hover:bg-gray-50`}
-                        onClick={() => handleChange(item)}
+                        onClick={() => handleChangee(item?.id, item)}
                       >
                         <td className="text-center py-2 border border-gray-300">
-                          <input type="checkbox" className="cursor-pointer" checked={isItemAdded(item)} readOnly />
+                          <input
+                            type="checkbox"
+                            className="cursor-pointer"
+                            checked={isItemAddedd(item.id)}
+                            readOnly
+                          />
                         </td>
-                        <td className="text-center border border-gray-300 text-[11px]">{index + 1}</td>
-                        <td className="border border-gray-300 text-[11px] px-2 py-1.5">{item?.PurchaseInward?.docId}</td>
+                        <td className="text-center border border-gray-300 text-[11px]">
+                          {index + 1}
+                        </td>
+                        <td className="border border-gray-300 text-[11px] px-2 py-1.5">
+                          {item?.PurchaseInward?.docId}
+                        </td>
                         <td className="border border-gray-300 px-2 py-1 text-left text-[11px]">
-                          {getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate)}
+                          {getDateFromDateTimeToDisplay(
+                            item?.PurchaseInward?.docDate,
+                          )}
                         </td>
-                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">{item?.StyleItem?.name}</td>
-                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">{item?.Hsn?.name}</td>
-                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">{item?.Uom?.name}</td>
-                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">{parseFloat(item?.poQty || 0).toFixed(2)}</td>
-                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">{parseFloat(item?.inwardQty || 0).toFixed(2)}</td>
-                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">{parseFloat(item?.alreadyReturnQty || 0).toFixed(2)}</td>
-                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">{parseFloat(item?.balQty || 0).toFixed(2)}</td>
+                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">
+                          {item?.StyleItem?.name}
+                        </td>
+                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">
+                          {item?.Size?.name}
+                        </td>
+
+                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">
+                          {item?.Color?.name}
+                        </td>
+
+                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">
+                          {item?.Uom?.name}
+                        </td>
+                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">
+                          {parseFloat(item?.poQty || 0).toFixed(2)}
+                        </td>
+                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">
+                          {parseFloat(item?.inwardQty || 0).toFixed(2)}
+                        </td>
+                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">
+                          {parseFloat(item?.alreadyReturnQty || 0).toFixed(2)}
+                        </td>
+                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">
+                          {parseFloat(item?.balQty || 0).toFixed(2)}
+                        </td>
                       </tr>
                     ))
                   )}

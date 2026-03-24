@@ -35,6 +35,8 @@ const ReturnItems = ({
     itemGroupId: "",
     sizeId: "",
     colorId: "",
+    alreadyReturnQty: "",
+    inwardQty: "",
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [fillGrid, setFillGrid] = useState(false);
@@ -159,37 +161,38 @@ const ReturnItems = ({
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">
         <div className="flex items-center my-2">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
-
-          <button
-            className="font-bold  bord ml-[1125px] text-sm bg-blue-500 rounded-md text-white px-2"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                setFillGrid(true);
-              }
-            }}
-            onClick={() => {
-              if (!supplierId) {
-                Swal.fire({
-                  icon: "success",
-                  title: ` Choose Supplier`,
-                  showConfirmButton: false,
-                  timer: 2000,
-                });
-              } else if (!returnType) {
-                Swal.fire({
-                  icon: "success",
-                  title: ` Choose Return Type`,
-                  showConfirmButton: false,
-                  timer: 2000,
-                });
-              } else {
-                setFillGrid(true);
-              }
-            }}
-          >
-            Fill Inward Items
-          </button>
+          {!id && (
+            <button
+              className="font-bold  bord ml-[1125px] text-sm bg-blue-500 rounded-md text-white px-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  setFillGrid(true);
+                }
+              }}
+              onClick={() => {
+                if (!supplierId) {
+                  Swal.fire({
+                    icon: "success",
+                    title: ` Choose Supplier`,
+                    showConfirmButton: false,
+                    timer: 2000,
+                  });
+                } else if (!returnType) {
+                  Swal.fire({
+                    icon: "success",
+                    title: ` Choose Return Type`,
+                    showConfirmButton: false,
+                    timer: 2000,
+                  });
+                } else {
+                  setFillGrid(true);
+                }
+              }}
+            >
+              Fill Inward Items
+            </button>
+          )}
         </div>
         <div
           className={`w-full min-h-[160px] max-h-[160px] overflow-y-auto  my-2`}
@@ -492,6 +495,7 @@ const ReturnItems = ({
 
                         if (parseFloat(minQty) < parseFloat(e.target.value)) {
                           e.target.value = "";
+                          handleInputChange("", index, "returnQty");
                           Swal.fire({
                             icon: "warning",
                             title: "Invalid Qty",

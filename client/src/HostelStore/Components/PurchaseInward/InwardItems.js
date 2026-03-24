@@ -37,7 +37,7 @@ const InwardItems = ({
     poId: "",
     alreadyInwardQty: "",
     alreadyReturnQty: "",
-    cancelQty: "",
+    alreadyCancelQty: "",
     balQty: "",
     itemGroupId: "",
     sizeId: "",
@@ -432,19 +432,27 @@ const InwardItems = ({
                           if (e.code === "Minus" || e.code === "NumpadSubtract")
                             e.preventDefault();
                           if (e.key === "Delete") {
-                            handleInputChange("", index, "cancelQty");
+                            handleInputChange("", index, "alreadyCancelQty");
                           }
                         }}
                         min={"0"}
                         type="number"
                         className="text-right rounded py-1 px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
-                        value={row?.cancelQty}
+                        value={row?.alreadyCancelQty}
                         onChange={(e) =>
-                          handleInputChange(e.target.value, index, "cancelQty")
+                          handleInputChange(
+                            e.target.value,
+                            index,
+                            "alreadyCancelQty",
+                          )
                         }
                         onBlur={(e) => {
-                          handleInputChange(e.target.value, index, "cancelQty");
+                          handleInputChange(
+                            e.target.value,
+                            index,
+                            "alreadyCancelQty",
+                          );
                         }}
                         disabled={
                           readOnly ||
@@ -626,16 +634,17 @@ const InwardItems = ({
                         handleInputChange(e.target.value, index, "inwardQty")
                       }
                       onBlur={(e) => {
-                        const minQty = row.balQty + row.alreadyInwardQty;
+                        const minQty = row.balQty;
 
                         if (inwardType !== "Direct Inward") {
                           if (parseFloat(minQty) < parseFloat(e.target.value)) {
                             e.target.value = "";
+                            handleInputChange("", index, "inwardQty");
                             skipFocusRef.current = true; // 🚩 Swal will open, block focus
                             Swal.fire({
                               icon: "warning",
                               title: "Invalid Qty",
-                              text: `Inward Qty cannot be More than ${minQty} Qty!`,
+                              text: `Inward Qty cannot be More than Balance Qty! - ${minQty}`,
                               confirmButtonText: "OK",
                             });
                             return;
@@ -643,7 +652,6 @@ const InwardItems = ({
                         }
 
                         if (e.target.value == 0) {
-                          e.target.value = "";
                           skipFocusRef.current = true; // 🚩 Swal will open, block focus
                           Swal.fire({
                             icon: "warning",
@@ -651,6 +659,7 @@ const InwardItems = ({
                             text: `Minimum Qty is 1`,
                             confirmButtonText: "OK",
                           });
+                          e.target.value = "";
                           return;
                         }
 

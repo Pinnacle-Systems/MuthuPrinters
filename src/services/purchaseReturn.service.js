@@ -10,7 +10,6 @@ import {
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 
-
 async function getNextDocId(
   branchId,
   shortCode,
@@ -158,6 +157,9 @@ async function get(req) {
         },
       },
     },
+    orderBy: {
+      docId: "desc",
+    },
   });
   data = manualFilterSearchData(searchDocDate, data);
   const totalCount = data.length;
@@ -191,6 +193,9 @@ async function getOne(id) {
           poId: item.poId,
           uomId: item.uomId,
           hsnId: item.hsnId,
+          itemGroupId: item.itemGroupId,
+          sizeId: item.sizeId,
+          colorId: item.colorId,
         },
         select: {
           qty: true,
@@ -224,13 +229,40 @@ async function getOne(id) {
           inwardQty: true,
         },
       });
+      const inwardAgg = await prisma.inwardItems.aggregate({
+        where: {
+          styleItemId: item.styleItemId,
+          purchaseInwardId: item.purchaseInwardId,
+          uomId: item.uomId,
+          hsnId: item.hsnId,
+          itemGroupId: item.itemGroupId,
+          sizeId: item.sizeId,
+          colorId: item.colorId,
+        },
+        _sum: { inwardQty: true },
+      });
+      const alreadyInwardQty = inwardAgg?._sum?.inwardQty ?? 0;
+      const returnAgg = await prisma.purchaseReturnItems.aggregate({
+        where: {
+          styleItemId: item.styleItemId,
+          purchaseInwardId: item.purchaseInwardId,
+          uomId: item.uomId,
+          hsnId: item.hsnId,
+          itemGroupId: item.itemGroupId,
+          sizeId: item.sizeId,
+          colorId: item.colorId,
+          purchaseInwardReturnId: { not: data.id },
+        },
+        _sum: { returnQty: true },
+      });
+      const alreadyReturnQty = returnAgg?._sum?.returnQty ?? 0;
       return {
         ...item,
-        // balQty: inwardQty.inwardQty - item.returnQty ,
-        balQty: inwardQty.inwardQty - returnQty + item.returnQty,
-        poQty: poQty.qty,
-        inwardQty: inwardQty?.inwardQty || 0,
-        alreadyReturnQty: returnQty,
+        // balQty: inwardQty?.inwardQty - returnQty + item.returnQty,
+        balQty: alreadyInwardQty - alreadyReturnQty,
+        poQty: poQty?.qty,
+        inwardQty: alreadyInwardQty,
+        alreadyReturnQty: alreadyReturnQty,
       };
     }),
   );
@@ -356,6 +388,11 @@ async function createReturnItems(
           : null,
         invNo: invNo ? invNo : null,
         batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+        itemGroupId: stockDetail?.itemGroupId
+          ? parseInt(stockDetail.itemGroupId)
+          : null,
+        sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+        colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
       },
     });
     await tx.stock.create({
@@ -378,6 +415,11 @@ async function createReturnItems(
         // returnType: returnType ? returnType : "",
         invNo: invNo ? invNo : null,
         batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+        itemGroupId: stockDetail?.itemGroupId
+          ? parseInt(stockDetail.itemGroupId)
+          : null,
+        sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+        colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
       },
     });
     return createdItem;
@@ -503,6 +545,11 @@ async function updateReturnGoods(
             : null,
           invNo: invNo ? invNo : null,
           batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+          itemGroupId: stockDetail?.itemGroupId
+            ? parseInt(stockDetail.itemGroupId)
+            : null,
+          sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+          colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
         },
       });
 
@@ -531,6 +578,13 @@ async function updateReturnGoods(
             // returnType: returnType ? returnType : "",
             invNo: invNo ? invNo : null,
             batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+            itemGroupId: stockDetail?.itemGroupId
+              ? parseInt(stockDetail.itemGroupId)
+              : null,
+            sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+            colorId: stockDetail?.colorId
+              ? parseInt(stockDetail.colorId)
+              : null,
           },
         });
       } else {
@@ -555,6 +609,13 @@ async function updateReturnGoods(
             // returnType: returnType ? returnType : "",
             invNo: invNo ? invNo : null,
             batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+            itemGroupId: stockDetail?.itemGroupId
+              ? parseInt(stockDetail.itemGroupId)
+              : null,
+            sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+            colorId: stockDetail?.colorId
+              ? parseInt(stockDetail.colorId)
+              : null,
           },
         });
       }
@@ -579,6 +640,11 @@ async function updateReturnGoods(
             : null,
           invNo: invNo ? invNo : null,
           batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+          itemGroupId: stockDetail?.itemGroupId
+            ? parseInt(stockDetail.itemGroupId)
+            : null,
+          sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+          colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
         },
       });
 
@@ -603,6 +669,11 @@ async function updateReturnGoods(
           // returnType: returnType ? returnType : "",
           invNo: invNo ? invNo : null,
           batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+          itemGroupId: stockDetail?.itemGroupId
+            ? parseInt(stockDetail.itemGroupId)
+            : null,
+          sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
+          colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
         },
       });
 

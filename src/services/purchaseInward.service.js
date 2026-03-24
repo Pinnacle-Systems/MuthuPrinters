@@ -186,6 +186,9 @@ async function get(req) {
         },
       },
     },
+    orderBy: {
+      docId: "desc",
+    },
   });
   totalCount = data.length;
   if (searchDocDate) {
@@ -450,45 +453,59 @@ async function getOne(id) {
   //   });
   const itemsWithQty = await Promise.all(
     data.inwardItems.map(async (item) => {
-      const cancelItems = await prisma.purchaseCancelItems.findMany({
+      const cancelAgg = await prisma.purchaseCancelItems.aggregate({
         where: {
           styleItemId: item.styleItemId,
           poId: item.poId,
           uomId: item.uomId,
           hsnId: item.hsnId,
+          itemGroupId: item.itemGroupId,
+          sizeId: item.sizeId,
+          colorId: item.colorId,
         },
-        select: {
+        _sum: {
           cancelQty: true,
         },
       });
+      const alreadyCancelQty = cancelAgg?._sum?.cancelQty ?? 0;
 
-      const cancelQty = cancelItems.reduce(
-        (sum, item) => sum + (item.cancelQty ?? 0),
-        0,
-      );
-      const inwardItems = await prisma.inwardItems.findMany({
+      const inwardAgg = await prisma.inwardItems.aggregate({
         where: {
           styleItemId: item.styleItemId,
           poId: item.poId,
           uomId: item.uomId,
           hsnId: item.hsnId,
+          itemGroupId: item.itemGroupId,
+          sizeId: item.sizeId,
+          colorId: item.colorId,
+          purchaseInwardId: { not: data.id },
         },
-        select: {
-          purchaseInwardId: true,
-          inwardQty: true,
-        },
+        _sum: { inwardQty: true },
       });
 
-      const inwardQty = inwardItems.reduce(
-        (sum, item) => sum + (item.inwardQty ?? 0),
-        0,
-      );
+      const alreadyInwardQty = inwardAgg?._sum?.inwardQty ?? 0;
+
+      const returnAgg = await prisma.purchaseReturnItems.aggregate({
+        where: {
+          styleItemId: item.styleItemId,
+          uomId: item.uomId,
+          hsnId: item.hsnId,
+          itemGroupId: item.itemGroupId,
+          sizeId: item.sizeId,
+          colorId: item.colorId,
+          purchaseInwardId:  data.id,
+        },
+        _sum: { returnQty: true },
+      });
+
+      const alreadyReturnQty = returnAgg?._sum?.returnQty ?? 0;
+
       return {
         ...item,
-        cancelQty,
-        alreadyInwardQty: item.inwardQty,
-        balQty: item.poQty - (inwardQty + cancelQty),
-        // balQty: item.poQty - (inwardQty + cancelQty) + item.inwardQty,
+        alreadyCancelQty,
+        alreadyInwardQty,
+        alreadyReturnQty,
+        balQty: item.poQty - (alreadyInwardQty + alreadyCancelQty),
       };
     }),
   );
@@ -1277,13 +1294,13 @@ async function getPurchaseDetailStock(req) {
 function manualFilterSearchDataPurchaseInwardItems(
   searchDocDate,
   searchDcDate,
-  searchInwardType,
+  returnType,
   data,
 ) {
-  const inwardTypeToSearch =
-    searchInwardType === "General Return"
-      ? "General Purchase Inward"
-      : "Order Purchase Inward";
+  const returnTypeToSearch =
+    returnType === "General Return"
+      ? ["Direct Inward"]
+      : ["Order Purchase Inward", "General Purchase Inward"];
 
   return data.filter(
     (item) =>
@@ -1297,8 +1314,8 @@ function manualFilterSearchDataPurchaseInwardItems(
             searchDcDate,
           )
         : true) &&
-      (inwardTypeToSearch
-        ? item.PurchaseInward.inwardType === inwardTypeToSearch
+      (returnTypeToSearch
+        ? returnTypeToSearch.includes(item.PurchaseInward.inwardType) // ✅ Check against array
         : true),
   );
 }
@@ -1348,6 +1365,21 @@ async function getPurInwardItemById(id) {
           name: true,
         },
       },
+      Itemgroup: {
+        select: {
+          name: true,
+        },
+      },
+      Size: {
+        select: {
+          name: true,
+        },
+      },
+      Color: {
+        select: {
+          name: true,
+        },
+      },
     },
   });
   if (!data) return NoRecordFound("Purchase Inward");
@@ -1390,7 +1422,7 @@ async function getPurInwardItemById(id) {
     statusCode: 0,
     data: {
       ...data,
-      poQty: itemWithPoQty.qty,
+      poQty: itemWithPoQty?.qty ?? 0,
       alreadyReturnQty: returnQty,
       // balQty: totalStkQty._sum.qty,
       balQty: data.inwardQty - returnQty,
@@ -1407,8 +1439,8 @@ async function getPurchaseInwardItems(req) {
     dataPerPage,
     searchDocId,
     searchDocDate,
-    searchInwardType,
     searchDcDate,
+    returnType,
   } = req.query;
 
   let data;
@@ -1445,7 +1477,7 @@ async function getPurchaseInwardItems(req) {
     data = manualFilterSearchDataPurchaseInwardItems(
       searchDocDate,
       searchDcDate,
-      searchInwardType,
+      returnType,
       data,
     );
     console.log(data, "data");

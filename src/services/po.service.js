@@ -788,9 +788,7 @@ function manualFilterSearchDataPoItems(
   poType,
   data,
 ) {
-  const inwardTypeKey = poType
-    ? poType.split(" ")[0].toUpperCase()
-    : "";
+  const inwardTypeKey = poType ? poType.split(" ")[0].toUpperCase() : "";
   return data.filter(
     (item) =>
       (searchDocDate
@@ -827,7 +825,6 @@ async function getAllDataPoItems(data) {
       item.quoteVersion === maxVersionByPo[item.poId] && item.balQty > 0,
   );
 
-  console.log(finalResult, "finalResult");
   return finalResult;
 }
 
@@ -852,6 +849,9 @@ async function getPoItemById(id) {
       poId: data.poId,
       uomId: data.uomId,
       hsnId: data.hsnId,
+      itemGroupId: data.itemGroupId,
+      sizeId: data.sizeId,
+      colorId: data.colorId,
     },
     select: {
       purchaseInwardId: true,
@@ -870,6 +870,9 @@ async function getPoItemById(id) {
       poId: data.poId,
       uomId: data.uomId,
       hsnId: data.hsnId,
+      itemGroupId: data.itemGroupId,
+      sizeId: data.sizeId,
+      colorId: data.colorId,
     },
     select: {
       cancelQty: true,
@@ -893,6 +896,9 @@ async function getPoItemById(id) {
         uomId: data.uomId,
         hsnId: data.hsnId,
         purchaseInwardId: { in: inwardIds },
+        itemGroupId: data.itemGroupId,
+        sizeId: data.sizeId,
+        colorId: data.colorId,
       },
       _sum: { returnQty: true },
     });
@@ -900,23 +906,12 @@ async function getPoItemById(id) {
     returnQty = returnAgg._sum.returnQty ?? 0;
   }
 
-  // 3️⃣ Stock balance
-  const totalStkQty = await prisma.stock.aggregate({
-    where: {
-      styleItemId: data.styleItemId,
-      uomId: data.uomId,
-      hsnId: data.hsnId,
-      invNo: data.invNo,
-    },
-    _sum: { qty: true },
-  });
-
   return {
     statusCode: 0,
     data: {
       ...data,
       poQty: data.qty,
-      cancelQty,
+      alreadyCancelQty: cancelQty,
       alreadyInwardQty: inwardQty,
       alreadyReturnQty: returnQty,
       balQty: data.qty - (inwardQty + cancelQty),
@@ -937,7 +932,7 @@ async function getPoItems(req) {
     searchDocDate,
     searchInwardType,
     searchDueDate,
-    poType
+    poType,
   } = req.query;
 
   let data;

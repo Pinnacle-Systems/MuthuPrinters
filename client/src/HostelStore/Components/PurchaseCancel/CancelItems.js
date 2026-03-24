@@ -58,6 +58,7 @@ const CancelItems = ({
       itemGroupId: "",
       sizeId: "",
       colorId: "",
+      alreadyCancelQty: "",
     };
     setCancelItems([...cancelItems, newRow]);
   };
@@ -168,30 +169,31 @@ const CancelItems = ({
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">
         <div className="flex items-center my-2">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
-
-          <button
-            className="font-bold  bord ml-[1230px] text-sm bg-blue-500 rounded-md text-white px-2"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                setFillGrid(true);
-              }
-            }}
-            onClick={() => {
-              if (!supplierId) {
-                Swal.fire({
-                  icon: "success",
-                  title: ` Choose Supplier`,
-                  showConfirmButton: false,
-                  timer: 2000,
-                });
-              } else {
-                setFillGrid(true);
-              }
-            }}
-          >
-            Fill Inward Items
-          </button>
+          {!id && (
+            <button
+              className="font-bold  bord ml-[1210px] text-sm bg-blue-500 rounded-md text-white px-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  setFillGrid(true);
+                }
+              }}
+              onClick={() => {
+                if (!supplierId) {
+                  Swal.fire({
+                    icon: "success",
+                    title: ` Choose Supplier`,
+                    showConfirmButton: false,
+                    timer: 2000,
+                  });
+                } else {
+                  setFillGrid(true);
+                }
+              }}
+            >
+              Fill Items
+            </button>
+          )}
         </div>
         <div
           className={`w-full min-h-[160px] max-h-[160px] overflow-y-auto  my-2`}
@@ -200,7 +202,7 @@ const CancelItems = ({
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
               <tr>
                 <th
-                  className={`w-12 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-10 px-4 py-2 text-center font-medium text-[13px]`}
                 >
                   S.No
                 </th>
@@ -210,12 +212,12 @@ const CancelItems = ({
                   PO No
                 </th>
                 <th
-                  className={`w-96 px-2 py-2 text-center font-medium text-[13px]`}
+                  className={`w-64 px-2 py-2 text-center font-medium text-[13px]`}
                 >
                   Description of Goods
                 </th>
                 <th
-                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-20 px-4 py-2 text-center font-medium text-[13px]`}
                 >
                   Size
                 </th>
@@ -233,6 +235,11 @@ const CancelItems = ({
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
                   PO Qty
+                </th>
+                <th
+                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                >
+                  Already Cancel Qty
                 </th>
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
@@ -270,10 +277,10 @@ const CancelItems = ({
                   <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
                     {index + 1}
                   </td>
-                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-center">
+                  <td className="border-blue-gray-200 text-[11px] border text-left border-gray-300 py-0.5">
                     <input
                       min={"0"}
-                      className="text-center rounded py-1 px-1 w-full table-data-input"
+                      className=" rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
                       value={row?.poDocId}
                       disabled={true}
@@ -403,6 +410,37 @@ const CancelItems = ({
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
                           e.preventDefault();
                         if (e.key === "Delete") {
+                          handleInputChange("", index, "alreadyCancelQty");
+                        }
+                      }}
+                      min={"0"}
+                      type="number"
+                      className="text-right rounded py-1 px-1 w-full table-data-input"
+                      onFocus={(e) => e.target.select()}
+                      value={row?.alreadyCancelQty}
+                      onChange={(e) =>
+                        handleInputChange(
+                          e.target.value,
+                          index,
+                          "alreadyCancelQty",
+                        )
+                      }
+                      onBlur={(e) => {
+                        handleInputChange(
+                          e.target.value,
+                          index,
+                          "alreadyCancelQty",
+                        );
+                      }}
+                      disabled={readOnly || (row.stockQty ?? 0) > 0}
+                    />
+                  </td>
+                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <input
+                      onKeyDown={(e) => {
+                        if (e.code === "Minus" || e.code === "NumpadSubtract")
+                          e.preventDefault();
+                        if (e.key === "Delete") {
                           handleInputChange("", index, "alreadyInwardQty");
                         }
                       }}
@@ -465,23 +503,19 @@ const CancelItems = ({
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
                           e.preventDefault();
                         if (e.key === "Delete") {
-                          handleInputChange("", index, "balQtyCancel");
+                          handleInputChange("", index, "balQty");
                         }
                       }}
                       min={"0"}
                       type="number"
                       className="text-right rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.balQtyCancel}
+                      value={row?.balQty}
                       onChange={(e) =>
-                        handleInputChange(e.target.value, index, "balQtyCancel")
+                        handleInputChange(e.target.value, index, "balQty")
                       }
                       onBlur={(e) => {
-                        handleInputChange(
-                          e.target.value,
-                          index,
-                          "balQtyCancel",
-                        );
+                        handleInputChange(e.target.value, index, "balQty");
                       }}
                       disabled={true}
                     />
@@ -516,10 +550,11 @@ const CancelItems = ({
                         handleInputChange(e.target.value, index, "cancelQty")
                       }
                       onBlur={(e) => {
-                        const minQty = row.balQtyCancel;
+                        const minQty = row.balQty;
 
                         if (parseFloat(minQty) < parseFloat(e.target.value)) {
                           e.target.value = "";
+                          handleInputChange("", index, "cancelQty");
                           Swal.fire({
                             icon: "warning",
                             title: "Invalid Qty",
@@ -576,6 +611,14 @@ const CancelItems = ({
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {cancelItems
                     ?.reduce((sum, row) => sum + (Number(row.poQty) || 0), 0)
+                    .toFixed(2)}
+                </td>
+                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                  {cancelItems
+                    ?.reduce(
+                      (sum, row) => sum + (Number(row.alreadyCancelQty) || 0),
+                      0,
+                    )
                     .toFixed(2)}
                 </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">

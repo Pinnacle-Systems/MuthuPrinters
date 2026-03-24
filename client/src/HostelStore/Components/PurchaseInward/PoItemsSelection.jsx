@@ -1,8 +1,8 @@
 import { getDateFromDateTimeToDisplay } from "../../../Utils/helper";
 
 const PurchaseInwardItemsSelection = ({
-  returnItems = [],
-  setReturnItems,
+  inwardItems = [],
+  setInwardItems,
   onClose,
   tempItems = [],
   searchDocId,
@@ -12,31 +12,51 @@ const PurchaseInwardItemsSelection = ({
 }) => {
 
   const EMPTY_ROW = {
-    styleItemId: "", uomId: "", hsnId: "",
-    poQty: "", balQty: "", purchaseInwardId: "",
+    styleItemId: "",
+    hsnId: "",
+    uomId: "",
+    inwardQty: "",
+    poQty: "",
+    poId: "",
+    alreadyInwardQty: "",
+    alreadyReturnQty: "",
+    alreadyCancelQty: "",
+    balQty: "",
+    itemGroupId: "",
+    sizeId: "",
+    colorId: "",
   };
 
   // ─── Selection Logic ──────────────────────────────────────────────────────
 
   function isItemAdded(id) {
-    return (returnItems || []).findIndex(
+    return (inwardItems || []).findIndex(
       (r) => parseInt(r?.id) === parseInt(id)
     ) !== -1;
   }
 
   function addItem(item) {
-    setReturnItems((prev) => {
+    setInwardItems((prev) => {
       let newItems = structuredClone(prev);
+      const alreadyExists = newItems.some(
+        (v) => parseInt(v.id) === parseInt(item.id),
+      );
+      if (alreadyExists) return prev;
       const newRow = {
         ...item,
-        styleItemId:      item.styleItemId      ?? "",
-        uomId:            item.uomId            ?? "",
-        hsnId:            item.hsnId            ?? "",
-        poQty:            item.poQty            ?? "",
-        balQty:           item.balQty           ?? "",
-        inwardQty:        item.inwardQty        ?? "",
+        styleItemId: item.styleItemId ?? "",
+        uomId: item.uomId ?? "",
+        hsnId: item.hsnId ?? "",
+        poQty: item.poQty ?? "",
+        poId: item.poId ?? "",
+        alreadyCancelQty: item?.alreadyCancelQty ?? "",
+        balQty: item.balQty ?? "",
+        alreadyInwardQty: item.alreadyInwardQty ?? "",
         alreadyReturnQty: item.alreadyReturnQty ?? "",
         purchaseInwardId: item.purchaseInwardId ?? "",
+        sizeId: item.sizeId ?? "",
+        colorId: item.colorId ?? "",
+        itemGroupId: item.itemGroupId ?? "",
       };
 
       const emptyIndex = newItems.findIndex(
@@ -54,7 +74,7 @@ const PurchaseInwardItemsSelection = ({
   }
 
   function removeItem(id) {
-    setReturnItems((prev) => {
+    setInwardItems((prev) => {
       let updated = prev.filter(
         (r) => String(r.id) !== String(id)
       );
@@ -71,22 +91,33 @@ const PurchaseInwardItemsSelection = ({
     }
   }
 
-  function handleSelectAllChange(value) {
+  function handleSelectAllChange(value, inwardItems) {
     if (value) {
-      (tempItems || []).forEach((item) => {
-        if (!isItemAdded(item.id)) addItem(item);
-      });
+      inwardItems?.forEach((item) => addItem(item));
     } else {
-      (tempItems || []).forEach((item) => removeItem(item.id));
+      inwardItems?.forEach((item) => removeItem(item.id));
     }
   }
 
-  function getSelectAll() {
-    return (tempItems || []).length > 0 &&
-      (tempItems || []).every((item) => isItemAdded(item.id));
+  function getSelectAll(inwardItems) {
+    return inwardItems?.every((item) => isItemAddedd(item.id));
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  function handleChangee(id, obj) {
+    if (isItemAddedd(id)) {
+      removeItem(id);
+    } else {
+      addItem(obj);
+    }
+  }
+
+  function isItemAddedd(id) {
+    return (
+      (inwardItems || [])?.findIndex(
+        (item) => parseInt(item?.id) === parseInt(id),
+      ) !== -1
+    );
+  }
 
   return (
     <div className="h-full flex flex-col bg-[#f1f1f0]">
@@ -94,7 +125,7 @@ const PurchaseInwardItemsSelection = ({
       {/* HEADER */}
       <div className="border-b py-2 px-4 mx-3 flex justify-between items-center sticky top-0 z-10 bg-white mt-3">
         <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
-          Purchase Inward Items
+          Purchase Order Items
         </h2>
         <button
           type="button"
@@ -111,8 +142,8 @@ const PurchaseInwardItemsSelection = ({
         <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
             <div className="relative w-full max-h-[420px] overflow-y-auto py-1">
-              <table className="w-full border-collapse table-fixed">
-                <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
+              <table className="w-full text-xs border border-gray-200">
+                <thead className="bg-gray-200 text-gray-800">
                   <tr>
                     <th className="px-2 py-1 w-10 border border-gray-300">
                       <div className="flex flex-col items-center">
@@ -120,81 +151,146 @@ const PurchaseInwardItemsSelection = ({
                         <input
                           type="checkbox"
                           className="cursor-pointer"
-                          onChange={(e) => handleSelectAllChange(e.target.checked)}
-                          checked={getSelectAll()}
+                          onChange={(e) =>
+                            handleSelectAllChange(
+                              e.target.checked,
+                              tempItems ? tempItems : [],
+                            )
+                          }
+                          checked={getSelectAll(tempItems ? tempItems : [])}
                         />
                       </div>
                     </th>
                     <th className="border border-gray-300 px-2 py-1 text-center text-xs w-10">S No</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-24">
-                      <label>Inward No</label>
+                    {/* <th className="px-4 py-1.5 border border-gray-300 text-center text-xs w-36">Po Type</th> */}
+                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-20">
+                      <label>Po No</label>
                       <input
                         type="text"
-                        className="text-black h-6 focus:outline-none border border-gray-400 rounded-lg w-full mt-0.5"
+                        className="text-black h-6 focus:outline-none border  border-gray-400 rounded-lg w-full"
                         placeholder="Search"
                         onFocus={(e) => e.target.select()}
                         value={searchDocId}
-                        onChange={(e) => setSearchDocId(e.target.value)}
+                        onChange={(e) => {
+                          setSearchDocId(e.target.value);
+                        }}
                       />
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-24">
-                      <label>Inward Date</label>
+                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-20">
+                      <label>Po Date</label>
                       <input
                         type="text"
-                        className="text-black h-6 focus:outline-none border border-gray-400 rounded-lg w-full mt-0.5"
+                        className="text-black h-6 focus:outline-none border  border-gray-400 rounded-lg w-full"
                         placeholder="Search"
                         value={searchDocDate}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => setSearchDocDate(e.target.value)}
+                        onChange={(e) => {
+                          setSearchDocDate(e.target.value);
+                        }}
+                        onFocus={(e) => { e.target.select() }}
+
                       />
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-56">Description of Goods</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-28">HSN</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16">UOM</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 text-right">PO Qty</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 text-right">Inward Qty</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-24 text-right">Already Return Qty</th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 text-right">Balance Qty</th>
+
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-56">
+                      <label>Discription of Goods</label>
+
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-12">
+                      Size
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-24">
+                      Color
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-14">
+                      UOM
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
+                    PO Qty
+
+
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
+                      Cancel Qty
+
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
+                      Already Inward Qty
+
+
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
+                      <label>Already Return Qty</label></th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
+                      <label>Balance Qty</label></th>
+
+
+
+
                   </tr>
                 </thead>
 
                 <tbody>
-                  {(tempItems || []).length === 0 ? (
+                  {tempItems?.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="px-4 py-4 text-center text-gray-500">
+                      <td colSpan={9} className="px-4 py-4 text-center text-gray-500">
                         No data found
                       </td>
                     </tr>
-                  ) : (
-                    (tempItems || []).map((item, index) => (
-                      <tr
-                        key={item.id ?? index}
-                        className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border-b cursor-pointer hover:bg-gray-50`}
-                        onClick={() => handleChange(item?.id, item)}
-                      >
-                        <td className="text-center py-2 border border-gray-300">
-                          <input
-                            type="checkbox"
-                            className="cursor-pointer"
-                            checked={isItemAdded(item.id)}
-                            readOnly
-                          />
-                        </td>
-                        <td className="text-center border border-gray-300 text-[11px]">{index + 1}</td>
-                        <td className="border border-gray-300 text-[11px] px-2 py-1.5">{item?.PurchaseInward?.docId}</td>
-                        <td className="border border-gray-300 px-2 py-1 text-left text-[11px]">
-                          {getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate)}
-                        </td>
-                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">{item?.StyleItem?.name}</td>
-                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">{item?.Hsn?.name}</td>
-                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">{item?.Uom?.name}</td>
-                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">{parseFloat(item?.poQty || 0).toFixed(2)}</td>
-                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">{parseFloat(item?.inwardQty || 0).toFixed(2)}</td>
-                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">{parseFloat(item?.alreadyReturnQty || 0).toFixed(2)}</td>
-                        <td className="border border-gray-300 text-[11px] text-right py-1.5 px-2">{parseFloat(item?.balQty || 0).toFixed(2)}</td>
-                      </tr>
-                    ))
-                  )}
+                  ) : (tempItems || []).map((item, index) => (
+                    <tr
+                      key={index}
+                      className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"
+                        } border-b cursor-pointer hover:bg-gray-50`}
+                      onClick={() => handleChangee(item?.id, item)}
+                    >
+                      <td className="text-center py-2 border border-gray-300">
+                        <input
+                          type="checkbox"
+                          className="cursor-pointer"
+                          checked={isItemAddedd(item.id)}
+                          readOnly
+                        />
+                      </td>
+
+                      <td className="text-center border border-gray-300">{index + 1}</td>
+                      <td className=" border border-gray-300 text-[11px] py-1.5 px-2">
+                        {item?.Po?.docId}
+                      </td>
+                      <td className=" border border-gray-300 px-2 py-1 text-left text-xs">
+                        {getDateFromDateTimeToDisplay(item?.Po?.docDate)}
+                      </td>
+
+                      <td className=" border border-gray-300 text-[11px]  py-1.5 px-2">
+                        {item?.StyleItem?.name}
+                      </td>
+                      <td className="border border-gray-300 text-[11px] py-1.5 px-2">
+                        {item?.Size?.name}
+                      </td>
+
+                      <td className="border border-gray-300 text-[11px] py-1.5 px-2">
+                        {item?.Color?.name}
+                      </td>
+                      <td className="border border-gray-300 text-[11px] py-1.5 px-2">
+                        {item?.Uom?.name}
+                      </td>
+                      <td className=" border border-gray-300 text-[11px] text-right   py-1.5 px-2">
+                        {parseFloat(item?.qty || 0).toFixed(2)}
+                      </td>
+                      <td className=" border border-gray-300 text-[11px] text-right  py-1.5 px-2">
+                        {parseFloat(item?.alreadyCancelQty || 0).toFixed(2)}
+                      </td>
+                      <td className=" border border-gray-300 text-[11px] text-right py-1.5 px-2">
+                        {parseFloat(item?.alreadyInwardQty || 0).toFixed(2)}
+                      </td>
+                      <td className=" border border-gray-300 text-[11px] text-right py-1.5 px-2">
+                        {parseFloat(item?.alreadyReturnQty || 0).toFixed(2)}
+                      </td>
+                      <td className=" border border-gray-300 text-[11px] text-right py-1.5 px-2">
+                        {parseFloat(item?.balQty || 0).toFixed(2)}
+                      </td>
+
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

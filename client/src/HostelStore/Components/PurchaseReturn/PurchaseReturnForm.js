@@ -1,7 +1,6 @@
-import { FaEye, FaFileAlt } from "react-icons/fa";
+import { FaFileAlt } from "react-icons/fa";
 
 import {
-  DateInput,
   DateInputNew,
   DropdownInput,
   ReusableInput,
@@ -16,29 +15,21 @@ import {
   getCommonParams,
   isGridDatasValid,
 } from "../../../Utils/helper";
-import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 import { toast } from "react-toastify";
 import { FiEdit2, FiSave } from "react-icons/fi";
-import { HiOutlineRefresh, HiX } from "react-icons/hi";
+import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { PDFViewer } from "@react-pdf/renderer";
-import tw from "../../../Utils/tailwind-react-pdf";
-import Modal from "../../../UiComponents/Modal";
-import { Loader } from "../../../Basic/components";
 import { dropDownListObject } from "../../../Utils/contructObject";
-import { useGetBranchByIdQuery } from "../../../redux/services/BranchMasterService";
 import ReturnItems from "./ReturnItems";
 import { useGetLocationMasterQuery } from "../../../redux/services/LocationMasterService";
-import purchaseReturnApi, {
+import {
   useAddPurchaseReturnMutation,
   useGetPurchaseReturnByIdQuery,
   useUpdatePurchaseReturnMutation,
 } from "../../../redux/services/PurchaseReturnService";
-import { useDispatch } from "react-redux";
-import purchaseInwardEntryApi, {
-  useGetPurInwardItemsQuery,
-} from "../../../redux/uniformService/PurchaseInwardEntry";
-import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
+import { useGetPurInwardItemsQuery } from "../../../redux/uniformService/PurchaseInwardEntry";
+import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 
 const PurchaseReturnForm = ({
   onClose,
@@ -96,7 +87,6 @@ const PurchaseReturnForm = ({
 
   const [addData] = useAddPurchaseReturnMutation();
   const [updateData] = useUpdatePurchaseReturnMutation();
-  const dispatch = useDispatch();
 
   const searchFields = {
     searchDocId,
@@ -111,16 +101,20 @@ const PurchaseReturnForm = ({
     data: purInwardItemsData,
     isLoading: isPurInwardItemsLoading,
     isFetching: isPurInwardItemsFetching,
-  } = useGetPurInwardItemsQuery({
-    params: {
-      branchId,
-      supplierId,
-      ...searchFields,
-      pagination: true,
-      dataPerPage,
-      pageNumber: currentPageNumber,
+  } = useGetPurInwardItemsQuery(
+    {
+      params: {
+        branchId,
+        supplierId,
+        ...searchFields,
+        pagination: true,
+        dataPerPage,
+        pageNumber: currentPageNumber,
+        returnType,
+      },
     },
-  });
+    { skip: !supplierId },
+  );
 
   const syncFormWithDbItems = useCallback(
     (data) => {
@@ -211,7 +205,7 @@ const PurchaseReturnForm = ({
           showConfirmButton: false,
           timer: 2000,
         });
-
+        invalidatePurchaseModule();
         if (returnData.statusCode === 0) {
           if (nextProcess == "new") {
             setId(0);
@@ -270,8 +264,8 @@ const PurchaseReturnForm = ({
       { condition: !data.locationId, title: "Location is required!" },
       { condition: !data.storeId, title: "Location is required!" },
       { condition: !data.supplierId, title: "Supplier is required!" },
-      { condition: !data.dcDate, title: "DC Date is required!" },
       { condition: !data.dcNo, title: "DC No is required!" },
+      { condition: !data.dcDate, title: "DC Date is required!" },
       {
         condition: filledItems.length === 0,
         title: "Please add at least one item!",
@@ -335,11 +329,6 @@ const PurchaseReturnForm = ({
     } else {
       handleSubmitCustom(addData, data, "Added", nextProcess);
     }
-    dispatch(
-      purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
-    );
-    dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
-    dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
   };
 
   const dateRef = useRef(null);

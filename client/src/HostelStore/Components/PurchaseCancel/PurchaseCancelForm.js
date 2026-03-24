@@ -20,18 +20,15 @@ import { FiEdit2, FiSave } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { dropDownListObject } from "../../../Utils/contructObject";
-import { useGetBranchByIdQuery } from "../../../redux/services/BranchMasterService";
 import CancelItems from "./CancelItems";
 import { useGetLocationMasterQuery } from "../../../redux/services/LocationMasterService";
-import purchaseCancelApi, {
+import {
   useAddPurchaseCancelMutation,
   useGetPurchaseCancelByIdQuery,
   useUpdatePurchaseCancelMutation,
 } from "../../../redux/uniformService/PurchaseCancelService";
-import { useDispatch } from "react-redux";
-import purchaseInwardEntryApi from "../../../redux/uniformService/PurchaseInwardEntry";
-import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
 import { useGetPoItemsQuery } from "../../../redux/uniformService/PoServices";
+import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 
 const PurchaseCancelForm = ({
   onClose,
@@ -91,7 +88,6 @@ const PurchaseCancelForm = ({
 
   const [addData] = useAddPurchaseCancelMutation();
   const [updateData] = useUpdatePurchaseCancelMutation();
-  const dispatch = useDispatch();
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -195,11 +191,7 @@ const PurchaseCancelForm = ({
           showConfirmButton: false,
           timer: 2000,
         });
-        dispatch(
-          purchaseInwardEntryApi.util.invalidateTags(["purchaseInwardEntry"]),
-        );
-        dispatch(purchaseReturnApi.util.invalidateTags(["PurchaseReturn"]));
-        dispatch(purchaseCancelApi.util.invalidateTags(["PurchaseCancel"]));
+        invalidatePurchaseModule();
         if (returnData.statusCode === 0) {
           if (nextProcess == "new") {
             setId(0);
