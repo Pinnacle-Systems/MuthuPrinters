@@ -225,11 +225,14 @@ const ReturnItems = ({
                 >
                   UOM
                 </th>
-                <th
-                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                >
-                  Order Qty
-                </th>
+                {returnType !== "General Return" && (
+                  <th
+                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                  >
+                    Order Qty
+                  </th>
+                )}
+
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
@@ -361,29 +364,32 @@ const ReturnItems = ({
                       }}
                     />
                   </td>
-                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
-                    <input
-                      onKeyDown={(e) => {
-                        if (e.code === "Minus" || e.code === "NumpadSubtract")
-                          e.preventDefault();
-                        if (e.key === "Delete") {
-                          handleInputChange("", index, "poQty");
+                  {returnType !== "General Return" && (
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                      <input
+                        onKeyDown={(e) => {
+                          if (e.code === "Minus" || e.code === "NumpadSubtract")
+                            e.preventDefault();
+                          if (e.key === "Delete") {
+                            handleInputChange("", index, "poQty");
+                          }
+                        }}
+                        min={"0"}
+                        type="number"
+                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        onFocus={(e) => e.target.select()}
+                        value={row?.poQty}
+                        onChange={(e) =>
+                          handleInputChange(e.target.value, index, "poQty")
                         }
-                      }}
-                      min={"0"}
-                      type="number"
-                      className="text-right rounded py-1 px-1 w-full table-data-input"
-                      onFocus={(e) => e.target.select()}
-                      value={row?.poQty}
-                      onChange={(e) =>
-                        handleInputChange(e.target.value, index, "poQty")
-                      }
-                      onBlur={(e) => {
-                        handleInputChange(e.target.value, index, "poQty");
-                      }}
-                      disabled={true}
-                    />
-                  </td>
+                        onBlur={(e) => {
+                          handleInputChange(e.target.value, index, "poQty");
+                        }}
+                        disabled={true}
+                      />
+                    </td>
+                  )}
+
                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
                     <input
                       onKeyDown={(e) => {
@@ -549,11 +555,13 @@ const ReturnItems = ({
                 >
                   Total
                 </td>
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
-                  {returnItems
-                    ?.reduce((sum, row) => sum + (Number(row.poQty) || 0), 0)
-                    .toFixed(2)}
-                </td>
+                {returnType !== "General Return" && (
+                  <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                    {returnItems
+                      ?.reduce((sum, row) => sum + (Number(row.poQty) || 0), 0)
+                      .toFixed(2)}
+                  </td>
+                )}
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {returnItems
                     ?.reduce(

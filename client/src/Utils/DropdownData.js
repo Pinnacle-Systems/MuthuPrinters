@@ -88,6 +88,12 @@ export const inwardTypes = [
   { show: "Direct Inward", value: "Direct Inward" },
 ];
 
+export const billTypes = [
+  { show: "General Purchase Bill", value: "General Purchase Inward" },
+  { show: "Order Purchase Bill", value: "Order Purchase Inward" },
+  { show: "Direct Inward Bill", value: "Direct Inward" },
+];
+
 export const returnTypes = [
   { show: "General Return", value: "General Return" },
   { show: "Purchase Return", value: "Purchase Return" },

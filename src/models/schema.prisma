@@ -1076,13 +1076,14 @@ model TaxTerm {
 }
 
 model TaxTemplate {
-  id                 Int                  @id @default(autoincrement())
-  name               String
-  Company            Company              @relation(fields: [companyId], references: [id])
-  companyId          Int
-  active             Boolean              @default(true)
-  TaxTemplateDetails TaxTemplateDetails[]
-  pos                Po[]
+  id                  Int                  @id @default(autoincrement())
+  name                String
+  Company             Company              @relation(fields: [companyId], references: [id])
+  companyId           Int
+  active              Boolean              @default(true)
+  TaxTemplateDetails  TaxTemplateDetails[]
+  pos                 Po[]
+  purchaseBillEntries PurchaseBillEntry[]
 }
 
 model TaxTemplateDetails {
@@ -1434,6 +1435,11 @@ model PurchaseBillEntry {
   user                   User?                    @relation(fields: [userId], references: [id])
   userId                 Int?
   netBillValue           Float?
+  billType               String?
+  TaxTemplate            TaxTemplate?             @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
+  taxTemplateId          Int?
+  discountType           String?
+  discountValue          Float?
   purchaseBillEntryItems PurchaseBillEntryItems[]
   purchaseLedgers        PurchaseLedger[]
 }
@@ -1462,6 +1468,9 @@ model PurchaseBillEntryItems {
   sizeId              Int?
   Color               Color?             @relation(fields: [colorId], references: [id])
   colorId             Int?
+  discountType        String?
+  discountValue       Float?
+  taxPercent          Float?
 }
 
 model PurchaseLedger {

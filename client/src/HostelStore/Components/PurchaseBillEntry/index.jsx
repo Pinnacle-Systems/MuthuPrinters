@@ -10,6 +10,7 @@ import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.
 import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices";
 import Swal from "sweetalert2";
 import { useDeletePurchaseBillEntryMutation, } from "../../../redux/uniformService/PurchaseBillEntryService.js";
+import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -80,7 +81,8 @@ export default function Form() {
   const { data: uomList } = useGetUnitOfMeasurementMasterQuery({ params });
   const { data: hsnList } =
     useGetHsnMasterQuery({ params });
-
+const { data: taxTypeList, isLoading: isTaxLoading, isFetching: isTaxfetching } =
+    useGetTaxTemplateQuery({ params: { ...params } });
   return (
     <>
       <div
@@ -135,6 +137,7 @@ export default function Form() {
           styleItemList={styleItemList}
           hsnList={hsnList}
           onNew={onNew}
+          taxTypeList={taxTypeList}
         />
       )}
     </>

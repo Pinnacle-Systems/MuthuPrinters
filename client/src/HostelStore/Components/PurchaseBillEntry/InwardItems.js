@@ -1,40 +1,51 @@
 import { useEffect, useState } from "react";
-
-import FxSelect from "../../../Inputs";
-import customInput from "../../../Inputs";
 import Swal from "sweetalert2";
 import Modal from "../../../UiComponents/Modal";
-import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
 import PoItemsSelection from "./PoItemsSelection";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
 import { getDateFromDateTimeToDisplay } from "../../../Utils/helper";
+import { VIEW } from "../../../icons";
+import { toast } from "react-toastify";
+import TaxDetailsFullTemplate from "./TaxDetailsFullTemplate";
 
 const InwardItems = ({
   id,
-  inwardItems, tempItems, setTempItems,
+  inwardItems,
+  tempItems,
+  setTempItems,
   setInwardItems,
   readOnly,
-  params,
-  styleItemList,
-  uomList,
-  hsnList,
   taxTemplateId,
-  inwardType,
+  billType,
   supplierId,
-  branchId, dcNo, invNo
+  branchId,
+  dcNo,
+  invNo,
+  searchDocId,
+  setSearchDocId,
+  searchPIDate,
+  setSearchPIDate,
+  searchInvNo,
+  setSearchInvNo,
+  searchDcNo,
+  setSearchDcNo,
 }) => {
   const EMPTY_ROW = {
     purchaseBillEntryId: "",
     docId: "",
     docdate: "",
     invNo: "",
-    dcNo: "", styleItemId: "",
+    dcNo: "",
+    styleItemId: "",
     hsnId: "",
     uomId: "",
     inwardQty: "",
     poQty: "",
     poId: "",
-
+    price: "",
+    discountType: "",
+    discountValue: "",
+    taxPercent: "",
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -52,7 +63,6 @@ const InwardItems = ({
       inwardQty: "",
       poQty: "",
       poId: "",
-
     };
     setInwardItems([...inwardItems, newRow]);
   };
@@ -94,7 +104,7 @@ const InwardItems = ({
   };
 
   const handleDeleteAllRows = () => {
-    setInwardItems(Array.from({ length: 4 }, () => ({ ...EMPTY_ROW })));
+    setInwardItems(Array.from({ length: 5 }, () => ({ ...EMPTY_ROW })));
   };
 
   const handleRightClick = (event, rowIndex, type) => {
@@ -121,7 +131,7 @@ const InwardItems = ({
   useEffect(() => {
     // If edit mode (id exists)
     if (id && inwardItems?.length > 0) {
-      const requiredRows = 4;
+      const requiredRows = 5;
       const missingRows = requiredRows - inwardItems.length;
 
       if (missingRows > 0) {
@@ -134,10 +144,9 @@ const InwardItems = ({
 
     // If create mode (no id)
     if (!id && (!inwardItems || inwardItems.length === 0)) {
-      setInwardItems(Array.from({ length: 4 }, () => ({ ...EMPTY_ROW })));
+      setInwardItems(Array.from({ length: 5 }, () => ({ ...EMPTY_ROW })));
     }
   }, [id, inwardItems]);
-  console.log(inwardItems, "inwrdsinparent");
 
   return (
     <>
@@ -152,6 +161,7 @@ const InwardItems = ({
           setCurrentSelectedIndex={setCurrentSelectedIndex}
           inwardItems={inwardItems}
           handleInputChange={handleInputChange}
+          id={id}
         />
       </Modal>
       <Modal
@@ -165,84 +175,98 @@ const InwardItems = ({
           inwardItems={inwardItems}
           setInwardItems={setInwardItems}
           branchId={branchId}
-          inwardType={inwardType}
-          dcNo={dcNo} tempItems={tempItems} setTempItems={setTempItems}
+          billType={billType}
+          dcNo={dcNo}
+          tempItems={tempItems}
+          setTempItems={setTempItems}
           invNo={invNo}
           onClose={() => setFillGrid(false)}
-
+          searchDocId={searchDocId}
+          searchPIDate={searchPIDate}
+          searchInvNo={searchInvNo}
+          searchDcNo={searchDcNo}
+          setSearchDocId={setSearchDocId}
+          setSearchPIDate={setSearchPIDate}
+          setSearchInvNo={setSearchInvNo}
+          setSearchDcNo={setSearchDcNo}
         />
       </Modal>
-      <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">
+      <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm min-h-[260px] overflow-auto  w-full">
         <div className="flex items-center my-2">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
-
-          <button
-            className={`font-bold text-slate-700 bord ml-[1080px] text-sm bg-blue-500 rounded rounded-md text-white px-2
+          {!id && (
+            <button
+              className={`font-bold  bord ml-[1220px] text-sm bg-blue-500 rounded-md text-white px-2
               `}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                setFillGrid(true);
-              }
-            }}
-            onClick={() => {
-              if (!supplierId) {
-                Swal.fire({
-                  icon: "warning",
-                  title: ` Choose Supplier`,
-                  showConfirmButton: false,
-                  timer: 2000,
-                });
-              } else {
-                setFillGrid(true);
-              }
-            }}
-            // disabled={id}
-          >
-            Fill Purchase Inward Items
-          </button>
-
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  setFillGrid(true);
+                }
+              }}
+              onClick={() => {
+                if (!supplierId) {
+                  Swal.fire({
+                    icon: "warning",
+                    title: ` Choose Supplier`,
+                    showConfirmButton: false,
+                    timer: 2000,
+                  });
+                } else {
+                  setFillGrid(true);
+                }
+              }}
+              // disabled={id}
+            >
+              Fill Inward Items
+            </button>
+          )}
         </div>
         <div
-          className={`w-full min-h-[180px] max-h-[180px] overflow-y-auto  my-2`}
+          className={`w-full min-h-[200px] max-h-[200px] overflow-y-auto  my-2`}
         >
           <table className=" border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
               <tr>
                 <th
-                  className={`w-12 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-8 px-4 py-2 text-center font-medium text-[13px]`}
                 >
                   S.No
                 </th>
                 <th
-                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-24 px-4 py-2 text-center font-medium text-[13px]`}
                 >
                   PI No
                 </th>
                 <th
-                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-20 px-4 py-2 text-center font-medium text-[13px]`}
                 >
                   PI Date
                 </th>
                 <th
-                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-20 px-4 py-2 text-center font-medium text-[13px]`}
                 >
                   Inv No
                 </th>
                 <th
-                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-20 px-4 py-2 text-center font-medium text-[13px]`}
                 >
                   Dc No
                 </th>
                 <th
-                  className={`w-96 px-2 py-2 text-center font-medium text-[13px]`}
+                  className={`w-64 px-2 py-2 text-center font-medium text-[13px]`}
                 >
                   Description of Goods
                 </th>
                 <th
-                  className={`w-28 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-20 px-4 py-2 text-center font-medium text-[13px]`}
                 >
-                  HSN/SAC
+                  Size
+                </th>
+                <th
+                  className={`w-36 px-4 py-2 text-center font-medium text-[13px]`}
+                >
+                  Color
                 </th>
                 <th
                   className={`w-20 px-4 py-2 text-center font-medium text-[13px] `}
@@ -252,14 +276,23 @@ const InwardItems = ({
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
-                  Price
+                  Inward Qty
                 </th>
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
-                  Inward Qty
+                  Price
                 </th>
-
+                <th
+                  className={`w-28 px-1 py-2 text-center font-medium text-[13px] `}
+                >
+                  Gross Amount
+                </th>
+                <th
+                  className={`w-24 px-1 py-2 text-center font-medium text-[13px] `}
+                >
+                  Tax Details
+                </th>
                 <th
                   className={`w-20 px-1 py-2 text-center font-medium text-[13px] `}
                 >
@@ -271,7 +304,6 @@ const InwardItems = ({
               {(inwardItems ? inwardItems : [])?.map((row, index) => (
                 <tr
                   className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
-
                   key={index}
                 >
                   <td className="w-12 border border-gray-300 text-[11px] py-1.5  text-center p-0.5">
@@ -281,36 +313,71 @@ const InwardItems = ({
                     {row?.PurchaseInward?.docId}
                   </td>
                   <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
-                    {row?.PurchaseInward?.docDate ? getDateFromDateTimeToDisplay(row?.PurchaseInward?.docDate) : ""}
+                    {row?.PurchaseInward?.docDate
+                      ? getDateFromDateTimeToDisplay(
+                          row?.PurchaseInward?.docDate,
+                        )
+                      : ""}
                   </td>
-                  <td className="w-12 border border-gray-300 text-[11px]  text-right pr-1 p-0.5">
+                  <td className="w-12 border border-gray-300 text-[11px]  pr-1 p-0.5">
                     {row?.PurchaseInward?.invNo}
                   </td>
-                  <td className="w-12 border border-gray-300 text-[11px]  text-right  pr-1 p-0.5">
+                  <td className="w-12 border border-gray-300 text-[11px]  pr-1 p-0.5">
                     {row?.PurchaseInward?.dcNo}
                   </td>
                   <td className=" text-[11px] border pl-1 border-gray-300 text-left">
                     {row?.StyleItem?.name}
-
                   </td>
-                  <td className="py-0.5 border text-right pr-1 border-gray-300 text-[11px] ">
-                    {row.Hsn?.name}
-
+                  <td className="py-0.5 border pl-1 border-gray-300 text-[11px] ">
+                    {row.Size?.name}
+                  </td>
+                  <td className="py-0.5 border  pl-1 border-gray-300 text-[11px] ">
+                    {row.Color?.name}
                   </td>
                   <td className="py-0.5 border pl-1  border-gray-300 text-[11px] ">
                     {row.Uom?.name}
                   </td>
                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right pr-1">
-                    {row?.price?.toFixed(2)}
-
-
+                    {row?.inwardQty}
                   </td>
                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right pr-1">
-                    {row?.inwardQty}
-
+                    {row?.price}
                   </td>
-
-
+                  <td className="py-0.5 border border-gray-300 text-[11px]">
+                    <input
+                      type="number"
+                      onFocus={(e) => e.target.select()}
+                      className="text-right rounded py-1 px-1 w-full"
+                      value={
+                        !row.inwardQty || !row.price
+                          ? 0.0
+                          : (
+                              parseFloat(row.inwardQty) * parseFloat(row.price)
+                            ).toFixed(2)
+                      }
+                      disabled={true}
+                    />
+                  </td>
+                  <td className=" py-0.5 border border-gray-300 text-[11px] text-right">
+                    <button
+                      disabled={!row?.StyleItem?.name}
+                      className="text-center rounded py-1 w-20"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          setCurrentSelectedIndex(index);
+                        }
+                      }}
+                      onClick={() => {
+                        if (!taxTemplateId)
+                          return toast.info("Please select Tax Type", {
+                            position: "top-center",
+                          });
+                        setCurrentSelectedIndex(index);
+                      }}
+                    >
+                      {VIEW}
+                    </button>
+                  </td>
                   <td className="w-2 border border-gray-300 bg-transparent">
                     <input
                       onContextMenu={(e) => {
@@ -335,19 +402,9 @@ const InwardItems = ({
               <tr className="bg-gray-50 h-7 font-medium text-gray-800">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium text-[13px] py-0.5"
-                  colSpan={8}
+                  colSpan={9}
                 >
                   Total
-                </td>
-
-
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
-                  {inwardItems
-                    ?.reduce(
-                      (sum, row) => sum + (Number(row?.price) || 0),
-                      0,
-                    )
-                    .toFixed(2)}
                 </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {inwardItems
@@ -357,7 +414,24 @@ const InwardItems = ({
                     )
                     .toFixed(2)}
                 </td>
-                <td className="text-right border border-gray-300"></td>
+                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                  {inwardItems
+                    ?.reduce((sum, row) => sum + (Number(row?.price) || 0), 0)
+                    .toFixed(2)}
+                </td>
+                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                  {inwardItems
+                    ?.reduce((sum, row) => {
+                      const qty = parseFloat(row.inwardQty) || 0;
+                      const price = parseFloat(row.price) || 0;
+                      return sum + qty * price;
+                    }, 0)
+                    .toFixed(2)}
+                </td>
+                <td
+                  className="text-right border border-gray-300"
+                  colSpan={2}
+                ></td>
               </tr>
             </tfoot>
           </table>

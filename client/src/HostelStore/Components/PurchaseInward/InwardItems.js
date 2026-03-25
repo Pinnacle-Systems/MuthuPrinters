@@ -5,6 +5,7 @@ import Modal from "../../../UiComponents/Modal";
 import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
 import PoItemsSelection from "./PoItemsSelection";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
+import { getUniqueArrayBySize } from "../../../Utils/helper";
 
 const InwardItems = ({
   id,
@@ -279,6 +280,13 @@ const InwardItems = ({
                     Balance Qty
                   </th>
                 )}
+                {inwardType === "Direct Inward" && (
+                  <th
+                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                  >
+                    Price
+                  </th>
+                )}
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
@@ -332,7 +340,12 @@ const InwardItems = ({
                       onChange={(val) =>
                         handleInputChange(val, index, "sizeId")
                       }
-                      options={(sizeList?.data || [])
+                      options={getUniqueArrayBySize(
+                        styleItemList?.data,
+                        sizeList?.data,
+                        "sizeId",
+                        row.styleItemId,
+                      )
                         .filter((item) => (id ? true : item.active))
                         .map((item) => ({
                           label: item.name,
@@ -565,33 +578,36 @@ const InwardItems = ({
                       />
                     </td>
                   )}
-                  {/* <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
-                    <input
-                      onKeyDown={(e) => {
-                        if (e.code === "Minus" || e.code === "NumpadSubtract")
-                          e.preventDefault();
-                        if (e.key === "Delete") {
-                          handleInputChange("", index, "price");
+                  {inwardType === "Direct Inward" && (
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                      <input
+                        onKeyDown={(e) => {
+                          if (e.code === "Minus" || e.code === "NumpadSubtract")
+                            e.preventDefault();
+                          if (e.key === "Delete") {
+                            handleInputChange("", index, "price");
+                          }
+                        }}
+                        min={"0"}
+                        type="number"
+                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        onFocus={(e) => e.target.select()}
+                        value={row?.price}
+                        onChange={(e) =>
+                          handleInputChange(e.target.value, index, "price")
                         }
-                      }}
-                      min={"0"}
-                      type="number"
-                      className="text-right rounded py-1 px-1 w-full table-data-input"
-                      onFocus={(e) => e.target.select()}
-                      value={parseFloat(row?.price).toFixed(2)}
-                      onChange={(e) =>
-                        handleInputChange(e.target.value, index, "price")
-                      }
-                      onBlur={(e) => {
-                        handleInputChange(e.target.value, index, "price");
-                      }}
-                      disabled={
-                        readOnly ||
-                        (row.stockQty ?? 0) > 0 ||
-                        inwardType !== "Direct Inward"
-                      }
-                    />
-                  </td> */}
+                        onBlur={(e) => {
+                          handleInputChange(e.target.value, index, "price");
+                        }}
+                        disabled={
+                          readOnly ||
+                          (row.stockQty ?? 0) > 0 ||
+                          inwardType !== "Direct Inward"
+                        }
+                      />
+                    </td>
+                  )}
+
                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
                     <input
                       id={`inwardQty-input-${index}`}
@@ -710,6 +726,17 @@ const InwardItems = ({
                     <td className="border border-gray-300 " colSpan={4}></td>
                   </>
                 )}
+                {inwardType === "Direct Inward" && (
+                  <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                    {inwardItems
+                      ?.reduce(
+                        (sum, row) => sum + (Number(row.price) || 0),
+                        0,
+                      )
+                      .toFixed(2)}
+                  </td>
+                )}
+
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {inwardItems
                     ?.reduce(

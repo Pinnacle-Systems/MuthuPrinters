@@ -1,14 +1,13 @@
 import { FaFileAlt } from "react-icons/fa";
 
 import {
-
   DateInputNew,
-
+  DropdownInput,
   ReusableInput,
   ReusableSearchableInput,
   TextInput,
 } from "../../../Inputs";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
 import {
   findFromList,
@@ -21,7 +20,6 @@ import { FiEdit2, FiSave } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 
-
 import InwardItems from "./InwardItems";
 import purchaseInwardEntryApi, {
   useAddPurchaseBillEntryMutation,
@@ -31,6 +29,13 @@ import purchaseInwardEntryApi, {
 import { useDispatch } from "react-redux";
 import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
 import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
+import { dropDownListObject } from "../../../Utils/contructObject";
+import { set } from "lodash";
+import { billTypes, inwardTypes } from "../../../Utils/DropdownData";
+import { useGetPurchaseInwardEntryForBillByIdQuery } from "../../../redux/uniformService/PurchaseInwardEntry";
+import { calculateTaxWithHSNBreakupAndInsertIntoInwardItems } from "./taxSummary";
+import PoSummary from "../PurchaseOrder/PoSummary";
+import Modal from "../../../UiComponents/Modal";
 
 const PurchaseBillEntryForm = ({
   onClose,
@@ -42,6 +47,7 @@ const PurchaseBillEntryForm = ({
   uomList,
   styleItemList,
   hsnList,
+  taxTypeList,
 }) => {
   const today = new Date();
 
@@ -50,21 +56,26 @@ const PurchaseBillEntryForm = ({
   );
   const [supplierId, setSupplierId] = useState("");
   const [inwardItems, setInwardItems] = useState([]);
-  const [tempItems, setTempItems] = useState([])
+  const [tempItems, setTempItems] = useState([]);
   const [remarks, setRemarks] = useState("");
-  const [inwardType, setInwardType] = useState("General Purchase Inward");
-  const [storeId, setStoreId] = useState("");
+  const [billType, setBillType] = useState("General Purchase Inward");
   const [docId, setDocId] = useState("");
-  const [locationId, setLocationId] = useState("");
   const [dcNo, setDcNo] = useState("");
-  const [dcDate, setDcDate] = useState("");
   const [vehicleNo, setVehicleNo] = useState("");
   const [invNo, setInvNo] = useState("");
-  const [inwardArray, setInwardArray] = useState([])
-  const [netBillValue, setNetBillValue] = useState("")
+  const [netBillValue, setNetBillValue] = useState("");
+  const [taxTemplateId, setTaxTemplateId] = useState("");
   const { userId, finYearId, branchId, companyId } = getCommonParams();
+  const [searchDocId, setSearchDocId] = useState("");
+  const [searchPIDate, setSearchPIDate] = useState("");
+  const [searchInvNo, setSearchInvNo] = useState("");
+  const [searchDcNo, setSearchDcNo] = useState("");
+  const [dataPerPage, setDataPerPage] = useState("10");
+  const [currentPageNumber, setCurrentPageNumber] = useState(1);
   const supplierRef = useRef(null);
-
+  const [discountType, setDiscountType] = useState("Percentage");
+  const [discountValue, setDiscountValue] = useState();
+  const [summary, setSummary] = useState(false);
 
   const {
     data: singleData,
@@ -75,7 +86,33 @@ const PurchaseBillEntryForm = ({
   const [addData] = useAddPurchaseBillEntryMutation();
   const [updateData] = useUpdatePurchaseBillEntryMutation();
   const dispatch = useDispatch();
+  const searchFields = { searchDocId, searchPIDate, searchInvNo, searchDcNo };
 
+  const {
+    data: purchaseInwarddata,
+    isFetching: isSingleInwardFetching,
+    isLoading: isSingleInwardLoading,
+  } = useGetPurchaseInwardEntryForBillByIdQuery(
+    {
+      params: {
+        branchId,
+        supplierId,
+        ...searchFields,
+        pagination: true,
+        dataPerPage,
+        pageNumber: currentPageNumber,
+        billType,
+      },
+    },
+    { skip: !supplierId },
+  );
+
+  const syncFormWithInwardDb = useCallback(
+    (data) => {
+      setTempItems(data);
+    },
+    [supplierId],
+  );
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -85,22 +122,14 @@ const PurchaseBillEntryForm = ({
           ? moment.utc(data?.docDate)?.format("YYYY-MM-DD")
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
-
-      const mappedInwardItems = data?.purchaseBillEntryItems?.map((val) => ({
-        ...val,
-        // docdate: moment.utc(val?.purchaseInward?.docDate).format("DD-MM-YYYY") || "",
-        // styleItemId: val?.StyleItem?.id,
-        // uomId: val?.Uom?.id,
-        // hsnId: val?.Hsn?.id,
-        // price:val?.price?.toFixed(2)
-
-      })) || []
-      console.log(mappedInwardItems, "mappedInwardItems");
-      setNetBillValue(parseFloat(data?.netBillValue)?.toFixed(2))
-      setInwardItems(mappedInwardItems);
+      setNetBillValue(parseFloat(data?.netBillValue)?.toFixed(2));
+      setInwardItems(data?.purchaseBillEntryItems || []);
       setSupplierId(data?.supplierId || "");
-
+      setTaxTemplateId(data?.taxTemplateId || "");
       setRemarks(data?.remarks || "");
+      setBillType(data?.billType || "General Purchase Inward");
+      setDiscountValue(data?.discountValue || "0");
+      setDiscountType(data?.discountType || "Percentage");
     },
     [id],
   );
@@ -113,15 +142,44 @@ const PurchaseBillEntryForm = ({
     }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
+  useEffect(() => {
+    if (purchaseInwarddata?.data) {
+      syncFormWithInwardDb(purchaseInwarddata?.data);
+    }
+  }, [
+    isSingleInwardFetching,
+    isSingleInwardLoading,
+    syncFormWithInwardDb,
+    purchaseInwarddata,
+  ]);
+
+  useEffect(() => {
+    setCurrentPageNumber(1);
+  }, [searchDocId, searchPIDate, searchDcNo, searchInvNo]);
+
+  useEffect(() => {
+    if (!id) {
+      setInwardItems([]);
+    }
+  }, [supplierId]);
+
   let data = {
-    companyId, branchId, finYearId, userId,
+    companyId,
+    branchId,
+    finYearId,
+    userId,
     id,
     docDate,
     supplierId,
-    remarks, vehicleNo, netBillValue,
-    inwardItems: inwardItems?.filter((val) => val?.StyleItem?.id),
+    remarks,
+    vehicleNo,
+    netBillValue,
+    inwardItems: inwardItems?.filter((val) => val?.styleItemId),
+    taxTemplateId,
+    billType,
+    discountType,
+    discountValue,
   };
-  console.log(inwardItems, "parentTable");
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
@@ -163,72 +221,59 @@ const PurchaseBillEntryForm = ({
     }
   };
 
-  const findDuplicates = (items) => {
-    const seen = new Map(); // key -> first index
-    const duplicates = [];
-
-    items.forEach((row, index) => {
-      const key = [row.styleItemId || "", row.hsnId || ""].join("-");
-
-      if (seen.has(key)) {
-        duplicates.push({
-          firstIndex: seen.get(key),
-          duplicateIndex: index,
-          styleItemId: row.styleItemId,
-          hsnId: row.hsnId,
-        });
-      } else {
-        seen.set(key, index);
-      }
-    });
-
-    return duplicates; // empty array = no duplicates
-  };
   const totalprice = inwardItems
     .reduce((sum, row) => sum + (Number(row.price) || 0), 0)
-    .toFixed(2)
+    .toFixed(2);
 
+  const enrichedItems = useMemo(() => {
+    if (!inwardItems?.length) return inwardItems;
+    const { items, ...totals } =
+      calculateTaxWithHSNBreakupAndInsertIntoInwardItems(
+        structuredClone(inwardItems), // clone to avoid mutating state
+        false,
+        discountType,
+        discountValue,
+      );
+    return { items, totals };
+  }, [inwardItems, discountType, discountValue]);
+
+  const enrichedItemsList = enrichedItems?.items || [];
+  const totals = enrichedItems?.totals || {};
 
   const validateData = (data) => {
-    const items = data?.inwardItems || [];
-    console.log(items, "cheekcingvalidation");
-
-    const isAmountMatched =
-      Number(netBillValue).toFixed(2) === Number(totalprice).toFixed(2);
-
-    if (!isAmountMatched) {
+    if (!data.taxTemplateId) {
       Swal.fire({
         icon: "error",
-        title: "Amount Mismatch",
-        text: "Net Bill Value and Total Price do not match.",
-        timer: 2000,
+        title: "Tax Template is required",
+        timer: 1500,
         showConfirmButton: false,
       });
       return false;
     }
-    // remove blank rows
-    const filledItems = items.filter((item) => item.styleItemId);
-    const hasAtLeastOneItem = items.some(
-      (item) => item.StyleItem?.id
-    );
-    const duplicates = findDuplicates(filledItems);
-    // duplicate check
-    //   if (duplicates.length > 0) {
-    //     const dup = duplicates[0]; // show first duplicate
-    //     Swal.fire({
-    //       icon: "warning",
-    //       title: "Duplicate Item Found",
-    //       html: `
-    //   Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},
-    //   HSN - ${findFromList(dup?.hsnId, hsnList?.data, "name")},
-    // `,
-    //       confirmButtonText: "OK",
-    //     });
-    //     return false;
-    //   }
+    if (!data.supplierId) {
+      Swal.fire({
+        icon: "error",
+        title: "Supplier is required",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      return false;
+    }
+
+    const items = data?.inwardItems || [];
+    const hasAtLeastOneItem = items.some((item) => item.styleItemId);
+    if (!hasAtLeastOneItem) {
+      Swal.fire({
+        icon: "error",
+        title: "Please add at least one item",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      return false;
+    }
+
     const FIELD_LABELS = {
       StyleItem: "Item",
-      Hsn: "HSN",
       Uom: "UOM",
       inwardQty: "Inward Quantity",
     };
@@ -239,10 +284,6 @@ const PurchaseBillEntryForm = ({
 
         // only validate rows that have an Item selected
         if (!row.StyleItem?.id) continue;
-
-        if (!row.Hsn?.id) {
-          return { rowIndex: i + 1, field: "Hsn" };
-        }
 
         if (!row.Uom?.id) {
           return { rowIndex: i + 1, field: "Uom" };
@@ -259,30 +300,6 @@ const PurchaseBillEntryForm = ({
       return null;
     };
 
-
-
-    let mandatoryFields = ["styleItemId", "hsnId", "uomId", "inwardQty"];
-
-    if (!data.supplierId) {
-      Swal.fire({
-        icon: "error",
-        title: "Supplier is required",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      return false;
-    }
-
-    if (!hasAtLeastOneItem) {
-      Swal.fire({
-        icon: "error",
-        title: "Please add at least one item",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      return false;
-    }
-
     //  validate only filled rows
     const missing = findMissingField(items);
 
@@ -296,27 +313,22 @@ const PurchaseBillEntryForm = ({
       });
       return false;
     }
-    // if (
-    //   !(
 
+    const isAmountMatched =
+      Number(netBillValue).toFixed(2) ===
+      parseFloat(totals?.net || 0).toFixed(2);
 
-
-    //     data.supplierId &&
-    //     isGridDatasValid(data?.inwardItems, false, mandatoryFields) &&
-    //     data?.inwardItems?.length !== 0
-
-    //   )
-    // ) {
-    //   Swal.fire({
-    //     // title: "Total percentage exceeds 100%",
-    //     title: "Please fill all required fields...!",
-    //     icon: "error",
-    //     timer: 1500,
-    //     showConfirmButton: false,
-    //   });
-    //   return false;
-    // }
-
+    if (!isAmountMatched) {
+      Swal.fire({
+        icon: "error",
+        title: "Amount Mismatch",
+        text: "Total Bill Value and Total Net Amount must be Equal.",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+      return false;
+    }
+    // remove blank rows
     return true;
   };
 
@@ -356,7 +368,6 @@ const PurchaseBillEntryForm = ({
   const dateRef = useRef(null);
   const inputPartyRef = useRef(null);
 
-
   const handleKeyDown = (event) => {
     let charCode = String.fromCharCode(event.which).toLowerCase();
     if ((event.ctrlKey || event.metaKey) && charCode === "s") {
@@ -364,16 +375,33 @@ const PurchaseBillEntryForm = ({
       saveData();
     }
   };
-  console.log(inwardItems, "inwardItemsvalidatecheck");
   useEffect(() => {
     supplierRef.current?.focus();
   }, []);
 
   return (
     <>
+      <Modal
+        isOpen={summary}
+        onClose={() => setSummary(false)}
+        widthClass={"p-10"}
+      >
+        <PoSummary
+          discountType={discountType}
+          setDiscountType={setDiscountType}
+          discountValue={discountValue}
+          setDiscountValue={setDiscountValue}
+          poItems={inwardItems}
+          taxTypeId={taxTemplateId}
+          readOnly={readOnly}
+          totals={totals}
+        />
+      </Modal>
       <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
         <div className="flex justify-between items-center">
-          <h1 className="text-lg font-bold text-gray-800">Purchase Bill Entry</h1>
+          <h1 className="text-lg font-bold text-gray-800">
+            Purchase Bill Entry
+          </h1>
           <button
             onClick={() => {
               // onNew();
@@ -387,16 +415,18 @@ const PurchaseBillEntryForm = ({
         </div>
       </div>
       <div className="space-y-2 py-2" onKeyDown={handleKeyDown}>
-        <div className="flex gap-x-2">
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm w-[390px]">
+        <div className="grid grid-cols-3 gap-x-2 ">
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
             <h2 className="font-medium text-slate-700 mb-2">Basic Details</h2>
-            <div className="grid grid-cols-2 gap-1">
-              <ReusableInput
-                label="Purchase Bill Entry No"
-                readOnly
-                value={docId}
-              />
-              <div className="w-[140px] ml-1">
+            <div className="flex gap-x-4">
+              <div className="w-[160px]">
+                <ReusableInput
+                  label="Purchase Bill Entry No"
+                  readOnly
+                  value={docId}
+                />
+              </div>
+              <div className="w-[160px] ml-1">
                 <ReusableInput
                   label="Purchase Bill Entry Date"
                   value={docDate}
@@ -404,18 +434,49 @@ const PurchaseBillEntryForm = ({
                   required={true}
                   readOnly={true}
                   disabled
-                /></div>
+                />
+              </div>
             </div>
           </div>
-
-
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
+            <h2 className="font-medium text-slate-700 mb-2">Bill Details</h2>
+            <div className="grid grid-cols-2 gap-x-4">
+              <DropdownInput
+                name="Bill Type"
+                options={billTypes}
+                value={billType}
+                setValue={(value) => {
+                  setBillType(value);
+                }}
+                required={true}
+                readOnly={readOnly}
+                disabled={id}
+                beforeChange={() => {
+                  setInwardItems([]);
+                }}
+                autoFocus={true}
+              />
+              <DropdownInput
+                name="Tax Type"
+                options={dropDownListObject(
+                  taxTypeList ? taxTypeList?.data : [],
+                  "name",
+                  "id",
+                )}
+                value={taxTemplateId}
+                setValue={setTaxTemplateId}
+                required={true}
+                readOnly={readOnly}
+              />
+            </div>
+          </div>
 
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm w-full">
             <h2 className="font-medium text-slate-700 mb-2">
               Supplier Details
             </h2>
             <div className="flex gap-x-4">
-              <div className="w-[500px]">
+              <div className="w-[400px]">
                 <ReusableSearchableInput
                   label="Supplier"
                   component="PartyMaster"
@@ -429,39 +490,38 @@ const PurchaseBillEntryForm = ({
                   required={true}
                   disabled={id}
                   isSupplier={true}
-                  ref={supplierRef}
-
+                  // ref={supplierRef}
                 />
               </div>
               <div className="w-[150px]">
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Net Bill Value
+                <label
+                  className="block text-xs font-bold text-slate-700 mb-1"
+                  required={true}
+                >
+                  Total Bill Value
                 </label>
                 <input
                   // disabled={id}
 
-                  className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
+                  className={`w-full px-3 py-1.5 text-xs text-right border border-gray-300 rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm
-          ${readOnly
-                      ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                      : "bg-white hover:border-gray-400"
-                    }
-          `} type="number"
+          ${
+            readOnly
+              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+              : "bg-white hover:border-gray-400"
+          }
+          `}
+                  type="number"
                   value={netBillValue}
                   onChange={(e) => setNetBillValue(e.target.value)}
                   onBlur={(e) =>
                     setNetBillValue(
-                      e.target.value
-                        ? Number(e.target.value).toFixed(2)
-                        : ""
+                      e.target.value ? Number(e.target.value).toFixed(2) : "",
                     )
                   }
                 />
-
               </div>
-
-
 
               {/* <div className="w-[250px]">
                 <TextInput
@@ -494,30 +554,35 @@ const PurchaseBillEntryForm = ({
           </div>
         </div>
 
-
-
-
-        <fieldset className="">
+        <fieldset className="w-full">
           <InwardItems
             id={id}
-            inwardItems={inwardItems}
+            inwardItems={enrichedItemsList}
             setInwardItems={setInwardItems}
             readOnly={readOnly}
             uomList={uomList}
             hsnList={hsnList}
             styleItemList={styleItemList}
-            inwardType={inwardType}
+            billType={billType}
             supplierId={supplierId}
             branchId={branchId}
             dcNo={dcNo}
             invNo={invNo}
-            setTempItems={setTempItems} tempItems={tempItems}
+            setTempItems={setTempItems}
+            tempItems={tempItems}
+            searchDocId={searchDocId}
+            searchPIDate={searchPIDate}
+            searchInvNo={searchInvNo}
+            searchDcNo={searchDcNo}
+            setSearchDocId={setSearchDocId}
+            setSearchPIDate={setSearchPIDate}
+            setSearchInvNo={setSearchInvNo}
+            setSearchDcNo={setSearchDcNo}
+            taxTemplateId={taxTemplateId}
           />
         </fieldset>
 
         <div className="grid grid-cols-3 gap-3">
-
-
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
             <h2 className="font-medium text-slate-700 mb-2 text-base">
               Remarks
@@ -537,8 +602,15 @@ const PurchaseBillEntryForm = ({
               Qty Summary
             </h2>
 
-
             <div className="space-y-1.5">
+              <div className="flex justify-between  text-sm">
+                <span className="text-slate-600">Total Inward Qty</span>
+                <span className="font-medium">
+                  {inwardItems
+                    .reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
+                    .toFixed(2)}
+                </span>
+              </div>
               <div className="flex justify-between  text-sm">
                 <span className="text-slate-600">Total Price</span>
                 <span className="font-medium">
@@ -547,12 +619,27 @@ const PurchaseBillEntryForm = ({
                     .toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between  text-sm">
-                <span className="text-slate-600">Total Inward Qty</span>
+            </div>
+          </div>
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
+            <h2 className="font-semibold text-slate-800 mb-2 text-base">
+              Amount Summary
+            </h2>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">Taxable Amount</span>
                 <span className="font-medium">
-                  {inwardItems
-                    .reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
-                    .toFixed(2)}
+                  Rs.{parseFloat(totals?.taxable || 0).toFixed(2)}{" "}
+                </span>
+              </div>
+              {/* <div className="flex justify-between py-1 text-sm">
+                  <span className="text-slate-600">Tax Amount</span>
+                  <span className="font-medium">Rs.{taxDetails?.grossAmount}</span>
+                </div> */}
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">Net Amount</span>
+                <span className="font-medium">
+                  Rs.{parseFloat(totals?.net || 0).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -579,12 +666,29 @@ const PurchaseBillEntryForm = ({
           </div>
 
           <div className="flex gap-2 flex-wrap">
+            {!id ||
+              (readOnly && (
+                <button
+                  className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-sm"
+                  onClick={() => setReadOnly(false)}
+                >
+                  <FiEdit2 className="w-4 h-4 mr-2" />
+                  Edit
+                </button>
+              ))}
             <button
-              className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-sm"
-              onClick={() => setReadOnly(false)}
+              className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1  rounded"
+              onClick={() => {
+                if (!taxTemplateId) {
+                  toast.info("Please Select Tax Template !", {
+                    position: "top-center",
+                  });
+                  return;
+                }
+                setSummary(true);
+              }}
             >
-              <FiEdit2 className="w-4 h-4 mr-2" />
-              Edit
+              View Po Summary
             </button>
           </div>
         </div>

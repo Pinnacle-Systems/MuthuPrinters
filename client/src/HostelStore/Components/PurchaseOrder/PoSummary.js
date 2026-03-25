@@ -62,7 +62,7 @@ const PoSummary = ({
                 type="text"
                 name="value"
                 disabled={id ? !isNewVersion : readOnly || !discountType}
-                className="h-7 w-full"
+                className="h-7 w-full text-right"
                 value={discountValue}
                 onKeyDown={(e) => {
                   if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -94,7 +94,7 @@ const PoSummary = ({
               {(totals?.taxable).toFixed(2)}
             </td>
           </tr>
-          {totals?.slabBreakup?.map((i) => (
+          {totals?.slabBreakup?.filter((item) => item.amount > 0)?.map((i) => (
             <tr className="h-7">
               <td className="border border-gray-500">{i.tax} </td>
               <td className="border border-gray-500" colSpan={2}>

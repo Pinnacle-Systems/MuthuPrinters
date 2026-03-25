@@ -668,8 +668,8 @@ async function getPurchaseInwardBillEntryItems(req) {
     searchPIDate,
     searchInwardType,
     searchDcNo,
+    billType
   } = req.query;
-  console.log(supplierId, pagination, "paramsreceived");
   const docDateFilter = buildDateRange(searchPIDate);
 
   let data;
@@ -696,6 +696,7 @@ async function getPurchaseInwardBillEntryItems(req) {
           docDate: docDateFilter,
 
           supplierId: supplierId ? parseInt(supplierId) : undefined,
+          inwardType: billType ? { contains: billType } : undefined,
         },
       },
       include: {
@@ -717,11 +718,32 @@ async function getPurchaseInwardBillEntryItems(req) {
         //     name: true,
         //   },
         // },
-        Hsn: true,
-        StyleItem: true,
-        Uom: true,
+        Hsn: {
+          select:{
+            name: true,
+          }
+        },
+        StyleItem:  {
+          select:{
+            name: true,
+          }
+        },
+        Uom:  {
+          select:{
+            name: true,
+          }
+        },
+        Size: {
+          select:{
+            name: true,
+          }
+        },
+        Color: {
+          select:{
+            name: true,
+          }
       },
-    });
+    }});
 
     data = data?.filter((i) => i.PurchaseInward.supplierId == supplierId);
 

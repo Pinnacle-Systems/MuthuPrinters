@@ -6,82 +6,24 @@ import {
 
 } from "../../../redux/uniformService/PurchaseInwardEntry";
 
-const PoItemsSelection = ({ inwardItems = [], setInwardItems, setFillGrid, branchId, supplierId, tempItems, setTempItems, onClose }) => {
-    const [localinwardItems, setLocalinwardItems] = useState([]);
-    const [searchDocId, setSearchDocId] = useState("");
-    const [searchPIDate, setPIDate] = useState("");
-    const [searchInvNo, setSearchInvNo] = useState("");
-    const [searchDcNo, setSearchDcNo] = useState("");
-    const [dataPerPage, setDataPerPage] = useState("10");
-    const [totalCount, setTotalCount] = useState(0);
-    const [currentPageNumber, setCurrentPageNumber] = useState(1);
-    const searchFields = { searchDocId, searchPIDate, searchInvNo, searchDcNo }
+const PoItemsSelection = ({ inwardItems = [], setInwardItems, tempItems, setTempItems, onClose,
+    searchDocId,
+    setSearchDocId,
+    searchPIDate,
+    setSearchPIDate,
+    searchInvNo,
+    setSearchInvNo,
+    searchDcNo,
+    setSearchDcNo,
+}) => {
 
-    useEffect(() => {
-        setCurrentPageNumber(1);
-    }, [
-        searchDocId, searchPIDate, searchDcNo, searchInvNo
-    ]);
-    const tempItemsaaa = Array.from({ length: 20 }, (_, index) => ({
-        id: index + 1,
-
-        inwardQty: (Math.random() * 100 + 1).toFixed(2),
-        price: (Math.random() * 500 + 50).toFixed(2),
-
-        PurchaseInward: {
-            docId: `PI/26/${index + 1}`,
-            docDate: `2026-02-${String((index % 28) + 1).padStart(2, "0")}T00:00:00.000Z`,
-            invNo: `INV-${1000 + index}`,
-            dcNo: `DC-${2000 + index}`,
-        },
-
-        StyleItem: {
-            name: `Style-${index + 1}`,
-        },
-
-        Hsn: {
-            name: `HSN-${321590 + index}`,
-        },
-
-        Uom: {
-            name: "PCS",
-        },
-    }));
-
-
-
-    const { data: purchaseInwarddata, isFetching: isSingleFetching,
-        isLoading: isSingleLoading, } = useGetPurchaseInwardEntryForBillByIdQuery({
-            params: {
-
-                branchId,
-                supplierId,
-                ...searchFields, pagination: true, dataPerPage, pageNumber: currentPageNumber,
-            }
-        })
-    const syncFormWithDb = useCallback((data) => {
-
-        setTempItems(data)
-
-    }, [supplierId]);
-
-    console.log(tempItems, "tempItemscheck");
-
-    useEffect(() => {
-        if (purchaseInwarddata?.data) {
-            syncFormWithDb(purchaseInwarddata?.data);
-        }
-
-    }, [isSingleFetching, isSingleLoading, syncFormWithDb, purchaseInwarddata]);
-
-    function handleDone() {
-        onClose()
-
-    }
     function addItem(id, obj) {
         setInwardItems(prevItems => {
             let newItems = structuredClone(prevItems);
-
+            const alreadyExists = newItems.some(
+                (v) => parseInt(v.id) === parseInt(obj.id),
+            );
+            if (alreadyExists) return prevItems;
             const index = newItems?.findIndex(v => v?.styleItemId === "");
 
 
@@ -102,8 +44,6 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, setFillGrid, branc
         });
     }
     function handleChangee(id, obj) {
-        console.log(id, "iddddd")
-
         if (isItemAddedd(id)) {
             removeItem(id)
         } else {
@@ -111,7 +51,6 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, setFillGrid, branc
         }
     }
     function isItemAddedd(id) {
-        console.log(id, "id")
 
         return (inwardItems || [])?.findIndex(item => parseInt(item?.id) === parseInt(id)) !== -1
     }
@@ -127,38 +66,6 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, setFillGrid, branc
         return inwardItems?.every(item => isItemAddedd(item.id))
     }
 
-
-    function isItemChecked(checkItem) {
-        console.log(checkItem, "checkItem")
-
-        let item = localinwardItems.find(item =>
-            // checkItem.styleItemId === item.styleItemId
-            // &&
-            // checkItem.hsnId === item.hsnId
-            // &&
-            // checkItem.uomId === item.uomId
-            // &&
-            // checkItem.inwardQty === item.inwardQty
-            // &&
-            // getDateFromDateTimeToDisplay(checkItem?.PurchaseInward?.docDate) === getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate)
-            // &&
-            // checkItem?.PurchaseInward?.docId === item?.PurchaseInward?.docId
-            // &&
-            // checkItem?.PurchaseInward?.invNo === item?.PurchaseInward?.invNo
-            // &&
-            // checkItem?.PurchaseInward?.dcNo === item?.PurchaseInward?.dcNo
-            checkItem?.checkId === item?.checkId
-
-
-        )
-        if (!item) return false
-        return true
-    }
-
-
-
-
-    console.log(inwardItems, "inwardItemsinpoItemselection");
 
     return (
         <>
@@ -217,7 +124,7 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, setFillGrid, branc
                                                         </div>
                                                     </th>
                                                     <th className="border border-gray-300 px-2 py-1 text-center text-xs w-11">S No</th>
-                                                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-32">
+                                                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-20">
                                                         <label>PI No</label>
                                                         <input
                                                             type="text"
@@ -230,7 +137,7 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, setFillGrid, branc
                                                             }}
                                                         />
                                                     </th>
-                                                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-32">
+                                                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-20">
                                                         <label>PI Date</label>
                                                         <input
                                                             type="text"
@@ -238,13 +145,13 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, setFillGrid, branc
                                                             placeholder="Search"
                                                             value={searchPIDate}
                                                             onChange={(e) => {
-                                                                setPIDate(e.target.value);
+                                                                setSearchPIDate(e.target.value);
                                                             }}
                                                             onFocus={(e) => { e.target.select() }}
 
                                                         />
                                                     </th>
-                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-28">
+                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-20">
                                                         <label>Inv No</label>
                                                         <input
                                                             type="text"
@@ -259,7 +166,7 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, setFillGrid, branc
                                                         />
 
                                                     </th>
-                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-28">
+                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-20">
                                                         <label>Dc No</label>
                                                         <input
                                                             type="text"
@@ -275,21 +182,20 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, setFillGrid, branc
 
                                                     </th>
 
-                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-80">
+                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-64">
                                                         <label>Description of Goods</label>
 
                                                     </th>
-                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-32">
-                                                        <label>HSN/SAC</label>
-
+                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-16">
+                                                        Size
                                                     </th>
-                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-28">
+                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-32">
+                                                        Color
+                                                    </th>
+                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-16">
                                                         <label>UOM</label>
 
                                                     </th>
-
-
-
                                                     <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
                                                         <label>Inward Qty</label></th>
                                                     <th className="px-1 py-1.5 border border-gray-300 text-xs  w-20">
@@ -335,17 +241,20 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, setFillGrid, branc
                                                             {item?.PurchaseInward?.docDate ? getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate) : ""}
 
                                                         </td>
-                                                        <td className=" border border-gray-300 text-right text-[11px] py-1.5 px-2">
+                                                        <td className=" border border-gray-300  text-[11px] py-1.5 px-2">
                                                             {item?.PurchaseInward?.invNo}
                                                         </td>
-                                                        <td className=" border border-gray-300 text-right text-[11px] py-1.5 px-2">
+                                                        <td className=" border border-gray-300  text-[11px] py-1.5 px-2">
                                                             {item?.PurchaseInward?.dcNo}
                                                         </td>
                                                         <td className=" border border-gray-300 text-[11px] py-1.5 px-2">
                                                             {item?.StyleItem?.name}
                                                         </td>
-                                                        <td className=" border text-right border-gray-300 text-[11px] py-1.5 px-2">
-                                                            {item.Hsn?.name}
+                                                        <td className=" border border-gray-300 text-[11px] py-1.5 px-2">
+                                                            {item.Size?.name}
+                                                        </td>
+                                                        <td className=" border border-gray-300 text-[11px] py-1.5 px-2">
+                                                            {item.Color?.name}
                                                         </td>
                                                         <td className=" border border-gray-300 text-[11px] py-1.5 px-2">
                                                             {item.Uom?.name}

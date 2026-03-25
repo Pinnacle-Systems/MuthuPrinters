@@ -29,12 +29,6 @@ const PurchaseInwardItemsSelection = ({
 
   // ─── Selection Logic ──────────────────────────────────────────────────────
 
-  function isItemAdded(id) {
-    return (inwardItems || []).findIndex(
-      (r) => parseInt(r?.id) === parseInt(id)
-    ) !== -1;
-  }
-
   function addItem(item) {
     setInwardItems((prev) => {
       let newItems = structuredClone(prev);
@@ -81,14 +75,6 @@ const PurchaseInwardItemsSelection = ({
       while (updated.length < 3) updated.push({ ...EMPTY_ROW });
       return updated;
     });
-  }
-
-  function handleChange(id, obj) {
-    if (isItemAdded(id)) {
-      removeItem(id);
-    } else {
-      addItem(obj);
-    }
   }
 
   function handleSelectAllChange(value, inwardItems) {
