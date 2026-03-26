@@ -445,6 +445,7 @@ export default function Form() {
                               setValue={setStoreName}
                               readOnly={readOnly}
                               disabled={childRecord.current > 0}
+                              required={true}
                             />
                           </div>
                         </div>

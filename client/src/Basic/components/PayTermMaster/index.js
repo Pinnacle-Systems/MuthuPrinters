@@ -6,7 +6,13 @@ import { TextInput, ToggleButton, ReusableTable } from "../../../Inputs";
 import { Check, Power } from "lucide-react";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import Modal from "../../../UiComponents/Modal";
-import { useAddPaytermMasterMutation, useDeletePaytermMasterMutation, useGetPaytermMasterByIdQuery, useGetPaytermMasterQuery, useUpdatePaytermMasterMutation } from "../../../redux/services/payTermMasterService";
+import {
+  useAddPaytermMasterMutation,
+  useDeletePaytermMasterMutation,
+  useGetPaytermMasterByIdQuery,
+  useGetPaytermMasterQuery,
+  useUpdatePaytermMasterMutation,
+} from "../../../redux/services/payTermMasterService";
 
 const MODEL = "Pay Term Master";
 
@@ -28,7 +34,7 @@ export default function Form() {
 
   const params = {
     companyId: secureLocalStorage.getItem(
-      sessionStorage.getItem("sessionId") + "userCompanyId"
+      sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
   const {
@@ -58,11 +64,11 @@ export default function Form() {
         setReadOnly(true);
         setName(data?.name ? data.name : "");
         setdays(data?.days ? data.days : "");
-        setActive(id ? data?.active ?? false : true);
+        setActive(id ? (data?.active ?? false) : true);
         setAliasName(data?.aliasName ? data?.aliasName : "");
       }
     },
-    [id]
+    [id],
   );
 
   useEffect(() => {
@@ -76,7 +82,7 @@ export default function Form() {
     active,
     aliasName,
     companyId: secureLocalStorage.getItem(
-      sessionStorage.getItem("sessionId") + "userCompanyId"
+      sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
 
@@ -120,6 +126,22 @@ export default function Form() {
         timer: 1000,
       });
       return;
+    }
+    let foundItem;
+    if (id) {
+      foundItem = allData?.data
+        ?.filter((i) => i.id != id)
+        ?.some((item) => item.name === name);
+    } else {
+      foundItem = allData?.data?.some((item) => item.name === name);
+    }
+
+    if (foundItem) {
+      Swal.fire({
+        text: "The Tax Term Name already exists.",
+        icon: "warning",
+      });
+      return false;
     }
     if (!window.confirm("Are you sure save the details ...?")) {
       return;
@@ -325,6 +347,7 @@ export default function Form() {
                               setValue={setdays}
                               readOnly={readOnly}
                               disabled={childRecord.current > 0}
+                              required={true}
                             />
                           </div>
                           <div className="mb-3 ">

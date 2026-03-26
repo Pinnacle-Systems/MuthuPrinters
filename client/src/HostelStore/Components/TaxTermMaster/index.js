@@ -122,6 +122,22 @@ export default function Form() {
       });
       return;
     }
+    let foundItem;
+    if (id) {
+      foundItem = allData?.data
+        ?.filter((i) => i.id != id)
+        ?.some((item) => item.name === name);
+    } else {
+      foundItem = allData?.data?.some((item) => item.name === name);
+    }
+
+    if (foundItem) {
+      Swal.fire({
+        text: "The Tax Term Name already exists.",
+        icon: "warning",
+      });
+      return false;
+    }
     if (!window.confirm("Are you sure save the details ...?")) {
       return;
     }

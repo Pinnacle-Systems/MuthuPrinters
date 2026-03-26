@@ -292,7 +292,7 @@ export default function Form() {
     {
       header: "Size Template Name",
       accessor: (item) => item.name,
-      className: "font-medium text-gray-900  w-[150px]  py-1  px-2",
+      className: "font-medium text-gray-900  w-[200px]  py-1  px-2",
     },
     {
       header: "Status",

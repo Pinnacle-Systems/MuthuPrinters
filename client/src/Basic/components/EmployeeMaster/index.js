@@ -241,7 +241,6 @@ export default function Form() {
     };
 
     const saveData = () => {
-        console.log(data, "datadat")
         if (!validateData(data)) {
             Swal.fire({
                 title: "Please fill all required fields...!",
@@ -269,7 +268,22 @@ export default function Form() {
         //     toast.info("Please enter proper perm. Pincode...!", { position: "top-center" })
         //     return
         // }
-
+         let foundItem;
+            if (id) {
+              foundItem = allData?.data
+                ?.filter((i) => i.id != id)
+                ?.some((item) => item.name === name);
+            } else {
+              foundItem = allData?.data?.some((item) => item.name === name);
+            }
+        
+            if (foundItem) {
+              Swal.fire({
+                text: "The Employee Name already exists.",
+                icon: "warning",
+              });
+              return false;
+            }
         if (!window.confirm("Are you sure save the details ...?")) {
             return;
         }
@@ -393,7 +407,7 @@ export default function Form() {
             header: "Employee Id",
             accessor: (item) => item?.regNo,
             //   cellClass: () => "font-medium  text-gray-900",
-            className: "font-medium text-gray-900 text-center uppercase w-28",
+            className: "font-medium text-gray-900 text-center uppercase w-40",
         },
 
         {
