@@ -570,7 +570,22 @@ const ReturnItems = ({
                     )
                     .toFixed(2)}
                 </td>
-                <td className="border border-gray-300" colSpan={2}></td>
+                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                  {returnItems
+                    ?.reduce(
+                      (sum, row) => sum + (Number(row.alreadyReturnQty) || 0),
+                      0,
+                    )
+                    .toFixed(2)}
+                </td>
+                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                  {returnItems
+                    ?.reduce(
+                      (sum, row) => sum + (Number(row.balQty) || 0),
+                      0,
+                    )
+                    .toFixed(2)}
+                </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {returnItems
                     ?.reduce(

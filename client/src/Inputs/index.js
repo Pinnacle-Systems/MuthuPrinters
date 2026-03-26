@@ -621,7 +621,7 @@ export const CheckBox = ({
           onChange={(e) => {
             handleOnChange(e);
           }}
-          disabled={readOnly}
+          disabled={readOnly || disabled}
         />
         {name}
       </label>

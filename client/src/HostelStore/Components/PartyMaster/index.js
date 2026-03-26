@@ -270,7 +270,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
         active, companyId, coa: coa ? coa : "", soa,
         id, userId,
         landMark, contact, designation, department, contactPersonEmail, contactNumber, alterContactNumber, bankname,
-        bankBranchName, accountNumber, ifscCode, attachments: attachments?.filter(i => i.name), msmeNo, companyAlterNumber, partyCode, parentId, isBranch, branchTypeId
+        bankBranchName, accountNumber, ifscCode, attachments: attachments?.filter(i => i.filePath), msmeNo, companyAlterNumber, partyCode, parentId, isBranch, branchTypeId
     }
 
     const validateData = (data) => {
@@ -285,6 +285,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
             for (let key in data) {
 
                 if (key == 'attachments') {
+                    console.log("attachments =>", data[key]);
                     formData.append(key, JSON.stringify(data[key].map(i => ({ ...i, filePath: (i.filePath instanceof File) ? i.filePath.name : i.filePath }))));
                     data[key].forEach(option => {
                         if (option?.filePath instanceof File) {
@@ -508,7 +509,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
              if (data?.data?.childRecord > 0) {
                     Swal.fire({
                       icon: "error",
-                      title: "Child Record",
+                      title: "Child Record Exists",
                       text: "Data cannot be deleted!",
                     });
                   } else {

@@ -28,13 +28,18 @@ async function getOne(id) {
             TaxTemplateDetails: true
         }
     })
-    const childRecord = await prisma.po.count({
+    const childRecordPo = await prisma.po.count({
+    where: {
+      taxTemplateId: data.id,
+    },
+  });
+   const childRecordBill = await prisma.purchaseBillEntry.count({
     where: {
       taxTemplateId: data.id,
     },
   });
     if (!data) return NoRecordFound("taxTemplate");
-    return { statusCode: 0, data: { ...data, ...{ childRecord } } };
+    return { statusCode: 0, data: { ...data, ...{ childRecord : childRecordPo + childRecordBill } } };
 }
 
 async function getSearch(req) {

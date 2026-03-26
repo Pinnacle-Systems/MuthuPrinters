@@ -17,14 +17,23 @@ async function get(req) {
 
 
 async function getOne(id) {
-    const childRecord = 0;
+    const childRecordPo = await prisma.poItems.count({
+        where: {
+            sizeId: parseInt(id)
+        }
+    });
+    const childRecordInward = await prisma.inwardItems.count({
+        where: {
+            sizeId: parseInt(id)
+            }
+    });
     const data = await prisma.size.findUnique({
         where: {
             id: parseInt(id)
         }
     })
     if (!data) return NoRecordFound("size");
-    return { statusCode: 0, data: {...data, ...{childRecord}} };
+    return { statusCode: 0, data: {...data, ...{childRecord: childRecordPo + childRecordInward}} };
 }
 
 async function getSearch(req) {

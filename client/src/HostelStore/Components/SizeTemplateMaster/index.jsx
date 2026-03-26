@@ -77,7 +77,6 @@ export default function Form() {
         setSizeTemplateList([]);
         setActive(id ? data?.active : true);
       } else {
-        setReadOnly(true);
         setName(data?.name || "");
         setSizeTemplateList(
           data?.SizeTemplateList

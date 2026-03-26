@@ -493,7 +493,7 @@ async function getOne(id) {
           itemGroupId: item.itemGroupId,
           sizeId: item.sizeId,
           colorId: item.colorId,
-          purchaseInwardId:  data.id,
+          purchaseInwardId: data.id,
         },
         _sum: { returnQty: true },
       });
@@ -514,12 +514,18 @@ async function getOne(id) {
       purchaseInwardId: data.id,
     },
   });
+  const childRecordBill = await prisma.purchaseBillEntryItems.count({
+    where: {
+      purchaseInwardId: data.id,
+    },
+  });
   return {
     statusCode: 0,
     data: {
       ...data,
       inwardItems: itemsWithQty,
       childRecord: childRecordReturn,
+      childRecordBill : childRecordBill,
     },
   };
 }
@@ -668,7 +674,7 @@ async function getPurchaseInwardBillEntryItems(req) {
     searchPIDate,
     searchInwardType,
     searchDcNo,
-    billType
+    billType,
   } = req.query;
   const docDateFilter = buildDateRange(searchPIDate);
 
@@ -719,31 +725,32 @@ async function getPurchaseInwardBillEntryItems(req) {
         //   },
         // },
         Hsn: {
-          select:{
+          select: {
             name: true,
-          }
+          },
         },
-        StyleItem:  {
-          select:{
+        StyleItem: {
+          select: {
             name: true,
-          }
+          },
         },
-        Uom:  {
-          select:{
+        Uom: {
+          select: {
             name: true,
-          }
+          },
         },
         Size: {
-          select:{
+          select: {
             name: true,
-          }
+          },
         },
         Color: {
-          select:{
+          select: {
             name: true,
-          }
+          },
+        },
       },
-    }});
+    });
 
     data = data?.filter((i) => i.PurchaseInward.supplierId == supplierId);
 

@@ -43,10 +43,10 @@ export default function Form() {
 
   const syncFormWithDb = useCallback(
     (data) => {
-      if (id) setReadOnly(true);
       setName(data?.name ? data.name : "");
       setIsPowise(id ? (data?.isPoWise ? data.isPoWise : false) : false);
       setActive(id ? (data?.active ? data.active : false) : true);
+      childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
     [id],
   );

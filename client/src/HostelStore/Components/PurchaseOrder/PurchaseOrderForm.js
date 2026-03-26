@@ -1,4 +1,4 @@
-import {  FaFileAlt } from "react-icons/fa";
+import { FaFileAlt } from "react-icons/fa";
 
 import {
   CheckBox,
@@ -31,9 +31,7 @@ import tw from "../../../Utils/tailwind-react-pdf";
 import Modal from "../../../UiComponents/Modal";
 import { dropDownListObject } from "../../../Utils/contructObject";
 import PoSummary from "./PoSummary";
-import {
-  useGetBranchByIdQuery,
-} from "../../../redux/services/BranchMasterService";
+import { useGetBranchByIdQuery } from "../../../redux/services/BranchMasterService";
 import { groupBy } from "lodash";
 import PoItems from "./PoItems";
 import PurchaseOrderPrintFormat from "./PrintFormat-PO";
@@ -100,6 +98,9 @@ const PurchaseOrderForm = ({
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetPoByIdQuery(id, { skip: !id });
+
+  const childRecordCount =
+    singleData?.data?.childRecordInward + singleData?.data?.childRecordCancel;
 
   const [addData] = useAddPoMutation();
   const [updateData] = useUpdatePoMutation();
@@ -570,6 +571,7 @@ const PurchaseOrderForm = ({
                     setValue={setIsNewVersion}
                     readOnly={readOnly}
                     className="w-full"
+                    disabled={childRecordCount > 0}
                   />
                 </div>
               )}

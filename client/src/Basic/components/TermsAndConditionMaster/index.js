@@ -12,6 +12,7 @@ import {
   useDeleteTermsandCondtionsMutation,
   useGetTermsandCondtionsByIdQuery,
   useGetTermsandCondtionsQuery,
+  useLazyGetTermsandCondtionsByIdQuery,
   useUpdateTermsandCondtionsMutation,
 } from "../../../redux/uniformService/TermsAndContionService";
 import { ReusableTable, TextInputNew1, ToggleButton } from "../../../Inputs";
@@ -47,6 +48,7 @@ export default function Form() {
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetTermsandCondtionsByIdQuery(id, { skip: !id });
+  const [trigger, { data: LazyData }] = useLazyGetTermsandCondtionsByIdQuery();
 
   const [addData] = useAddTermsandCondtionsMutation();
   const [updateData] = useUpdateTermsandCondtionsMutation();
@@ -63,11 +65,13 @@ export default function Form() {
         setReadOnly(false);
         setName("");
         setActive(id ? data?.active : true);
+        childRecord.current = data?.childRecord ? data?.childRecord : 0;
       } else {
         // setReadOnly(true);
         setName(data?.name || "");
         setActive(id ? (data?.active ?? false) : true);
         setDescription(data?.description ? data?.description : "");
+        childRecord.current = data?.childRecord ? data?.childRecord : 0;
       }
     },
     [id],
@@ -151,25 +155,35 @@ export default function Form() {
   };
 
   const deleteData = async (id) => {
+    const { data } = await trigger(id);
+
     if (id) {
       if (!window.confirm("Are you sure to delete...?")) {
         return;
       }
-      try {
-        let deldata = await removeData(id).unwrap();
-        if (deldata?.statusCode == 1) {
-          toast.error(deldata?.message);
-          return;
-        }
-        setId("");
-        // toast.success("Deleted Successfully");
+      if (data?.data?.childRecord > 0) {
         Swal.fire({
-          title: "Deleted" + "  " + "Successfully",
-          icon: "success",
+          icon: "error",
+          title: "Child record Exists",
+          text: "Data cannot be deleted!",
         });
-        setForm(false);
-      } catch (error) {
-        toast.error("something went wrong");
+      } else {
+        try {
+          let deldata = await removeData(id).unwrap();
+          if (deldata?.statusCode == 1) {
+            toast.error(deldata?.message);
+            return;
+          }
+          setId("");
+          // toast.success("Deleted Successfully");
+          Swal.fire({
+            title: "Deleted" + "  " + "Successfully",
+            icon: "success",
+          });
+          setForm(false);
+        } catch (error) {
+          toast.error("something went wrong");
+        }
       }
     }
   };
@@ -355,7 +369,7 @@ export default function Form() {
                               <textarea
                                 className="w-72  h-10 overflow-auto focus:outline-none border border-gray-500 rounded p-2 text-xs"
                                 value={description}
-                                disabled={readOnly}
+                                disabled={childRecord.current > 0 || readOnly}
                                 onChange={(e) => setDescription(e.target.value)}
                               ></textarea>
                             </div>

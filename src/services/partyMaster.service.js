@@ -184,7 +184,8 @@ export async function getNew(req) {
 
 
 async function getOne(id) {
-    const childRecord = await prisma.po.count({ where: { supplierId: parseInt(id) } });
+    const childRecordPo = await prisma.po.count({ where: { supplierId: parseInt(id) } });
+    const childRecordInward = await prisma.purchaseInward.count({ where: { supplierId: parseInt(id) } });
 
     const data = await prisma.party.findUnique({
         where: {
@@ -269,7 +270,7 @@ async function getOne(id) {
             totalPaymentPurchaseBill,
             totalDiscount,
 
-            childRecord,
+            childRecord : childRecordPo + childRecordInward,
             totaloutstanding,
             totalPaymentAgainstInvoice,
 

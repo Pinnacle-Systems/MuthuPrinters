@@ -650,17 +650,30 @@ const InwardItems = ({
                         handleInputChange(e.target.value, index, "inwardQty")
                       }
                       onBlur={(e) => {
-                        const minQty = row.balQty;
+                        const maxQty = row.balQty;
+                        const minQty = row.alreadyReturnQty;
 
                         if (inwardType !== "Direct Inward") {
-                          if (parseFloat(minQty) < parseFloat(e.target.value)) {
+                          if (parseFloat(maxQty) < parseFloat(e.target.value)) {
                             e.target.value = "";
                             handleInputChange("", index, "inwardQty");
                             skipFocusRef.current = true; // 🚩 Swal will open, block focus
                             Swal.fire({
                               icon: "warning",
                               title: "Invalid Qty",
-                              text: `Inward Qty cannot be More than Balance Qty! - ${minQty}`,
+                              text: `Inward Qty cannot be More than Balance Qty! - ${maxQty}`,
+                              confirmButtonText: "OK",
+                            });
+                            return;
+                          }
+                          if (parseFloat(e.target.value) < parseFloat(minQty)) {
+                            e.target.value = "";
+                            handleInputChange("", index, "inwardQty");
+                            skipFocusRef.current = true;
+                            Swal.fire({
+                              icon: "warning",
+                              title: "Invalid Qty",
+                              text: `Inward Qty cannot be Less than Already Return Qty! - ${minQty}`,
                               confirmButtonText: "OK",
                             });
                             return;
@@ -723,16 +736,48 @@ const InwardItems = ({
                         )
                         .toFixed(2)}
                     </td>
-                    <td className="border border-gray-300 " colSpan={4}></td>
+                    <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                      {inwardItems
+                        ?.reduce(
+                          (sum, row) =>
+                            sum + (Number(row.alreadyCancelQty) || 0),
+                          0,
+                        )
+                        .toFixed(2)}
+                    </td>
+                    <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                      {inwardItems
+                        ?.reduce(
+                          (sum, row) =>
+                            sum + (Number(row.alreadyInwardQty) || 0),
+                          0,
+                        )
+                        .toFixed(2)}
+                    </td>
+                    <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                      {inwardItems
+                        ?.reduce(
+                          (sum, row) =>
+                            sum + (Number(row.alreadyReturnQty) || 0),
+                          0,
+                        )
+                        .toFixed(2)}
+                    </td>
+                    <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                      {inwardItems
+                        ?.reduce(
+                          (sum, row) =>
+                            sum + (Number(row.balQty) || 0),
+                          0,
+                        )
+                        .toFixed(2)}
+                    </td>
                   </>
                 )}
                 {inwardType === "Direct Inward" && (
                   <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                     {inwardItems
-                      ?.reduce(
-                        (sum, row) => sum + (Number(row.price) || 0),
-                        0,
-                      )
+                      ?.reduce((sum, row) => sum + (Number(row.price) || 0), 0)
                       .toFixed(2)}
                   </td>
                 )}

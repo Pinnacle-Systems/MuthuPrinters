@@ -56,6 +56,7 @@ export default function Form() {
       setName(data?.name ? data.name : "");
       setIsPowise(id ? (data?.isPoWise ? data.isPoWise : false) : false);
       setActive(id ? (data?.active ? data.active : false) : true);
+      childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
     [id],
   );
@@ -158,7 +159,7 @@ export default function Form() {
       if (data?.data?.childRecord > 0) {
         Swal.fire({
           icon: "error",
-          title: "Child Record",
+          title: "Child Record Exist",
           text: "Data cannot be deleted!",
         });
       } else {

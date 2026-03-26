@@ -624,7 +624,7 @@ const CancelItems = ({
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {cancelItems
                     ?.reduce(
-                      (sum, row) => sum + (Number(row.inwardQty) || 0),
+                      (sum, row) => sum + (Number(row.alreadyInwardQty) || 0),
                       0,
                     )
                     .toFixed(2)}
@@ -632,7 +632,7 @@ const CancelItems = ({
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {cancelItems
                     ?.reduce(
-                      (sum, row) => sum + (Number(row.returnQty) || 0),
+                      (sum, row) => sum + (Number(row.alreadyReturnQty) || 0),
                       0,
                     )
                     .toFixed(2)}

@@ -35,7 +35,10 @@ async function get(req) {
 }
 
 async function getOne(id) {
-  const childRecord = await prisma.poItems.count({
+  const childRecordPo = await prisma.poItems.count({
+    where: { styleItemId: parseInt(id) },
+  });
+  const childRecordInward = await prisma.inwardItems.count({
     where: { styleItemId: parseInt(id) },
   });
   const data = await prisma.styleItem.findUnique({
@@ -47,7 +50,7 @@ async function getOne(id) {
     },
   });
   if (!data) return NoRecordFound("styleItem");
-  return { statusCode: 0, data: { ...data, ...{ childRecord } } };
+  return { statusCode: 0, data: { ...data, ...{ childRecord : childRecordPo + childRecordInward } } };
 }
 
 async function getSearch(req) {

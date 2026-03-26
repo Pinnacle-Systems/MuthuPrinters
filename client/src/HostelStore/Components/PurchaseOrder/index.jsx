@@ -63,14 +63,14 @@ export default function Form() {
       if (data?.data?.childRecordInward > 0) {
         Swal.fire({
           icon: "error",
-          title: "This Transaction used in Purchase Inward",
+          title: "This Transaction Items used in Purchase Inward",
           text: "Data cannot be deleted!",
         });
       }
       else if (data?.data?.childRecordCancel > 0) {
         Swal.fire({
           icon: "error",
-          title: "This Transaction used in Purchase Cancel",
+          title: "This Transaction Items used in Purchase Cancel",
           text: "Data cannot be deleted!",
         });
       }

@@ -444,6 +444,7 @@ export default function Form() {
                               setItemGroupId(value);
                             }}
                             readOnly={readOnly}
+                            disabled={childRecord.current > 0}
                             clear={true}
                             required={true}
                           />
@@ -463,6 +464,7 @@ export default function Form() {
                               setUomId(value);
                             }}
                             required={true}
+                            disabled={childRecord.current > 0}
                             readOnly={readOnly}
                           />
                         </div>
@@ -484,6 +486,7 @@ export default function Form() {
                             }}
                             readOnly={readOnly}
                             clear={true}
+                            disabled={childRecord.current > 0}
                           />
                         </div>
                         <div className="mb-3">
@@ -502,6 +505,7 @@ export default function Form() {
                             }}
                             readOnly={readOnly}
                             clear={true}
+                            disabled={childRecord.current > 0}
                           />
                         </div>
                       </div>

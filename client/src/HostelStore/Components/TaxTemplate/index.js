@@ -73,6 +73,7 @@ export default function Form() {
       setName(data ? data?.name : "");
       setTaxTemplateDetails(data ? data?.TaxTemplateDetails : []);
       setActive(id ? (data?.active ? data.active : false) : true);
+      childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
     [id],
   );
@@ -181,7 +182,7 @@ export default function Form() {
       if (data?.data?.childRecord > 0) {
         Swal.fire({
           icon: "error",
-          title: "Child Record",
+          title: "Child Record Exist",
           text: "Data cannot be deleted!",
         });
       } else {
@@ -211,7 +212,6 @@ export default function Form() {
     }
   };
 
-  console.log(readOnly, "readOnly");
 
   const handleKeyDown = (event) => {
     let charCode = String.fromCharCode(event.which).toLowerCase();
@@ -461,7 +461,8 @@ export default function Form() {
                             params={params}
                             taxTemplateItems={taxTemplateDetails}
                             setTaxTemplateItems={setTaxTemplateDetails}
-                            readOnly={readOnly}
+                            readOnly={readOnly || childRecord.current > 0}
+                            
                           />
                         </fieldset>
                       </div>

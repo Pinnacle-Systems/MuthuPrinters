@@ -15,14 +15,18 @@ async function get(req) {
 }
 
 async function getOne(id) {
-  const childRecord = 0;
+  const childRecord = await prisma.po.count({
+    where: {
+      termsId: parseInt(id),
+    },
+  });
   const data = await prisma.termsAndConditions.findUnique({
     where: {
       id: parseInt(id),
     },
   });
   if (!data) return NoRecordFound("termsAndConditions");
-  return { statusCode: 0, data: { ...data, ...{ childRecord } } };
+  return { statusCode: 0, data: { ...data, ...{ childRecord : childRecord} } };
 }
 
 async function getSearch(req) {

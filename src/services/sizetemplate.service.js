@@ -13,7 +13,7 @@ async function get(req) {
 }
 
 async function getOne(id) {
-  const childRecord = await prisma.style.count({
+  const childRecord = await prisma.styleItem.count({
     where: { sizeTemplateId: parseInt(id) },
   });
   const data = await prisma.sizeTemplate.findUnique({

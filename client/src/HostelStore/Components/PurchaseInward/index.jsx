@@ -48,7 +48,13 @@ export default function Form() {
       } if (data?.data?.childRecord > 0) {
         Swal.fire({
           icon: "error",
-          title: "This Transaction used in Purchase Return",
+          title: "This Transaction Items used in Purchase Return",
+          text: "Data cannot be deleted!",
+        });
+      } else if (data?.data?.childRecordBill > 0) {
+        Swal.fire({
+          icon: "error",
+          title: "This Transaction Items used in Purchase Bill",
           text: "Data cannot be deleted!",
         });
       } else {

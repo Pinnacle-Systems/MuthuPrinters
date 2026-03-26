@@ -5,12 +5,18 @@ import {
   useDeleteColorMasterMutation,
   useGetColorMasterByIdQuery,
   useGetColorMasterQuery,
+  useLazyGetColorMasterByIdQuery,
   useUpdateColorMasterMutation,
 } from "../../../redux/services/ColorMasterService";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import { Check, Power } from "lucide-react";
-import { ReusableTable, TextInputNew, TextInputNew1, ToggleButton } from "../../../Inputs";
+import {
+  ReusableTable,
+  TextInputNew,
+  TextInputNew1,
+  ToggleButton,
+} from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
 
 const MODEL = "Color Master";
@@ -31,11 +37,11 @@ export default function Form() {
 
   const params = {
     companyId: secureLocalStorage.getItem(
-      sessionStorage.getItem("sessionId") + "userCompanyId"
+      sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
 
-  console.log(id, "id");
+  const [trigger, { data: LazyData }] = useLazyGetColorMasterByIdQuery();
 
   const {
     data: allData,
@@ -61,19 +67,17 @@ export default function Form() {
         setIsGrey(false);
         setActive(id ? data?.active : true);
         childRecord.current = data?.childRecord ? data?.childRecord : 0;
-
       } else {
         // setReadOnly(true);
 
         setName(data?.name || "");
         setPantone(data?.pantone || "");
         setIsGrey(data?.isGrey || false);
-        setActive(id ? data?.active ?? false : true);
+        setActive(id ? (data?.active ?? false) : true);
         childRecord.current = data?.childRecord ? data?.childRecord : 0;
-
       }
     },
-    [id]
+    [id],
   );
 
   useEffect(() => {
@@ -149,37 +153,40 @@ export default function Form() {
   };
 
   const deleteData = async (id, childRecord) => {
-    if (childRecord) {
-      Swal.fire({
-        icon: "error",
-        title: "Child record Exists",
-      });
-      return;
-    }
+    const { data } = await trigger(id);
+
     if (id) {
       if (!window.confirm("Are you sure to delete...?")) {
         return;
       }
-      try {
-        let deldata = await removeData(id).unwrap();
-        console.log(deldata, "deldata");
-        if (deldata?.statusCode == 1) {
-          Swal.fire({
-            icon: "error",
-            // title: 'Submission error',
-            text: deldata?.message || "Something went wrong!",
-          });
-          return;
-        }
-        setId("");
-        // toast.success("Deleted Successfully");
-        setForm(false);
+      if (data?.data?.childRecord > 0) {
         Swal.fire({
-          title: "Deleted" + "  " + "Successfully",
-          icon: "success",
+          icon: "error",
+          title: "Child Record Exist",
+          text: "Data cannot be deleted!",
         });
-      } catch (error) {
-        toast.error("something went wrong");
+      } else {
+        try {
+          let deldata = await removeData(id).unwrap();
+          console.log(deldata, "deldata");
+          if (deldata?.statusCode == 1) {
+            Swal.fire({
+              icon: "error",
+              // title: 'Submission error',
+              text: deldata?.message || "Something went wrong!",
+            });
+            return;
+          }
+          setId("");
+          // toast.success("Deleted Successfully");
+          setForm(false);
+          Swal.fire({
+            title: "Deleted" + "  " + "Successfully",
+            icon: "success",
+          });
+        } catch (error) {
+          toast.error("something went wrong");
+        }
       }
     }
   };
@@ -249,7 +256,6 @@ export default function Form() {
       className: "font-medium text-gray-900 text-center uppercase w-16",
     },
   ];
-
 
   const countryNameRef = useRef(null);
 

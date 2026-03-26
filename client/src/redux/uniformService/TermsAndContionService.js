@@ -80,6 +80,7 @@ const TermsandCondtionsApi = createApi({
 export const {
     useGetTermsandCondtionsQuery,
     useGetTermsandCondtionsByIdQuery,
+    useLazyGetTermsandCondtionsByIdQuery,
     useAddTermsandCondtionsMutation,
     useUpdateTermsandCondtionsMutation,
     useDeleteTermsandCondtionsMutation,
