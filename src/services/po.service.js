@@ -17,15 +17,27 @@ async function getNextDocId(branchId, shortCode, startTime, endTime) {
   let lastObject = await prisma.po.findFirst({
     where: {
       branchId: parseInt(branchId),
+      AND: [
+        {
+          createdAt: {
+            gte: startTime,
+          },
+        },
+        {
+          createdAt: {
+            lte: endTime,
+          },
+        },
+      ],
     },
     orderBy: {
       id: "desc",
     },
   });
   const branchObj = await getTableRecordWithId(branchId, "branch");
-  let newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PO/1`;
+  let newDocId = `${branchObj.branchCode}/${shortCode}/PO/1`;
   if (lastObject) {
-    newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PO/${parseInt(lastObject.docId.split("/").at(-1)) + 1}`;
+    newDocId = `${branchObj.branchCode}/${shortCode}/PO/${parseInt(lastObject.docId.split("/").at(-1)) + 1}`;
   }
   return newDocId;
 }

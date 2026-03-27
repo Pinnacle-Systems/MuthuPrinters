@@ -174,7 +174,7 @@ const PurchaseBillEntryForm = ({
     remarks,
     vehicleNo,
     netBillValue,
-    inwardItems: inwardItems?.filter((val) => val?.styleItemId),
+    inwardItems: inwardItems?.filter((val) => val?.StyleItem?.name),
     taxTemplateId,
     billType,
     discountType,
@@ -261,15 +261,17 @@ const PurchaseBillEntryForm = ({
     }
 
     const items = data?.inwardItems || [];
-    const hasAtLeastOneItem = items.some((item) => item.styleItemId);
-    if (!hasAtLeastOneItem) {
-      Swal.fire({
-        icon: "error",
-        title: "Please add at least one item",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      return false;
+    if (!id) {
+      const hasAtLeastOneItem = items.some((item) => item.styleItemId);
+      if (!hasAtLeastOneItem) {
+        Swal.fire({
+          icon: "error",
+          title: "Please add at least one item",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        return false;
+      }
     }
 
     const FIELD_LABELS = {

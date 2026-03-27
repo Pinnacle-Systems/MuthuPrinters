@@ -229,10 +229,15 @@ const PurchaseOrderForm = ({
   };
 
   const findDuplicates = (items) => {
+    const versionFilteredItems = items.filter((row) => {
+      if (!id) return true; // new entry — all rows
+      if (isNewVersion) return row.quoteVersion === "New";
+      return parseInt(row.quoteVersion) === parseInt(quoteVersion ?? "");
+    });
     const seen = new Map(); // key -> first index
     const duplicates = [];
 
-    items.forEach((row, index) => {
+    versionFilteredItems.forEach((row, index) => {
       const key = [
         row.styleItemId || "",
         row.sizeId || "",

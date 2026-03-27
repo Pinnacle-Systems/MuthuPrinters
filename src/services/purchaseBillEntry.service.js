@@ -68,9 +68,7 @@ async function getNextDocId(
     });
 
     const branchObj = await getTableRecordWithId(branchId, "branch");
-    let newDocId = `${branchObj.branchCode}${getYearShortCode(
-      new Date(),
-    )}/PB/1`;
+    let newDocId = `${branchObj.branchCode}/${shortCode}/PB/1`;
     if (lastObject) {
       if (lastObject.docId === "Draft Save") {
         const records = await prisma.purchaseBillEntry.findMany({
@@ -99,11 +97,11 @@ async function getNextDocId(
 
           return currentNo > maxNo ? current.docId : max;
         }, null);
-        newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PB/${
+        newDocId = `${branchObj.branchCode}/${shortCode}/PB/${
           parseInt(maxDocId.split("/").at(-1)) + 1
         }`;
       } else {
-        newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PB/${
+        newDocId = `${branchObj.branchCode}/${shortCode}/PB/${
           parseInt(lastObject.docId.split("/").at(-1)) + 1
         }`;
       }
@@ -238,6 +236,10 @@ async function getOne(id) {
           price: true,
           Color: true,
           Size: true,
+          Itemgroup:true,
+          taxPercent: true,
+          discountType: true,
+          discountValue: true,
           PurchaseInward: {
             select: {
               docId: true,
