@@ -51,6 +51,14 @@ export default function Form() {
     companyId,
   };
 
+  const countryNameRef = useRef(null);
+
+  useEffect(() => {
+    if (form && countryNameRef.current) {
+      countryNameRef.current.focus();
+    }
+  }, [form]);
+
   const {
     data: allData,
     isLoading,
@@ -107,6 +115,14 @@ export default function Form() {
       } else {
         returnData = await callback(data).unwrap();
       }
+
+      if (nextProcess == "new") {
+        syncFormWithDb(undefined);
+        onNew();
+        countryNameRef?.current?.focus();
+      } else {
+        setForm(false);
+      }
       Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
@@ -117,12 +133,6 @@ export default function Form() {
         //     Swal.showLoading();
         // }
       });
-      if (nextProcess == "new") {
-        syncFormWithDb(undefined);
-        onNew();
-      } else {
-        setForm(false);
-      }
       dispatch({
         type: `TaxTermMaster/invalidateTags`,
         payload: ["Taxe Name"],
@@ -211,7 +221,6 @@ export default function Form() {
       }
     }
   };
-
 
   const handleKeyDown = (event) => {
     let charCode = String.fromCharCode(event.which).toLowerCase();
@@ -442,6 +451,7 @@ export default function Form() {
                               required={true}
                               readOnly={readOnly}
                               disabled={childRecord.current > 0}
+                              ref={countryNameRef}
                             />
                           </div>
                           <ToggleButton
@@ -462,7 +472,6 @@ export default function Form() {
                             taxTemplateItems={taxTemplateDetails}
                             setTaxTemplateItems={setTaxTemplateDetails}
                             readOnly={readOnly || childRecord.current > 0}
-                            
                           />
                         </fieldset>
                       </div>

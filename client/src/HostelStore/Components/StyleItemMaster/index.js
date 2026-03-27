@@ -121,30 +121,26 @@ export default function Form() {
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
-      let returnData;
-      if (text === "Updated") {
-        returnData = await callback(data).unwrap();
-      } else {
-        returnData = await callback(data).unwrap();
-      }
+      let returnData = await callback(data).unwrap();
       setId(returnData.data.id);
-      Swal.fire({
-        title: text + "  " + "Successfully",
-        icon: "success",
-        draggable: true,
-        timer: 1000,
-        showConfirmButton: false,
-        didOpen: () => {
-          Swal.showLoading();
-        },
-      });
-      console.log(nextProcess, "nextProcess");
+
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
+        countryNameRef?.current?.focus();
       } else {
         setForm(false);
       }
+      Swal.fire({
+        title: text + "  " + "Successfully",
+        icon: "success",
+        // draggable: true,
+        // timer: 1000,
+        // showConfirmButton: false,
+        // didOpen: () => {
+        //   Swal.showLoading();
+        // },
+      });
     } catch (error) {
       console.log("handle");
     }

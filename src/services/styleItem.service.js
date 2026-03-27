@@ -50,7 +50,10 @@ async function getOne(id) {
     },
   });
   if (!data) return NoRecordFound("styleItem");
-  return { statusCode: 0, data: { ...data, ...{ childRecord : childRecordPo + childRecordInward } } };
+  return {
+    statusCode: 0,
+    data: { ...data, ...{ childRecord: childRecordPo + childRecordInward } },
+  };
 }
 
 async function getSearch(req) {
@@ -89,10 +92,10 @@ async function create(body) {
       aliasName,
       active,
       code,
-      hsnId: hsnId ? parseInt(hsnId) : undefined,
-      uomId: uomId ? parseInt(uomId) : undefined,
-      itemGroupId: itemGroupId ? parseInt(itemGroupId) : undefined,
-      sizeTemplateId: sizeTemplateId ? parseInt(sizeTemplateId) : undefined,
+      hsnId: parseInt(hsnId) || null,
+      uomId: parseInt(uomId) || null,
+      itemGroupId: parseInt(itemGroupId) || null,
+      sizeTemplateId: parseInt(sizeTemplateId) || null,
     },
   });
   return { statusCode: 0, data };
@@ -125,10 +128,10 @@ async function update(id, body) {
       aliasName,
       active,
       code,
-      hsnId: hsnId ? parseInt(hsnId) : undefined,
-      uomId: parseInt(uomId) ?? 0,
-      itemGroupId: parseInt(itemGroupId) ?? 0,
-      sizeTemplateId: parseInt(sizeTemplateId) ?? 0,
+      hsnId: parseInt(hsnId) || null,
+      uomId: parseInt(uomId) || null,
+      itemGroupId: parseInt(itemGroupId) || null,
+      sizeTemplateId: parseInt(sizeTemplateId) || null,
     },
   });
   return { statusCode: 0, data };

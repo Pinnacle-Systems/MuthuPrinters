@@ -79,17 +79,18 @@ export default function Form() {
     try {
       let returnData = await callback(data).unwrap();
       setId(returnData.data.id);
+      if (nextProcess == "new") {
+        syncFormWithDb(undefined)
+        onNew()
+        countryNameRef?.current?.focus()
+      } else {
+        setForm(false)
+      }
       Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
 
       });
-      if (nextProcess == "new") {
-        syncFormWithDb(undefined)
-        onNew()
-      } else {
-        setForm(false)
-      }
     } catch (error) {
       Swal.fire({
         icon: 'error',

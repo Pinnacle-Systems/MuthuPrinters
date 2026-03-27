@@ -74,6 +74,15 @@ export default function Form() {
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
       let returnData = await callback(data).unwrap();
+
+      if (nextProcess == "new") {
+        syncFormWithDb(undefined);
+        onNew();
+        countryNameRef?.current?.focus()
+
+      } else {
+        setForm(false);
+      }
       Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
@@ -84,12 +93,6 @@ export default function Form() {
         //     Swal.showLoading();
         // }
       });
-      if (nextProcess == "new") {
-        syncFormWithDb(undefined);
-        onNew();
-      } else {
-        setForm(false);
-      }
     } catch (error) {
       console.log("handle");
     }

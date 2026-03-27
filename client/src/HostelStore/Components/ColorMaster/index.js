@@ -103,16 +103,18 @@ export default function Form() {
       setId(returnData?.data?.id);
       // toast.success(text + "Successfully");
       setForm(false);
+
+      if (nextProcess == "new") {
+        syncFormWithDb(undefined);
+        onNew();
+        countryNameRef?.current?.focus();
+      } else {
+        setForm(false);
+      }
       Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
       });
-      if (nextProcess == "new") {
-        syncFormWithDb(undefined);
-        onNew();
-      } else {
-        setForm(false);
-      }
     } catch (error) {
       console.log("handle");
     }

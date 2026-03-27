@@ -51,7 +51,7 @@ export default function Form() {
 
   const params = {
     companyId: secureLocalStorage.getItem(
-      sessionStorage.getItem("sessionId") + "userCompanyId"
+      sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
   const {
@@ -84,7 +84,7 @@ export default function Form() {
       setState(data?.stateId ? data.stateId : "");
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
-    [id]
+    [id],
   );
 
   useEffect(() => {
@@ -110,16 +110,18 @@ export default function Form() {
     try {
       let returnData = await callback(data).unwrap();
       setId(returnData.data.id);
+
+      if (nextProcess == "new") {
+        syncFormWithDb(undefined);
+        onNew();
+        countryNameRef?.current?.focus();
+      } else {
+        setForm(false);
+      }
       Swal.fire({
         title: text + "Successfully",
         icon: "success",
       });
-      if (nextProcess == "new") {
-        syncFormWithDb(undefined);
-        onNew();
-      } else {
-        setForm(false);
-      }
       dispatch({
         type: `StateMaster/invalidateTags`,
         payload: ["State"],
@@ -136,15 +138,18 @@ export default function Form() {
         ?.filter((i) => i.id !== id)
         ?.some(
           (item) =>
-            item.name?.trim().toLowerCase() == name?.trim().toLowerCase() && item.stateId == state
+            item.name?.trim().toLowerCase() == name?.trim().toLowerCase() &&
+            item.stateId == state,
         );
     } else {
       foundItem = allData?.data?.some(
-        (item) => item.name?.trim().toLowerCase() == name?.trim().toLowerCase() && item.stateId == state
+        (item) =>
+          item.name?.trim().toLowerCase() == name?.trim().toLowerCase() &&
+          item.stateId == state,
       );
     }
 
-    console.log(allData?.data, "alldata")
+    console.log(allData?.data, "alldata");
 
     if (foundItem) {
       Swal.fire({
@@ -216,7 +221,7 @@ export default function Form() {
     setReadOnly(false);
     setForm(true);
     setSearchValue("");
-    syncFormWithDb(undefined)
+    syncFormWithDb(undefined);
   };
 
   function onDataClick(id) {
@@ -304,7 +309,8 @@ export default function Form() {
   //     );
   function countryFromState() {
     return state
-      ? stateList?.data?.find((item) => item.id === parseInt(state)).country?.name
+      ? stateList?.data?.find((item) => item.id === parseInt(state)).country
+          ?.name
       : "";
   }
 
@@ -446,14 +452,14 @@ export default function Form() {
                           options={
                             Array.isArray(stateList?.data)
                               ? dropDownListObject(
-                                id
-                                  ? stateList?.data
-                                  : stateList?.data?.filter(
-                                    (item) => item?.active
-                                  ),
-                                "name",
-                                "id"
-                              )
+                                  id
+                                    ? stateList?.data
+                                    : stateList?.data?.filter(
+                                        (item) => item?.active,
+                                      ),
+                                  "name",
+                                  "id",
+                                )
                               : []
                           }
                           value={state}
