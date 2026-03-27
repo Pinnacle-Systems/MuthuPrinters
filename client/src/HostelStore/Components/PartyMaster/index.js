@@ -1587,7 +1587,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                 <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto mt-1">
 
                     <div className='w-full flex justify-between mb-2 items-center px-0.5'>
-                        <h1 className="text-xl font-bold text-gray-800">Customer/Supplier Master </h1>
+                        <h1 className="text-lg font-bold text-gray-800">Customer/Supplier Master </h1>
                         <div className="flex items-center gap-4 text-md">
                             <button
                                 onClick={() => {

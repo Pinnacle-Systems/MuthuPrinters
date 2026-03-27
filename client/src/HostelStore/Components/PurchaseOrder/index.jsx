@@ -5,7 +5,7 @@ import { getCommonParams } from "../../../Utils/helper.js";
 import { FaPlus } from "react-icons/fa";
 import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
-import { useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
+import { useGetBranchByIdQuery, useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
 import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices";
@@ -37,6 +37,9 @@ export default function Form() {
     isLoading,
     isFetching,
   } = useGetTermsandCondtionsQuery({ params });
+  const {
+    data: branchData,
+  } = useGetBranchByIdQuery(branchId, { skip: !branchId });
   const [trigger, { data: singleData,
     isFetching: isSingleFetching,
     isLoading: isSingleLoading, }] =
@@ -183,6 +186,7 @@ export default function Form() {
           itemGroupList={itemGroupList}
           sizeList={sizeList}
           colorList={colorList}
+          branchData={branchData}
         />
       )}
     </>

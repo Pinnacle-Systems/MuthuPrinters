@@ -25,12 +25,15 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, tempItems, setTemp
             );
             if (alreadyExists) return prevItems;
             const index = newItems?.findIndex(v => v?.styleItemId === "");
-
+            const newRow = {
+                ...obj,
+                taxPercent: obj?.Hsn?.tax || 0,
+            }
 
             if (index !== -1) {
-                newItems[index] = obj;
+                newItems[index] = newRow;
             } else {
-                newItems.push(obj);
+                newItems.push(newRow);
             }
 
             return newItems;

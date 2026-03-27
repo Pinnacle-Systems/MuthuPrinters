@@ -28,6 +28,8 @@ import { useDispatch } from "react-redux";
 import { Check, Power } from "lucide-react";
 import Modal from "../../../UiComponents/Modal";
 import Swal from "sweetalert2";
+import { CountryMaster } from "..";
+import { DropdownWithModal } from "../../../Inputs/Reuseable";
 
 const MODEL = "State Master";
 
@@ -398,7 +400,7 @@ export default function Form() {
 
     <div onKeyDown={handleKeyDown} className="p-1">
       <div className="w-full flex bg-white p-1 justify-between  items-center">
-        <h5 className="text-2xl font-bold text-gray-800">State Master</h5>
+        <h5 className="text-lg font-bold text-gray-800">State Master</h5>
         <div className="flex items-center">
           <button
             onClick={() => {
@@ -510,7 +512,7 @@ export default function Form() {
                         />
                       </div>
                       <div className="">
-                        <DropdownInputNew
+                        {/* <DropdownInputNew
                           name="Country"
                           options={dropDownListObject(
                             id
@@ -527,6 +529,27 @@ export default function Form() {
                           readOnly={readOnly}
                           className={`w-[150px]`}
                           disabled={childRecord.current > 0}
+                        /> */}
+                        <DropdownWithModal
+                          name="Country"
+                          options={dropDownListObject(
+                            id
+                              ? countriesList?.data
+                              : countriesList?.data?.filter(
+                                  (item) => item?.active,
+                                ),
+                            "name",
+                            "id",
+                          )}
+                          value={country}
+                          setValue={setCountry}
+                          required={true}
+                          readOnly={readOnly}
+                          className={`w-[150px]`}
+                          disabled={childRecord.current > 0}
+                          addNewLabel="+ Add New Country"
+                          childComponent={CountryMaster}
+                          addNewModalWidth="w-[40%] h-[45%]"
                         />
                       </div>
 

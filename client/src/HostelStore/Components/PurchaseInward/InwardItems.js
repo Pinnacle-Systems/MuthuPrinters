@@ -228,7 +228,7 @@ const InwardItems = ({
                 <th
                   className={`w-96 px-2 py-2 text-center font-medium text-[13px]`}
                 >
-                  Description of Goods
+                  Description of Goods<span className="text-red-500">*</span>
                 </th>
                 <th
                   className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
@@ -243,7 +243,7 @@ const InwardItems = ({
                 <th
                   className={`w-20 px-4 py-2 text-center font-medium text-[13px] `}
                 >
-                  UOM
+                  UOM<span className="text-red-500">*</span>
                 </th>
                 {inwardType !== "Direct Inward" && (
                   <th
@@ -284,13 +284,13 @@ const InwardItems = ({
                   <th
                     className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                   >
-                    Price
+                    Price<span className="text-red-500">*</span>
                   </th>
                 )}
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
-                  Inward Qty
+                  Inward Qty<span className="text-red-500">*</span>
                 </th>
 
                 <th
@@ -303,7 +303,8 @@ const InwardItems = ({
             <tbody>
               {(inwardItems ? inwardItems : [])?.map((row, index) => (
                 <tr
-                  className="border border-blue-gray-200 cursor-pointer "
+                                    className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
+
                   key={index}
                 >
                   <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">

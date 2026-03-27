@@ -123,7 +123,16 @@ const PurchaseBillEntryForm = ({
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
       setNetBillValue(parseFloat(data?.netBillValue)?.toFixed(2));
-      setInwardItems(data?.purchaseBillEntryItems || []);
+      setInwardItems(
+        (data?.purchaseBillEntryItems || []).map((item) => ({
+          ...item, // ✅ keeps StyleItem, Color, Size, Uom, PurchaseInward
+          styleItemId: item.styleItemId || item.StyleItem?.id,
+          uomId: item.uomId || item.Uom?.id,
+          hsnId: item.hsnId || item.Hsn?.id,
+          colorId: item.colorId || item.Color?.id,
+          sizeId: item.sizeId || item.Size?.id,
+        })),
+      );
       setSupplierId(data?.supplierId || "");
       setTaxTemplateId(data?.taxTemplateId || "");
       setRemarks(data?.remarks || "");

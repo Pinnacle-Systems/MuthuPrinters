@@ -4,7 +4,7 @@ import PurchaseReturnFormReport from "./PurchaseReturnFormReport.js";
 import { getCommonParams } from "../../../Utils/helper.js";
 import { FaPlus } from "react-icons/fa";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
-import { useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
+import { useGetBranchByIdQuery, useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
 import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices";
@@ -25,6 +25,10 @@ export default function Form() {
     companyId,
     finYearId,
   };
+
+  const {
+    data: branchData,
+  } = useGetBranchByIdQuery(branchId, { skip: !branchId });
 
   const handleView = (orderId) => {
     setId(orderId);
@@ -144,6 +148,7 @@ export default function Form() {
           onNew={onNew}
           sizeList={sizeList}
           colorList={colorList}
+          branchData={branchData}
         />
       )}
     </>

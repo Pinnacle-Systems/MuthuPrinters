@@ -239,12 +239,12 @@ const PoItems = ({
           isNewVersion={isNewVersion}
         />
       </Modal>
-      <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">
+      <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[250px] overflow-auto  w-full">
         <div className="flex justify-between items-center my-2">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
         </div>
         <div
-          className={`w-full min-h-[180px] max-h-[180px] overflow-y-auto  my-1`}
+          className={`w-full min-h-[200px] max-h-[200px] overflow-y-auto  my-1`}
         >
           <table className=" border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
@@ -257,7 +257,7 @@ const PoItems = ({
                 <th
                   className={`w-96 px-2 py-2 text-center font-medium text-[13px]`}
                 >
-                  Description of Goods
+                  Description of Goods<span className="text-red-500">*</span>
                 </th>
                 <th
                   className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
@@ -277,18 +277,18 @@ const PoItems = ({
                 <th
                   className={`w-20 px-4 py-2 text-center font-medium text-[13px] `}
                 >
-                  UOM
+                  UOM<span className="text-red-500">*</span>
                 </th>
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
-                  Quantity
+                  Quantity<span className="text-red-500">*</span>
                 </th>
 
                 <th
                   className={`w-24 px-1 py-2 text-center font-medium text-[13px] `}
                 >
-                  Price
+                  Price<span className="text-red-500">*</span>
                 </th>
                 <th
                   className={`w-28 px-1 py-2 text-center font-medium text-[13px] `}
@@ -322,7 +322,7 @@ const PoItems = ({
                     : true
                 ) ? (
                   <tr
-                    className="border border-blue-gray-200 cursor-pointer "
+                    className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
                     key={index}
                   >
                     <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">

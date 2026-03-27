@@ -56,6 +56,7 @@ const PurchaseOrderForm = ({
   itemGroupList,
   sizeList,
   colorList,
+  branchData
 }) => {
   const today = new Date();
 
@@ -484,7 +485,21 @@ const PurchaseOrderForm = ({
         widthClass={"w-[90%] h-[90%]"}
       >
         <PDFViewer style={tw("w-full h-full")}>
-          <PurchaseOrderPrintFormat singleData={singleData?.data} />
+          <PurchaseOrderPrintFormat
+            singleData={singleData?.data}
+            supplierDetails={supplierDetails?.data}
+            deliveryTo={deliveryTo}
+            deliveryType={deliveryType}
+            branchData={branchData?.data}
+            taxDetails={totals}
+            taxGroupWise={taxGroupWise}
+            colorList={colorList}
+            uomList={uomList}
+            styleItemList={styleItemList}
+            discountType={discountType}
+            sizeList={sizeList}
+            discountValue={discountValue}
+          />
         </PDFViewer>
       </Modal>
       <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">

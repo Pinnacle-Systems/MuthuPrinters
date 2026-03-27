@@ -523,7 +523,7 @@ async function getOne(id) {
       ...data,
       inwardItems: itemsWithQty,
       childRecord: childRecordReturn,
-      childRecordBill : childRecordBill,
+      childRecordBill: childRecordBill,
     },
   };
 }
@@ -725,6 +725,7 @@ async function getPurchaseInwardBillEntryItems(req) {
         Hsn: {
           select: {
             name: true,
+            tax: true,
           },
         },
         StyleItem: {

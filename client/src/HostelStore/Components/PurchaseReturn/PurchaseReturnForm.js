@@ -16,7 +16,7 @@ import {
   isGridDatasValid,
 } from "../../../Utils/helper";
 import { toast } from "react-toastify";
-import { FiEdit2, FiSave } from "react-icons/fi";
+import { FiEdit2, FiPrinter, FiSave } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { PDFViewer } from "@react-pdf/renderer";
@@ -30,6 +30,9 @@ import {
 } from "../../../redux/services/PurchaseReturnService";
 import { useGetPurInwardItemsQuery } from "../../../redux/uniformService/PurchaseInwardEntry";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
+import Modal from "../../../UiComponents/Modal";
+import tw from "../../../Utils/tailwind-react-pdf";
+import PurchaseReturnPrintFormat from "./Print-Format/PurchaseReturnPrintFormat";
 
 const PurchaseReturnForm = ({
   onClose,
@@ -44,6 +47,7 @@ const PurchaseReturnForm = ({
   hsnList,
   sizeList,
   colorList,
+  branchData
 }) => {
   const today = new Date();
 
@@ -66,6 +70,7 @@ const PurchaseReturnForm = ({
   const [searchDocDate, setSearchDocDate] = useState("");
   const [dataPerPage, setDataPerPage] = useState("10");
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
 
   const { userId, finYearId, branchId } = getCommonParams();
 
@@ -256,8 +261,8 @@ const PurchaseReturnForm = ({
     const filledItems = (data?.returnItems || []).filter(
       (item) => item.styleItemId,
     );
-    const duplicates = findDuplicates(filledItems);
-    const dup = duplicates[0];
+    // const duplicates = findDuplicates(filledItems);
+    // const dup = duplicates[0];
 
     const checks = [
       { condition: !data.returnType, title: "Return Type is required!" },
@@ -270,13 +275,13 @@ const PurchaseReturnForm = ({
         condition: filledItems.length === 0,
         title: "Please add at least one item!",
       },
-      {
-        condition: duplicates.length > 0,
-        title: "Duplicate Item Found!",
-        html: dup
-          ? `Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},  Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")}, Color - ${findFromList(dup?.colorId, colorList?.data, "name")}`
-          : "",
-      },
+      // {
+      //   condition: duplicates.length > 0,
+      //   title: "Duplicate Item Found!",
+      //   html: dup
+      //     ? `Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")},  Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")}, Color - ${findFromList(dup?.colorId, colorList?.data, "name")}`
+      //     : "",
+      // },
       {
         condition: !isGridDatasValid(data?.returnItems, false, [
           "styleItemId",
@@ -350,6 +355,23 @@ const PurchaseReturnForm = ({
 
   return (
     <>
+      <Modal
+        isOpen={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        widthClass={"w-[90%] h-[90%]"}
+      >
+        <PDFViewer style={tw("w-full h-full")}>
+          <PurchaseReturnPrintFormat
+            singleData={singleData?.data}
+            supplierList={supplierList}
+            styleItemList={styleItemList}
+            uomList={uomList}
+            sizeList={sizeList}
+            colorList={colorList}
+            branchData={branchData?.data}
+          />
+        </PDFViewer>
+      </Modal>
       <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
         <div className="flex justify-between items-center">
           <h1 className="text-lg font-bold text-gray-800">Purchase Return</h1>
@@ -602,6 +624,16 @@ const PurchaseReturnForm = ({
             >
               <FiEdit2 className="w-4 h-4 mr-2" />
               Edit
+            </button>
+            <button
+              className="bg-slate-600 text-white px-4 py-1 rounded-md hover:bg-slate-700 flex items-center text-sm"
+              onClick={() => {
+                // handlePrint()
+                setPrintModalOpen(true);
+              }}
+            >
+              <FiPrinter className="w-4 h-4 mr-2" />
+              Print
             </button>
           </div>
         </div>

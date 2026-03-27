@@ -639,7 +639,7 @@ export default function Form() {
         // </div>
         <div onKeyDown={handleKeyDown} className="p-1 ">
             <div className="w-full flex bg-white p-1 justify-between  items-center">
-                <h1 className="text-2xl font-bold text-gray-800">
+                <h1 className="text-lg font-bold text-gray-800">
                     Employee Master
                 </h1>
                 <div className="flex items-center gap-4">

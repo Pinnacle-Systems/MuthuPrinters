@@ -158,7 +158,7 @@ const ReturnItems = ({
           onClose={() => setFillGrid(false)}
         />
       </Modal>
-      <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[230px] overflow-auto  w-full">
+      <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[250px] overflow-auto  w-full">
         <div className="flex items-center my-2">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
           {!id && (
@@ -195,7 +195,7 @@ const ReturnItems = ({
           )}
         </div>
         <div
-          className={`w-full min-h-[160px] max-h-[160px] overflow-y-auto  my-2`}
+          className={`w-full min-h-[200px] max-h-[200px] overflow-y-auto  my-2`}
         >
           <table className=" border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
@@ -251,7 +251,7 @@ const ReturnItems = ({
                 <th
                   className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
                 >
-                  Return Qty
+                  Return Qty<span className="text-red-500">*</span>
                 </th>
                 <th
                   className={`w-20 px-1 py-2 text-center font-medium text-[13px] `}
@@ -263,7 +263,7 @@ const ReturnItems = ({
             <tbody>
               {(returnItems ? returnItems : [])?.map((row, index) => (
                 <tr
-                  className="border border-blue-gray-200 cursor-pointer "
+                  className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
                   key={index}
                 >
                   <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
@@ -578,12 +578,9 @@ const ReturnItems = ({
                     )
                     .toFixed(2)}
                 </td>
-                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                   {returnItems
-                    ?.reduce(
-                      (sum, row) => sum + (Number(row.balQty) || 0),
-                      0,
-                    )
+                    ?.reduce((sum, row) => sum + (Number(row.balQty) || 0), 0)
                     .toFixed(2)}
                 </td>
                 <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">

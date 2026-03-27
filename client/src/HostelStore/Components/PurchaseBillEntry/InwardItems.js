@@ -223,7 +223,7 @@ const InwardItems = ({
           )}
         </div>
         <div
-          className={`w-full min-h-[200px] max-h-[200px] overflow-y-auto  my-2`}
+          className={`w-full min-h-[210px] max-h-[210px] overflow-y-auto  my-2`}
         >
           <table className=" border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
