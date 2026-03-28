@@ -47,7 +47,7 @@ const PurchaseReturnForm = ({
   hsnList,
   sizeList,
   colorList,
-  branchData
+  branchData,
 }) => {
   const today = new Date();
 
@@ -71,6 +71,7 @@ const PurchaseReturnForm = ({
   const [dataPerPage, setDataPerPage] = useState("10");
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  const supplierRef = useRef(null);
 
   const { userId, finYearId, branchId } = getCommonParams();
 
@@ -209,24 +210,32 @@ const PurchaseReturnForm = ({
           title: `${text || "Saved"} Successfully`,
           showConfirmButton: false,
           timer: 2000,
+          didClose: () => {
+            // ✅ Runs after Swal completely closes
+            invalidatePurchaseModule();
+
+            if (returnData.statusCode === 0) {
+              if (nextProcess == "new") {
+                setId(0);
+                setDocId("New");
+                syncFormWithDb(undefined);
+
+                // ✅ Focus after all state updates
+                setTimeout(() => {
+                  supplierRef.current?.focus();
+                }, 100);
+              }
+              if (nextProcess == "close") {
+                onClose();
+              }
+            } else {
+              toast.error(returnData?.message);
+            }
+          },
         });
-        invalidatePurchaseModule();
-        if (returnData.statusCode === 0) {
-          if (nextProcess == "new") {
-            setId(0);
-            setDocId("New");
-            syncFormWithDb(undefined);
-            // onNew();
-          }
-          if (nextProcess == "close") {
-            onClose();
-          }
-        } else {
-          toast.error(returnData?.message);
-        }
       }
     } catch (error) {
-      console.log("handle");
+      console.log("handle", error);
     }
   };
 
@@ -353,6 +362,10 @@ const PurchaseReturnForm = ({
     }
   }, [supplierId]);
 
+  useEffect(() => {
+    supplierRef.current?.focus();
+  }, []);
+
   return (
     <>
       <Modal
@@ -431,7 +444,8 @@ const PurchaseReturnForm = ({
                 }}
                 required={true}
                 readOnly={id}
-                autoFocus={true}
+                // autoFocus={true}
+                ref={supplierRef}
               />
               <DropdownInput
                 name="Location"

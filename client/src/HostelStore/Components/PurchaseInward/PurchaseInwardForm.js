@@ -8,7 +8,7 @@ import {
   TextInput,
 } from "../../../Inputs";
 import { inwardTypes } from "../../../Utils/DropdownData";
-import { useCallback, useEffect,  useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import moment from "moment";
 import {
   findFromList,
@@ -65,6 +65,7 @@ const PurchaseInwardForm = ({
   const [searchDocDate, setSearchDocDate] = useState("");
   const [dataPerPage, setDataPerPage] = useState("10");
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
+  const supplierRef = useRef(null);
 
   const { userId, finYearId, branchId } = getCommonParams();
   const { data: locationData } = useGetLocationMasterQuery({
@@ -190,24 +191,32 @@ const PurchaseInwardForm = ({
           title: `${text || "Saved"} Successfully`,
           showConfirmButton: false,
           timer: 2000,
+          didClose: () => {
+            // ✅ Runs after Swal completely closes
+            invalidatePurchaseModule();
+
+            if (returnData.statusCode === 0) {
+              if (nextProcess == "new") {
+                setId(0);
+                setDocId("New");
+                syncFormWithDb(undefined);
+
+                // ✅ Focus the Bill Type dropdown after all state updates
+                setTimeout(() => {
+                  supplierRef.current?.focus();
+                }, 100);
+              }
+              if (nextProcess == "close") {
+                onClose();
+              }
+            } else {
+              toast.error(returnData?.message);
+            }
+          },
         });
-        invalidatePurchaseModule();
-        if (returnData.statusCode === 0) {
-          if (nextProcess == "new") {
-            setId(0);
-            setDocId("New");
-            syncFormWithDb(undefined);
-            // onNew();
-          }
-          if (nextProcess == "close") {
-            onClose();
-          }
-        } else {
-          toast.error(returnData?.message);
-        }
       }
     } catch (error) {
-      console.log("handle");
+      console.log("handle", error);
     }
   };
 
@@ -330,6 +339,10 @@ const PurchaseInwardForm = ({
     }
   }, [supplierId]);
 
+  useEffect(() => {
+    supplierRef.current?.focus();
+  }, []);
+
   return (
     <>
       <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
@@ -391,7 +404,8 @@ const PurchaseInwardForm = ({
                 }}
                 required={true}
                 readOnly={id}
-                autoFocus={true}
+                // autoFocus={true}
+                ref={supplierRef}
               />
               <DropdownInput
                 name="Location"

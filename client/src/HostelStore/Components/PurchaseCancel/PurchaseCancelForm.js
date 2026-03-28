@@ -60,6 +60,7 @@ const PurchaseCancelForm = ({
   const [tempItems, setTempItems] = useState([]);
   const [searchDocId, setSearchDocId] = useState("");
   const [searchDocDate, setSearchDocDate] = useState("");
+  const supplierRef = useRef(null);
 
   const [dataPerPage, setDataPerPage] = useState("10");
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
@@ -190,24 +191,32 @@ const PurchaseCancelForm = ({
           title: `${text || "Saved"} Successfully`,
           showConfirmButton: false,
           timer: 2000,
+          didClose: () => {
+            // ✅ Everything runs after Swal closes
+            invalidatePurchaseModule();
+
+            if (returnData.statusCode === 0) {
+              if (nextProcess == "new") {
+                setId(0);
+                setDocId("New");
+                syncFormWithDb(undefined);
+
+                // ✅ Focus after state reset
+                setTimeout(() => {
+                  supplierRef.current?.focus();
+                }, 100);
+              }
+              if (nextProcess == "close") {
+                onClose();
+              }
+            } else {
+              toast.error(returnData?.message);
+            }
+          },
         });
-        invalidatePurchaseModule();
-        if (returnData.statusCode === 0) {
-          if (nextProcess == "new") {
-            setId(0);
-            setDocId("New");
-            syncFormWithDb(undefined);
-            // onNew();
-          }
-          if (nextProcess == "close") {
-            onClose();
-          }
-        } else {
-          toast.error(returnData?.message);
-        }
       }
     } catch (error) {
-      console.log("handle");
+      console.log("handle", error);
     }
   };
 
@@ -329,6 +338,10 @@ const PurchaseCancelForm = ({
     }
   }, [supplierId]);
 
+  useEffect(() => {
+    supplierRef.current?.focus();
+  }, []);
+
   return (
     <>
       <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
@@ -390,7 +403,8 @@ const PurchaseCancelForm = ({
                 }}
                 required={true}
                 readOnly={id}
-                autoFocus={true}
+                // autoFocus={true}
+                ref={supplierRef}
               />
               <DropdownInput
                 name="Location"

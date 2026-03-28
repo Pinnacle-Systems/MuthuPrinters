@@ -206,24 +206,26 @@ const PurchaseBillEntryForm = ({
           title: `${text || "Saved"} Successfully`,
           showConfirmButton: false,
           timer: 2000,
-        });
+          didClose: () => {
+            // ✅ This runs after Swal completely closes
+            if (returnData.statusCode === 0) {
+              if (nextProcess == "new") {
+                setId(0);
+                setDocId("New");
+                syncFormWithDb(undefined);
 
-        if (returnData.statusCode === 0) {
-          if (nextProcess == "new") {
-            setId(0);
-            setDocId("New");
-            syncFormWithDb(undefined);
-            // onNew();
-            setTimeout(() => {
-              supplierRef.current?.focus();
-            }, 0);
-          }
-          if (nextProcess == "close") {
-            onClose();
-          }
-        } else {
-          toast.error(returnData?.message);
-        }
+                setTimeout(() => {
+                  supplierRef.current?.focus();
+                }, 50);
+              }
+              if (nextProcess == "close") {
+                onClose();
+              }
+            } else {
+              toast.error(returnData?.message);
+            }
+          },
+        });
       }
     } catch (error) {
       console.log("handle");
@@ -465,7 +467,8 @@ const PurchaseBillEntryForm = ({
                 beforeChange={() => {
                   setInwardItems([]);
                 }}
-                autoFocus={true}
+                // autoFocus={true}
+                ref={supplierRef}
               />
               <DropdownInput
                 name="Tax Type"
@@ -501,7 +504,6 @@ const PurchaseBillEntryForm = ({
                   required={true}
                   disabled={id}
                   isSupplier={true}
-                  // ref={supplierRef}
                 />
               </div>
               <div className="w-[150px]">

@@ -56,7 +56,7 @@ const PurchaseOrderForm = ({
   itemGroupList,
   sizeList,
   colorList,
-  branchData
+  branchData,
 }) => {
   const today = new Date();
 
@@ -85,6 +85,7 @@ const PurchaseOrderForm = ({
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [isNewVersion, setIsNewVersion] = useState(false);
   const [quoteVersion, setQuoteVersion] = useState("");
+  const supplierRef = useRef(null);
 
   const [requirementId, setRequirementId] = useState("");
 
@@ -209,23 +210,32 @@ const PurchaseOrderForm = ({
           title: `${text || "Saved"} Successfully`,
           showConfirmButton: false,
           timer: 2000,
+          didClose: () => {
+            // ✅ Runs after Swal completely closes
+            invalidatePurchaseModule();
+
+            if (returnData.statusCode === 0) {
+              if (nextProcess == "new") {
+                setId("");
+                setDocId("New");
+                syncFormWithDb(undefined);
+
+                // ✅ Focus the Bill Type dropdown after all state updates
+                setTimeout(() => {
+                  supplierRef.current?.focus();
+                }, 100);
+              }
+              if (nextProcess == "close") {
+                onClose();
+              }
+            } else {
+              toast.error(returnData?.message);
+            }
+          },
         });
-        invalidatePurchaseModule();
-        if (returnData.statusCode === 0) {
-          if (nextProcess == "new") {
-            setId("");
-            setDocId("New");
-            syncFormWithDb(undefined);
-          }
-          if (nextProcess == "close") {
-            onClose();
-          }
-        } else {
-          toast.error(returnData?.message);
-        }
       }
     } catch (error) {
-      console.log("handle");
+      console.log("handle", error);
     }
   };
 
@@ -455,6 +465,10 @@ const PurchaseOrderForm = ({
     return parseFloat(qty || 0);
   }
 
+  useEffect(() => {
+    supplierRef.current?.focus();
+  }, []);
+
   return (
     <>
       <Modal
@@ -543,7 +557,8 @@ const PurchaseOrderForm = ({
                 }}
                 required={false}
                 readOnly={readOnly}
-                autoFocus={true}
+                // autoFocus={true}
+                ref={supplierRef}
               />
               <DateInputNew
                 name="Delivery Date"
