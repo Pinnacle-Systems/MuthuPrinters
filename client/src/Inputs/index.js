@@ -1368,11 +1368,11 @@ export const ReusableTable = ({
 
   return (
     <>
-      <div className="bg-[#F1F1F0] shadow-sm h-[71vh]">
+      <div className="bg-[#F1F1F0] shadow-sm h-[69vh]">
         <div className="h-[100vh] rounded-lg bg-[#F1F1F0] shadow-sm">
           <div className="h-[68vh]">
             <table className="">
-              <thead className="bg-gray-200 text-gray-800 ">
+              <thead className="bg-gray-200 text-gray-800">
                 <tr>
                   {columns?.map((column, index) => (
                     <th

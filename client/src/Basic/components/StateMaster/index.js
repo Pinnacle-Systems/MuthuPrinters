@@ -35,7 +35,6 @@ const MODEL = "State Master";
 
 export default function Form() {
   const [form, setForm] = useState(false);
-
   const [readOnly, setReadOnly] = useState(false);
   const [id, setId] = useState("");
   const [name, setName] = useState("");
@@ -433,6 +432,8 @@ export default function Form() {
             widthClass={"w-[40%] h-[320px]"}
             onClose={() => {
               setForm(false);
+              syncFormWithDb(undefined);
+              setId("");
             }}
           >
             <div className="h-full flex flex-col bg-gray-200 ">

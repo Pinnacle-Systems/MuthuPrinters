@@ -352,6 +352,7 @@ export default function Form() {
             widthClass={"w-[40%] h-[45%]"}
             onClose={() => {
               setForm(false);
+              syncFormWithDb(undefined);
             }}
           >
             <div className="h-full flex flex-col bg-gray-200 ">

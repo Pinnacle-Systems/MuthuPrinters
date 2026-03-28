@@ -295,7 +295,8 @@ export default function Form() {
           widthClass={"w-[750px] max-w-6xl h-[400px]"}
           onClose={() => {
             setForm(false);
-            setErrors({});
+            syncFormWithDb(undefined);
+            setId("");
           }}
         >
           <div className="h-full flex flex-col bg-gray-100">

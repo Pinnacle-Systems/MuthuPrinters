@@ -223,7 +223,7 @@ export default function Form() {
       header: "Tax Term",
       accessor: (item) => item?.name,
       //   cellClass: () => "font-medium  text-gray-900",
-      className: "font-medium text-gray-900 text-center uppercase w-72",
+      className: "font-medium text-gray-900 text-left uppercase w-72",
     },
 
     {
@@ -338,7 +338,8 @@ export default function Form() {
             widthClass={"w-[600px] h-[350px]"}
             onClose={() => {
               setForm(false);
-              // setErrors({});
+              syncFormWithDb(undefined);
+              setId("");
             }}
           >
             <div className="h-full flex flex-col bg-gray-200">

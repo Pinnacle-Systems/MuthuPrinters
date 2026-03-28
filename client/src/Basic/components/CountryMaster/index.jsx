@@ -71,7 +71,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     (data) => {
       setName(data?.name || "");
       setCode(data?.code || "");
-      setActive(id ? data?.active ?? false : true);
+      setActive( data?.active ??  true);
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
     [id]
@@ -413,7 +413,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
   return (
     <div onKeyDown={handleKeyDown} className="p-1">
       <div className="w-full flex bg-white p-1 justify-between  items-center">
-        <h5 className="text-2xl font-bold text-gray-800">Country Master</h5>
+        <h5 className="text-lg font-bold text-gray-800">Country Master</h5>
         <div className="flex items-center">
           <button
             onClick={() => {
@@ -427,7 +427,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm  mt-3">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden mt-3">
         <ReusableTable
           columns={columns}
           data={allData?.data}
@@ -443,10 +443,11 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
           <Modal
             isOpen={form}
             form={form}
-            widthClass={"w-[40%] h-[45%]"}
+            widthClass={"w-[40%] h-[320px]"}
             onClose={() => {
               setForm(false);
-              setErrors({});
+              syncFormWithDb(undefined);
+              setId("");
             }}
           >
             <div className="h-full flex flex-col  bg-gray-200">

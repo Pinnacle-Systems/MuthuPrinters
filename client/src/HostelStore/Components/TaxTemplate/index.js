@@ -259,9 +259,8 @@ export default function Form() {
       header: "Template Name",
       accessor: (item) => item?.name,
       //   cellClass: () => "font-medium  text-gray-900",
-      className: "font-medium text-gray-900 text-center uppercase w-72",
+      className: "font-medium text-gray-900 text-left uppercase w-72",
     },
-
     {
       header: "Status",
       accessor: (item) => (item.active ? ACTIVE : INACTIVE),
@@ -336,9 +335,7 @@ export default function Form() {
     // </div>
     <div onKeyDown={handleKeyDown} className="p-1 h-[90%]">
       <div className="w-full flex bg-white p-1 justify-between  items-center">
-        <h5 className="text-lg font-bold text-gray-800">
-          Tax Template Master
-        </h5>
+        <h5 className="text-lg font-bold text-gray-800">Tax Template Master</h5>
         <div className="flex items-center">
           <button
             onClick={() => {
@@ -372,7 +369,8 @@ export default function Form() {
             widthClass={"w-[90%] h-[500px]"}
             onClose={() => {
               setForm(false);
-              // setErrors({});
+              syncFormWithDb(undefined);
+              setId("");
             }}
           >
             <div className="h-full flex flex-col bg-gray-200">

@@ -43,7 +43,7 @@ export default function Form() {
 
   const params = {
     companyId: secureLocalStorage.getItem(
-      sessionStorage.getItem("sessionId") + "userCompanyId"
+      sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
   const {
@@ -88,11 +88,11 @@ export default function Form() {
         setIsFabric(data?.isFabric || false);
         setIsYarn(data?.isYarn || false);
         setIsGarments(data?.isGarments || false);
-        setActive(id ? data?.active ?? false : true);
+        setActive(id ? (data?.active ?? false) : true);
         childRecord.current = data?.childRecord ? data?.childRecord : 0;
       }
     },
-    [id]
+    [id],
   );
 
   useEffect(() => {
@@ -109,7 +109,7 @@ export default function Form() {
     isGarments,
     active,
     companyId: secureLocalStorage.getItem(
-      sessionStorage.getItem("sessionId") + "userCompanyId"
+      sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
 
@@ -153,13 +153,13 @@ export default function Form() {
         ?.some(
           (item) =>
             item.storeName?.trim().toLowerCase() ===
-            storeName?.trim().toLowerCase()
+            storeName?.trim().toLowerCase(),
         );
     } else {
       foundItem = allData?.data?.some(
         (item) =>
           item.storeName?.trim().toLowerCase() ===
-          storeName?.trim().toLowerCase()
+          storeName?.trim().toLowerCase(),
       );
     }
 
@@ -328,7 +328,8 @@ export default function Form() {
           widthClass={"w-[620px] max-w-6xl h-[450px]"}
           onClose={() => {
             setForm(false);
-            setErrors({});
+            syncFormWithDb(undefined);
+            setId("");
           }}
         >
           <div className="h-full flex flex-col bg-gray-100">
@@ -424,10 +425,10 @@ export default function Form() {
                                 id
                                   ? branchList?.data
                                   : branchList?.data?.filter(
-                                      (item) => item.active
+                                      (item) => item.active,
                                     ),
                                 "branchName",
-                                "id"
+                                "id",
                               )}
                               value={locationId}
                               setValue={setLocationId}
