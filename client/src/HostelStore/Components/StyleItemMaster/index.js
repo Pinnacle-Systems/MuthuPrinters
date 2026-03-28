@@ -26,6 +26,8 @@ import sizeTemplateApi, {
   useGetSizeTemplateQuery,
 } from "../../../redux/services/SizeTemplateMaster";
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService";
+import { DropdownWithModal } from "../../../Inputs/Reuseable";
+import { ItemGroup, UomMaster } from "..";
 
 const MODEL = "Item Master";
 export default function Form() {
@@ -426,7 +428,7 @@ export default function Form() {
                           />
                         </div>
                         <div className="mb-3">
-                          <DropdownInput
+                          {/* <DropdownInput
                             name="Item Group"
                             options={dropDownListObject(
                               id
@@ -445,10 +447,31 @@ export default function Form() {
                             disabled={childRecord.current > 0}
                             clear={true}
                             required={true}
+                          /> */}
+                          <DropdownWithModal
+                            name="Item Group"
+                            options={dropDownListObject(
+                              id
+                                ? itemGroupList?.data
+                                : itemGroupList?.data?.filter(
+                                    (item) => item?.active,
+                                  ),
+                              "name",
+                              "id",
+                            )}
+                            value={itemGroupId}
+                            setValue={setItemGroupId}
+                            required={true}
+                            readOnly={readOnly}
+                            className={`w-[150px]`}
+                            disabled={childRecord.current > 0}
+                            addNewLabel="+ Add New Item Group"
+                            childComponent={ItemGroup}
+                            addNewModalWidth="w-[40%] h-[45%]"
                           />
                         </div>
                         <div className="mb-3">
-                          <DropdownInput
+                          {/* <DropdownInput
                             name="UOM"
                             options={dropDownListObject(
                               id
@@ -464,6 +487,27 @@ export default function Form() {
                             required={true}
                             disabled={childRecord.current > 0}
                             readOnly={readOnly}
+                          /> */}
+                          <DropdownWithModal
+                            name="Uom"
+                            options={dropDownListObject(
+                              id
+                                ? uomList?.data
+                                : uomList?.data?.filter(
+                                    (item) => item?.active,
+                                  ),
+                              "name",
+                              "id",
+                            )}
+                            value={uomId}
+                            setValue={setUomId}
+                            required={true}
+                            readOnly={readOnly}
+                            className={`w-[150px]`}
+                            disabled={childRecord.current > 0}
+                            addNewLabel="+ Add New Uom"
+                            childComponent={UomMaster}
+                            addNewModalWidth="w-[40%] h-[45%]"
                           />
                         </div>
                         <div className="mb-3">

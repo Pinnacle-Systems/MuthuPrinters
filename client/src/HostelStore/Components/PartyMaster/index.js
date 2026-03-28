@@ -39,7 +39,7 @@ import {
 import moment from "moment";
 import Modal from "../../../UiComponents/Modal";
 
-import { Loader } from "../../../Basic/components";
+import { CityMaster, Loader } from "../../../Basic/components";
 import { useDispatch, useSelector } from "react-redux";
 import { findFromList, renameFile } from "../../../Utils/helper";
 import { Check, LayoutGrid, Paperclip, Plus, Power, Table } from "lucide-react";
@@ -51,6 +51,7 @@ import { push } from "../../../redux/features/opentabs";
 import AddBranch from "./AddBranch";
 import { useGetbranchTypeQuery } from "../../../redux/services/BranchTypeMaster";
 import { useGetPartyBranchByIdQuery } from "../../../redux/services/PartyBranchMasterService";
+import { DropdownWithModal } from "../../../Inputs/Reuseable";
 
 export default function Form({ partyId, onCloseForm, childId }) {
   const [form, setForm] = useState(false);
@@ -1095,7 +1096,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                       <div className="col-span-2">
                         <div className=" grid grid-cols-5 gap-3">
                           <div className="col-span-4">
-                            <DropdownInputNew
+                            {/* <DropdownInputNew
                               name="City/State Name"
                               options={dropDownListMergedObject(
                                 id
@@ -1115,7 +1116,28 @@ export default function Form({ partyId, onCloseForm, childId }) {
                               readOnly={readOnly}
                               disabled={childRecord.current > 0}
                               className="focus:ring-2 focus:ring-blue-100"
-                            />
+                            /> */}
+                             {/* <DropdownWithModal
+                              name="City/State Name"
+                              options={dropDownListMergedObject(
+                                id
+                                  ? cityList?.data
+                                  : cityList?.data?.filter((item) => item.active),
+                                "name",
+                                "id"
+                              )}
+                              country={country}
+                              masterName="CITY MASTER"
+                              // lastTab={activeTab}
+                              value={city}
+                              setValue={setCity}
+                              required={true}
+                              readOnly={readOnly}
+                              className="focus:ring-2 focus:ring-blue-100"
+                              addNewLabel="+ Add New City"
+                              childComponent={CityMaster}
+                              addNewModalWidth="w-[40%] h-[45%]"
+                            /> */}
                           </div>
                           <TextInputNew1
                             name="Pincode"
@@ -1987,7 +2009,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                           <div className="col-span-2">
                             <div className=" grid grid-cols-5 gap-3">
                               <div className="col-span-4">
-                                <DropdownInputNew
+                                {/* <DropdownInputNew
                                   name="City/State Name"
                                   options={dropDownListMergedObject(
                                     id
@@ -2007,7 +2029,28 @@ export default function Form({ partyId, onCloseForm, childId }) {
                                   readOnly={readOnly}
                                   // disabled={childRecord.current > 0}
                                   className="focus:ring-2 focus:ring-blue-100"
-                                />
+                                /> */}
+                                <DropdownWithModal
+                              name="City/State Name"
+                              options={dropDownListMergedObject(
+                                id
+                                  ? cityList?.data
+                                  : cityList?.data?.filter((item) => item.active),
+                                "name",
+                                "id"
+                              )}
+                              country={country}
+                              masterName="CITY MASTER"
+                              // lastTab={activeTab}
+                              value={city}
+                              setValue={setCity}
+                              required={true}
+                              readOnly={readOnly}
+                              className="focus:ring-2 focus:ring-blue-100"
+                              addNewLabel="+ Add New City"
+                              childComponent={CityMaster}
+                              addNewModalWidth="w-[40%] h-[45%]"
+                            />
                               </div>
                               <TextInputNew1
                                 name="Pincode"

@@ -53,6 +53,8 @@ import Loader from "../Loader";
 import { Check, LayoutGrid, Plus, Power, Table } from "lucide-react";
 import imageDefault from "../../../assets/default-dp.png";
 import Swal from "sweetalert2";
+import { CityMaster, DepartmentMaster, EmployeeCategoryMaster } from "..";
+import { DropdownWithModal } from "../../../Inputs/Reuseable";
 
 const MODEL = "Employee Master";
 
@@ -1045,7 +1047,7 @@ export default function Form() {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       <div>
-                        <DropdownInputNew
+                        {/* <DropdownInputNew
                           ref={input3Ref}
                           name="Employee Category"
                           options={dropDownListObject(
@@ -1063,6 +1065,27 @@ export default function Form() {
                           readOnly={readOnly}
                           // disabled={childRecord.current > 0}
                           onKeyDown={(e) => handleKeyNext(e, null)}
+                        /> */}
+                        <DropdownWithModal
+                          name="Employee Category"
+                          options={dropDownListObject(
+                            id
+                              ? employeeCategoryList?.data
+                              : employeeCategoryList?.data?.filter(
+                                  (item) => item?.active,
+                                ),
+                            "name",
+                            "id",
+                          )}
+                          value={employeeCategory}
+                          setValue={setEmployeeCategory}
+                          required={true}
+                          readOnly={readOnly}
+                          className={`w-[150px]`}
+                          disabled={childRecord.current > 0}
+                          addNewLabel="+ Add New State"
+                          childComponent={EmployeeCategoryMaster}
+                          addNewModalWidth="w-[40%] h-[45%]"
                         />
                         {errors.employeeCategory && (
                           <span className="text-red-500 text-xs ml-1">
@@ -1072,7 +1095,7 @@ export default function Form() {
                       </div>
 
                       <div>
-                        <DropdownInputNew
+                        {/* <DropdownInputNew
                           name="Department"
                           options={dropDownListObject(
                             id
@@ -1088,6 +1111,27 @@ export default function Form() {
                           readOnly={readOnly}
                           required={true}
                           // disabled={childRecord.current > 0}
+                        /> */}
+                        <DropdownWithModal
+                          name="Department"
+                          options={dropDownListObject(
+                            id
+                              ? departmentList?.data
+                              : departmentList?.data?.filter(
+                                  (item) => item?.active,
+                                ),
+                            "name",
+                            "id",
+                          )}
+                          value={department}
+                          setValue={setDepartment}
+                          required={true}
+                          readOnly={readOnly}
+                          className={`w-[150px]`}
+                          disabled={childRecord.current > 0}
+                          addNewLabel="+ Add New State"
+                          childComponent={DepartmentMaster}
+                          addNewModalWidth="w-[40%] h-[45%]"
                         />
                         {errors.department && (
                           <span className="text-red-500 text-xs ml-1">
@@ -1306,7 +1350,7 @@ export default function Form() {
                           // disabled={childRecord.current > 0}
                           required
                         />
-                        <DropdownInputNew
+                        {/* <DropdownInputNew
                           name="City/State"
                           options={dropDownListMergedObject(
                             (cityList?.data || []).filter(
@@ -1320,6 +1364,27 @@ export default function Form() {
                           readOnly={readOnly}
                           // disabled={childRecord.current > 0}
                           required
+                        /> */}
+                        <DropdownWithModal
+                          name="City/State Name"
+                          options={dropDownListMergedObject(
+                            id
+                              ? cityList?.data
+                              : cityList?.data?.filter((item) => item.active),
+                            "name",
+                            "id",
+                          )}
+                          // country={country}
+                          masterName="CITY MASTER"
+                          // lastTab={activeTab}
+                          value={permCity}
+                          setValue={setPermCity}
+                          required={true}
+                          readOnly={readOnly}
+                          className="focus:ring-2 focus:ring-blue-100"
+                          addNewLabel="+ Add New City"
+                          childComponent={CityMaster}
+                          addNewModalWidth="w-[40%] h-[45%]"
                         />
                       </div>
                     </div>

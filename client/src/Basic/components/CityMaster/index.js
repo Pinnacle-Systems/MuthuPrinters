@@ -31,14 +31,22 @@ import { Check, Power } from "lucide-react";
 import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import Swal from "sweetalert2";
+import { DropdownWithModal } from "../../../Inputs/Reuseable";
+import { StateMaster } from "..";
 
 const MODEL = "City Master";
 
-export default function Form() {
+export default function Form({
+  onSuccess,
+  onClose,
+  editId,
+  deleteId,
+  deleteLabel,
+} = {}) {
   const [form, setForm] = useState(false);
 
   const [readOnly, setReadOnly] = useState(false);
-  const [id, setId] = useState("");
+  const [id, setId] = useState(editId || deleteId || "");
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [active, setActive] = useState(true);
@@ -110,7 +118,10 @@ export default function Form() {
     try {
       let returnData = await callback(data).unwrap();
       setId(returnData.data.id);
-
+      if (onSuccess) {
+        onSuccess(returnData.data.id);
+        return;
+      }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
@@ -309,7 +320,7 @@ export default function Form() {
   //     );
   function countryFromState() {
     return state
-      ? stateList?.data?.find((item) => item.id === parseInt(state)).country
+      ? stateList?.data?.find((item) => item.id === parseInt(state))?.country
           ?.name
       : "";
   }
@@ -317,10 +328,169 @@ export default function Form() {
   const countryNameRef = useRef(null);
 
   useEffect(() => {
-    if (form && countryNameRef.current) {
+    if ((form || onSuccess) && countryNameRef.current) {
       countryNameRef.current.focus();
     }
-  }, [form]);
+  }, [form, onSuccess]);
+
+  const formBody = (
+    <div className="flex-1  p-3 ">
+      <div className="grid grid-cols-1  gap-3  h-full ">
+        <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+          <div className="grid grid-cols-2  gap-3 ">
+            <div className="">
+              <TextInputNew1
+                ref={countryNameRef}
+                name="City Name"
+                type="text"
+                value={name}
+                setValue={setName}
+                required={true}
+                readOnly={readOnly}
+                disabled={childRecord.current > 0}
+              />
+            </div>
+            <div className="">
+              <TextInputNew1
+                name="Code"
+                type="text"
+                value={code}
+                setValue={setCode}
+                readOnly={readOnly}
+                disabled={childRecord.current > 0}
+              />
+            </div>
+
+            <div className=" ">
+              {/* <DropdownInputNew
+                          name="State"
+                          options={
+                            Array.isArray(stateList?.data)
+                              ? dropDownListObject(
+                                  id
+                                    ? stateList?.data
+                                    : stateList?.data?.filter(
+                                        (item) => item?.active,
+                                      ),
+                                  "name",
+                                  "id",
+                                )
+                              : []
+                          }
+                          value={state}
+                          setValue={setState}
+                          required={true}
+                          readOnly={readOnly}
+                          disabled={childRecord.current > 0}
+                        /> */}
+              <DropdownWithModal
+                name="State"
+                options={dropDownListObject(
+                  id
+                    ? stateList?.data
+                    : stateList?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={state}
+                setValue={setState}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                disabled={childRecord.current > 0}
+                addNewLabel="+ Add New State"
+                childComponent={StateMaster}
+                addNewModalWidth="w-[40%] h-[45%]"
+              />
+            </div>
+            <div className="">
+              <TextInputNew1
+                name="Country"
+                type="text"
+                value={countryFromState()}
+                disabled={true}
+              />
+            </div>
+
+            <div className="">
+              <ToggleButton
+                name="Status"
+                options={statusDropdown}
+                value={active}
+                setActive={setActive}
+                required={true}
+                readOnly={readOnly}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (deleteId) {
+    const childCount = singleData?.data?.childRecord ?? 0;
+    const isLoadingRecord = isSingleFetching || isSingleLoading;
+
+    const handleConfirmDelete = async () => {
+      try {
+        const res = await removeData(deleteId).unwrap();
+        if (res?.statusCode === 1) {
+          toast.error(res?.data?.message || "Cannot delete");
+          return;
+        }
+        toast.success("City deleted successfully");
+        onSuccess?.();
+      } catch (err) {
+        toast.error(err?.data?.message || "Delete failed");
+      }
+    };
+
+    return (
+      <div className="h-full flex flex-col bg-gray-200">
+        <div className="border-b p-3 bg-white">
+          <h2 className="font-semibold">Delete City</h2>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white">
+          {isLoadingRecord ? (
+            <p>Checking...</p>
+          ) : childCount > 0 ? (
+            <>
+              <p className="text-red-600">
+                Cannot delete. Child records exist.
+              </p>
+              <button onClick={onClose}>Close</button>
+            </>
+          ) : (
+            <>
+              <p>Delete "{deleteLabel}"?</p>
+              <button onClick={onClose}>Cancel</button>
+              <button onClick={handleConfirmDelete}>Delete</button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (onSuccess) {
+    return (
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
+        <div className="border-b p-3 bg-white flex justify-between">
+          <h2>{editId ? "Edit City" : "Add New City"}</h2>
+          <button onClick={() => saveData("close")}>
+            <Check size={14} /> Save
+          </button>
+        </div>
+        {formBody}
+      </div>
+    );
+  }
+
   return (
     <div onKeyDown={handleKeyDown} className="p-1 ">
       <div className="w-full flex bg-white p-1 justify-between  items-center">
@@ -420,80 +590,7 @@ export default function Form() {
                   </div>
                 </div>
               </div>
-
-              <div className="flex-1 overflow-auto p-3 ">
-                <div className="grid grid-cols-1  gap-3  h-full ">
-                  <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                    <div className="grid grid-cols-2  gap-3 ">
-                      <div className="">
-                        <TextInputNew1
-                          ref={countryNameRef}
-                          name="City Name"
-                          type="text"
-                          value={name}
-                          setValue={setName}
-                          required={true}
-                          readOnly={readOnly}
-                          disabled={childRecord.current > 0}
-                        />
-                      </div>
-                      <div className="">
-                        <TextInputNew1
-                          name="Code"
-                          type="text"
-                          value={code}
-                          setValue={setCode}
-                          readOnly={readOnly}
-                          disabled={childRecord.current > 0}
-                        />
-                      </div>
-
-                      <div className=" ">
-                        <DropdownInputNew
-                          name="State"
-                          options={
-                            Array.isArray(stateList?.data)
-                              ? dropDownListObject(
-                                  id
-                                    ? stateList?.data
-                                    : stateList?.data?.filter(
-                                        (item) => item?.active,
-                                      ),
-                                  "name",
-                                  "id",
-                                )
-                              : []
-                          }
-                          value={state}
-                          setValue={setState}
-                          required={true}
-                          readOnly={readOnly}
-                          disabled={childRecord.current > 0}
-                        />
-                      </div>
-                      <div className="">
-                        <TextInputNew1
-                          name="Country"
-                          type="text"
-                          value={countryFromState()}
-                          disabled={true}
-                        />
-                      </div>
-
-                      <div className="">
-                        <ToggleButton
-                          name="Status"
-                          options={statusDropdown}
-                          value={active}
-                          setActive={setActive}
-                          required={true}
-                          readOnly={readOnly}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {formBody}
             </div>
           </Modal>
         )}

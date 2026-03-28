@@ -15,7 +15,6 @@ export function childRecordCount(count) {
   if (!count) return false;
   return Object.values(count).some((v) => v > 0);
 }
-
 export const DropdownWithModal = forwardRef(({
   name,
   beforeChange = () => { },
@@ -39,8 +38,7 @@ export const DropdownWithModal = forwardRef(({
   addNewLabel = "+ Add New",
   childComponent = null,
   addNewModalWidth = "w-[40%] h-[45%]",
-  widthClass,
-  onSelectNext,
+  widthClass
 }, ref) => {
 
   const [isOpen, setIsOpen] = useState(false);
@@ -66,13 +64,6 @@ export const DropdownWithModal = forwardRef(({
     setIsOpen(false);
     setSearch("");
     if (onBlur) onBlur();
-    
-    // Focus back on the button after modal closes
-    setTimeout(() => {
-      if (buttonRef.current) {
-        buttonRef.current.focus();
-      }
-    }, 100);
   };
 
   const handleDeleteSuccess = () => {
@@ -82,13 +73,6 @@ export const DropdownWithModal = forwardRef(({
       if (onBlur) onBlur();
     }
     setDeletingOption(null);
-    
-    // Focus back on the button after delete
-    setTimeout(() => {
-      if (buttonRef.current) {
-        buttonRef.current.focus();
-      }
-    }, 100);
   };
 
   // Use custom dropdown when addNewComponent is provided (native select can't host clickable options)
@@ -111,10 +95,6 @@ export const DropdownWithModal = forwardRef(({
       ) {
         setIsOpen(false);
         setSearch("");
-        // Focus back on button when clicking outside
-        if (buttonRef.current) {
-          buttonRef.current.focus();
-        }
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -165,7 +145,6 @@ export const DropdownWithModal = forwardRef(({
     const handleOnChange = (e) => {
       setValue(e.target.value);
     };
-    
     return (
       <div className={`mb-1 ${width}`}>
         {name && (
@@ -219,38 +198,26 @@ export const DropdownWithModal = forwardRef(({
     String(o.show).toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSelect = (optionValue) => {
+  const handleSelect = (optionValue, fromKeyboard = false) => {
     beforeChange();
     setValue(optionValue);
     setIsOpen(false);
     setSearch("");
     if (onBlur) onBlur();
-    
-    // Focus back on the button after selection
-    // Use setTimeout to ensure dropdown is closed before focusing
-    setTimeout(() => {
-      if (buttonRef.current) {
-        buttonRef.current.focus();
-      }
-    }, 0);
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setHighlightedIndex((i) => Math.min(i + 1, filtered.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlightedIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (highlightedIndex >= 0 && filtered[highlightedIndex]) {
-        handleSelect(filtered[highlightedIndex].value);
-      }
-    } else if (e.key === 'Escape') {
-      setIsOpen(false);
-      setSearch("");
-      buttonRef.current?.focus();
+    if (fromKeyboard) {
+      // Move focus to the next focusable input/select after this dropdown button
+      setTimeout(() => {
+        if (!buttonRef.current) return;
+        const allFocusable = Array.from(
+          document.querySelectorAll(
+            'input:not([disabled]):not([readonly]):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), select:not([disabled])'
+          )
+        ).filter(el => el.offsetParent !== null);
+        const nextInput = allFocusable.find(
+          el => buttonRef.current.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING
+        );
+        if (nextInput) nextInput.focus();
+      }, 0);
     }
   };
 
@@ -283,7 +250,6 @@ export const DropdownWithModal = forwardRef(({
             setIsOpen((o) => !o);
           }
         }}
-        onKeyDown={handleKeyDown}
         className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg text-left
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm flex justify-between items-center
@@ -312,7 +278,24 @@ export const DropdownWithModal = forwardRef(({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search..."
               className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-              onKeyDown={handleKeyDown}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setHighlightedIndex((i) => Math.min(i + 1, filtered.length - 1));
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setHighlightedIndex((i) => Math.max(i - 1, 0));
+                } else if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (highlightedIndex >= 0 && filtered[highlightedIndex]) {
+                    handleSelect(filtered[highlightedIndex].value, true);
+                  }
+                } else if (e.key === "Escape") {
+                  setIsOpen(false);
+                  setSearch("");
+                  buttonRef.current?.focus();
+                }
+              }}
             />
           </div>
           <ul ref={listRef} className="max-h-48 overflow-y-auto py-1">

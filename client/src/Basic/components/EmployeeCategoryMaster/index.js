@@ -26,11 +26,17 @@ import Swal from "sweetalert2";
 
 const MODEL = "Employee Category Master";
 
-export default function Form() {
+export default function Form({
+  onSuccess,
+  onClose,
+  editId,
+  deleteId,
+  deleteLabel,
+} = {}) {
   const [form, setForm] = useState(false);
 
   const [readOnly, setReadOnly] = useState(false);
-  const [id, setId] = useState("");
+  const [id, setId] = useState(editId || deleteId || "");
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [active, setActive] = useState(true);
@@ -95,7 +101,10 @@ export default function Form() {
       let returnData = await callback(data).unwrap();
       setId("");
       syncFormWithDb(undefined);
-
+      if (onSuccess) {
+        onSuccess(returnData.data.id);
+        return;
+      }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
@@ -263,10 +272,116 @@ export default function Form() {
   const countryNameRef = useRef(null);
 
   useEffect(() => {
-    if (form && countryNameRef.current) {
+    if ((form || onSuccess) && countryNameRef.current) {
       countryNameRef.current.focus();
     }
-  }, [form]);
+  }, [form, onSuccess]);
+
+  const formBody = (
+    <div className="flex-1 p-3 ">
+      <div className="grid grid-cols-1  gap-3  h-full ">
+        <div className="lg:col-span-2 space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+            <div className="grid grid-cols-2  gap-3 ">
+              <TextInputNew1
+                name="Category Name"
+                type="text"
+                value={name}
+                setValue={setName}
+                required={true}
+                readOnly={readOnly}
+                disabled={childRecord.current > 0}
+                ref={countryNameRef}
+              />
+
+              <TextInputNew
+                name="Code"
+                type="text"
+                value={code}
+                setValue={setCode}
+                readOnly={readOnly}
+                disabled={childRecord.current > 0}
+              />
+              <ToggleButton
+                name="Status"
+                options={statusDropdown}
+                value={active}
+                setActive={setActive}
+                required={true}
+                readOnly={readOnly}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (deleteId) {
+    const childCount = singleData?.data?.childRecord ?? 0;
+    const isLoadingRecord = isSingleFetching || isSingleLoading;
+
+    const handleConfirmDelete = async () => {
+      try {
+        await removeData(deleteId).unwrap();
+        toast.success("Deleted successfully");
+        onSuccess?.();
+      } catch (err) {
+        toast.error(err?.data?.message || "Delete failed");
+      }
+    };
+
+    return (
+      <div className="h-full flex flex-col bg-gray-200">
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center bg-white">
+          <h2 className="text-lg font-semibold">Delete Employee Category</h2>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
+          {isLoadingRecord ? (
+            <p>Checking...</p>
+          ) : childCount > 0 ? (
+            <>
+              <p className="text-red-600 font-semibold">Cannot Delete</p>
+              <p>
+                "{deleteLabel}" has {childCount} linked records.
+              </p>
+              <button onClick={onClose}>Close</button>
+            </>
+          ) : (
+            <>
+              <p>Are you sure delete "{deleteLabel}"?</p>
+              <div className="flex gap-2">
+                <button onClick={onClose}>Cancel</button>
+                <button onClick={handleConfirmDelete}>Delete</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (onSuccess) {
+    return (
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
+        <div className="border-b py-2 px-4 flex justify-between items-center bg-white">
+          <h2>{editId ? "Edit" : "Add"} Employee Category</h2>
+
+          <button onClick={() => saveData("close")}>
+            <Check size={14} />
+            {editId ? "Update" : "Save"}
+          </button>
+        </div>
+
+        {formBody}
+      </div>
+    );
+  }
+
   return (
     // <div
     //     onKeyDown={handleKeyDown}
@@ -418,43 +533,7 @@ export default function Form() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto p-3 ">
-                <div className="grid grid-cols-1  gap-3  h-full ">
-                  <div className="lg:col-span-2 space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                      <div className="grid grid-cols-2  gap-3 ">
-                        <TextInputNew1
-                          name="Category Name"
-                          type="text"
-                          value={name}
-                          setValue={setName}
-                          required={true}
-                          readOnly={readOnly}
-                          disabled={childRecord.current > 0}
-                          ref={countryNameRef}
-                        />
-
-                        <TextInputNew
-                          name="Code"
-                          type="text"
-                          value={code}
-                          setValue={setCode}
-                          readOnly={readOnly}
-                          disabled={childRecord.current > 0}
-                        />
-                        <ToggleButton
-                          name="Status"
-                          options={statusDropdown}
-                          value={active}
-                          setActive={setActive}
-                          required={true}
-                          readOnly={readOnly}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {formBody}
             </div>
           </Modal>
         )}

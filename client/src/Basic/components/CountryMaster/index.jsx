@@ -149,9 +149,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     let foundItem;
 
     if (id) {
-      foundItem = allData?.data?.filter(i => i.id != id)?.some(item => item.name.toUpperCase() === upperName);
+      foundItem = allData?.data?.filter(i => i.id != id)?.some(item => item?.name.toUpperCase() === upperName);
     } else {
-      foundItem = allData?.data?.some(item => item.name.toUpperCase() === upperName);
+      foundItem = allData?.data?.some(item => item?.name.toUpperCase() === upperName);
     }
 
 
