@@ -227,16 +227,33 @@ export const DropdownWithModal = forwardRef(
             document.querySelectorAll(
               'input:not([disabled]):not([readonly]):not([type="hidden"]), select:not([disabled]), button:not([disabled])',
             ),
-          ).filter((el) => el.offsetParent !== null);
+          ).filter(
+            (el) =>
+              el.offsetParent !== null &&
+              !el.closest('[data-skip-focus="true"]'), // ✅ skip toggle
+          );
 
           const currentIndex = allFocusable.indexOf(buttonRef.current);
-          const nextInput = allFocusable[currentIndex + 1];
+
+          let nextInput = null;
+
+          for (let i = currentIndex + 1; i < allFocusable.length; i++) {
+            const el = allFocusable[i];
+
+            // ❌ skip toggle checkbox
+            if (el.tagName === "INPUT" && el.type === "checkbox") continue;
+
+            nextInput = el;
+            break;
+          }
 
           if (nextInput) {
             nextInput.focus();
 
-            // 🔥 FORCE OPEN next dropdown
-            nextInput.click();
+            // open only dropdown buttons
+            if (nextInput.tagName === "BUTTON") {
+              nextInput.click();
+            }
           }
         }, 50); // small delay is important
       }

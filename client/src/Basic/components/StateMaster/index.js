@@ -380,7 +380,7 @@ export default function Form({
                               />
                             </div> */}
 
-            <div>
+            <div data-skip-focus="true">
               <ToggleButton
                 name="Status"
                 value={active}
