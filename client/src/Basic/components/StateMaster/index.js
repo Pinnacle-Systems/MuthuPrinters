@@ -30,6 +30,7 @@ import Modal from "../../../UiComponents/Modal";
 import Swal from "sweetalert2";
 import { CountryMaster } from "..";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
+import useInvalidateTags from '../../../CustomHooks/useInvalidateTags';
 
 const MODEL = "State Master";
 
@@ -53,6 +54,7 @@ export default function Form({
 
   const childRecord = useRef(0);
   const dispatch = useDispatch();
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const params = {
     companyId: secureLocalStorage.getItem(
@@ -133,10 +135,7 @@ export default function Form({
         title: text + "Successfully",
         icon: "success",
       });
-      dispatch({
-        type: `countryMaster/invalidateTags`,
-        payload: ["Countries"],
-      });
+      dispatchInvalidate();
     } catch (error) {
       console.log(error);
       console.log("handle");
@@ -201,6 +200,7 @@ export default function Form({
           icon: "success",
         });
         setForm(false);
+        dispatchInvalidate();
       } catch (error) {
         Swal.fire({
           icon: "error",
@@ -579,6 +579,7 @@ export default function Form({
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
+          childRecordLabel="City Master"
         />
       </div>
 

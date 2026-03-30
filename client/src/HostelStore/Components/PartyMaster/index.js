@@ -52,6 +52,7 @@ import AddBranch from "./AddBranch";
 import { useGetbranchTypeQuery } from "../../../redux/services/BranchTypeMaster";
 import { useGetPartyBranchByIdQuery } from "../../../redux/services/PartyBranchMasterService";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 
 export default function Form({ partyId, onCloseForm, childId }) {
   const [form, setForm] = useState(false);
@@ -150,6 +151,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
   const [addData] = useAddPartyMutation();
   const [updateData] = useUpdatePartyMutation();
   const [removeData] = useDeletePartyMutation();
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -384,18 +386,8 @@ export default function Form({ partyId, onCloseForm, childId }) {
       } else {
         returnData = await callback(formData).unwrap();
       }
-      dispatch({
-        type: `accessoryItemMaster/invalidateTags`,
-        payload: ["AccessoryItemMaster"],
-      });
-      dispatch({
-        type: `CityMaster/invalidateTags`,
-        payload: ["City/State Name"],
-      });
-      dispatch({
-        type: `CurrencyMaster/invalidateTags`,
-        payload: ["Currency"],
-      });
+      dispatchInvalidate();
+
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
@@ -599,19 +591,9 @@ export default function Form({ partyId, onCloseForm, childId }) {
             });
             return;
           }
-          dispatch({
-            type: `accessoryItemMaster/invalidateTags`,
-            payload: ["AccessoryItemMaster"],
-          });
           setId("");
-          dispatch({
-            type: `CityMaster/invalidateTags`,
-            payload: ["City/State Name"],
-          });
-          dispatch({
-            type: `CurrencyMaster/invalidateTags`,
-            payload: ["Currency"],
-          });
+          dispatchInvalidate();
+
           syncFormWithDb(undefined);
           Swal.fire({
             title: "Deleted Successfully",
@@ -785,7 +767,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
     return (
       <>
         <div className="h-full flex flex-col bg-gray-200 ">
-          <div className="border-b py-2 px-4 mx-3 flex justify-between items-center sticky top-0 z-10 bg-white mt-3 ">
+          <div className="border-b py-2 px-4 mx-3 flex justify-between items-center sticky top-0 z-10 bg-white">
             <div className="flex items-center gap-2">
               <h2 className="text-md font-semibold text-gray-800">
                 {id
@@ -1117,7 +1099,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                               disabled={childRecord.current > 0}
                               className="focus:ring-2 focus:ring-blue-100"
                             /> */}
-                             {/* <DropdownWithModal
+                            {/* <DropdownWithModal
                               name="City/State Name"
                               options={dropDownListMergedObject(
                                 id
@@ -1590,8 +1572,8 @@ export default function Form({ partyId, onCloseForm, childId }) {
   return (
     <>
       <div onKeyDown={handleKeyDown}>
-        <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto mt-1">
-          <div className="w-full flex justify-between mb-2 items-center px-0.5">
+        <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto mt-1 bg-white">
+          <div className="w-full flex justify-between py-0.5 items-center px-0.5">
             <h1 className="text-lg font-bold text-gray-800">
               Customer/Supplier Master{" "}
             </h1>
@@ -1678,6 +1660,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
             onEdit={handleEdit}
             onDelete={deleteData}
             itemsPerPage={15}
+            childRecordLabel="Purchase Module"
           />
         </div>
 
@@ -1685,7 +1668,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
           <Modal
             isOpen={form}
             form={form}
-            widthClass={"w-[90%] h-[99%]"}
+            widthClass={"w-[90%] h-[95%]"}
             onClose={() => {
               setForm(false);
               syncFormWithDb(undefined);
@@ -2031,26 +2014,28 @@ export default function Form({ partyId, onCloseForm, childId }) {
                                   className="focus:ring-2 focus:ring-blue-100"
                                 /> */}
                                 <DropdownWithModal
-                              name="City/State Name"
-                              options={dropDownListMergedObject(
-                                id
-                                  ? cityList?.data
-                                  : cityList?.data?.filter((item) => item.active),
-                                "name",
-                                "id"
-                              )}
-                              country={country}
-                              masterName="CITY MASTER"
-                              // lastTab={activeTab}
-                              value={city}
-                              setValue={setCity}
-                              required={true}
-                              readOnly={readOnly}
-                              className="focus:ring-2 focus:ring-blue-100"
-                              addNewLabel="+ Add New City"
-                              childComponent={CityMaster}
-                              addNewModalWidth="w-[50%] h-[55%]"
-                            />
+                                  name="City/State Name"
+                                  options={dropDownListMergedObject(
+                                    id
+                                      ? cityList?.data
+                                      : cityList?.data?.filter(
+                                          (item) => item.active,
+                                        ),
+                                    "name",
+                                    "id",
+                                  )}
+                                  country={country}
+                                  masterName="CITY MASTER"
+                                  // lastTab={activeTab}
+                                  value={city}
+                                  setValue={setCity}
+                                  required={true}
+                                  readOnly={readOnly}
+                                  className="focus:ring-2 focus:ring-blue-100"
+                                  addNewLabel="+ Add New City"
+                                  childComponent={CityMaster}
+                                  addNewModalWidth="w-[50%] h-[55%]"
+                                />
                               </div>
                               <TextInputNew1
                                 name="Pincode"

@@ -2,16 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,600;1,400;1,600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,600;1,400;1,600&display=swap");
 
 html,
 body,
 label {
-  font-family: 'Roboto', sans-serif;
+  font-family: "Roboto", sans-serif;
   z-index: 0;
 }
-.table-data{
-  font-family: 'Roboto', sans-serif;
+.table-data {
+  font-family: "Roboto", sans-serif;
 }
 
 .Select {
@@ -31,28 +31,27 @@ label {
 }
 
 @media print {
-  html {}
+  html {
+  }
 }
 
 @layer base {
-
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
   }
 }
 
-
 @layer utilities {
   .container-w-h {
     min-height: 90%;
     max-height: 90%;
   }
-  .download-table-xls-button{
-     background: #064209;
-     color: white;
-     padding: 3px;
-     border-radius: 4px;
+  .download-table-xls-button {
+    background: #064209;
+    color: white;
+    padding: 3px;
+    border-radius: 4px;
   }
 
   .custom-circle {
@@ -98,7 +97,6 @@ label {
     @apply text-xs text-gray-500 font-bold;
   }
 
-
   .frame {
     @apply border-2;
   }
@@ -128,11 +126,11 @@ label {
   }
 
   .sub-navbar {
-    @apply border rounded text-green-600 font-bold p-1 text-sm
+    @apply border rounded text-green-600 font-bold p-1 text-sm;
   }
 
   .sub-navbar-active {
-    @apply bg-emerald-900 text-white rounded p-1 text-sm
+    @apply bg-emerald-900 text-white rounded p-1 text-sm;
   }
 
   .button-border {
@@ -154,7 +152,6 @@ label {
   }
 }
 
-
 .select-all-on-touch {
   -webkit-user-select: all;
   user-select: all;
@@ -168,13 +165,11 @@ label {
 .bor th {
   border: none;
   margin-top: 2rem;
-
 }
 
 .bor td {
   border: none;
   margin-top: 2rem;
-
 }
 
 @media print {
@@ -194,7 +189,7 @@ label {
 }
 
 .swal-custom-height {
-  min-height: 10px;   /* control height */
+  min-height: 10px; /* control height */
 }
 
 .custom-multiselect .dropdown-content {
@@ -206,4 +201,78 @@ label {
 .custom-multiselect .dropdown-content ul {
   max-height: unset !important;
   overflow: unset !important;
+}
+
+/* ── SweetAlert2 Global Redesign ── */
+.swal2-popup {
+  width: 360px !important;
+  max-height: 70vh !important;
+  overflow-y: auto !important;
+  border-radius: 14px !important;
+  padding: 28px 24px 20px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+  font-family: inherit !important;
+}
+
+.swal2-title {
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  margin-bottom: 4px !important;
+  padding: 0 !important;
+}
+
+.swal2-html-container {
+  font-size: 0.82rem !important;
+  color: #64748b !important;
+  margin: 6px 0 0 !important;
+}
+
+.swal2-icon {
+  transform: scale(0.65) !important;
+  margin: -10px auto 0px !important;
+}
+
+.swal2-actions {
+  margin-top: 18px !important;
+  gap: 8px !important;
+}
+
+.swal2-styled.swal2-confirm {
+  background-color: #4f46e5 !important;
+  color: #fff !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  padding: 7px 22px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  box-shadow: none !important;
+  transition: background 0.2s !important;
+}
+
+.swal2-styled.swal2-confirm:hover {
+  background-color: #4338ca !important;
+  filter: none !important;
+}
+
+.swal2-styled.swal2-cancel {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  padding: 7px 22px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  box-shadow: none !important;
+  transition: background 0.2s !important;
+}
+
+.swal2-styled.swal2-cancel:hover {
+  background-color: #e2e8f0 !important;
+  filter: none !important;
+}
+
+.swal2-timer-progress-bar {
+  background: #4f46e5 !important;
+  height: 3px !important;
 }

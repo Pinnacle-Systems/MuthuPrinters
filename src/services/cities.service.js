@@ -52,7 +52,7 @@ async function get(req) {
     return {
         statusCode: 0, data: data = data.map(order => ({
             ...order,
-            childRecord: order?._count.Party > 0
+            childRecord: order?._count.Party
         })),
     };
 }

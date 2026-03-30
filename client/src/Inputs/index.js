@@ -1,5 +1,11 @@
 import validator from "validator";
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { MultiSelect } from "react-multi-select-component";
 import Select from "react-select";
 import { findFromList } from "../Utils/helper";
@@ -22,7 +28,7 @@ import useOutsideClick from "../CustomHooks/handleOutsideClick";
 import Modal from "../UiComponents/Modal";
 import DynamicRenderer from "../HostelStore/Components/DeliveryChallan/DynamicComponent";
 
-export const handleOnChange = (event, setValue,type) => {
+export const handleOnChange = (event, setValue, type) => {
   const inputValue = event.target.value;
   const inputSelectionStart = event.target.selectionStart;
   const inputSelectionEnd = event.target.selectionEnd;
@@ -30,23 +36,22 @@ export const handleOnChange = (event, setValue,type) => {
   const upperCaseValue =
     type === "password" ? inputValue : inputValue.toUpperCase();
 
-
   const valueBeforeCursor = upperCaseValue.slice(0, inputSelectionStart);
   const valueAfterCursor = upperCaseValue.slice(inputSelectionEnd);
 
   setValue(
     valueBeforeCursor +
-    inputValue.slice(inputSelectionStart, inputSelectionEnd) +
-    valueAfterCursor,
+      inputValue.slice(inputSelectionStart, inputSelectionEnd) +
+      valueAfterCursor,
   );
 
   // Set the cursor position to the end of the input value
   setTimeout(() => {
     event.target.setSelectionRange(
       valueBeforeCursor.length +
-      inputValue.slice(inputSelectionStart, inputSelectionEnd).length,
+        inputValue.slice(inputSelectionStart, inputSelectionEnd).length,
       valueBeforeCursor.length +
-      inputValue.slice(inputSelectionStart, inputSelectionEnd).length,
+        inputValue.slice(inputSelectionStart, inputSelectionEnd).length,
     );
   });
 };
@@ -172,10 +177,11 @@ export const TextInput = forwardRef(
           className={`w-full px-3 py-1 text-xs border border-gray-300 rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm
-          ${readOnly || disabled
+          ${
+            readOnly || disabled
               ? "bg-gray-100 text-gray-500 cursor-not-allowed"
               : "bg-white hover:border-gray-400"
-            }
+          }
           ${className}`}
           autoFocus={autoFocus}
           onKeyDown={onKeyDown}
@@ -303,7 +309,7 @@ export const DropdownInput = forwardRef(
   (
     {
       name,
-      beforeChange = () => { },
+      beforeChange = () => {},
       onBlur = null,
       options,
       value,
@@ -683,7 +689,7 @@ export const DropdownWithSearch = ({
     });
 
     return () => {
-      dropDownElement.removeEventListener("keydown", () => { });
+      dropDownElement.removeEventListener("keydown", () => {});
     };
   }, [currentIndex]);
 
@@ -703,11 +709,11 @@ export const DropdownWithSearch = ({
         values={
           value
             ? [
-              {
-                id: value,
-                name: findFromList(value, options || [], "name"),
-              },
-            ]
+                {
+                  id: value,
+                  name: findFromList(value, options || [], "name"),
+                },
+              ]
             : []
         }
         onChange={(value) => {
@@ -756,7 +762,8 @@ export function ReusableInput({
         disabled={disabled}
         className={`w-full px-2 py-1 text-xs border border-slate-300 rounded-md 
           focus:border-indigo-300 focus:outline-none transition-all duration-200
-          hover:border-slate-400 ${readOnly || disabled ? "bg-slate-100" : ""
+          hover:border-slate-400 ${
+            readOnly || disabled ? "bg-slate-100" : ""
           } ${className}`}
         autoFocus={autoFocus}
       />
@@ -794,7 +801,8 @@ export function ReusableInputNew({
         disabled={disabled}
         className={`w-full px-2 py-1 text-xs border border-slate-300 rounded-md 
           focus:border-indigo-300 focus:outline-none transition-all duration-200
-          hover:border-slate-400 ${readOnly || disabled ? "bg-slate-100" : ""
+          hover:border-slate-400 ${
+            readOnly || disabled ? "bg-slate-100" : ""
           } ${className}`}
       />
     </div>
@@ -817,7 +825,7 @@ export const ReusableSearchableInput = forwardRef(
       show,
       name,
       disabled,
-      isSupplier = false
+      isSupplier = false,
     },
     ref,
   ) => {
@@ -837,7 +845,9 @@ export const ReusableSearchableInput = forwardRef(
       isFetching: isPartyFetching,
     } = useGetPartyQuery({ params: { companyId, userId } });
 
-    const filteredPartyList = isSupplier ? partyList?.data?.filter((item) => item.isSupplier === true) : partyList?.data
+    const filteredPartyList = isSupplier
+      ? partyList?.data?.filter((item) => item.isSupplier === true)
+      : partyList?.data;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -944,7 +954,6 @@ export const ReusableSearchableInput = forwardRef(
         pageSearchComponent.removeEventListener("keydown", keyHandler);
       };
     }, [isDropdownOpen]);
-
 
     return (
       <>
@@ -1159,7 +1168,6 @@ export const TextInputNew = forwardRef(
               : handleOnChange(e, setValue)
           }
           onKeyDown={(e) => {
-           
             if (e.key === "Enter" && nextRef?.current) {
               nextRef.current?.showPicker();
             }
@@ -1184,7 +1192,7 @@ export const DropdownInputNew = forwardRef(
   (
     {
       name,
-      beforeChange = () => { },
+      beforeChange = () => {},
       onBlur = null,
       options,
       value,
@@ -1274,13 +1282,15 @@ export const ReusableTable = ({
   emptyStateMessage = "No data available",
   rowActions = true,
   width,
+  childRecordLabel = "", // New prop with default value
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [hoveredDeleteId, setHoveredDeleteId] = useState(null);
+
   const totalPages = Math?.ceil(data?.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = data?.slice(indexOfFirstItem, indexOfLastItem);
-
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -1289,8 +1299,6 @@ export const ReusableTable = ({
   };
 
   const Pagination = () => {
-    // if (totalPages <= 1) return null;
-
     return (
       <div className=" w-full flex flex-col sm:flex-row justify-between items-center p-2 bg-white border-t border-gray-200">
         <div className="text-sm text-gray-600 mb-2 sm:mb-0">
@@ -1301,10 +1309,11 @@ export const ReusableTable = ({
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className={`px-3 py-1 rounded-md ${currentPage === 1
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-white text-gray-600 hover:bg-gray-100"
-              }`}
+            className={`px-3 py-1 rounded-md ${
+              currentPage === 1
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-600 hover:bg-gray-100"
+            }`}
           >
             <FaChevronLeft className="inline" />
           </button>
@@ -1325,10 +1334,11 @@ export const ReusableTable = ({
               <button
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
-                className={`px-3 py-1 rounded-md ${currentPage === pageNum
-                  ? "bg-indigo-800 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-                  }`}
+                className={`px-3 py-1 rounded-md ${
+                  currentPage === pageNum
+                    ? "bg-indigo-800 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
               >
                 {pageNum}
               </button>
@@ -1342,10 +1352,11 @@ export const ReusableTable = ({
           {totalPages > 5 && currentPage < totalPages - 2 && (
             <button
               onClick={() => handlePageChange(totalPages)}
-              className={`px-3 py-1 rounded-md ${currentPage === totalPages
-                ? "bg-indigo-800 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === totalPages
+                  ? "bg-indigo-800 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
+              }`}
             >
               {totalPages}
             </button>
@@ -1354,10 +1365,11 @@ export const ReusableTable = ({
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className={`px-3 py-1 rounded-md ${currentPage === totalPages
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-white text-gray-600 hover:bg-gray-100"
-              }`}
+            className={`px-3 py-1 rounded-md ${
+              currentPage === totalPages
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-600 hover:bg-gray-100"
+            }`}
           >
             <FaChevronRight className="inline" />
           </button>
@@ -1377,8 +1389,9 @@ export const ReusableTable = ({
                   {columns?.map((column, index) => (
                     <th
                       key={index}
-                      className={` font-medium text-gray-900 py-2 text-[12px] px-8 text-center uppercase  ${column.header !== "" ? "border-r border-white/50" : ""
-                        } `}
+                      className={` font-medium text-gray-900 py-2 text-[12px] px-8 text-center uppercase  ${
+                        column.header !== "" ? "border-r border-white/50" : ""
+                      } `}
                     >
                       {column.header}
                     </th>
@@ -1401,85 +1414,121 @@ export const ReusableTable = ({
                     </td>
                   </tr>
                 ) : (
-                  currentItems?.map((item, index) => (
-                    <tr
-                      key={item.id}
-                      className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${index % 2 === 0 ? "bg-white" : "bg-gray-100"
+                  currentItems?.map((item, index) => {
+                    const hasChildRecords = item?.childRecord > 0;
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${
+                          index % 2 === 0 ? "bg-white" : "bg-gray-100"
                         }`}
-                    >
-                      {columns?.map((column, colIndex) => (
-                        <td
-                          key={colIndex}
-                          className={` ${column.className ? column.className : ""} ${column.header !== "" ? "border-r border-white/50" : ""} h-7 px-1.5`}
-                        >
-                          {column.accessor(item, index)}
-                        </td>
-                      ))}
-                      {rowActions && (
-                        <td className=" w-[30px] border-gray-200 gap-1 px-2   h-8 justify-end">
-                          <div className="flex">
-                            {onView && (
-                              <button
-                                className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
-                                onClick={() => onView(item.id)}
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-4 w-4"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
+                      >
+                        {columns?.map((column, colIndex) => (
+                          <td
+                            key={colIndex}
+                            className={` ${column.className ? column.className : ""} ${column.header !== "" ? "border-r border-white/50" : ""} h-7 px-1.5`}
+                          >
+                            {column.accessor(item, index)}
+                          </td>
+                        ))}
+                        {rowActions && (
+                          <td className=" w-[30px] border-gray-200 gap-1 px-2   h-8 justify-end">
+                            <div className="flex">
+                              {onView && (
+                                <button
+                                  className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
+                                  onClick={() => onView(item.id)}
                                 >
-                                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              </button>
-                            )}
-                            {onEdit && (
-                              <button
-                                className="text-green-600 gap-1 px-1   bg-green-50 rounded"
-                                onClick={() => onEdit(item.id)}
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-4 w-4"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </button>
+                              )}
+                              {onEdit && (
+                                <button
+                                  className="text-green-600 gap-1 px-1   bg-green-50 rounded"
+                                  onClick={() => onEdit(item.id)}
                                 >
-                                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                                </svg>
-                              </button>
-                            )}
-                            {onDelete && (
-                              <button
-                                className=" text-red-800 flex items-center gap-1 px-1  bg-red-50 rounded"
-                                onClick={() =>
-                                  onDelete(item.id, item?.childRecord)
-                                }
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-4 w-4"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                  </svg>
+                                </button>
+                              )}
+                              {onDelete && (
+                                <div
+                                  className="relative inline-block"
+                                  onMouseEnter={() =>
+                                    setHoveredDeleteId(item.id)
+                                  }
+                                  onMouseLeave={() => setHoveredDeleteId(null)}
                                 >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                                {/* <span className="text-xs">delete</span> */}
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))
+                                  <button
+                                    className={`text-red-800 flex items-center gap-1 px-1 bg-red-50 rounded transition-opacity ${
+                                      hasChildRecords
+                                        ? "opacity-40 cursor-not-allowed"
+                                        : "hover:bg-red-100"
+                                    }`}
+                                    // cursor-pointer
+                                    onClick={() => {
+                                      if (!hasChildRecords) {
+                                        onDelete(item.id, item?.childRecord);
+                                      }
+                                    }}
+                                    disabled={hasChildRecords}
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-4 w-4"
+                                      viewBox="0 0 20 20"
+                                      fill="currentColor"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                  </button>
+
+                                  {/* Tooltip */}
+                                  {hasChildRecords &&
+                                    hoveredDeleteId === item.id && (
+                                      <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-2 bg-gray-900 text-white text-[12px] rounded shadow-lg whitespace-nowrap z-50">
+                                        Child Record Exist{" "}
+                                        <span className="font-semibold">
+                                          {childRecordLabel ? "in " + childRecordLabel : ""}
+                                        </span>
+                                        . Please Remove them First.
+                                        {/* Arrow */}
+                                        <div className="absolute right-full top-1/2 transform -translate-y-1/2 mr-1">
+                                          <div className="border-4 border-transparent border-r-gray-900"></div>
+                                        </div>
+                                      </div>
+                                    )}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -1968,7 +2017,6 @@ export const ReusableSearchableInputNewCustomerwithBranches = forwardRef(
     const { data: partyList } = useGetPartyQuery({
       params: { companyId, userId, isAddessCombined: true },
     });
-
 
     /* ---------------------------------- STATE --------------------------------- */
 
@@ -2609,10 +2657,11 @@ export const DateInputNew = forwardRef(
       <div className="grid-cols-1 md:grid-cols-3 items-center md:px-1">
         {name && (
           <label
-            className={`block  font-bold text-slate-700 mb-1 text-xs ${required
-              ? 'after:content-["*"] after:ml-0.5 after:text-red-500'
-              : ""
-              }`}
+            className={`block  font-bold text-slate-700 mb-1 text-xs ${
+              required
+                ? 'after:content-["*"] after:ml-0.5 after:text-red-500'
+                : ""
+            }`}
           >
             {name}
           </label>
@@ -2681,9 +2730,10 @@ export const TextAreaNew = ({
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm  resize-y
 
-          ${readOnly || disabled
-            ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-            : "bg-white hover:border-gray-400"
+          ${
+            readOnly || disabled
+              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+              : "bg-white hover:border-gray-400"
           }
           ${inputClass}`}
       ></textarea>
@@ -2725,7 +2775,6 @@ export const ShowInvoicPendingCustomers = forwardRef(
     // const { data: partyList } = useGetPartyNewQuery({
     //   params: { companyId, userId, isAddessCombined: true , id ,supplierId },
     // });
-
 
     /* ---------------------------------- STATE --------------------------------- */
 
@@ -3189,5 +3238,3 @@ export default function FxSelect({
     />
   );
 }
-
-

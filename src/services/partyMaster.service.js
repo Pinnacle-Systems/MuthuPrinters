@@ -7,11 +7,6 @@ import { getPartyOverAllReport, getPartyLedgerReport, getPartyLedgerReportCus, g
 
 async function get(req) {
     const { companyId, active, isPartyOverAllReport, searchValue, partyId, startDate, endDate, isPartyLedgerReport, isPartyLedgerReportCus, isPartyPurchaseOverAllReport, isParent, isAddessCombined } = req.query
-    console.log(isAddessCombined, "isAddessCombined")
-    // if (isPartyLedgerReport) {
-    //     const data = await getPartyLedgerReport(partyId, startDate, endDate)
-    //     return { statusCode: 0, data };
-    // }
 
     let data;
     if (isPartyLedgerReport) {
@@ -80,7 +75,8 @@ async function get(req) {
             },
             _count: {
                 select: {
-                    Supplier: true
+                    po: true,
+                    purchaseInwards: true
                 }
             },
             BranchType: true

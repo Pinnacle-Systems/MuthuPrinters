@@ -33,6 +33,7 @@ import { statusDropdown } from "../../../Utils/DropdownData";
 import Swal from "sweetalert2";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import { StateMaster } from "..";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 
 const MODEL = "City Master";
 
@@ -56,6 +57,7 @@ export default function Form({
 
   const childRecord = useRef(0);
   const dispatch = useDispatch();
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const params = {
     companyId: secureLocalStorage.getItem(
@@ -133,10 +135,7 @@ export default function Form({
         title: text + "Successfully",
         icon: "success",
       });
-      dispatch({
-        type: `StateMaster/invalidateTags`,
-        payload: ["State"],
-      });
+      dispatchInvalidate();
     } catch (error) {
       console.log("handle");
     }
@@ -203,10 +202,8 @@ export default function Form({
       try {
         await removeData(id);
         setId("");
-        dispatch({
-          type: `countryMaster/invalidateTags`,
-          payload: ["Countries"],
-        });
+        dispatchInvalidate();
+
         // toast.success("Deleted Successfully");
         Swal.fire({
           title: "Deleted Successfully",
@@ -523,6 +520,7 @@ export default function Form({
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
+          childRecordLabel="Customer/Supplier Master"
         />
       </div>
 
