@@ -2,7 +2,6 @@ import { prisma } from "../lib/prisma.js";
 
 import { NoRecordFound } from "../configs/Responses.js";
 
-
 async function get(req) {
   const { companyId, active } = req.query;
   const data = await prisma.taxTerm.findMany({
@@ -10,15 +9,23 @@ async function get(req) {
       companyId: companyId ? parseInt(companyId) : undefined,
       active: active ? Boolean(active) : undefined,
     },
-    // include : {
-    //     _count : {
-    //         select : {
-
-    //         }
-    //     }
-    // }
+    include: {
+      _count: {
+        select: {
+          TaxTemplateDetails: true,
+        },
+      },
+    },
   });
-  return { statusCode: 0, data };
+  return {
+    statusCode: 0,
+    data: data.map((item) => {
+      return {
+        ...item,
+        childRecord: item._count.TaxTemplateDetails,
+      };
+    }),
+  };
 }
 
 async function getOne(id) {

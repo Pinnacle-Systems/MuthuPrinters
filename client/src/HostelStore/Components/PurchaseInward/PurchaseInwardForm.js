@@ -29,6 +29,7 @@ import {
 import { useGetLocationMasterQuery } from "../../../redux/services/LocationMasterService";
 import { useGetPoItemsQuery } from "../../../redux/uniformService/PoServices";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 
 const PurchaseInwardForm = ({
   onClose,
@@ -66,6 +67,7 @@ const PurchaseInwardForm = ({
   const [dataPerPage, setDataPerPage] = useState("10");
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
   const supplierRef = useRef(null);
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const { userId, finYearId, branchId } = getCommonParams();
   const { data: locationData } = useGetLocationMasterQuery({
@@ -194,6 +196,7 @@ const PurchaseInwardForm = ({
           didClose: () => {
             // ✅ Runs after Swal completely closes
             invalidatePurchaseModule();
+            dispatchInvalidate();
 
             if (returnData.statusCode === 0) {
               if (nextProcess == "new") {

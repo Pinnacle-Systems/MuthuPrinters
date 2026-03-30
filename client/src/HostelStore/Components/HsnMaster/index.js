@@ -425,6 +425,7 @@ export default function Form({
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
+          childRecordLabel="Style Item Master"
         />
       </div>
 

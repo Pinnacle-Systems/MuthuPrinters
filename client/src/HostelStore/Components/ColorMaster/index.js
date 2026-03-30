@@ -292,6 +292,7 @@ export default function Form() {
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
+          childRecordLabel="Purchase Module"
         />
       </div>
 

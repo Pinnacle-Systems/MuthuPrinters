@@ -17,7 +17,13 @@ import Modal from "../../../UiComponents/Modal";
 
 const MODEL = "Terms & Conditions Master";
 
-export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
+export default function Form({
+  onSuccess,
+  onClose,
+  editId,
+  deleteId,
+  deleteLabel,
+} = {}) {
   const [form, setForm] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [id, setId] = useState(editId || deleteId || "");
@@ -32,21 +38,21 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
-  
+
   const {
     data: allData,
     isLoading,
     isFetching,
   } = useGetTermsandCondtionsQuery({ params, searchParams: searchValue });
-  
+
   const rows = allData?.data ?? [];
-  
+
   const {
     data: singleData,
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetTermsandCondtionsByIdQuery(id, { skip: !id });
-  
+
   const [trigger, { data: LazyData }] = useLazyGetTermsandCondtionsByIdQuery();
 
   const [addData] = useAddTermsandCondtionsMutation();
@@ -88,17 +94,17 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     try {
       let returnData = await callback(data).unwrap();
       setId(returnData.data.id);
-      
+
       if (onSuccess) {
         onSuccess(returnData.data.id);
         return;
       }
-      
+
       await Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
       });
-      
+
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
@@ -107,9 +113,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       }
     } catch (error) {
       await Swal.fire({
-        icon: 'error',
-        title: 'Submission error',
-        text: error.data?.message || 'Something went wrong!',
+        icon: "error",
+        title: "Submission error",
+        text: error.data?.message || "Something went wrong!",
       });
       termsNameRef?.current?.focus();
     }
@@ -124,20 +130,22 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
 
     if (!validateData(finalData)) {
       Swal.fire({
-        title: 'Please fill all required fields...!',
-        icon: 'error',
+        title: "Please fill all required fields...!",
+        icon: "error",
       });
       termsNameRef?.current?.focus();
       return;
     }
-    
+
     let foundItem;
     if (id) {
       foundItem = allData?.data
         ?.filter((i) => i.id != id)
         ?.some((item) => item?.name.toUpperCase() === upperName);
     } else {
-      foundItem = allData?.data?.some((item) => item?.name.toUpperCase() === upperName);
+      foundItem = allData?.data?.some(
+        (item) => item?.name.toUpperCase() === upperName,
+      );
     }
 
     if (foundItem) {
@@ -148,11 +156,11 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       termsNameRef?.current?.focus();
       return false;
     }
-    
+
     if (!window.confirm("Are you sure save the details ...?")) {
       return;
     }
-    
+
     if (id) {
       handleSubmitCustom(updateData, finalData, "Updated", nextProcess);
     } else {
@@ -169,9 +177,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         let deldata = await removeData(id).unwrap();
         if (deldata?.statusCode == 1) {
           await Swal.fire({
-            icon: 'error',
-            title: 'Child record Exists',
-            text: deldata.data?.message || 'Data cannot be deleted!',
+            icon: "error",
+            title: "Child record Exists",
+            text: deldata.data?.message || "Data cannot be deleted!",
           });
           return;
         }
@@ -183,9 +191,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         setForm(false);
       } catch (error) {
         await Swal.fire({
-          icon: 'error',
-          title: 'Submission error',
-          text: error.data?.message || 'Something went wrong!',
+          icon: "error",
+          title: "Submission error",
+          text: error.data?.message || "Something went wrong!",
         });
         setForm(false);
       }
@@ -215,7 +223,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       <Power size={10} />
     </div>
   );
-  
+
   const INACTIVE = (
     <div className="bg-gradient-to-r from-red-200 to-red-500 inline-flex items-center justify-center rounded-full border-2 w-6 border-red-500 shadow-lg text-white hover:scale-110 transition-transform duration-300">
       <Power size={10} />
@@ -250,7 +258,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     setForm(true);
     setReadOnly(true);
   };
-  
+
   const handleEdit = (id) => {
     setId(id);
     setForm(true);
@@ -320,20 +328,26 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       try {
         const res = await removeData(deleteId).unwrap();
         if (res?.statusCode === 1) {
-          toast.error(res?.data?.message || "Cannot delete: child records exist");
+          toast.error(
+            res?.data?.message || "Cannot delete: child records exist",
+          );
           return;
         }
         toast.success("Terms & Conditions deleted successfully");
         onSuccess?.();
       } catch (err) {
-        toast.error(err?.data?.message || "Failed to delete terms & conditions");
+        toast.error(
+          err?.data?.message || "Failed to delete terms & conditions",
+        );
       }
     };
 
     return (
       <div className="h-full flex flex-col bg-gray-200">
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
-          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">Delete Terms & Conditions</h2>
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            Delete Terms & Conditions
+          </h2>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
           {isLoadingRecord ? (
@@ -341,18 +355,35 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
           ) : childCount > 0 ? (
             <>
               <div className="flex flex-col items-center gap-2">
-                <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                <svg
+                  className="w-10 h-10 text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                  />
                 </svg>
-                <p className="text-sm font-semibold text-red-600">Cannot Delete</p>
+                <p className="text-sm font-semibold text-red-600">
+                  Cannot Delete
+                </p>
                 <p className="text-xs text-gray-600 text-center">
                   <span className="font-semibold">"{deleteLabel}"</span> has{" "}
-                  <span className="font-semibold text-red-600">{childCount} linked record{childCount > 1 ? "s" : ""}</span>.
-                  Remove them first before deleting this terms & conditions.
+                  <span className="font-semibold text-red-600">
+                    {childCount} linked record{childCount > 1 ? "s" : ""}
+                  </span>
+                  . Remove them first before deleting this terms & conditions.
                 </p>
               </div>
-              <button type="button" onClick={onClose}
-                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+              >
                 Close
               </button>
             </>
@@ -363,12 +394,18 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                 <span className="font-semibold">"{deleteLabel}"</span>?
               </p>
               <div className="flex gap-3">
-                <button type="button" onClick={onClose}
-                  className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+                >
                   Cancel
                 </button>
-                <button type="button" onClick={handleConfirmDelete}
-                  className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded">
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded"
+                >
                   Delete
                 </button>
               </div>
@@ -381,7 +418,10 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
 
   if (onSuccess) {
     return (
-      <div onKeyDown={handleKeyDown} className="h-full flex flex-col bg-gray-200">
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
           <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
             {editId ? "Edit Terms & Conditions" : "Add New Terms & Conditions"}
@@ -427,6 +467,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
+          childRecordLabel="Purchase Order"
         />
       </div>
 
@@ -483,7 +524,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                     )}
                   </div>
                   <div className="flex gap-2">
-                    {(!readOnly && !id) && (
+                    {!readOnly && !id && (
                       <button
                         type="button"
                         onClick={() => saveData("new")}

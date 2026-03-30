@@ -24,6 +24,7 @@ import Modal from "../../../UiComponents/Modal";
 import { Check, Power } from "lucide-react";
 import Swal from "sweetalert2";
 import { statusDropdown } from "../../../Utils/DropdownData";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 
 const MODEL = "Tax Template Master";
 
@@ -37,6 +38,7 @@ export default function Form() {
   const [taxTemplateDetails, setTaxTemplateDetails] = useState([]);
 
   const [searchValue, setSearchValue] = useState("");
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const childRecord = useRef(0);
   const dispatch = useDispatch();
@@ -133,10 +135,7 @@ export default function Form() {
         //     Swal.showLoading();
         // }
       });
-      dispatch({
-        type: `TaxTermMaster/invalidateTags`,
-        payload: ["Taxe Name"],
-      });
+      dispatchInvalidate();
     } catch (error) {
       console.log("handle");
     }
@@ -199,10 +198,7 @@ export default function Form() {
         try {
           await removeData(id);
           setId("");
-          dispatch({
-            type: `TaxTermMaster/invalidateTags`,
-            payload: ["Tax Name"],
-          });
+          dispatchInvalidate();
           onNew();
           setForm(false);
           Swal.fire({

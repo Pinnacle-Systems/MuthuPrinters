@@ -22,6 +22,7 @@ import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelServi
 import StyleItemMasterApi from "../../../redux/services/StyleItemMasterService.js";
 import { useDispatch } from "react-redux";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -49,6 +50,7 @@ export default function Form() {
     setShowForm(true);
     setReadOnly(true);
   };
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const handleEdit = (orderId) => {
     setId(orderId);
@@ -95,7 +97,7 @@ export default function Form() {
             timer: 1000,
           });
           setShowForm(false);
-          dispatch(StyleItemMasterApi.util.invalidateTags(["StyleItemMaster"]));
+          dispatchInvalidate();
           invalidatePurchaseModule();
         } catch (error) {
           Swal.fire({

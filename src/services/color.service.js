@@ -11,7 +11,8 @@ async function get(req) {
     include: {
       _count: {
         select: {
-          DeliveryChallanItems: true,
+          poItems: true,
+          inwardItems: true,
         },
       },
     },
@@ -20,7 +21,7 @@ async function get(req) {
     statusCode: 0,
     data: (data = data.map((color) => ({
       ...color,
-      childRecord: color?._count.DeliveryChallanItems > 0,
+      childRecord: color?._count.poItems + color?._count.inwardItems,
     }))),
   };
 }
@@ -40,9 +41,7 @@ async function getOne(id) {
   if (!data) return NoRecordFound("color");
   return {
     statusCode: 0,
-    data: { ...data,
-         ...{ childRecord: childRecordPo + childRecordInward }
-         },
+    data: { ...data, ...{ childRecord: childRecordPo + childRecordInward } },
   };
 }
 

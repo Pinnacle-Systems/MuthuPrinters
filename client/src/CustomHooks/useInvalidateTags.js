@@ -20,10 +20,17 @@ const useInvalidateTags = () => {
       type: `paytermMaster/invalidateTags`,
       payload: ["PaytermMaster"],
     },
-
     {
-      type: `branchTypeMaster/invalidateTags`,
-      payload: ["branchType"],
+      type: `taxTermMaster/invalidateTags`,
+      payload: ["TaxTermMaster"],
+    },
+    {
+      type: `StyleItemMaster/invalidateTags`,
+      payload: ["StyleItemMaster"],
+    },
+    {
+      type: `TermsandCondtions/invalidateTags`,
+      payload: ["TermsandCondtions"],
     },
     {
       type: `finYearMaster/invalidateTags`,

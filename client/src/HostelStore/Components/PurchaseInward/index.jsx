@@ -13,6 +13,7 @@ import { useDeletePurchaseInwardEntryMutation, useLazyGetPurchaseInwardEntryById
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -39,6 +40,8 @@ export default function Form() {
     setReadOnly(false);
   };
   const [removeData] = useDeletePurchaseInwardEntryMutation();
+  const [dispatchInvalidate] = useInvalidateTags();
+
   const handleDelete = async (id) => {
     setId(id);
     const { data } = await trigger(id);
@@ -76,6 +79,7 @@ export default function Form() {
             timer: 1000,
           });
           setShowForm(false);
+          dispatchInvalidate();
           invalidatePurchaseModule();
         } catch (error) {
           Swal.fire({

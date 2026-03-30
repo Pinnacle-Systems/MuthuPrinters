@@ -303,7 +303,7 @@ export default function Form() {
     //         </div>
     //     </div>
     // </div>
-    <div onKeyDown={handleKeyDown} className="p-1 h-[90%]">
+    <div onKeyDown={handleKeyDown} className="p-1 h-[85%]">
       <div className="w-full flex bg-white p-1 justify-between  items-center">
         <h5 className="text-lg font-bold text-gray-800">Tax Term Master</h5>
         <div className="flex items-center">
@@ -327,6 +327,7 @@ export default function Form() {
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
+          childRecordLabel="Tax Template Master"
         />
       </div>
 

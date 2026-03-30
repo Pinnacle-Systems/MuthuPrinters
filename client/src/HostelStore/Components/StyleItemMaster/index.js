@@ -22,12 +22,11 @@ import { statusDropdown } from "../../../Utils/DropdownData";
 import { dropDownListObject } from "../../../Utils/contructObject";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices";
 import { useGetUomQuery } from "../../../redux/services/UomMasterService";
-import {
-  useGetSizeTemplateQuery,
-} from "../../../redux/services/SizeTemplateMaster";
+import { useGetSizeTemplateQuery } from "../../../redux/services/SizeTemplateMaster";
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
-import { ItemGroup, UomMaster,SizeTemplate, HsnMaster } from "..";
+import { ItemGroup, UomMaster, SizeTemplate, HsnMaster } from "..";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 
 const MODEL = "Item Master";
 export default function Form() {
@@ -45,6 +44,7 @@ export default function Form() {
   const [itemGroupId, setItemGroupId] = useState("");
   const [sizeTemplateId, setSizeTemplateId] = useState("");
   const [uomId, setUomId] = useState("");
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const params = {
     companyId: secureLocalStorage.getItem(
@@ -143,6 +143,7 @@ export default function Form() {
         //   Swal.showLoading();
         // },
       });
+      dispatchInvalidate();
     } catch (error) {
       console.log("handle");
     }
@@ -220,6 +221,7 @@ export default function Form() {
             timer: 1000,
           });
           setForm(false);
+          dispatchInvalidate();
         } catch (error) {
           Swal.fire({
             icon: "error",
@@ -493,9 +495,7 @@ export default function Form() {
                             options={dropDownListObject(
                               id
                                 ? uomList?.data
-                                : uomList?.data?.filter(
-                                    (item) => item?.active,
-                                  ),
+                                : uomList?.data?.filter((item) => item?.active),
                               "name",
                               "id",
                             )}
@@ -511,7 +511,7 @@ export default function Form() {
                           />
                         </div>
                         <div className="mb-3">
-                           <DropdownWithModal
+                          <DropdownWithModal
                             name="Size Template"
                             options={dropDownListObject(
                               id
@@ -575,9 +575,7 @@ export default function Form() {
                             options={dropDownListObject(
                               id
                                 ? hsnList?.data
-                                : hsnList?.data?.filter(
-                                    (item) => item?.active,
-                                  ),
+                                : hsnList?.data?.filter((item) => item?.active),
                               "name",
                               "id",
                             )}

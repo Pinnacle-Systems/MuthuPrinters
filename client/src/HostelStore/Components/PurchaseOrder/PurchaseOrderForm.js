@@ -37,6 +37,7 @@ import PoItems from "./PoItems";
 import PurchaseOrderPrintFormat from "./PrintFormat-PO";
 import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 
 const PurchaseOrderForm = ({
   onClose,
@@ -86,6 +87,7 @@ const PurchaseOrderForm = ({
   const [isNewVersion, setIsNewVersion] = useState(false);
   const [quoteVersion, setQuoteVersion] = useState("");
   const supplierRef = useRef(null);
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const [requirementId, setRequirementId] = useState("");
 
@@ -213,6 +215,7 @@ const PurchaseOrderForm = ({
           didClose: () => {
             // ✅ Runs after Swal completely closes
             invalidatePurchaseModule();
+            dispatchInvalidate();
 
             if (returnData.statusCode === 0) {
               if (nextProcess == "new") {

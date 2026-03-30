@@ -74,8 +74,8 @@ async function get(req) {
                 }
             },
             _count: {
-                select: {
-                    po: true,
+                select:{
+                    PoSupplier: true,
                     purchaseInwards: true
                 }
             },
@@ -98,7 +98,7 @@ async function get(req) {
     return {
         statusCode: 0, data: data = data?.map(party => ({
             ...party,
-            childRecord: party?._count.Supplier > 0
+            childRecord: party?._count.PoSupplier + party?._count.purchaseInwards
         })),
     };
 }

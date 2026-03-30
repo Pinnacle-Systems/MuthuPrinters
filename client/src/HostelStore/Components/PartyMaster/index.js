@@ -724,7 +724,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
       header: reportName,
       accessor: (item) => item?.name,
       //   cellClass: () => "font-medium text-gray-900",
-      className: "font-medium text-gray-900 text-left uppercase w-2/4",
+      className: "font-medium text-gray-900 text-left uppercase w-[500px]",
     },
     {
       header: "Branch Type",
