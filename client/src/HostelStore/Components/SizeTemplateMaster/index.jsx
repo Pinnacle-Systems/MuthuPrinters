@@ -4,6 +4,7 @@ import {
   MultiSelectDropdown,
   ReusableTable,
   TextInput,
+  TextInputNew,
   ToggleButton,
 } from "../../../Inputs";
 import { statusDropdown } from "../../../Utils/DropdownData";
@@ -21,13 +22,20 @@ import {
 import Modal from "../../../UiComponents/Modal";
 import { Check, Power } from "lucide-react";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService";
+import { toast } from "react-toastify";
 
 const MODEL = "Size Template Master";
-export default function Form() {
+export default function Form({
+  onSuccess,
+  onClose,
+  editId,
+  deleteId,
+  deleteLabel,
+} = {}) {
   const [form, setForm] = useState(false);
 
   const [readOnly, setReadOnly] = useState(false);
-  const [id, setId] = useState("");
+  const [id, setId] = useState(editId || deleteId || "");
   const [name, setName] = useState("");
   const [sizeTemplateList, setSizeTemplateList] = useState([]);
   const [active, setActive] = useState(true);
@@ -42,6 +50,7 @@ export default function Form() {
       sessionStorage.getItem("sessionId") + "userCompanyId"
     ),
   };
+
   const {
     data: allData,
     isLoading,
@@ -52,16 +61,19 @@ export default function Form() {
       active: true
     }
   });
+
   const {
     data: singleData,
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetSizeTemplateByIdQuery(id, { skip: !id });
+
   const {
     data: sizeList,
     isLoading: isSizeLoading,
     isFetching: isSizeFetching,
   } = useGetSizeMasterQuery({ params });
+
   const [trigger, { data: singleDataLazy, isFetchingLazy }] =
     useLazyGetSizeTemplateByIdQuery();
 
@@ -75,7 +87,7 @@ export default function Form() {
         setReadOnly(false);
         setName("");
         setSizeTemplateList([]);
-        setActive(id ? data?.active : true);
+        setActive(true);
       } else {
         setName(data?.name || "");
         setSizeTemplateList(
@@ -96,7 +108,7 @@ export default function Form() {
         childRecord.current = data?.childRecord ? data?.childRecord : 0;
       }
     },
-    [id]
+    [id, sizeList]
   );
 
   useEffect(() => {
@@ -104,10 +116,10 @@ export default function Form() {
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
   useEffect(() => {
-    if (form && !readOnly && sizeNameRef.current) {
+    if ((form || onSuccess) && sizeNameRef.current) {
       sizeNameRef.current.focus();
     }
-  }, [form, readOnly]);
+  }, [form, onSuccess]);
 
   const data = {
     id,
@@ -126,21 +138,24 @@ export default function Form() {
     return false;
   };
 
-  const handleSubmitCustom = async (callback, data, text) => {
+  const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
       let returnData = await callback(data).unwrap();
-      setId(returnData.data.id);
-      setForm(false);
+      if (onSuccess) {
+        onSuccess(returnData.data.id);
+        return;
+      }
+      if (nextProcess === "new") {
+        syncFormWithDb(undefined);
+        onNew();
+        sizeNameRef?.current?.focus();
+      } else {
+        setForm(false);
+      }
 
       Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
-        draggable: true,
-        timer: 1000,
-        showConfirmButton: false,
-        didOpen: () => {
-          Swal.showLoading();
-        },
       });
     } catch (error) {
       Swal.fire({
@@ -151,7 +166,7 @@ export default function Form() {
     }
   };
 
-  const saveData = () => {
+  const saveData = (nextProcess) => {
     let foundItem;
     if (id) {
       foundItem = allData?.data
@@ -175,6 +190,7 @@ export default function Form() {
       });
       return false;
     }
+
     if (!validateData(data)) {
       Swal.fire({
         icon: "error",
@@ -184,10 +200,14 @@ export default function Form() {
       return;
     }
 
+    if (!window.confirm("Are you sure save the details ...?")) {
+      return;
+    }
+
     if (id) {
-      handleSubmitCustom(updateData, data, "Updated");
+      handleSubmitCustom(updateData, data, "Updated", nextProcess);
     } else {
-      handleSubmitCustom(addData, data, "Added");
+      handleSubmitCustom(addData, data, "Added", nextProcess);
     }
   };
 
@@ -214,6 +234,7 @@ export default function Form() {
       "id"
     )
     : [];
+
   const handleView = (id) => {
     setId(id);
     setForm(true);
@@ -275,6 +296,7 @@ export default function Form() {
       <Power size={10} />
     </div>
   );
+
   const INACTIVE = (
     <div className="bg-gradient-to-r from-red-200 to-red-500 inline-flex items-center justify-center rounded-full border-2 w-6 border-red-500 shadow-lg text-white hover:scale-110 transition-transform duration-300">
       <Power size={10} />
@@ -287,7 +309,6 @@ export default function Form() {
       accessor: (item, index) => parseInt(index) + parseInt(1),
       className: "font-medium text-gray-900 w-[10px] py-1",
     },
-
     {
       header: "Size Template Name",
       accessor: (item) => item.name,
@@ -301,6 +322,127 @@ export default function Form() {
     },
   ];
 
+  // Form Body
+  const formBody = (
+    <div className="flex-1 p-3">
+      <div className="grid grid-cols-1 gap-3 h-full">
+        <div className="lg:col-span- space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+            <fieldset className="rounded mt-2">
+              <div className="w-[50%]">
+                <TextInputNew
+                  name="Size Template Name"
+                  type="text"
+                  value={name}
+                  setValue={setName}
+                  required={true}
+                  readOnly={readOnly}
+                  disabled={childRecord.current > 0}
+                  ref={sizeNameRef}
+                />
+              </div>
+              <div className="w-[50%] mt-5">
+                <MultiSelectDropdown
+                  name="Size"
+                  selected={sizeTemplateList}
+                  setSelected={setSizeTemplateList}
+                  options={sizeOptions}
+                  readOnly={readOnly}
+                  disabled={childRecord.current > 0}
+                  className="size-multiselect"
+                />
+              </div>
+              <div className="mt-5">
+                <ToggleButton
+                  name="Status"
+                  options={statusDropdown}
+                  value={active}
+                  setActive={setActive}
+                  required={true}
+                  readOnly={readOnly}
+                />
+              </div>
+            </fieldset>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (deleteId) {
+    const childCount = singleData?.data?.childRecord ?? 0;
+    const isLoadingRecord = isSingleFetching || isSingleLoading;
+
+    const handleConfirmDelete = async () => {
+      try {
+        const res = await removeData(deleteId).unwrap();
+        if (res?.statusCode === 1) {
+          toast.error(
+            res?.data?.message || "Cannot delete: child records exist",
+          );
+          return;
+        }
+        toast.success("Deleted successfully");
+        onSuccess?.();
+      } catch (err) {
+        toast.error(err?.data?.message || "Failed to delete");
+      }
+    };
+
+    return (
+      <div className="h-full flex flex-col bg-gray-200">
+        <div className="border-b py-2 px-4 mx-3 mt-4 bg-white">
+          <h2 className="text-lg font-semibold">Delete Size Template</h2>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
+          {isLoadingRecord ? (
+            <p>Checking...</p>
+          ) : childCount > 0 ? (
+            <>
+              <p className="text-red-600 font-semibold">Cannot Delete</p>
+              <p>
+                "{deleteLabel}" has {childCount} linked records.
+              </p>
+              <button onClick={onClose}>Close</button>
+            </>
+          ) : (
+            <>
+              <p>Are you sure to delete "{deleteLabel}"?</p>
+              <button onClick={onClose}>Cancel</button>
+              <button onClick={handleConfirmDelete}>Delete</button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (onSuccess) {
+    return (
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            {editId ? "Edit Size Template" : "Add New Size Template"}
+          </h2>
+          <button
+            type="button"
+            onClick={() => saveData("close")}
+            className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+          >
+            <Check size={14} />
+            {editId ? "Update" : "Save"}
+          </button>
+        </div>
+
+        {formBody}
+      </div>
+    );
+  }
+
   return (
     <div onKeyDown={handleKeyDown} className="p-1">
       <div className="w-full flex bg-white justify-between p-1 items-center">
@@ -310,17 +452,16 @@ export default function Form() {
         <div className="flex items-center">
           <button
             onClick={() => {
-
               setForm(true);
               onNew();
-
             }}
-            className="bg-white border font-segoe  text-sm border-green-600 text-green-600 hover:bg-green-700 hover:text-white px-2  rounded-md shadow transition-colors duration-200 flex items-center gap-2"
+            className="bg-white border font-segoe text-sm border-green-600 text-green-600 hover:bg-green-700 hover:text-white px-2 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             + Add New Size Template
           </button>
         </div>
       </div>
+
       <div className="bg-white rounded-xl shadow-sm overflow-hidden mt-3">
         <ReusableTable
           columns={columns}
@@ -336,22 +477,22 @@ export default function Form() {
         <Modal
           isOpen={form}
           form={form}
-          widthClass={"w-[500px] max-w-6xl h-[450px]"}
+          widthClass={"w-[600px] h-[500px]"}
           onClose={() => {
             setForm(false);
             syncFormWithDb(undefined);
             setId("");
           }}
         >
-          <div className="h-full flex flex-col bg-gray-100">
-            <div className="border-b py-2 px-4 mx-3  mt-3 flex justify-between items-center sticky top-0 z-10 bg-white">
-              <div className="flex items-center gap-2 ">
+          <div className="h-full flex flex-col bg-gray-200">
+            <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+              <div className="flex items-center gap-2">
                 <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
                   {id
                     ? !readOnly
-                      ? "Edit Size Template"
-                      : "Size Template Master "
-                    : "Add New Size Template"}
+                      ? "Edit Size Template Master"
+                      : "Size Template Master"
+                    : "Add New Size Template Master"}
                 </h2>
               </div>
               <div className="flex gap-2">
@@ -360,13 +501,13 @@ export default function Form() {
                     <button
                       type="button"
                       onClick={() => {
-
-                        setReadOnly(false);
-
+                        setForm(false);
+                        setSearchValue("");
+                        setId(false);
                       }}
                       className="px-3 py-1 text-red-600 hover:bg-red-600 hover:text-white border border-red-600 text-xs rounded"
                     >
-                      Edit
+                      Cancel
                     </button>
                   )}
                 </div>
@@ -374,62 +515,36 @@ export default function Form() {
                   {!readOnly && (
                     <button
                       type="button"
-                      onClick={saveData}
-                      className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
-                                        border border-green-600 flex items-center gap-1 text-xs"
+                      onClick={() => {
+                        saveData("close");
+                      }}
+                      className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
+                                 border border-blue-600 flex items-center gap-1 text-xs"
                     >
                       <Check size={14} />
-                      {id ? "Update" : "Save"}
+                      {id ? "Update" : "Save & close"}
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {!readOnly && !id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        saveData("new");
+                      }}
+                      className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
+                                 border border-green-600 flex items-center gap-1 text-xs"
+                    >
+                      <Check size={14} />
+                      {"Save & New"}
                     </button>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-3">
-              <div className="grid grid-cols-1  gap-3  h-full">
-                <div className="lg:col-span- space-y-3">
-                  <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                    <fieldset className="rounded mt-2">
-                      <div className="w-[50%]">
-                        <TextInput
-                          name="Size Template Name"
-                          type="text"
-                          value={name}
-                          setValue={setName}
-                          required={true}
-                          readOnly={readOnly}
-                          disabled={childRecord.current > 0}
-                          ref={sizeNameRef}
-                        />
-                      </div>
-                      <div className=" w-[50%] mt-5">
-                        <MultiSelectDropdown
-                          name="Size"
-                          selected={sizeTemplateList}
-                          setSelected={setSizeTemplateList}
-                          options={sizeOptions}
-                          readOnly={readOnly}
-                          disabled={childRecord.current > 0}
-                          className="size-multiselect"
-                        />
-                      </div>
-                      <div className="mt-5">
-                        <ToggleButton
-                          name="Status"
-                          options={statusDropdown}
-                          value={active}
-                          setActive={setActive}
-                          required={true}
-                          readOnly={readOnly}
-                        />
-                      </div>
-                    </fieldset>
-                    `
-                  </div>
-                </div>
-              </div>
-            </div>
+            {formBody}
           </div>
         </Modal>
       )}

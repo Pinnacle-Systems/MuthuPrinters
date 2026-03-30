@@ -24,10 +24,10 @@ import Modal from "../../../UiComponents/Modal";
 
 const MODEL = "Location Master";
 
-export default function Form() {
+export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
   const [form, setForm] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
-  const [id, setId] = useState("");
+  const [id, setId] = useState(editId || deleteId || "");
   const [storeName, setStoreName] = useState("");
   const [locationId, setLocationId] = useState("");
   const [isFabric, setIsFabric] = useState(false);
@@ -39,6 +39,10 @@ export default function Form() {
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
+  
+  // Create refs for form fields
+  const branchRef = useRef(null);
+  const locationNameRef = useRef(null);
   // const dispatch = useDispatch();
 
   const params = {
@@ -120,7 +124,7 @@ export default function Form() {
     return false;
   };
 
-  const handleSubmitCustom = async (callback, data, text) => {
+  const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
       let returnData;
       if (text === "Updated") {
@@ -129,23 +133,41 @@ export default function Form() {
         returnData = await callback(data).unwrap();
       }
       setId(returnData.data.id);
+      
+      if (onSuccess) {
+        onSuccess(returnData.data.id);
+        return;
+      }
+      
       Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
         draggable: true,
         timer: 1000,
         showConfirmButton: false,
-        didOpen: () => {
-          Swal.showLoading();
+        didClose: () => {
+          branchRef.current.focus();
         },
       });
-      setForm(false);
+      
+      if (nextProcess == "new") {
+        syncFormWithDb(undefined);
+        onNew();
+        // Focus on branch field after Save & New
+        setTimeout(() => {
+          if (branchRef.current) {
+            branchRef.current.focus();
+          }
+        }, 100);
+      } else {
+        setForm(false);
+      }
     } catch (error) {
       console.log("handle");
     }
   };
 
-  const saveData = () => {
+  const saveData = (nextProcess) => {
     let foundItem;
     if (id) {
       foundItem = allData?.data
@@ -184,9 +206,9 @@ export default function Form() {
       return;
     }
     if (id) {
-      handleSubmitCustom(updateData, data, "Updated");
+      handleSubmitCustom(updateData, data, "Updated", nextProcess);
     } else {
-      handleSubmitCustom(addData, data, "Added");
+      handleSubmitCustom(addData, data, "Added", nextProcess);
     }
   };
 
@@ -359,15 +381,28 @@ export default function Form() {
                 </div>
                 <div className="flex gap-2">
                   {!readOnly && (
-                    <button
-                      type="button"
-                      onClick={saveData}
-                      className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
-                                        border border-green-600 flex items-center gap-1 text-xs"
-                    >
-                      <Check size={14} />
-                      {id ? "Update" : "Save"}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => saveData("close")}
+                        className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
+                          border border-green-600 flex items-center gap-1 text-xs"
+                      >
+                        <Check size={14} />
+                        {id ? "Update" : "Save & close"}
+                      </button>
+                      {!id && (
+                        <button
+                          type="button"
+                          onClick={() => saveData("new")}
+                          className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
+                            border border-blue-600 flex items-center gap-1 text-xs"
+                        >
+                          <Check size={14} />
+                          {"Save & New"}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -420,6 +455,7 @@ export default function Form() {
                         <div className="flex-col">
                           <div className="mb-3 w-[48%]">
                             <DropdownInput
+                              ref={branchRef}
                               name="Branch"
                               options={dropDownListObject(
                                 id
@@ -440,6 +476,7 @@ export default function Form() {
                           </div>
                           <div className="mb-3 w-[48%]">
                             <TextInput
+                              ref={locationNameRef}
                               name="Location"
                               type="text"
                               value={storeName}

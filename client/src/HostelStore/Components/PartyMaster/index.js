@@ -2049,7 +2049,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                               className="focus:ring-2 focus:ring-blue-100"
                               addNewLabel="+ Add New City"
                               childComponent={CityMaster}
-                              addNewModalWidth="w-[40%] h-[45%]"
+                              addNewModalWidth="w-[50%] h-[55%]"
                             />
                               </div>
                               <TextInputNew1

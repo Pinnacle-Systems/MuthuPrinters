@@ -25,11 +25,17 @@ import {
   useUpdateHsnMasterMutation,
 } from "../../../redux/services/HsnMasterServices";
 
-export default function Form() {
+export default function Form({
+  onSuccess,
+  onClose,
+  editId,
+  deleteId,
+  deleteLabel,
+} = {}) {
   const [form, setForm] = useState(false);
 
   const [readOnly, setReadOnly] = useState(false);
-  const [id, setId] = useState("");
+  const [id, setId] = useState(editId || deleteId || "");
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
   const [tax, setTax] = useState("");
@@ -71,12 +77,6 @@ export default function Form() {
   const countryNameRef = useRef(null);
 
   useEffect(() => {
-    if (form && countryNameRef.current) {
-      countryNameRef.current.focus();
-    }
-  }, [form]);
-
-  useEffect(() => {
     syncFormWithDb(singleData?.data);
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
@@ -99,7 +99,11 @@ export default function Form() {
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
-      await callback(data);
+      let returnData = await callback(data).unwrap();
+      if (onSuccess) {
+        onSuccess(returnData?.data.id);
+        return;
+      }
       setId("");
       syncFormWithDb(undefined);
 
@@ -262,6 +266,140 @@ export default function Form() {
     console.log("Edit");
   };
 
+  const formBody = (
+    <div className="flex-1 p-3">
+      <div className="grid grid-cols-1  gap-3  h-full">
+        <div className="lg:col-span- space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+            <div className="space-y-4 ">
+              <fieldset className=" rounded mt-2">
+                {/* <div className=''>
+                                                        <div className='mb-3 w-[48%]'>
+                                                            <TextInput name="Counts" type="text" value={name} setValue={setName} required={true} readOnly={readOnly} disabled={(childRecord.current > 0)} />
+                                                        </div>
+
+                                                        <div className='mb-5'>
+                                                            <ToggleButton name="Status" options={statusDropdown} value={active} setActive={setActive} required={true} readOnly={readOnly} />
+                                                        </div>
+                                                    </div> */}
+                <div className="grid grid-cols-3 my-2 gap-5">
+                  <TextInputNew1
+                    name="HSN Code"
+                    type="text"
+                    value={name}
+                    setValue={setName}
+                    required={true}
+                    readOnly={readOnly}
+                    disabled={childRecord.current > 0}
+                    ref={countryNameRef}
+                  />
+                  <TextInputNew1
+                    name="Tax Percentage"
+                    type="text"
+                    max={"100"}
+                    value={tax}
+                    setValue={setTax}
+                    required={true}
+                    readOnly={readOnly}
+                    disabled={childRecord.current > 0}
+                  />
+                </div>
+                <ToggleButton
+                  name="Status"
+                  options={statusDropdown}
+                  value={active}
+                  setActive={setActive}
+                  required={true}
+                  readOnly={readOnly}
+                />
+              </fieldset>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  useEffect(() => {
+    if ((form || onSuccess) && countryNameRef.current) {
+      countryNameRef.current.focus();
+    }
+  }, [form, onSuccess]);
+
+  if (deleteId) {
+    const childCount = singleData?.data?.childRecord ?? 0;
+    const isLoadingRecord = isSingleFetching || isSingleLoading;
+
+    const handleConfirmDelete = async () => {
+      try {
+        const res = await removeData(deleteId).unwrap();
+        if (res?.statusCode === 1) {
+          toast.error(
+            res?.data?.message || "Cannot delete: child records exist",
+          );
+          return;
+        }
+        toast.success("Deleted successfully");
+        onSuccess?.();
+      } catch (err) {
+        toast.error(err?.data?.message || "Failed to delete");
+      }
+    };
+
+    return (
+      <div className="h-full flex flex-col bg-gray-200">
+        <div className="border-b py-2 px-4 mx-3 mt-4 bg-white">
+          <h2 className="text-lg font-semibold">Delete Hsn</h2>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
+          {isLoadingRecord ? (
+            <p>Checking...</p>
+          ) : childCount > 0 ? (
+            <>
+              <p className="text-red-600 font-semibold">Cannot Delete</p>
+              <p>
+                "{deleteLabel}" has {childCount} linked records.
+              </p>
+              <button onClick={onClose}>Close</button>
+            </>
+          ) : (
+            <>
+              <p>Are you sure to delete "{deleteLabel}"?</p>
+              <button onClick={onClose}>Cancel</button>
+              <button onClick={handleConfirmDelete}>Delete</button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (onSuccess) {
+    return (
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            {editId ? "Edit Hsn" : "Add New Hsn"}
+          </h2>
+          <button
+            type="button"
+            onClick={() => saveData("close")}
+            className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+          >
+            <Check size={14} />
+            {editId ? "Update" : "Save"}
+          </button>
+        </div>
+
+        {formBody}
+      </div>
+    );
+  }
+
   return (
     <div onKeyDown={handleKeyDown} className="p-1 h-[90%]">
       <div className="w-full flex bg-white p-1 justify-between  items-center">
@@ -358,57 +496,7 @@ export default function Form() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto p-3">
-                <div className="grid grid-cols-1  gap-3  h-full">
-                  <div className="lg:col-span- space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                      <div className="space-y-4 ">
-                        <fieldset className=" rounded mt-2">
-                          {/* <div className=''>
-                                                        <div className='mb-3 w-[48%]'>
-                                                            <TextInput name="Counts" type="text" value={name} setValue={setName} required={true} readOnly={readOnly} disabled={(childRecord.current > 0)} />
-                                                        </div>
-
-                                                        <div className='mb-5'>
-                                                            <ToggleButton name="Status" options={statusDropdown} value={active} setActive={setActive} required={true} readOnly={readOnly} />
-                                                        </div>
-                                                    </div> */}
-                          <div className="grid grid-cols-3 my-2 gap-5">
-                            <TextInputNew1
-                              name="HSN Code"
-                              type="text"
-                              value={name}
-                              setValue={setName}
-                              required={true}
-                              readOnly={readOnly}
-                              disabled={childRecord.current > 0}
-                              ref={countryNameRef}
-                            />
-                            <TextInputNew1
-                              name="Tax Percentage"
-                              type="text"
-                              max={"100"}
-                              value={tax}
-                              setValue={setTax}
-                              required={true}
-                              readOnly={readOnly}
-                              disabled={childRecord.current > 0}
-                            />
-                          </div>
-                          <ToggleButton
-                            name="Status"
-                            options={statusDropdown}
-                            value={active}
-                            setActive={setActive}
-                            required={true}
-                            readOnly={readOnly}
-                          />
-                        </fieldset>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {formBody}
             </div>
           </Modal>
         )}

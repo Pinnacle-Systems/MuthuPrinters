@@ -21,13 +21,13 @@ import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { dropDownListObject } from "../../../Utils/contructObject";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices";
-import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices";
-import sizeTemplateApi, {
+import { useGetUomQuery } from "../../../redux/services/UomMasterService";
+import {
   useGetSizeTemplateQuery,
 } from "../../../redux/services/SizeTemplateMaster";
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
-import { ItemGroup, UomMaster } from "..";
+import { ItemGroup, UomMaster,SizeTemplate, HsnMaster } from "..";
 
 const MODEL = "Item Master";
 export default function Form() {
@@ -52,7 +52,7 @@ export default function Form() {
     ),
   };
   const { data: hsnList } = useGetHsnMasterQuery({ params });
-  const { data: uomList } = useGetUnitOfMeasurementMasterQuery({ params });
+  const { data: uomList } = useGetUomQuery({ params });
   const { data: sizeTemplateList } = useGetSizeTemplateQuery({ params });
   const { data: itemGroupList } = useGetItemGroupMasterQuery({ params });
 
@@ -511,7 +511,28 @@ export default function Form() {
                           />
                         </div>
                         <div className="mb-3">
-                          <DropdownInput
+                           <DropdownWithModal
+                            name="Size Template"
+                            options={dropDownListObject(
+                              id
+                                ? sizeTemplateList?.data
+                                : sizeTemplateList?.data?.filter(
+                                    (item) => item?.active,
+                                  ),
+                              "name",
+                              "id",
+                            )}
+                            value={sizeTemplateId}
+                            setValue={setSizeTemplateId}
+                            required={true}
+                            readOnly={readOnly}
+                            className={`w-[150px]`}
+                            disabled={childRecord.current > 0}
+                            addNewLabel="+ Add New Size Template"
+                            childComponent={SizeTemplate}
+                            addNewModalWidth="w-[40%] h-[62%]"
+                          />
+                          {/* <DropdownInput
                             name="Size Template"
                             options={dropDownListObject(
                               id
@@ -529,10 +550,10 @@ export default function Form() {
                             readOnly={readOnly}
                             clear={true}
                             disabled={childRecord.current > 0}
-                          />
+                          /> */}
                         </div>
                         <div className="mb-3">
-                          <DropdownInput
+                          {/* <DropdownInput
                             name="HSN"
                             options={dropDownListObject(
                               id
@@ -548,6 +569,27 @@ export default function Form() {
                             readOnly={readOnly}
                             clear={true}
                             disabled={childRecord.current > 0}
+                          /> */}
+                          <DropdownWithModal
+                            name="Hsn"
+                            options={dropDownListObject(
+                              id
+                                ? hsnList?.data
+                                : hsnList?.data?.filter(
+                                    (item) => item?.active,
+                                  ),
+                              "name",
+                              "id",
+                            )}
+                            value={hsnId}
+                            setValue={setHsnId}
+                            required={true}
+                            readOnly={readOnly}
+                            className={`w-[150px]`}
+                            disabled={childRecord.current > 0}
+                            addNewLabel="+ Add New Hsn"
+                            childComponent={HsnMaster}
+                            addNewModalWidth="w-[40%] h-[50%]"
                           />
                         </div>
                       </div>

@@ -272,8 +272,6 @@ export default function Form({
 
   const countryNameRef = useRef(null);
 
-
-
   const formBody = (
     <div className="flex-1 p-3 ">
       <div className="grid grid-cols-1  gap-3  h-full ">
@@ -318,7 +316,7 @@ export default function Form({
     </div>
   );
 
-    useEffect(() => {
+  useEffect(() => {
     if ((form || onSuccess) && countryNameRef.current) {
       countryNameRef.current.focus();
     }
@@ -379,17 +377,21 @@ export default function Form({
         onKeyDown={handleKeyDown}
         className="h-full flex flex-col bg-gray-200"
       >
-        <div className="border-b py-2 px-4 mx-3 mt-4 bg-white flex justify-between">
-          <h2 className="text-lg font-semibold">
-            {editId ? "Edit Department" : "Add Department"}
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            {editId ? "Edit Department" : "Add New Department"}
           </h2>
-
-          <button onClick={() => saveData("close")}>
-            <Check size={14} /> {editId ? "Update" : "Save"}
+          <button
+            type="button"
+            onClick={() => saveData("close")}
+            className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+          >
+            <Check size={14} />
+            {editId ? "Update" : "Save"}
           </button>
         </div>
 
-       {formBody}
+        {formBody}
       </div>
     );
   }

@@ -27,11 +27,17 @@ import Swal from "sweetalert2";
 
 const MODEL = "Uom Master";
 
-export default function Form() {
+export default function Form({
+  onSuccess,
+  onClose,
+  editId,
+  deleteId,
+  deleteLabel,
+} = {}) {
   const [form, setForm] = useState(false);
 
   const [readOnly, setReadOnly] = useState(false);
-  const [id, setId] = useState("");
+  const [id, setId] = useState(editId || deleteId || "");
   const [name, setName] = useState("");
   // const [code, setCode] = useState("");
   const [active, setActive] = useState(true);
@@ -92,28 +98,25 @@ export default function Form() {
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
       let returnData = await callback(data).unwrap();
-      if (returnData.statusCode === 0) {
-        setId("");
-        syncFormWithDb(undefined);
-
-        if (nextProcess == "new") {
-          syncFormWithDb(undefined);
-          onNew();
-          countryNameRef?.current?.focus();
-        } else {
-          setForm(false);
-        }
-        Swal.fire({
-          title: text + "  " + "Successfully",
-          icon: "success",
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Submission error",
-          text: returnData.data?.message || "Something went wrong!",
-        });
+      setId("");
+      syncFormWithDb(undefined);
+      
+      if (onSuccess) {
+        onSuccess(returnData?.data.id);
+        return;
       }
+
+      if (nextProcess == "new") {
+        syncFormWithDb(undefined);
+        onNew();
+        countryNameRef?.current?.focus();
+      } else {
+        setForm(false);
+      }
+      Swal.fire({
+        title: text + "  " + "Successfully",
+        icon: "success",
+      });
     } catch (error) {
       console.log("handle");
     }
@@ -131,7 +134,10 @@ export default function Form() {
     if (id) {
       foundItem = allData?.data
         ?.filter((i) => i.id != id)
-        ?.some((item) => item.name === name);
+        ?.some(
+          (item) =>
+            item.name?.trim().toLowerCase() === name?.trim().toLowerCase(),
+        );
     } else {
       foundItem = allData?.data?.some((item) => item.name === name);
     }
@@ -206,9 +212,10 @@ export default function Form() {
 
   const onNew = () => {
     setId("");
-    setReadOnly(false);
     setForm(true);
     setSearchValue("");
+    syncFormWithDb(undefined);
+    setReadOnly(false);
   };
 
   function onDataClick(id) {
@@ -264,69 +271,127 @@ export default function Form() {
 
   const countryNameRef = useRef(null);
 
+  const formBody = (
+    <div className="flex-1 p-3 ">
+      <div className="grid grid-cols-1  gap-3  h-full ">
+        <div className="lg:col-span-2 space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+            <div className="space-y-4 ">
+              <div className="grid grid-cols-2  gap-3  h-full">
+                <fieldset className="">
+                  <div className="mb-5">
+                    <TextInputNew
+                      name="Uom Name"
+                      type="text"
+                      value={name}
+                      setValue={setName}
+                      required={true}
+                      readOnly={readOnly}
+                      disabled={childRecord.current > 0}
+                      ref={countryNameRef}
+                    />
+                  </div>
+                  <div>
+                    <ToggleButton
+                      name="Status"
+                      options={statusDropdown}
+                      value={active}
+                      setActive={setActive}
+                      required={true}
+                      readOnly={readOnly}
+                      disabled={childRecord.current > 0}
+                    />
+                  </div>
+                </fieldset>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   useEffect(() => {
-    if (form && countryNameRef.current) {
+    if ((form || onSuccess) && countryNameRef.current) {
       countryNameRef.current.focus();
     }
-  }, [form]);
-  // if (!form)
-  //     return <ReportTemplate
-  //         heading={MODEL}
-  //         tableHeaders={tableHeaders}
-  //         tableDataNames={tableDataNames}
-  //         loading={
-  //             isLoading || isFetching
-  //         }
-  //         setForm={setForm}
-  //         data={allData?.data}
-  //         onClick={onDataClick}
-  //         onNew={onNew}
-  //         searchValue={searchValue}
-  //         setSearchValue={setSearchValue}
-  //     />
+  }, [form, onSuccess]);
+
+  if (deleteId) {
+    const childCount = singleData?.data?.childRecord ?? 0;
+    const isLoadingRecord = isSingleFetching || isSingleLoading;
+
+    const handleConfirmDelete = async () => {
+      try {
+        const res = await removeData(deleteId).unwrap();
+        if (res?.statusCode === 1) {
+          toast.error(
+            res?.data?.message || "Cannot delete: child records exist",
+          );
+          return;
+        }
+        toast.success("Deleted successfully");
+        onSuccess?.();
+      } catch (err) {
+        toast.error(err?.data?.message || "Failed to delete");
+      }
+    };
+
+    return (
+      <div className="h-full flex flex-col bg-gray-200">
+        <div className="border-b py-2 px-4 mx-3 mt-4 bg-white">
+          <h2 className="text-lg font-semibold">Delete Item Group</h2>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
+          {isLoadingRecord ? (
+            <p>Checking...</p>
+          ) : childCount > 0 ? (
+            <>
+              <p className="text-red-600 font-semibold">Cannot Delete</p>
+              <p>
+                "{deleteLabel}" has {childCount} linked records.
+              </p>
+              <button onClick={onClose}>Close</button>
+            </>
+          ) : (
+            <>
+              <p>Are you sure to delete "{deleteLabel}"?</p>
+              <button onClick={onClose}>Cancel</button>
+              <button onClick={handleConfirmDelete}>Delete</button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (onSuccess) {
+    return (
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            {editId ? "Edit Uom" : "Add New Uom"}
+          </h2>
+          <button
+            type="button"
+            onClick={() => saveData("close")}
+            className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+          >
+            <Check size={14} />
+            {editId ? "Update" : "Save"}
+          </button>
+        </div>
+
+        {formBody}
+      </div>
+    );
+  }
 
   return (
-    // <div onKeyDown={handleKeyDown} className='md:items-start md:justify-items-center grid h-full bg-theme'>
-    //     <div className='flex flex-col frame w-full h-full'>
-    //         <FormHeader
-    //             onNew={onNew}
-    //             onClose={() => {
-    //                 setForm(false);
-    //                 setSearchValue("");
-    //             }} model={MODEL}
-    //             saveData={saveData}
-    //             setReadOnly={setReadOnly}
-    //             deleteData={deleteData}
-    //         // childRecord={childRecord.current}
-    //         />
-    //         <div className='flex-1 grid grid-cols-1 md:grid-cols-4 gap-x-2 overflow-clip'>
-    //             <div className='col-span-3 grid md:grid-cols-2 border overflow-auto'>
-    //                 <div className='mr-1 md:ml-2'>
-    //                     <fieldset className='frame my-1'>
-    //                         <legend className='sub-heading'>UOM Info</legend>
-    //                         <div className='grid grid-cols-1 my-2'>
-    //                             <TextInput name="UOM Type" type="text" value={name} setValue={setName} required={true} readOnly={readOnly} disabled={(childRecord.current > 0)} />
-    //                             <CheckBox name="Active" value={active} setValue={setActive} readOnly={readOnly} />
-    //                         </div>
-    //                     </fieldset>
-    //                 </div>
-    //             </div>
-    //             <div className='frame overflow-x-hidden'>
-    //                 <FormReport
-    //                     searchValue={searchValue}
-    //                     setSearchValue={setSearchValue}
-    //                     setId={setId}
-    //                     tableHeaders={tableHeaders}
-    //                     tableDataNames={tableDataNames}
-    //                     data={allData?.data}
-    //                     loading={
-    //                         isLoading || isFetching
-    //                     }
-    //                 />
-    //             </div>
-    //         </div>
-    //     </div>
-    // </div>
     <div onKeyDown={handleKeyDown} className="p-1">
       <div className="w-full flex bg-white p-1 justify-between  items-center">
         <h5 className="text-lg font-bold text-gray-800">
@@ -337,7 +402,6 @@ export default function Form() {
             onClick={() => {
               setForm(true);
               onNew();
-              syncFormWithDb(undefined);
             }}
             className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-sm px-4 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
@@ -429,43 +493,7 @@ export default function Form() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto p-3 ">
-                <div className="grid grid-cols-1  gap-3  h-full ">
-                  <div className="lg:col-span-2 space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                      <div className="space-y-4 ">
-                        <div className="grid grid-cols-2  gap-3  h-full">
-                          <fieldset className="">
-                            <div className="mb-5">
-                              <TextInputNew
-                                name="Uom Name"
-                                type="text"
-                                value={name}
-                                setValue={setName}
-                                required={true}
-                                readOnly={readOnly}
-                                disabled={childRecord.current > 0}
-                                ref={countryNameRef}
-                              />
-                            </div>
-                            <div>
-                              <ToggleButton
-                                name="Status"
-                                options={statusDropdown}
-                                value={active}
-                                setActive={setActive}
-                                required={true}
-                                readOnly={readOnly}
-                                disabled={childRecord.current > 0}
-                              />
-                            </div>
-                          </fieldset>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {formBody}
             </div>
           </Modal>
         )}

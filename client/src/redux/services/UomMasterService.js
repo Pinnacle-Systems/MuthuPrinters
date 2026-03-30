@@ -10,7 +10,7 @@ const uomMasterApi = createApi({
     baseQuery: fetchBaseQuery({
         baseUrl: BASE_URL,
     }),
-    tagTypes: ["Uom"],
+    tagTypes: ["UomMaster"],
     endpoints: (builder) => ({
         getUom: builder.query({
             query: ({ params, searchParams }) => {
@@ -33,7 +33,7 @@ const uomMasterApi = createApi({
                     params
                 };
             },
-            providesTags: ["Uom"],
+            providesTags: ["UomMaster"],
         }),
         getUomById: builder.query({
             query: (id) => {
@@ -45,7 +45,7 @@ const uomMasterApi = createApi({
                     },
                 };
             },
-            providesTags: ["Uom"],
+            providesTags: ["UomMaster"],
         }),
         addUom: builder.mutation({
             query: (payload) => ({
@@ -56,7 +56,7 @@ const uomMasterApi = createApi({
                     "Content-type": "application/json; charset=UTF-8",
                 },
             }),
-            invalidatesTags: ["Uom"],
+            invalidatesTags: ["UomMaster"],
         }),
         updateUom: builder.mutation({
             query: (payload) => {
@@ -67,14 +67,14 @@ const uomMasterApi = createApi({
                     body,
                 };
             },
-            invalidatesTags: ["Uom"],
+            invalidatesTags: ["UomMaster"],
         }),
         deleteUom: builder.mutation({
             query: (id) => ({
                 url: `${UOM_API}/${id}`,
                 method: "DELETE",
             }),
-            invalidatesTags: ["Uom"],
+            invalidatesTags: ["UomMaster"],
         }),
     }),
 });

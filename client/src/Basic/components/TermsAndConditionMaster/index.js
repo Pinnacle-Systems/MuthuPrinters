@@ -1,10 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-
 import secureLocalStorage from "react-secure-storage";
-
 import { statusDropdown } from "../../../Utils/DropdownData";
-import { Check, Plus, Power } from "lucide-react";
-
+import { Check, Power } from "lucide-react";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import {
@@ -18,16 +15,14 @@ import {
 import { ReusableTable, TextInputNew1, ToggleButton } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
 
-const MODEL = "Counts Master";
+const MODEL = "Terms & Conditions Master";
 
-export default function Form() {
+export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
   const [form, setForm] = useState(false);
-
   const [readOnly, setReadOnly] = useState(false);
-  const [id, setId] = useState("");
+  const [id, setId] = useState(editId || deleteId || "");
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
-  const [errors, setErrors] = useState({});
   const [description, setDescription] = useState("");
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
@@ -37,42 +32,33 @@ export default function Form() {
       sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
+  
   const {
     data: allData,
     isLoading,
     isFetching,
   } = useGetTermsandCondtionsQuery({ params, searchParams: searchValue });
+  
   const rows = allData?.data ?? [];
+  
   const {
     data: singleData,
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetTermsandCondtionsByIdQuery(id, { skip: !id });
+  
   const [trigger, { data: LazyData }] = useLazyGetTermsandCondtionsByIdQuery();
 
   const [addData] = useAddTermsandCondtionsMutation();
   const [updateData] = useUpdateTermsandCondtionsMutation();
   const [removeData] = useDeleteTermsandCondtionsMutation();
-  const countryNameRef = useRef(null);
-  useEffect(() => {
-    if (form && countryNameRef.current) {
-      countryNameRef.current.focus();
-    }
-  }, [form]);
+
   const syncFormWithDb = useCallback(
     (data) => {
-      if (!id) {
-        setReadOnly(false);
-        setName("");
-        setActive(id ? data?.active : true);
-        childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      } else {
-        // setReadOnly(true);
-        setName(data?.name || "");
-        setActive(id ? (data?.active ?? false) : true);
-        setDescription(data?.description ? data?.description : "");
-        childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      }
+      setName(data?.name || "");
+      setDescription(data?.description || "");
+      setActive(id ? (data?.active ?? false) : true);
+      childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
     [id],
   );
@@ -83,107 +69,125 @@ export default function Form() {
 
   const data = {
     id,
+    name,
     description,
     active,
     companyId: secureLocalStorage.getItem(
       sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
-    name,
   };
 
   const validateData = (data) => {
-    if (data.description) {
+    if (data.name && data.description) {
       return true;
     }
     return false;
   };
 
-  useEffect(() => {
-    console.log(allData, "allData");
-  }, [allData]);
-
-  const handleSubmitCustom = async (callback, data, text) => {
+  const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
       let returnData = await callback(data).unwrap();
       setId(returnData.data.id);
-      // toast.success(text + "Successfully");
-      Swal.fire({
+      
+      if (onSuccess) {
+        onSuccess(returnData.data.id);
+        return;
+      }
+      
+      await Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
       });
-      setForm(false);
+      
+      if (nextProcess == "new") {
+        syncFormWithDb(undefined);
+        onNew();
+      } else {
+        setForm(false);
+      }
     } catch (error) {
-      console.log("handle");
+      await Swal.fire({
+        icon: 'error',
+        title: 'Submission error',
+        text: error.data?.message || 'Something went wrong!',
+      });
+      termsNameRef?.current?.focus();
     }
   };
 
-  const saveData = () => {
-    if (!validateData(data)) {
-      // toast.error("Please fill all required fields...!", {
-      //     position: "top-center",
-      // });
+  const saveData = (nextProcess) => {
+    const upperName = name.toUpperCase();
+    const finalData = {
+      ...data,
+      name: upperName,
+    };
+
+    if (!validateData(finalData)) {
       Swal.fire({
-        title: "Please fill all required fields...!",
-        icon: "success",
+        title: 'Please fill all required fields...!',
+        icon: 'error',
       });
+      termsNameRef?.current?.focus();
       return;
     }
+    
     let foundItem;
     if (id) {
       foundItem = allData?.data
         ?.filter((i) => i.id != id)
-        ?.some((item) => item.name === name);
+        ?.some((item) => item?.name.toUpperCase() === upperName);
     } else {
-      foundItem = allData?.data?.some((item) => item.name === name);
+      foundItem = allData?.data?.some((item) => item?.name.toUpperCase() === upperName);
     }
 
     if (foundItem) {
       Swal.fire({
-        text: "The Tax Term Name already exists.",
+        text: "The Terms & Conditions Name already exists.",
         icon: "warning",
       });
+      termsNameRef?.current?.focus();
       return false;
     }
+    
     if (!window.confirm("Are you sure save the details ...?")) {
       return;
     }
+    
     if (id) {
-      handleSubmitCustom(updateData, data, "Updated");
+      handleSubmitCustom(updateData, finalData, "Updated", nextProcess);
     } else {
-      handleSubmitCustom(addData, data, "Added");
+      handleSubmitCustom(addData, finalData, "Added", nextProcess);
     }
   };
 
   const deleteData = async (id) => {
-    const { data } = await trigger(id);
-
     if (id) {
       if (!window.confirm("Are you sure to delete...?")) {
         return;
       }
-      if (data?.data?.childRecord > 0) {
-        Swal.fire({
-          icon: "error",
-          title: "Child record Exists",
-          text: "Data cannot be deleted!",
-        });
-      } else {
-        try {
-          let deldata = await removeData(id).unwrap();
-          if (deldata?.statusCode == 1) {
-            toast.error(deldata?.message);
-            return;
-          }
-          setId("");
-          // toast.success("Deleted Successfully");
-          Swal.fire({
-            title: "Deleted" + "  " + "Successfully",
-            icon: "success",
+      try {
+        let deldata = await removeData(id).unwrap();
+        if (deldata?.statusCode == 1) {
+          await Swal.fire({
+            icon: 'error',
+            title: 'Child record Exists',
+            text: deldata.data?.message || 'Data cannot be deleted!',
           });
-          setForm(false);
-        } catch (error) {
-          toast.error("something went wrong");
+          return;
         }
+        setId("");
+        await Swal.fire({
+          title: "Deleted Successfully",
+          icon: "success",
+        });
+        setForm(false);
+      } catch (error) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Submission error',
+          text: error.data?.message || 'Something went wrong!',
+        });
+        setForm(false);
       }
     }
   };
@@ -198,22 +202,20 @@ export default function Form() {
 
   const onNew = () => {
     setId("");
+    setReadOnly(false);
     setForm(true);
     setSearchValue("");
-    syncFormWithDb(undefined);
-    setReadOnly(false);
+    setTimeout(() => {
+      termsNameRef?.current?.focus();
+    }, 100);
   };
-
-  function onDataClick(id) {
-    setId(id);
-    setForm(true);
-  }
 
   const ACTIVE = (
     <div className="bg-gradient-to-r from-green-200 to-green-500 inline-flex items-center justify-center rounded-full border-2 w-6 border-green-500 shadow-lg text-white hover:scale-110 transition-transform duration-300">
       <Power size={10} />
     </div>
   );
+  
   const INACTIVE = (
     <div className="bg-gradient-to-r from-red-200 to-red-500 inline-flex items-center justify-center rounded-full border-2 w-6 border-red-500 shadow-lg text-white hover:scale-110 transition-transform duration-300">
       <Power size={10} />
@@ -224,26 +226,22 @@ export default function Form() {
     {
       header: "S.No",
       accessor: (item, index) => index + 1,
-      className: "font-medium text-gray-900 w-12  text-center",
+      className: "font-medium text-gray-900 w-12 text-center",
     },
     {
       header: "Name",
-      accessor: (item, index) => item?.name,
-      className: "font-medium text-gray-900 w-24  text-center",
+      accessor: (item) => item?.name,
+      className: "font-medium text-gray-900 text-left uppercase w-48",
     },
-
     {
-      header: "Terms & conditions",
+      header: "Terms & Conditions",
       accessor: (item) => item?.description,
-      //   cellClass: () => "font-medium  text-gray-900",
-      className: "font-medium text-gray-900 text-left uppercase w-[400px]",
+      className: "font-medium text-gray-900 text-left w-[400px]",
     },
-
     {
       header: "Status",
       accessor: (item) => (item.active ? ACTIVE : INACTIVE),
-      //   cellClass: () => "font-medium text-gray-900",
-      className: "font-medium text-gray-900 text-center uppercase w-16",
+      className: "font-medium text-gray-900 text-center w-16",
     },
   ];
 
@@ -251,17 +249,160 @@ export default function Form() {
     setId(id);
     setForm(true);
     setReadOnly(true);
-    console.log("view");
   };
+  
   const handleEdit = (id) => {
     setId(id);
     setForm(true);
     setReadOnly(false);
-    console.log("Edit");
   };
+
+  const termsNameRef = useRef(null);
+  const descriptionRef = useRef(null);
+
+  useEffect(() => {
+    if ((form || onSuccess) && termsNameRef.current) {
+      termsNameRef.current.focus();
+    }
+  }, [form, onSuccess]);
+
+  const formBody = (
+    <div className="flex-1 overflow-auto p-3">
+      <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+        <div className="space-y-4">
+          <fieldset className="rounded mt-2">
+            <div className="mb-3 w-[58%]">
+              <TextInputNew1
+                name="Terms & Condition Name"
+                type="text"
+                value={name}
+                setValue={setName}
+                required={true}
+                readOnly={readOnly}
+                disabled={childRecord.current > 0}
+                ref={termsNameRef}
+              />
+            </div>
+            <div className="mt-3">
+              <label className="block text-xs font-bold text-gray-600 mb-1">
+                Description <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                className="w-full h-32 focus:outline-none border border-gray-300 rounded p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                value={description}
+                disabled={childRecord.current > 0 || readOnly}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Enter terms and conditions description..."
+                ref={descriptionRef}
+              ></textarea>
+            </div>
+            <div className="mt-5">
+              <ToggleButton
+                name="Status"
+                options={statusDropdown}
+                value={active}
+                setActive={setActive}
+                required={true}
+                readOnly={readOnly}
+              />
+            </div>
+          </fieldset>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (deleteId) {
+    const childCount = singleData?.data?.childRecord ?? 0;
+    const isLoadingRecord = isSingleFetching || isSingleLoading;
+
+    const handleConfirmDelete = async () => {
+      try {
+        const res = await removeData(deleteId).unwrap();
+        if (res?.statusCode === 1) {
+          toast.error(res?.data?.message || "Cannot delete: child records exist");
+          return;
+        }
+        toast.success("Terms & Conditions deleted successfully");
+        onSuccess?.();
+      } catch (err) {
+        toast.error(err?.data?.message || "Failed to delete terms & conditions");
+      }
+    };
+
+    return (
+      <div className="h-full flex flex-col bg-gray-200">
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">Delete Terms & Conditions</h2>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
+          {isLoadingRecord ? (
+            <p className="text-xs text-gray-400">Checking records...</p>
+          ) : childCount > 0 ? (
+            <>
+              <div className="flex flex-col items-center gap-2">
+                <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <p className="text-sm font-semibold text-red-600">Cannot Delete</p>
+                <p className="text-xs text-gray-600 text-center">
+                  <span className="font-semibold">"{deleteLabel}"</span> has{" "}
+                  <span className="font-semibold text-red-600">{childCount} linked record{childCount > 1 ? "s" : ""}</span>.
+                  Remove them first before deleting this terms & conditions.
+                </p>
+              </div>
+              <button type="button" onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                Close
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-700 text-center">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold">"{deleteLabel}"</span>?
+              </p>
+              <div className="flex gap-3">
+                <button type="button" onClick={onClose}
+                  className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                  Cancel
+                </button>
+                <button type="button" onClick={handleConfirmDelete}
+                  className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded">
+                  Delete
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (onSuccess) {
+    return (
+      <div onKeyDown={handleKeyDown} className="h-full flex flex-col bg-gray-200">
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            {editId ? "Edit Terms & Conditions" : "Add New Terms & Conditions"}
+          </h2>
+          <button
+            type="button"
+            onClick={() => saveData("close")}
+            className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+          >
+            <Check size={14} />
+            {editId ? "Update" : "Save"}
+          </button>
+        </div>
+        {formBody}
+      </div>
+    );
+  }
+
   return (
-    <div onKeyDown={handleKeyDown} className="p-1 h-[90%]">
-      <div className="w-full flex bg-white p-1 justify-between  items-center">
+    <div onKeyDown={handleKeyDown} className="p-1">
+      <div className="w-full flex bg-white p-1 justify-between items-center">
         <h5 className="text-lg font-bold text-gray-800">
           Terms & Conditions Master
         </h5>
@@ -271,14 +412,14 @@ export default function Form() {
               setForm(true);
               onNew();
             }}
-            className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-sm px-4 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
+            className="bg-white border border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-sm px-4 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             + Add New Terms & Conditions
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden mt-3 ">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden mt-3">
         <ReusableTable
           columns={columns}
           data={rows}
@@ -294,7 +435,7 @@ export default function Form() {
           <Modal
             isOpen={form}
             form={form}
-            widthClass={"w-[40%] h-[60%]"}
+            widthClass={"w-[600px] h-[500px]"}
             onClose={() => {
               setForm(false);
               syncFormWithDb(undefined);
@@ -304,7 +445,7 @@ export default function Form() {
             <div className="h-full flex flex-col bg-gray-200">
               <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg px-2 py-0.5 font-semibold  text-gray-800">
+                  <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
                     {id
                       ? !readOnly
                         ? "Edit Terms & Conditions Master"
@@ -332,65 +473,32 @@ export default function Form() {
                     {!readOnly && (
                       <button
                         type="button"
-                        onClick={saveData}
-                        className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
-                                  border border-green-600 flex items-center gap-1 text-xs"
+                        onClick={() => saveData("close")}
+                        className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
+                          border border-blue-600 flex items-center gap-1 text-xs"
                       >
                         <Check size={14} />
-                        {id ? "Update" : "Save"}
+                        {id ? "Update" : "Save & close"}
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {(!readOnly && !id) && (
+                      <button
+                        type="button"
+                        onClick={() => saveData("new")}
+                        className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
+                          border border-green-600 flex items-center gap-1 text-xs"
+                      >
+                        <Check size={14} />
+                        {"Save & New"}
                       </button>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto p-3">
-                <div className="grid grid-cols-1  gap-3  h-full">
-                  <div className="lg:col-span- space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                      <div className="space-y-4 ">
-                        <fieldset className=" rounded mt-2">
-                          <div className="">
-                            <div className="mb-3 w-[58%]">
-                              <TextInputNew1
-                                name="Terms & Condition Name"
-                                type="text"
-                                value={name}
-                                setValue={setName}
-                                required={true}
-                                readOnly={readOnly}
-                                disabled={childRecord.current > 0}
-                                ref={countryNameRef}
-                              />
-                            </div>
-                            <div className="mt-3 gap-x-2">
-                              <label className="block text-xs font-bold text-gray-600 mt-3">
-                                Description :
-                              </label>
-                              <textarea
-                                className="w-72  h-10 overflow-auto focus:outline-none border border-gray-500 rounded p-2 text-xs"
-                                value={description}
-                                disabled={childRecord.current > 0 || readOnly}
-                                onChange={(e) => setDescription(e.target.value)}
-                              ></textarea>
-                            </div>
-                            <div className="mt-5">
-                              <ToggleButton
-                                name="Status"
-                                options={statusDropdown}
-                                value={active}
-                                setActive={setActive}
-                                required={true}
-                                readOnly={readOnly}
-                              />
-                            </div>
-                          </div>
-                        </fieldset>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {formBody}
             </div>
           </Modal>
         )}
