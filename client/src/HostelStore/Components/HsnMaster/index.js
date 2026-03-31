@@ -24,6 +24,7 @@ import {
   useLazyGetHsnMasterByIdQuery,
   useUpdateHsnMasterMutation,
 } from "../../../redux/services/HsnMasterServices";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 export default function Form({
   onSuccess,
@@ -39,6 +40,7 @@ export default function Form({
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
   const [tax, setTax] = useState("");
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
@@ -74,7 +76,12 @@ export default function Form({
     },
     [id],
   );
-  const countryNameRef = useRef(null);
+    const {
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
 
   useEffect(() => {
     syncFormWithDb(singleData?.data);
@@ -309,6 +316,8 @@ export default function Form({
                     required={true}
                     readOnly={readOnly}
                     disabled={childRecord.current > 0}
+                                    onKeyDown={handlers.handleLastInputKeyDown}
+
                   />
                 </div>
                 <ToggleButton
@@ -318,6 +327,8 @@ export default function Form({
                   setActive={setActive}
                   required={true}
                   readOnly={readOnly}
+                  ref={toggleButtonRef}
+                onKeyDown={handlers.handleToggleKeyDown}
                 />
               </fieldset>
             </div>
@@ -354,12 +365,12 @@ export default function Form({
     };
 
     return (
-      <div className="h-full flex flex-col bg-gray-200">
+      <div className="min-h-[250px] flex flex-col bg-gray-200">
         <div className="border-b py-2 px-4 mx-3 mt-4 bg-white">
           <h2 className="text-lg font-semibold">Delete Hsn</h2>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
           {isLoadingRecord ? (
             <p>Checking...</p>
           ) : childCount > 0 ? (
@@ -395,6 +406,8 @@ export default function Form({
           <button
             type="button"
             onClick={() => saveData("close")}
+             ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
             className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
           >
             <Check size={14} />
@@ -478,6 +491,9 @@ export default function Form({
                         onClick={() => {
                           saveData("close");
                         }}
+                         ref={saveCloseButtonRef} // ✅ Add ref
+                        tabIndex={0}
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                                                  border border-blue-600 flex items-center gap-1 text-xs"
                       >
@@ -493,6 +509,9 @@ export default function Form({
                         onClick={() => {
                           saveData("new");
                         }}
+                         onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                    ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                                                  border border-green-600 flex items-center gap-1 text-xs"
                       >

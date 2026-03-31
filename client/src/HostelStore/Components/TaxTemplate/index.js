@@ -79,7 +79,6 @@ export default function Form() {
 
   const syncFormWithDb = useCallback(
     (data) => {
-      if (id) setReadOnly(true);
       setName(data ? data?.name : "");
       setTaxTemplateDetails(data ? data?.TaxTemplateDetails : []);
       setActive(id ? (data?.active ? data.active : false) : true);

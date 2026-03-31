@@ -59,12 +59,14 @@ async function getSearch(req) {
 }
 
 async function create(body) {
-  const { name, days, companyId, active, aliasName } = await body;
+  const { name, days, months, years,companyId, active, aliasName } = await body;
   const data = await prisma.payTerm.create({
     data: {
       name,
       days: days ? parseInt(days) : undefined,
       companyId: parseInt(companyId),
+       months: months ? parseInt(months) : undefined,
+                years: years ? parseInt(years) : undefined,
       active,
       aliasName,
     },
@@ -73,7 +75,7 @@ async function create(body) {
 }
 
 async function update(id, body) {
-  const { name, days, companyId, active, aliasName } = await body;
+  const { name, days, companyId, months, years, active, aliasName } = await body;
   const dataFound = await prisma.payTerm.findUnique({
     where: {
       id: parseInt(id),
@@ -90,6 +92,8 @@ async function update(id, body) {
       companyId: companyId ? parseInt(companyId) : undefined,
       active,
       aliasName: aliasName ? aliasName : undefined,
+       months: months ? parseInt(months) : undefined,
+            years: years ? parseInt(years) : undefined,
     },
   });
   return { statusCode: 0, data };

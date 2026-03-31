@@ -175,6 +175,9 @@ export default function Form({
       Swal.fire({
         text: "The State Name already exists.",
         icon: "warning",
+         didClose:() => {
+          countryNameRef?.current?.focus();
+        }
       });
       return false;
     }

@@ -18,6 +18,7 @@ import {
   ToggleButton,
 } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 const MODEL = "Color Master";
 
@@ -31,6 +32,7 @@ export default function Form() {
   const [active, setActive] = useState(true);
   const [isGrey, setIsGrey] = useState(false);
   const [errors, setErrors] = useState({});
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
@@ -263,7 +265,12 @@ export default function Form() {
     },
   ];
 
-  const countryNameRef = useRef(null);
+  const {
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
 
   useEffect(() => {
     if (form && countryNameRef.current) {
@@ -348,6 +355,9 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
+                   ref={saveCloseButtonRef} // ✅ Add ref
+                        tabIndex={0}
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {id ? "Update" : "Save & close"}
@@ -363,6 +373,9 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
+                  onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                    ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0}
                       >
                         <Check size={14} />
                         {"Save & New"}
@@ -388,18 +401,25 @@ export default function Form() {
                               readOnly={readOnly}
                               disabled={childRecord.current > 0}
                               ref={countryNameRef}
+                                              onKeyDown={handlers.handleLastInputKeyDown}
+
                             />
                             {/* <div className="grid grid-cols-2">
                                                    <TextInput name="Pantone" type="text" value={pantone} setValue={setPantone} required={true} readOnly={readOnly} disabled={(childRecord.current > 0)} />
                                                    <div className={`h-20 w-32`} style={{ backgroundColor: pantone }}></div>
                                                </div> */}
                             {/* <CheckBox name="Grey" readOnly={readOnly} value={isGrey} setValue={setIsGrey} /> */}
+                           
+
                             <ToggleButton
                               name="Active"
                               readOnly={readOnly}
                               value={active}
                               setValue={setActive}
+                              onKeyDown={handlers.handleToggleKeyDown}
+                ref={toggleButtonRef}
                             />
+                            
                           </fieldset>
                           <div></div>
                         </div>

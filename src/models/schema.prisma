@@ -1233,6 +1233,8 @@ model PayTerm {
   id        Int      @id @default(autoincrement())
   name      String?
   days      Int?
+  years     Int?
+  months    Int?
   Company   Company? @relation(fields: [companyId], references: [id])
   companyId Int?
   active    Boolean  @default(true)

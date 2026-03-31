@@ -14,6 +14,7 @@ import { Check, Power } from "lucide-react";
 import { ReusableTable, TextInputNew, ToggleButton } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 const MODEL = "Tax Term Master";
 
@@ -25,6 +26,7 @@ export default function Form() {
   const [name, setName] = useState("");
   const [isPoWise, setIsPowise] = useState(false);
   const [active, setActive] = useState(true);
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
@@ -52,7 +54,6 @@ export default function Form() {
 
   const syncFormWithDb = useCallback(
     (data) => {
-      if (id) setReadOnly(true);
       setName(data?.name ? data.name : "");
       setIsPowise(id ? (data?.isPoWise ? data.isPoWise : false) : false);
       setActive(id ? (data?.active ? data.active : false) : true);
@@ -92,8 +93,7 @@ export default function Form() {
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
-                syncFormWithDb(undefined);
-
+        syncFormWithDb(undefined);
       }
       Swal.fire({
         title: text + "  " + "Successfully",
@@ -112,9 +112,9 @@ export default function Form() {
 
   const saveData = (nextProcess) => {
     if (!validateData(data)) {
-      toast.info("Please fill all required fields...!", {
-        position: "top-center",
-      });
+      // toast.info("Please fill all required fields...!", {
+      //   position: "top-center",
+      // });
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
@@ -143,8 +143,7 @@ export default function Form() {
       });
       return false;
     }
-    if(id){
-
+    if (id) {
       if (!window.confirm("Are you sure update the details ...?")) {
         return;
       }
@@ -183,8 +182,7 @@ export default function Form() {
             //     Swal.showLoading();
             // }
           });
-                          syncFormWithDb(undefined);
-
+          syncFormWithDb(undefined);
         } catch (error) {
           toast.error("something went wrong");
         }
@@ -254,7 +252,12 @@ export default function Form() {
     console.log("Edit");
   };
 
-  const countryNameRef = useRef(null);
+  const {
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
 
   useEffect(() => {
     if (form && countryNameRef.current) {
@@ -386,6 +389,9 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
+                  ref={saveCloseButtonRef}
+                        tabIndex={0} // ✅ Add tabIndex
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {id ? "Update" : "Save & close"}
@@ -401,6 +407,9 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
+                   ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0} // ✅ Add tabIndex
+                        onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {"Save & New"}
@@ -427,6 +436,7 @@ export default function Form() {
                                 readOnly={readOnly}
                                 disabled={childRecord.current > 0}
                                 ref={countryNameRef}
+                                onKeyDown={handlers.handleLastInputKeyDown}
                               />
                             </div>
                             {/* <CheckBox name="Po wise" readOnly={readOnly} value={isPoWise} setValue={setIsPowise} /> */}
@@ -438,6 +448,8 @@ export default function Form() {
                             setActive={setActive}
                             required={true}
                             readOnly={readOnly}
+                            ref={toggleButtonRef}
+                            onKeyDown={handlers.handleToggleKeyDown}
                           />
                         </fieldset>
                       </div>
