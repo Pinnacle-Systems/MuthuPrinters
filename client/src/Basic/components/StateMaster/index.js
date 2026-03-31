@@ -30,7 +30,8 @@ import Modal from "../../../UiComponents/Modal";
 import Swal from "sweetalert2";
 import { CountryMaster } from "..";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
-import useInvalidateTags from '../../../CustomHooks/useInvalidateTags';
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 const MODEL = "State Master";
 
@@ -55,6 +56,7 @@ export default function Form({
   const childRecord = useRef(0);
   const dispatch = useDispatch();
   const [dispatchInvalidate] = useInvalidateTags();
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const params = {
     companyId: secureLocalStorage.getItem(
@@ -121,8 +123,12 @@ export default function Form({
       setId(returnData.data.id);
       // toast.success(text + "Successfully");
       if (onSuccess) {
-        onSuccess(returnData.data.id);
-        return;
+        await Swal.fire({
+                 title: text + "  " + "Successfully",
+                 icon: "success",
+               });
+               onSuccess(returnData.data.id);
+               return;
       }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
@@ -130,6 +136,7 @@ export default function Form({
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
+        syncFormWithDb(undefined);
       }
       Swal.fire({
         title: text + "Successfully",
@@ -147,6 +154,9 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
+        didClose:() => {
+          countryNameRef?.current?.focus();
+        }
       });
       return;
     }
@@ -168,9 +178,10 @@ export default function Form({
       });
       return false;
     }
-
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
+    if (id) {
+      if (!window.confirm("Are you sure update the details ...?")) {
+        return;
+      }
     }
     if (id) {
       handleSubmitCustom(updateData, data, "Updated", nextProcess);
@@ -185,7 +196,6 @@ export default function Form({
       }
       try {
         let deldata = await removeData(id).unwrap();
-        console.log(deldata, "deldata");
         if (deldata?.statusCode == 1) {
           Swal.fire({
             icon: "error",
@@ -201,6 +211,7 @@ export default function Form({
         });
         setForm(false);
         dispatchInvalidate();
+        syncFormWithDb(undefined);
       } catch (error) {
         Swal.fire({
           icon: "error",
@@ -290,7 +301,14 @@ export default function Form({
     },
   ];
 
-  const countryNameRef = useRef(null);
+  const {
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
+
+  // const countryNameRef = useRef(null);
 
   useEffect(() => {
     if ((form || onSuccess) && countryNameRef.current) {
@@ -351,7 +369,7 @@ export default function Form({
                 disabled={childRecord.current > 0}
                 addNewLabel="+ Add New Country"
                 childComponent={CountryMaster}
-                addNewModalWidth="w-[40%] h-[45%]"
+                addNewModalWidth="w-[40%] h-[48%]"
               />
             </div>
 
@@ -364,6 +382,7 @@ export default function Form({
                 required={true}
                 readOnly={readOnly}
                 disabled={childRecord.current > 0}
+                onKeyDown={handlers.handleLastInputKeyDown}
               />
             </div>
 
@@ -380,13 +399,15 @@ export default function Form({
                               />
                             </div> */}
 
-            <div data-skip-focus="true">
+            <div data-skip-focus="true" className="mt-1">
               <ToggleButton
                 name="Status"
                 value={active}
                 setActive={setActive}
                 required={true}
                 readOnly={readOnly}
+                onKeyDown={handlers.handleToggleKeyDown}
+                ref={toggleButtonRef}
               />
             </div>
           </fieldset>
@@ -414,12 +435,12 @@ export default function Form({
     };
 
     return (
-      <div className="h-full flex flex-col bg-gray-200">
+      <div className="min-h-[250px] flex flex-col bg-gray-200">
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center bg-white">
           <h2 className="text-lg font-semibold">Delete State</h2>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
           {isLoadingRecord ? (
             <p>Checking...</p>
           ) : childCount > 0 ? (
@@ -433,8 +454,18 @@ export default function Form({
             <>
               <p>Are you sure delete "{deleteLabel}"?</p>
               <div className="flex gap-2">
-                <button onClick={onClose}>Cancel</button>
-                <button onClick={handleConfirmDelete}>Delete</button>
+                <button
+                  onClick={onClose}
+                  className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded"
+                >
+                  Delete
+                </button>
               </div>
             </>
           )}
@@ -456,6 +487,8 @@ export default function Form({
           <button
             type="button"
             onClick={() => saveData("close")}
+            ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
             className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
           >
             <Check size={14} />
@@ -631,6 +664,9 @@ export default function Form({
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
+                        ref={saveCloseButtonRef}
+                        tabIndex={0} // ✅ Add tabIndex
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {id ? "Update" : "Save & close"}
@@ -646,6 +682,9 @@ export default function Form({
                         }}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
+                        ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0} // ✅ Add tabIndex
+                        onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {"Save & New"}

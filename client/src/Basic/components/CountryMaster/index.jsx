@@ -18,6 +18,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { Check, Power } from "lucide-react";
 import Swal from "sweetalert2";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 // import { usePermissionForUsers } from "../HasPermission";
 
 const MODEL = "Country Master";
@@ -31,9 +32,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [active, setActive] = useState(true);
-  const [errors, setErrors] = useState({});
-
   const [searchValue, setSearchValue] = useState("");
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
   const formRef = useRef(null);
 
   const childRecord = useRef(0);
@@ -60,18 +60,13 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
   const [updateData] = useUpdateCountryMutation();
   const [removeData] = useDeleteCountryMutation();
 
-  // const dispatch = useDispatch();
 
-  // useEffect(() => {
-  //   dispatch(push({ name: "COUNTRY MASTER" }))
-
-  // }, [ dispatch,openTabs])
 
   const syncFormWithDb = useCallback(
     (data) => {
       setName(data?.name || "");
       setCode(data?.code || "");
-      setActive( data?.active ??  true);
+      setActive(data?.active ?? true);
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
     [id]
@@ -105,19 +100,25 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       let returnData = await callback(data).unwrap();
       setId(returnData.data.id);
       if (onSuccess) {
+        await Swal.fire({
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
         onSuccess(returnData.data.id);
         return;
+      }
+      if (nextProcess == "new") {
+        syncFormWithDb(undefined)
+        onNew()
+        countryNameRef?.current?.focus();
+      } else {
+        setForm(false)
+        syncFormWithDb(undefined);
       }
       await Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
       });
-      if (nextProcess == "new") {
-        syncFormWithDb(undefined)
-        onNew()
-      } else {
-        setForm(false)
-      }
     } catch (error) {
       await Swal.fire({
         icon: 'error',
@@ -142,6 +143,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       Swal.fire({
         title: 'Please fill all required fields...!',
         icon: 'error',
+        didClose: () => {          countryNameRef?.current?.focus();
+        }
       });
       countryNameRef.current?.focus();
       return;
@@ -163,8 +166,10 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       countryNameRef.current?.focus();
       return false;
     }
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
+    if (id) {
+      if (!window.confirm("Are you sure update the details ...?")) {
+        return;
+      }
     }
     if (id) {
       handleSubmitCustom(updateData, finalData, "Updated", nextProcess);
@@ -194,6 +199,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
           icon: "success",
         });
         setForm(false);
+        syncFormWithDb(undefined);
       } catch (error) {
         await Swal.fire({
           icon: 'error',
@@ -218,9 +224,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     setReadOnly(false);
     setForm(true);
     setSearchValue("");
-    setTimeout(() => {
-      countryNameRef.current?.focus();
-    }, 100);
+    syncFormWithDb(undefined);
   };
   const handleView = (id) => {
     setId(id);
@@ -266,12 +270,13 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
 
 
   ];
-  function onDataClick(id) {
-    setId(id);
-    setForm(true);
-  }
 
-  const countryNameRef = useRef(null);
+  const {
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
 
   useEffect(() => {
     if ((form || onSuccess) && countryNameRef.current) {
@@ -305,6 +310,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                 required={true}
                 readOnly={readOnly}
                 disabled={childRecord.current > 0}
+                onKeyDown={handlers.handleLastInputKeyDown}
               />
             </div>
           </div>
@@ -315,6 +321,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             setActive={setActive}
             required={true}
             readOnly={readOnly}
+            ref={toggleButtonRef}
+            onKeyDown={handlers.handleToggleKeyDown}
           />
         </div>
       </div>
@@ -341,11 +349,11 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     };
 
     return (
-      <div className="h-full flex flex-col bg-gray-200">
+      <div className="flex flex-col bg-gray-200 min-h-[250px]">
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
           <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">Delete Country</h2>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 mb-3 rounded">
           {isLoadingRecord ? (
             <p className="text-xs text-gray-400">Checking records...</p>
           ) : childCount > 0 ? (
@@ -399,6 +407,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
           <button
             type="button"
             onClick={() => saveData("close")}
+            ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
             className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
           >
             <Check size={14} />
@@ -487,6 +497,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
+                        ref={saveCloseButtonRef} // ✅ Add ref
+                        tabIndex={0}
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {id ? "Update" : "Save & close"}
@@ -500,9 +513,11 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                         onClick={() => {
                           saveData("new")
                         }}
-
+                        onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
+                        ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0}
                       >
                         <Check size={14} />
                         {"Save & New"}

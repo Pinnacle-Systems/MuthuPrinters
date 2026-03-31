@@ -1542,15 +1542,23 @@ export const ReusableTable = ({
   );
 };
 
-export const ToggleButton = ({
+export const ToggleButton =forwardRef( ({
   name,
   value,
   setActive,
   required,
   readOnly,
   disabled = false,
-}) => {
+   onKeyDown,
+},ref) => {
   const [isToggled, setIsToggled] = useState(false);
+   const labelRef = useRef(null); 
+
+   useImperativeHandle(ref, () => ({
+      focus: () => {
+        labelRef.current?.focus();
+      }
+    }));
 
   useEffect(() => {
     if (value) {
@@ -1560,6 +1568,8 @@ export const ToggleButton = ({
     }
   }, [value, isToggled]);
 
+
+
   return (
     <div>
       <div className="">
@@ -1567,7 +1577,23 @@ export const ToggleButton = ({
           {required ? <RequiredLabel name={name} /> : `${name}`}
         </label>
         <div className="flex items-center mt-1">
-          <label className="relative inline-flex items-center cursor-pointer">
+          <label className="relative inline-flex items-center cursor-pointer"
+          ref={labelRef}
+           tabIndex={0}
+          
+               onKeyDown={(e) => {
+                // Handle Space or Enter to toggle
+                if ((e.key === ' ' || e.key === 'Enter') && !readOnly && !disabled) {
+                  e.preventDefault();
+                  setIsToggled(!isToggled);
+                  setActive(!value);
+                }
+                // ✅ Call parent's onKeyDown if provided
+                if (onKeyDown) {
+                  onKeyDown(e);
+                }
+              }}
+          >
             <input
               type="checkbox"
               className="sr-only peer"
@@ -1580,6 +1606,8 @@ export const ToggleButton = ({
               }}
               disabled={disabled}
               required
+             tabIndex={-1}
+              
             />
             <div className="w-12 h-6 bg-gray-300 rounded-full peer-checked:bg-green-500 peer transition duration-300"></div>
             <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full peer-checked:translate-x-6 transition-transform duration-300 shadow-sm"></div>
@@ -1592,7 +1620,7 @@ export const ToggleButton = ({
       </div>
     </div>
   );
-};
+});
 
 export const TextInputNew1 = forwardRef(
   (
@@ -1611,6 +1639,7 @@ export const TextInputNew1 = forwardRef(
       width = "full",
       max,
       handleChange,
+      onKeyDown = null,
     },
     ref,
   ) => {
@@ -1640,6 +1669,7 @@ export const TextInputNew1 = forwardRef(
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm ${readOnly || disabled ? "bg-slate-100" : ""}
           ${className}`}
+           onKeyDown={onKeyDown}
         />
       </div>
     );

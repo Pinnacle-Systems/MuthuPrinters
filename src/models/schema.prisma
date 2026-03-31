@@ -23,18 +23,20 @@ model Page {
 }
 
 model Company {
-  id                  Int                  @id @default(autoincrement())
-  companyId           String               @unique @default(uuid())
-  name                String
-  code                String?
-  gstNo               String?
-  panNo               String?
-  contactName         String?
-  contactMobile       BigInt
-  contactEmail        String?
-  branch              Branch[]
-  country             Country[]
-  active              Boolean              @default(true)
+  id            Int       @id @default(autoincrement())
+  companyId     String    @unique @default(uuid())
+  name          String
+  code          String?
+  gstNo         String?
+  panNo         String?
+  contactName   String?
+  contactMobile BigInt
+  contactEmail  String?
+  branch        Branch[]
+  country       Country[]
+  active        Boolean   @default(true)
+  logo          String?
+
   Department          Department[]
   Role                Role[]
   Subscription        Subscription[]
@@ -75,23 +77,25 @@ model Subscription {
 }
 
 model Branch {
-  id                    Int                    @id @default(autoincrement())
-  branchName            String
-  branchCode            String?
-  contactName           String?
-  contactMobile         BigInt
-  contactEmail          String?
-  address               String?                @default("")
-  company               Company                @relation(fields: [companyId], references: [id])
-  companyId             Int
-  active                Boolean                @default(true)
-  EmployeeCategory      EmployeeCategory[]
-  UserOnBranch          UserOnBranch[]
-  Employee              Employee[]
-  idPrefix              String?
-  idSequence            String?
-  tempPrefix            String?
-  tempSequence          String?
+  id               Int                @id @default(autoincrement())
+  branchName       String
+  branchCode       String?
+  contactName      String?
+  contactMobile    BigInt
+  contactEmail     String?
+  address          String?            @default("")
+  company          Company            @relation(fields: [companyId], references: [id])
+  companyId        Int
+  active           Boolean            @default(true)
+  EmployeeCategory EmployeeCategory[]
+  UserOnBranch     UserOnBranch[]
+  Employee         Employee[]
+  idPrefix         String?
+  idSequence       String?
+  tempPrefix       String?
+  tempSequence     String?
+  logo             String?
+
   prefixCategory        PrefixCategory?
   PurchaseBill          PurchaseBill[]
   PurchaseReturn        PurchaseReturn[]
@@ -375,6 +379,7 @@ model Party {
   website           String?
   contactPersonName String?
   gstNo             String?
+  aadharNo          String?
   costCode          String?
   active            Boolean?  @default(true)
   contactMobile     BigInt?   @default(0)

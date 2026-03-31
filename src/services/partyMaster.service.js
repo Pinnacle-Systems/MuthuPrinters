@@ -310,7 +310,7 @@ async function create(body) {
         gstNo, currencyId, costCode, soa, coa,
         companyId, active, userId,
         landMark, contact, designation, department, contactPersonEmail, contactNumber, alterContactNumber, bankname,
-        bankBranchName, accountNumber, ifscCode, attachments, msmeNo, companyAlterNumber, partyCode, parentId, branchTypeId, isBranch
+        bankBranchName, accountNumber, ifscCode, attachments, msmeNo, companyAlterNumber, partyCode, parentId, branchTypeId, isBranch,aadharNo
     } = await body
 
     const data = await prisma.party.create(
@@ -346,7 +346,7 @@ async function create(body) {
                 partyCode: partyCode ? partyCode : "",
                 branchTypeId: branchTypeId ? parseInt(branchTypeId) : undefined,
                 parentId: parentId ? parentId : undefined,
-
+                aadharNo,
                 attachments: JSON.parse(attachments)?.length > 0
                     ? {
                         createMany: {
@@ -373,7 +373,7 @@ async function update(id, body) {
         gstNo, coa, soa,
         companyId, active, userId, landMark, contact, designation, department, contactPersonEmail, contactNumber,
         alterContactNumber, bankname, bankBranchName, accountNumber, ifscCode, msmeNo, attachments, companyAlterNumber, partyCode,
-        branchTypeId, parentId, isBranch
+        branchTypeId, parentId, isBranch,aadharNo
     } = await body
 
 
@@ -428,7 +428,7 @@ async function update(id, body) {
             branchTypeId: branchTypeId ? parseInt(branchTypeId) : undefined,
             parentId: parentId ? parentId : undefined,
             isBranch: isBranch ? JSON.parse(isBranch) : false,
-
+            aadharNo,
 
             attachments: {
                 deleteMany: {

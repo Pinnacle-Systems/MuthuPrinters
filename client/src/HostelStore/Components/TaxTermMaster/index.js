@@ -92,6 +92,8 @@ export default function Form() {
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
+                syncFormWithDb(undefined);
+
       }
       Swal.fire({
         title: text + "  " + "Successfully",
@@ -141,8 +143,11 @@ export default function Form() {
       });
       return false;
     }
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
+    if(id){
+
+      if (!window.confirm("Are you sure update the details ...?")) {
+        return;
+      }
     }
     if (id) {
       handleSubmitCustom(updateData, data, "Updated", nextProcess);
@@ -178,6 +183,8 @@ export default function Form() {
             //     Swal.showLoading();
             // }
           });
+                          syncFormWithDb(undefined);
+
         } catch (error) {
           toast.error("something went wrong");
         }

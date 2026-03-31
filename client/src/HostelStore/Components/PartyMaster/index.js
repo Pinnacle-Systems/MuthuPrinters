@@ -53,9 +53,11 @@ import { useGetbranchTypeQuery } from "../../../redux/services/BranchTypeMaster"
 import { useGetPartyBranchByIdQuery } from "../../../redux/services/PartyBranchMasterService";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
+import { BranchTypeMaster } from "..";
 
 export default function Form({ partyId, onCloseForm, childId }) {
   const [form, setForm] = useState(false);
+  const [aadharNo, setAadharNo] = useState("");
 
   const [readOnly, setReadOnly] = useState(false);
 
@@ -169,6 +171,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
       setCinNo(data?.cinNo ? data?.cinNo : "");
       setCoa(data?.coa ? data?.coa : "");
       setSoa(data?.soa ? data?.soa : "");
+      setAadharNo(data?.aadharNo || "");
 
       setContactPersonName(
         data?.contactPersonName ? data?.contactPersonName : "",
@@ -280,6 +283,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
       setPartyCode(data?.partyCode ? data?.partyCode : "");
       // setParentId(data?.parentId ? data?.parentId : "")
       // childRecord.current = data?.childRecord ? data?.childRecord : 0;
+      setAadharNo(data?.aadharNo ? data?.aadharNo : "");
     },
     [parentId],
   );
@@ -340,6 +344,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
     parentId,
     isBranch,
     branchTypeId,
+    aadharNo,
   };
 
   const validateData = (data) => {
@@ -349,10 +354,15 @@ export default function Form({ partyId, onCloseForm, childId }) {
       data?.address &&
       data?.cityId &&
       data?.pincode &&
-      data?.gstNo &&
-      data?.partyCode
+      // data?.gstNo &&
+      data?.partyCode &&
+      data?.aadharNo
     );
   };
+
+  const aadharRegex = /^[0-9]{12}$/; // 12 digits
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/; // ABCDE1234F
+  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
@@ -397,6 +407,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
           onCloseForm();
         }
         setForm(false);
+        syncFormWithDb(undefined);
       }
 
       Swal.fire({
@@ -481,14 +492,35 @@ export default function Form({ partyId, onCloseForm, childId }) {
       });
       return;
     }
-    if (gstNo && !alphaNum12.test(gstNo.toUpperCase())) {
+
+    if (!aadharRegex.test(data.aadharNo)) {
       Swal.fire({
-        title: "Invalid GST Number",
-        text: "Must be exactly 15 alphanumeric characters",
+        title: "Invalid Aadhar Number",
+        text: "Aadhar must be exactly 12 digits",
         icon: "error",
       });
       return;
     }
+
+    if (data.panNo && !panRegex.test(data.panNo.toUpperCase())) {
+      Swal.fire({
+        title: "Invalid PAN Number",
+        text: "Format: ABCDE1234F",
+        icon: "error",
+      });
+      return;
+    }
+
+    // GST (optional)
+    if (data.gstNo && !gstRegex.test(data.gstNo.toUpperCase())) {
+      Swal.fire({
+        title: "Invalid GST Number",
+        text: "Invalid GST format",
+        icon: "error",
+      });
+      return;
+    }
+
     if (!isCustomer && !isSupplier) {
       Swal.fire({
         title: "Please Select Customer or Supplier",
@@ -548,9 +580,10 @@ export default function Form({ partyId, onCloseForm, childId }) {
         return false;
       }
     }
-
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
+    if (id) {
+      if (!window.confirm("Are you sure update the details ...?")) {
+        return;
+      }
     }
 
     if (id) {
@@ -921,16 +954,17 @@ export default function Form({ partyId, onCloseForm, childId }) {
                         options={dropDownListObject(
                           id
                             ? allData?.data?.filter(
-                                (i) => i.id != id && !i.parentId,
+                                (i) => i.id != id && !i.parentId && i.gstNo,
                               )
                             : allData?.data?.filter(
                                 (item) =>
                                   item.active &&
                                   item.id != id &&
-                                  !item.parentId,
+                                  !item.parentId &&
+                                  item.gstNo,
                               ),
                           "name",
-                          "id" || [],
+                          "id",
                         )}
                         value={parentId}
                         setValue={(value) => {
@@ -1077,50 +1111,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                       </div>
                       <div className="col-span-2">
                         <div className=" grid grid-cols-5 gap-3">
-                          <div className="col-span-4">
-                            {/* <DropdownInputNew
-                              name="City/State Name"
-                              options={dropDownListMergedObject(
-                                id
-                                  ? cityList?.data
-                                  : cityList?.data?.filter(
-                                      (item) => item.active,
-                                    ),
-                                "name",
-                                "id",
-                              )}
-                              country={country}
-                              masterName="CITY MASTER"
-                              // lastTab={activeTab}
-                              value={city}
-                              setValue={setCity}
-                              required={true}
-                              readOnly={readOnly}
-                              disabled={childRecord.current > 0}
-                              className="focus:ring-2 focus:ring-blue-100"
-                            /> */}
-                            {/* <DropdownWithModal
-                              name="City/State Name"
-                              options={dropDownListMergedObject(
-                                id
-                                  ? cityList?.data
-                                  : cityList?.data?.filter((item) => item.active),
-                                "name",
-                                "id"
-                              )}
-                              country={country}
-                              masterName="CITY MASTER"
-                              // lastTab={activeTab}
-                              value={city}
-                              setValue={setCity}
-                              required={true}
-                              readOnly={readOnly}
-                              className="focus:ring-2 focus:ring-blue-100"
-                              addNewLabel="+ Add New City"
-                              childComponent={CityMaster}
-                              addNewModalWidth="w-[40%] h-[45%]"
-                            /> */}
-                          </div>
+                          <div className="col-span-4"></div>
                           <TextInputNew1
                             name="Pincode"
                             type="number"
@@ -1133,31 +1124,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
                           />
                         </div>
                       </div>
-
-                      {/* <div className="">
-                                                        <TextInputNew
-                                                            name={"Contact Number"}
-                                                            value={contact}
-
-                                                            setValue={setContact}
-                                                            readOnly={readOnly}
-                                                            disabled={childRecord.current > 0}
-                                                            className="focus:ring-2 focus:ring-blue-100 w-10"
-                                                        />
-                                                    </div>
-                                                    <div className="">
-                                                        <TextInputNew1
-                                                            name={"Email"}
-                                                            type="text"
-                                                            value={email}
-
-                                                            setValue={setEmail}
-                                                            readOnly={readOnly}
-                                                            disabled={childRecord.current > 0}
-                                                            className="focus:ring-2 focus:ring-blue-100 w-10"
-                                                        />
-
-                                                    </div> */}
                     </div>
                   </div>
                 </div>
@@ -1220,18 +1186,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
                           className="focus:ring-2 focus:ring-blue-100 w-10"
                         />
                       </div>
-                      {/* <div className='col-span-1'>
-                                                        <TextInputNew
-                                                            name="Alternative Contact Number"
-                                                            type="number"
-                                                            value={alterContactNumber}
-                                                            setValue={setAlterContactNumber}
-
-                                                            // readOnly={readOnly}
-                                                            // disabled={childRecord.current > 0}
-                                                            className="focus:ring-2 focus:ring-blue-100 w-10"
-                                                        />
-                                                    </div> */}
                     </div>
                   </div>
                 </div>
@@ -1244,42 +1198,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
                   </h3>
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2">
-                      {/* <DropdownInput
-                                                    name="Currency"
-                                                    options={dropDownListObject(
-                                                        id
-                                                            ? currencyList?.data ?? []
-                                                            : currencyList?.data?.filter(
-                                                                (item) => item.active
-                                                            ) ?? [],
-                                                        "name",
-                                                        "id"
-                                                    )}
-                                                    // lastTab={activeTab}
-                                                    masterName="CURRENCY MASTER"
-                                                    value={currency}
-                                                    setValue={setCurrency}
-                                                    readOnly={readOnly}
-                                                    disabled={childRecord.current > 0}
-                                                    className="focus:ring-2 focus:ring-blue-100"
-                                                /> */}
-
-                      {/* <DropdownInput
-                                                    name="PayTerm"
-                                                    options={dropDownListObject(
-                                                        id
-                                                            ? payTermList?.data
-                                                            : payTermList?.data?.filter((item) => item.active),
-                                                        "name",
-                                                        "id"
-                                                    )}
-                                                    value={payTermDay}
-                                                    setValue={setPayTermDay}
-                                                    // required={true}
-                                                    readOnly={readOnly}
-                                                    disabled={childRecord.current > 0}
-                                                    className="focus:ring-2 focus:ring-blue-100"
-                                                /> */}
                       <TextInputNew
                         name="Pan No"
                         type="pan_no"
@@ -1832,13 +1750,14 @@ export default function Form({ partyId, onCloseForm, childId }) {
                             options={dropDownListObject(
                               id
                                 ? allData?.data?.filter(
-                                    (i) => i.id != id && !i.parentId,
+                                    (i) => i.id != id && !i.parentId && i.gstNo,
                                   )
                                 : allData?.data?.filter(
                                     (item) =>
                                       item.active &&
                                       item.id != id &&
-                                      !item.parentId,
+                                      !item.parentId &&
+                                      item.gstNo,
                                   ),
                               "name",
                               "id",
@@ -1857,7 +1776,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                           />
                         </div>
                         <div className="col-span-2">
-                          <DropdownInputNew
+                          {/* <DropdownInputNew
                             name="Branch Type"
                             options={dropDownListObject(
                               id
@@ -1878,6 +1797,30 @@ export default function Form({ partyId, onCloseForm, childId }) {
                             disabled={
                               childRecord.current > 0 || !isBranch || !parentId
                             }
+                          /> */}
+                          <DropdownWithModal
+                            name="Branch Type"
+                            options={dropDownListObject(
+                              id
+                                ? branchTypeData?.data
+                                : branchTypeData?.data?.filter(
+                                    (item) => item.active,
+                                  ),
+                              "name",
+                              "id",
+                            )}
+                            value={branchTypeId}
+                            setValue={(value) => {
+                              setBranchTypeId(value);
+                            }}
+                            required={true}
+                            readOnly={readOnly}
+                            disabled={
+                              childRecord.current > 0 || !isBranch || !parentId
+                            }
+                            addNewLabel="+ Add New Branch Type"
+                            childComponent={BranchTypeMaster}
+                            addNewModalWidth="w-[40%] h-[45%]"
                           />
                         </div>
                         {!isBranch && (
@@ -1939,7 +1882,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                           />
                         </div>
 
-                        <div className=" ml-2">
+                        <div className=" ml-2 mt-1">
                           <ToggleButton
                             name="Status"
                             options={statusDropdown}
@@ -2085,7 +2028,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                       </h3>
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-2">
-                          <div className="">
+                          <div className="col-span-2">
                             <TextInputNew1
                               name="Contact Person Name"
                               type="text"
@@ -2115,7 +2058,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                             // disabled={childRecord.current > 0}
                             className="focus:ring-2 focus:ring-blue-100 w-10"
                           />
-                          <div className="col-span-1">
+                          <div className="col-span-2">
                             <TextInputNew
                               name="Email"
                               type="text"
@@ -2205,13 +2148,23 @@ export default function Form({ partyId, onCloseForm, childId }) {
                             // disabled={childRecord.current > 0}
                             className="focus:ring-2 focus:ring-blue-100"
                           />
+                          <TextInput
+                            name="Aadhar No"
+                            type="text"
+                            value={aadharNo}
+                            setValue={setAadharNo}
+                            readOnly={readOnly || parentId || isBranch}
+                            required={true}
+                            disabled={parentId || isBranch}
+                            className="focus:ring-2 focus:ring-blue-100"
+                          />
                           <TextInputNew
                             name="GST No"
                             type="text"
                             value={gstNo}
                             setValue={setGstNo}
                             readOnly={readOnly || parentId || isBranch}
-                            required={true}
+                            // required={true}
                             disabled={parentId || isBranch}
                             className="focus:ring-2 focus:ring-blue-100"
                           />

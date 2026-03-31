@@ -115,7 +115,7 @@ export default function Form() {
   };
 
   const validateData = (data) => {
-    if (data.name && data.itemGroupId && data?.uomId) {
+    if (data.name && data.itemGroupId && data?.uomId && data?.sizeTemplateId) {
       return true;
     }
     return false;
@@ -143,6 +143,8 @@ export default function Form() {
         //   Swal.showLoading();
         // },
       });
+                                syncFormWithDb(undefined);
+
       dispatchInvalidate();
     } catch (error) {
       console.log("handle");
@@ -182,8 +184,11 @@ export default function Form() {
       });
       return;
     }
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
+    if(id){
+
+      if (!window.confirm("Are you sure save the details ...?")) {
+        return;
+      }
     }
     if (id) {
       handleSubmitCustom(updateData, data, "Updated", nextProcess);
@@ -220,6 +225,8 @@ export default function Form() {
             icon: "success",
             timer: 1000,
           });
+                                    syncFormWithDb(undefined);
+
           setForm(false);
           dispatchInvalidate();
         } catch (error) {
@@ -328,6 +335,7 @@ export default function Form() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           itemsPerPage={10}
+          childRecordLabel="Purchase Module"
         />
       </div>
       {form && (
@@ -581,7 +589,6 @@ export default function Form() {
                             )}
                             value={hsnId}
                             setValue={setHsnId}
-                            required={true}
                             readOnly={readOnly}
                             className={`w-[150px]`}
                             disabled={childRecord.current > 0}

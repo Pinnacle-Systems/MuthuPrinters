@@ -8,8 +8,23 @@ async function get(req) {
       companyId: companyId ? parseInt(companyId) : undefined,
       active: active ? Boolean(active) : undefined,
     },
+    include: {
+      _count: {
+        select: {
+          styleItems: true,
+        },
+      },
+    },
   });
-  return { statusCode: 0, data };
+  return {
+    statusCode: 0,
+    data: data.map((item) => {
+      return {
+        ...item,
+        childRecord: item._count.styleItems,
+      };
+    }),
+  };
 }
 
 async function getOne(id) {

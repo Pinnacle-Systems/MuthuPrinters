@@ -789,11 +789,41 @@ const PurchaseOrderForm = ({
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm flex items-center">
             <textarea
               disabled={readOnly}
-              className="w-full h-14 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
+              className="w-full h-20 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
               value={termsAndCondtion}
               onChange={(e) => setTermsAndCondtion(e.target.value)}
               placeholder="Type Terms & Conditions..."
+              onKeyDown={(e) => {
+                  if (e.ctrlKey && e.key === "Enter") {
+                    e.preventDefault();
+
+                    const textarea = e.target;
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+
+                    const newValue =
+                      termsAndCondtion.substring(0, start) +
+                      "\n" +
+                      termsAndCondtion.substring(end);
+
+                    setTermsAndCondtion(newValue);
+
+                    // ✅ Restore focus + cursor properly
+                    requestAnimationFrame(() => {
+                      textarea.focus();
+                      textarea.setSelectionRange(start + 1, start + 1);
+                    });
+                  }
+                }}
             />
+             {/* <textarea
+                className="w-full h-32 focus:outline-none border border-gray-300 rounded p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                value={termsAndCondtion}
+              disabled={readOnly}
+                onChange={(e) => setTermsAndCondtion(e.target.value)}
+              placeholder="Type Terms & Conditions..."
+                
+              /> */}
           </div>
 
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">

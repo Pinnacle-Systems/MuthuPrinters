@@ -55,6 +55,7 @@ import imageDefault from "../../../assets/default-dp.png";
 import Swal from "sweetalert2";
 import { CityMaster, DepartmentMaster, EmployeeCategoryMaster } from "..";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 
 const MODEL = "Employee Master";
 
@@ -213,6 +214,7 @@ export default function Form() {
     },
     [id],
   );
+  const [dispatchInvalidate] = useInvalidateTags();
 
   useEffect(() => {
     syncFormWithDb(singleData?.data);
@@ -321,20 +323,7 @@ export default function Form() {
         syncFormWithDb(undefined);
       }
 
-      dispatch({
-        type: `EmployeeCategoryMaster/invalidateTags`,
-        payload: ["Employee Category"],
-      });
-
-      dispatch({
-        type: `DepartmentMaster/invalidateTags`,
-        payload: ["Department"],
-      });
-
-      dispatch({
-        type: `CityMaster/invalidateTags`,
-        payload: ["City/State Name"],
-      });
+      dispatchInvalidate();
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -371,7 +360,10 @@ export default function Form() {
       return;
     }
 
-    if (!window.confirm("Are you sure save the details ...?")) return;
+    if(id){
+
+      if (!window.confirm("Are you sure update the details ...?")) return;
+    }
 
     if (!JSON.parse(active)) {
       setLeavingForm(true);
@@ -400,22 +392,14 @@ export default function Form() {
       try {
         await removeData(id);
         setId("");
-        dispatch({
-          type: `EmployeeCategoryMaster/invalidateTags`,
-          payload: ["Employee Category"],
-        });
-        dispatch({
-          type: `DepartmentMaster/invalidateTags`,
-          payload: ["Department"],
-        });
-        dispatch({
-          type: `cityMaster/invalidateTags`,
-          payload: ["City/State Name"],
-        });
+        dispatchInvalidate();
+
         Swal.fire({
           title: "Deleted Successfully",
           icon: "success",
         });
+                                  syncFormWithDb(undefined);
+
       } catch (error) {
         toast.error("something went wrong");
       }
@@ -623,6 +607,7 @@ export default function Form() {
                 onEdit={handleEdit}
                 onDelete={deleteData}
                 itemsPerPage={10}
+                childRecordLabel="User Master"
               />
             </div>
           ) : (

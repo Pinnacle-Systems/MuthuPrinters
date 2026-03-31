@@ -1,8 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 
-
 import { NoRecordFound } from "../configs/Responses.js";
-
 
 async function get(req) {
   const { companyId, active } = req.query;
@@ -11,8 +9,23 @@ async function get(req) {
       companyId: companyId ? parseInt(companyId) : undefined,
       active: active ? Boolean(active) : undefined,
     },
+    include: {
+      _count: {
+        select: {
+          pos: true,
+        },
+      },
+    },
   });
-  return { statusCode: 0, data };
+  return {
+    statusCode: 0,
+    data: data.map((item) => {
+      return {
+        ...item,
+        childRecord: item._count.pos,
+      };
+    }),
+  };
 }
 
 async function getOne(id) {
@@ -74,7 +87,7 @@ async function update(id, body) {
     data: {
       name,
       days: days ? parseInt(days) : undefined,
-      companyId: companyId ?  parseInt(companyId) : undefined,
+      companyId: companyId ? parseInt(companyId) : undefined,
       active,
       aliasName: aliasName ? aliasName : undefined,
     },

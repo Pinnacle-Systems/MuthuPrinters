@@ -103,6 +103,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         onNew();
       } else {
         setForm(false);
+                        syncFormWithDb(undefined);
+
       }
     } catch (error) {
       await Swal.fire({
@@ -148,8 +150,11 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       return false;
     }
     
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
+    if(id){
+
+      if (!window.confirm("Are you sure update the details ...?")) {
+        return;
+      }
     }
     
     if (id) {
@@ -180,6 +185,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
           icon: "success",
         });
         setForm(false);
+                        syncFormWithDb(undefined);
+
       } catch (error) {
         await Swal.fire({
           icon: 'error',
@@ -437,6 +444,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={10}
+          childRecordLabel="Purchase Order"
         />
       </div>
 

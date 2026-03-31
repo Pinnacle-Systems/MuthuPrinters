@@ -151,6 +151,8 @@ export default function Form({
         sizeNameRef?.current?.focus();
       } else {
         setForm(false);
+                        syncFormWithDb(undefined);
+
       }
 
       Swal.fire({
@@ -199,9 +201,11 @@ export default function Form({
       });
       return;
     }
+    if(id){
 
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
+      if (!window.confirm("Are you sure update the details ...?")) {
+        return;
+      }
     }
 
     if (id) {
@@ -279,6 +283,8 @@ export default function Form({
             timer: 1000,
           });
           setForm(false);
+                          syncFormWithDb(undefined);
+
         } catch (error) {
           Swal.fire({
             icon: "error",
@@ -470,6 +476,7 @@ export default function Form({
           onEdit={handleEdit}
           onDelete={handleDelete}
           itemsPerPage={10}
+          childRecordLabel="Item Master"
         />
       </div>
 

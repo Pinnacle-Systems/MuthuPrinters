@@ -24,7 +24,13 @@ import Modal from "../../../UiComponents/Modal";
 
 const MODEL = "Location Master";
 
-export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
+export default function Form({
+  onSuccess,
+  onClose,
+  editId,
+  deleteId,
+  deleteLabel,
+} = {}) {
   const [form, setForm] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [id, setId] = useState(editId || deleteId || "");
@@ -39,7 +45,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
-  
+
   // Create refs for form fields
   const branchRef = useRef(null);
   const locationNameRef = useRef(null);
@@ -133,12 +139,12 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         returnData = await callback(data).unwrap();
       }
       setId(returnData.data.id);
-      
+
       if (onSuccess) {
         onSuccess(returnData.data.id);
         return;
       }
-      
+
       Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
@@ -149,7 +155,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
           branchRef.current.focus();
         },
       });
-      
+
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
@@ -161,6 +167,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         }, 100);
       } else {
         setForm(false);
+        syncFormWithDb(undefined);
       }
     } catch (error) {
       console.log("handle");
@@ -202,8 +209,10 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       });
       return;
     }
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
+    if (id) {
+      if (!window.confirm("Are you sure update the details ...?")) {
+        return;
+      }
     }
     if (id) {
       handleSubmitCustom(updateData, data, "Updated", nextProcess);
@@ -243,6 +252,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             timer: 1000,
           });
           setForm(false);
+          syncFormWithDb(undefined);
         } catch (error) {
           Swal.fire({
             icon: "error",
@@ -290,8 +300,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       search: "",
     },
     {
-      header: "Location Name",
-      accessor: (item) => item.storeName,
+      header: "Company (Branch) / Location",
+      accessor: (item) => `${item.Location?.branchName ? ` ${item.Location.branchName} /` : ""} ${item.storeName}`,
       className: "font-medium text-gray-900  w-[250px]  py-1  px-2",
       search: "Location Name",
     },
@@ -341,6 +351,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
           onEdit={handleEdit}
           onDelete={handleDelete}
           itemsPerPage={10}
+          childRecordLabel="Purchase Inward"
         />
       </div>
       {form && (
@@ -456,7 +467,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                           <div className="mb-3 w-[48%]">
                             <DropdownInput
                               ref={branchRef}
-                              name="Branch"
+                              name="Company/Branch"
                               options={dropDownListObject(
                                 id
                                   ? branchList?.data

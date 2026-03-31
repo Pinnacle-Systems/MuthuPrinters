@@ -15,7 +15,7 @@ async function get(req) {
         include: {
             _count: {
                 select: {
-                    DeliveryChallanItems: true
+                    styleItems: true
                 }
             }
         }
@@ -23,7 +23,7 @@ async function get(req) {
     return {
         statusCode: 0, data: data = data.map(color => ({
             ...color,
-            childRecord: color?._count.DeliveryChallanItems > 0
+            childRecord: color?._count.styleItems > 0
         })),
     };
 }

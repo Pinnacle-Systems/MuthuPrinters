@@ -63,7 +63,7 @@ export default function Form({
     (data) => {
       setName(data?.name || "");
       setDescription(data?.description || "");
-      setActive(id ? (data?.active ?? false) : true);
+      setActive(data?.active ?? true);
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
     [id],
@@ -110,6 +110,7 @@ export default function Form({
         onNew();
       } else {
         setForm(false);
+        syncFormWithDb(undefined);
       }
     } catch (error) {
       await Swal.fire({
@@ -157,8 +158,10 @@ export default function Form({
       return false;
     }
 
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
+    if (id) {
+      if (!window.confirm("Are you sure update the details ...?")) {
+        return;
+      }
     }
 
     if (id) {
@@ -189,6 +192,7 @@ export default function Form({
           icon: "success",
         });
         setForm(false);
+        syncFormWithDb(undefined);
       } catch (error) {
         await Swal.fire({
           icon: "error",
@@ -302,7 +306,29 @@ export default function Form({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter terms and conditions description..."
                 ref={descriptionRef}
-              ></textarea>
+                onKeyDown={(e) => {
+                  if (e.ctrlKey && e.key === "Enter") {
+                    e.preventDefault();
+
+                    const textarea = e.target;
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+
+                    const newValue =
+                      description.substring(0, start) +
+                      "\n" +
+                      description.substring(end);
+
+                    setDescription(newValue);
+
+                    // ✅ Restore focus + cursor properly
+                    requestAnimationFrame(() => {
+                      textarea.focus();
+                      textarea.setSelectionRange(start + 1, start + 1);
+                    });
+                  }
+                }}
+              />
             </div>
             <div className="mt-5">
               <ToggleButton

@@ -115,6 +115,10 @@ const useInvalidateTags = () => {
       payload: ["BillEntry"],
     },
     {
+      type: `branchTypeMaster/invalidateTags`,
+      payload: ["branchType"],
+    },
+    {
       type: `accessoryPo/invalidateTags`,
       payload: ["accessoryPo"],
     },

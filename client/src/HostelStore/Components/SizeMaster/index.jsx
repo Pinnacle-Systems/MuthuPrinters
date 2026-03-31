@@ -82,6 +82,8 @@ export default function Form() {
 
       } else {
         setForm(false);
+                        syncFormWithDb(undefined);
+
       }
       Swal.fire({
         title: text + "  " + "Successfully",
@@ -131,8 +133,11 @@ export default function Form() {
       });
       return false;
     }
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
+    if(id){
+
+      if (!window.confirm("Are you sure update the details ...?")) {
+        return;
+      }
     }
     if (id) {
       handleSubmitCustom(updateData, data, "Updated", nextProcess);
@@ -168,6 +173,8 @@ export default function Form() {
             //     Swal.showLoading();
             // }
           });
+                          syncFormWithDb(undefined);
+
         } catch (error) {
           toast.error("something went wrong");
         }
@@ -245,7 +252,7 @@ export default function Form() {
     }
   }, [form]);
   return (
-    <div onKeyDown={handleKeyDown} className="p-1 h-[90%]">
+    <div onKeyDown={handleKeyDown} className="p-1 h-[87%]">
       <div className="w-full flex bg-white p-1 justify-between  items-center">
         <h5 className="text-lg font-bold text-gray-800">Size Master</h5>
         <div className="flex items-center">
@@ -269,6 +276,7 @@ export default function Form() {
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
+          childRecordLabel="Size Template Master"
         />
       </div>
 

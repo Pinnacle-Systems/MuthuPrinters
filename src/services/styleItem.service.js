@@ -12,6 +12,7 @@ async function get(req) {
       _count: {
         select: {
           poItems: true,
+          inwardItems:true
         },
       },
       SizeTemplate: {
@@ -29,7 +30,7 @@ async function get(req) {
     statusCode: 0,
     data: (data = data.map((color) => ({
       ...color,
-      childRecord: color?._count.poItems > 0,
+      childRecord: color?._count.poItems + color?._count.inwardItems,
     }))),
   };
 }
