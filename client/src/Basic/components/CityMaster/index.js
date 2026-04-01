@@ -24,7 +24,10 @@ import {
   TextInputNew1,
 } from "../../../Inputs";
 import ReportTemplate from "../ReportTemplate";
-import { dropDownListObject } from "../../../Utils/contructObject";
+import {
+  dropDownListObject,
+  dropDownListObjectMultiple,
+} from "../../../Utils/contructObject";
 import Loader from "../Loader";
 import { useDispatch } from "react-redux";
 import { Check, Power } from "lucide-react";
@@ -171,9 +174,9 @@ export default function Form({
         text: "The City Name already exists.",
         icon: "warning",
         timer: 1500,
-          didClose:() =>{
+        didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
       });
       return false;
     }
@@ -181,9 +184,9 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "error",
-          didClose:() =>{
+        didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
       });
       return;
     }
@@ -400,11 +403,11 @@ export default function Form({
                         /> */}
               <DropdownWithModal
                 name="State"
-                options={dropDownListObject(
+                options={dropDownListObjectMultiple(
                   id
                     ? stateList?.data
                     : stateList?.data?.filter((item) => item?.active),
-                  "name",
+                  ["name", "country.name"],
                   "id",
                 )}
                 value={state}
@@ -478,8 +481,11 @@ export default function Form({
               <p className="text-red-600 font-semibold">
                 Cannot delete "{deleteLabel}"
               </p>
-               <button type="button" onClick={onClose}
-                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+              >
                 Close
               </button>
             </>

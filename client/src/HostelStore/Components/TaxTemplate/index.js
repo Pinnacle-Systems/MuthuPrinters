@@ -25,10 +25,17 @@ import { Check, Power } from "lucide-react";
 import Swal from "sweetalert2";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 const MODEL = "Tax Template Master";
 
-export default function Form() {
+export default function Form({
+  onSuccess,
+  onClose,
+  editId,
+  deleteId,
+  deleteLabel,
+} = {}) {
   const [form, setForm] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [id, setId] = useState("");
@@ -39,6 +46,7 @@ export default function Form() {
 
   const [searchValue, setSearchValue] = useState("");
   const [dispatchInvalidate] = useInvalidateTags();
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const childRecord = useRef(0);
   const dispatch = useDispatch();
@@ -53,13 +61,18 @@ export default function Form() {
     companyId,
   };
 
-  const countryNameRef = useRef(null);
+  const {
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
 
   useEffect(() => {
-    if (form && countryNameRef.current) {
+    if ((form || onSuccess) && countryNameRef.current) {
       countryNameRef.current.focus();
     }
-  }, [form]);
+  }, [form, onSuccess]);
 
   const {
     data: allData,
@@ -116,15 +129,21 @@ export default function Form() {
       } else {
         returnData = await callback(data).unwrap();
       }
-
+      if (onSuccess) {
+        await Swal.fire({
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
+        onSuccess(returnData.data.id);
+        return;
+      }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
-                        syncFormWithDb(undefined);
-
+        syncFormWithDb(undefined);
       }
       Swal.fire({
         title: text + "  " + "Successfully",
@@ -147,8 +166,9 @@ export default function Form() {
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
-         didClose: () => {          countryNameRef?.current?.focus();
-        }
+        didClose: () => {
+          countryNameRef?.current?.focus();
+        },
         // draggable: true,
         // timer: 1000,
         // showConfirmButton: false,
@@ -171,13 +191,13 @@ export default function Form() {
       Swal.fire({
         text: "The Tax Template Name already exists.",
         icon: "warning",
-         didClose: () => {          countryNameRef?.current?.focus();
-        }
+        didClose: () => {
+          countryNameRef?.current?.focus();
+        },
       });
       return false;
     }
-    if(id){
-
+    if (id) {
       if (!window.confirm("Are you sure update the details ...?")) {
         return;
       }
@@ -219,8 +239,7 @@ export default function Form() {
             //     Swal.showLoading();
             // }
           });
-                          syncFormWithDb(undefined);
-
+          syncFormWithDb(undefined);
         } catch (error) {
           toast.error("something went wrong");
         }
@@ -241,6 +260,7 @@ export default function Form() {
     setForm(true);
     setSearchValue("");
     setReadOnly(false);
+    syncFormWithDb(undefined);
   };
 
   const ACTIVE = (
@@ -287,6 +307,141 @@ export default function Form() {
     setId(id);
     setForm(true);
   };
+
+  const formBody = (
+    <div className="flex-1 p-3">
+      <div className="grid grid-cols-1  gap-3  h-full">
+        <div className="lg:col-span- space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+            <div className="space-y-4 px-1">
+              <div className="grid grid-cols-4 my-1">
+                <TextInput
+                  name="Template Name"
+                  type="text"
+                  value={name}
+                  setValue={setName}
+                  required={true}
+                  readOnly={readOnly}
+                  disabled={childRecord.current > 0}
+                  ref={countryNameRef}
+                />
+              </div>
+              <fieldset className=" rounded-tr-lg rounded-bl-lg rounded-br-lg my-5 w-full flex h-[260px] overflow-auto border border-gray-200">
+                <legend className="sub-heading">Tax Template Details</legend>
+                <TaxTemplateGrid
+                  params={params}
+                  taxTemplateItems={taxTemplateDetails}
+                  setTaxTemplateItems={setTaxTemplateDetails}
+                  readOnly={readOnly || childRecord.current > 0}
+                />
+              </fieldset>
+              <ToggleButton
+                name="Status"
+                options={statusDropdown}
+                value={active}
+                setActive={setActive}
+                required={true}
+                readOnly={readOnly}
+                onKeyDown={handlers.handleToggleKeyDown}
+                ref={toggleButtonRef}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (deleteId) {
+    const childCount = singleData?.data?.childRecord ?? 0;
+    const isLoadingRecord = isSingleFetching || isSingleLoading;
+
+    const handleConfirmDelete = async () => {
+      try {
+        const res = await removeData(deleteId).unwrap();
+        if (res?.statusCode === 1) {
+          toast.error(res?.data?.message || "Cannot delete");
+          return;
+        }
+        toast.success("State deleted successfully");
+        onSuccess?.();
+      } catch (err) {
+        toast.error(err?.data?.message || "Failed to delete state");
+      }
+    };
+
+    return (
+      <div className="min-h-[250px] flex flex-col bg-gray-200">
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center bg-white">
+          <h2 className="text-lg font-semibold">Delete Tax Template</h2>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
+          {isLoadingRecord ? (
+            <p>Checking...</p>
+          ) : childCount > 0 ? (
+            <>
+              <p className="text-red-600 font-semibold">
+                Cannot delete "{deleteLabel}"
+              </p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+              >
+                Close
+              </button>
+            </>
+          ) : (
+            <>
+              <p>Are you sure delete "{deleteLabel}"?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={onClose}
+                  className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded"
+                >
+                  Delete
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (onSuccess) {
+    return (
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            {editId ? "Edit State" : "Add New State"}
+          </h2>
+          <button
+            type="button"
+            onClick={() => saveData("close")}
+            ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
+            className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+          >
+            <Check size={14} />
+            {editId ? "Update" : "Save"}
+          </button>
+        </div>
+
+        {formBody}
+      </div>
+    );
+  }
 
   return (
     // <div
@@ -364,6 +519,7 @@ export default function Form() {
           onDelete={deleteData}
           itemsPerPage={15}
           setReadOnly={setReadOnly}
+          childRecordLabel="Purchase Module"
         />
       </div>
 
@@ -372,7 +528,7 @@ export default function Form() {
           <Modal
             isOpen={form}
             form={form}
-            widthClass={"w-[90%] h-[500px]"}
+            widthClass={"w-[90%] h-[600px]"}
             onClose={() => {
               setForm(false);
               syncFormWithDb(undefined);
@@ -415,6 +571,9 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
+                        ref={saveCloseButtonRef}
+                        tabIndex={0} // ✅ Add tabIndex
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {id ? "Update" : "Save & close"}
@@ -430,6 +589,9 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
+                        ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0} // ✅ Add tabIndex
+                        onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {"Save & New"}
@@ -439,50 +601,7 @@ export default function Form() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto p-3">
-                <div className="grid grid-cols-1  gap-3  h-full">
-                  <div className="lg:col-span- space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                      <div className="space-y-4 ">
-                        <fieldset className=" my-1 rounded-tr-lg rounded-bl-lg rounded-br-lg border border-gray-200">
-                          <legend className="">Tax Template Info</legend>
-                          <div className="grid grid-cols-4 my-2 p-2">
-                            <TextInput
-                              name="Template Name"
-                              type="text"
-                              value={name}
-                              setValue={setName}
-                              required={true}
-                              readOnly={readOnly}
-                              disabled={childRecord.current > 0}
-                              ref={countryNameRef}
-                            />
-                          </div>
-                          <ToggleButton
-                            name="Status"
-                            options={statusDropdown}
-                            value={active}
-                            setActive={setActive}
-                            required={true}
-                            readOnly={readOnly}
-                          />
-                        </fieldset>
-                        <fieldset className=" rounded-tr-lg rounded-bl-lg rounded-br-lg my-5 w-full flex h-[300px] overflow-auto border border-gray-200">
-                          <legend className="sub-heading">
-                            Tax Template Details
-                          </legend>
-                          <TaxTemplateGrid
-                            params={params}
-                            taxTemplateItems={taxTemplateDetails}
-                            setTaxTemplateItems={setTaxTemplateDetails}
-                            readOnly={readOnly || childRecord.current > 0}
-                          />
-                        </fieldset>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {formBody}
             </div>
           </Modal>
         )}

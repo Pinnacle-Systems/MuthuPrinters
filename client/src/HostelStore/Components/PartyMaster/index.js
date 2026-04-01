@@ -262,7 +262,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
       setWebsite(data?.website ? data?.website : "");
       setEmail(data?.email ? data?.email : "");
       setIsSupplier(data?.isSupplier ? data.isSupplier : false);
-      setIsCustomer(data?.isCustomer ? data.isCustomer : true);
+      setIsCustomer(data?.isCustomer ? data.isCustomer : false);
       // setActive(id ? (data?.active ? data.active : false) : true);
       setContactMobile(data?.contactMobile ? data.contactMobile : "");
       setContact(data?.contact ? data?.contact : "");
@@ -348,21 +348,41 @@ export default function Form({ partyId, onCloseForm, childId }) {
   };
 
   const validateData = (data) => {
-    return (
-      data.name &&
-      data?.active &&
-      data?.address &&
-      data?.cityId &&
-      data?.pincode &&
-      // data?.gstNo &&
-      data?.partyCode &&
-      data?.aadharNo
-    );
+    const requiredFields = [
+      { key: "name", label: "Name" },
+      { key: "partyCode", label: "Party Code" },
+      { key: "active", label: "Active Status" },
+      { key: "address", label: "Address" },
+      { key: "cityId", label: "City" },
+      { key: "pincode", label: "Pincode" },
+      { key: "aadharNo", label: "Aadhar Number" },
+    ];
+
+    const missing = requiredFields.find((f) => !data[f.key]);
+
+    if (missing) {
+      return { isValid: false, message: `${missing.label} is required` };
+    }
+
+    return { isValid: true };
+  };
+
+  const showAlert = (message, type = "error") => {
+    Swal.fire({
+      title: message,
+      icon: type,
+      confirmButtonColor: "#3085d6",
+    });
   };
 
   const aadharRegex = /^[0-9]{12}$/; // 12 digits
   const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/; // ABCDE1234F
   const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+  const validatePincode = (pincode) => {
+    const pincodeRegex = /^[1-9][0-9]{5}$/; // 6 digit pincode, not starting with 0
+    return pincodeRegex.test(pincode);
+  };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
@@ -462,130 +482,77 @@ export default function Form({ partyId, onCloseForm, childId }) {
   }, [form]);
   const alphaNum12 = /^[A-Z0-9]{15}$/;
   const saveData = (nextProcess) => {
-    if (isBranch) {
-      if (!parentId) {
-        Swal.fire({
-          text: `Choose  the Parent Customer/supplier `,
-          icon: "warning",
-          customClass: {
-            popup: "swal-custom-height",
-          },
-        });
-        return false;
-      }
-      if (!branchTypeId) {
-        Swal.fire({
-          text: `Choose the Branch Type`,
-          icon: "warning",
-          customClass: {
-            popup: "swal-custom-height",
-          },
-        });
-        return false;
-      }
+    // Branch validations
+    if (isBranch && !parentId) {
+      return showAlert("Choose Parent Customer/Supplier", "warning");
     }
 
-    if (!validateData(data)) {
-      Swal.fire({
-        title: "Please fill all required fields...!",
-        icon: "error",
-      });
-      return;
+    if (isBranch && !branchTypeId) {
+      return showAlert("Choose Branch Type", "warning");
     }
 
+    // Required fields
+    const validation = validateData(data);
+    if (!validation.isValid) {
+      return showAlert(validation.message);
+    }
+
+    // Pincode
+    if (data.pincode && !validatePincode(data.pincode)) {
+      return showAlert("Enter valid 6-digit pincode");
+    }
+
+    // Aadhar
     if (!aadharRegex.test(data.aadharNo)) {
-      Swal.fire({
-        title: "Invalid Aadhar Number",
-        text: "Aadhar must be exactly 12 digits",
-        icon: "error",
-      });
-      return;
+      return showAlert("Aadhar must be 12 digits");
     }
 
+    // PAN
     if (data.panNo && !panRegex.test(data.panNo.toUpperCase())) {
-      Swal.fire({
-        title: "Invalid PAN Number",
-        text: "Format: ABCDE1234F",
-        icon: "error",
-      });
-      return;
+      return showAlert("Invalid PAN (ABCDE1234F)");
     }
 
-    // GST (optional)
+    // GST
     if (data.gstNo && !gstRegex.test(data.gstNo.toUpperCase())) {
-      Swal.fire({
-        title: "Invalid GST Number",
-        text: "Invalid GST format",
-        icon: "error",
-      });
-      return;
+      return showAlert("Invalid GST format");
     }
 
+    // Customer/Supplier check
     if (!isCustomer && !isSupplier) {
-      Swal.fire({
-        title: "Please Select Customer or Supplier",
-        icon: "error",
-      });
-      return;
+      return showAlert("Select Customer or Supplier");
     }
 
+    // Duplicate check
     let foundItem;
 
     if (isBranch) {
-      if (id) {
-        foundItem = allData?.data
-          ?.filter((i) => i.id != id)
-          ?.some(
-            (item) =>
-              item.branchTypeId == branchTypeId && item.parentId == parentId,
-          );
-      } else {
-        foundItem = allData?.data?.some(
+      foundItem = allData?.data
+        ?.filter((i) => i.id != id)
+        ?.some(
           (item) =>
             item.branchTypeId == branchTypeId && item.parentId == parentId,
         );
-      }
     } else {
-      if (id) {
-        foundItem = allData?.data
-          ?.filter((i) => i.id != id)
-          ?.some((item) => item.name == name && item.gstNo == gstNo);
-      } else {
-        foundItem = allData?.data?.some(
-          (item) => item.name == name && item.gstNo == gstNo,
-        );
-      }
+      foundItem = allData?.data
+        ?.filter((i) => i.id != id)
+        ?.some((item) => item.name == name && item.gstNo == gstNo);
     }
 
-    if (isBranch) {
-      if (foundItem) {
-        Swal.fire({
-          text: `The Branch name is already  exists `,
-          icon: "warning",
-          customClass: {
-            popup: "swal-custom-height",
-          },
-        });
-        return false;
-      }
-    } else {
-      if (foundItem) {
-        Swal.fire({
-          text: `The ${isSupplier ? "Supplier" : "Customer"} name is already  exists `,
-          icon: "warning",
-          customClass: {
-            popup: "swal-custom-height",
-          },
-        });
-        return false;
-      }
-    }
-    if (id) {
-      if (!window.confirm("Are you sure update the details ...?")) {
-        return;
-      }
+    if (foundItem) {
+      return showAlert(
+        isBranch
+          ? "Branch already exists"
+          : `${isSupplier ? "Supplier" : "Customer"} already exists`,
+        "warning",
+      );
     }
 
+    // Confirm update
+    if (id && !window.confirm("Are you sure update the details...?")) {
+      return;
+    }
+
+    // Submit
     if (id) {
       handleSubmitCustom(updateData, data, "Updated", nextProcess);
     } else {
@@ -1733,6 +1700,12 @@ export default function Form({ partyId, onCloseForm, childId }) {
                                   setParentId("");
                                   setBranchTypeId("");
                                   setName("");
+                                  setPartyCode("");
+                                  setPanNo("");
+                                  setAadharNo("");
+                                  setGstNo("");
+                                  setMsmeNo("");
+                                  setCinNo("");
                                 }
                                 setIsBranch(e.target.checked);
                               }}

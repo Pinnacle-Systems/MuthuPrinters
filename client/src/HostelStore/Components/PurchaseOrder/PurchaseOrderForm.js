@@ -38,6 +38,8 @@ import PurchaseOrderPrintFormat from "./PrintFormat-PO";
 import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
+import { DropdownWithModal } from "../../../Inputs/Reuseable";
+import { PayTermMaster } from "../../../Basic/components";
 
 const PurchaseOrderForm = ({
   onClose,
@@ -547,7 +549,7 @@ const PurchaseOrderForm = ({
                 readOnly={true}
                 disabled
               />
-              <DropdownInput
+              {/* <DropdownInput
                 name="Pay Term"
                 options={dropDownListObject(
                   payTermList ? payTermList?.data : [],
@@ -562,6 +564,27 @@ const PurchaseOrderForm = ({
                 readOnly={readOnly}
                 // autoFocus={true}
                 ref={supplierRef}
+              /> */}
+              <DropdownWithModal
+                name="Pay Term"
+                options={dropDownListObject(
+                  id
+                    ? payTermList?.data
+                    : payTermList?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={payTermId}
+                setValue={setPayTermId}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Pay Term"
+                childComponent={PayTermMaster}
+                addNewModalWidth="w-[40%] h-[66%]"
+                openOnFocus={false}
+                autoFocus={true}
               />
               <DateInputNew
                 name="Delivery Date"
@@ -794,29 +817,29 @@ const PurchaseOrderForm = ({
               onChange={(e) => setTermsAndCondtion(e.target.value)}
               placeholder="Type Terms & Conditions..."
               onKeyDown={(e) => {
-                  if (e.ctrlKey && e.key === "Enter") {
-                    e.preventDefault();
+                if (e.ctrlKey && e.key === "Enter") {
+                  e.preventDefault();
 
-                    const textarea = e.target;
-                    const start = textarea.selectionStart;
-                    const end = textarea.selectionEnd;
+                  const textarea = e.target;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
 
-                    const newValue =
-                      termsAndCondtion.substring(0, start) +
-                      "\n" +
-                      termsAndCondtion.substring(end);
+                  const newValue =
+                    termsAndCondtion.substring(0, start) +
+                    "\n" +
+                    termsAndCondtion.substring(end);
 
-                    setTermsAndCondtion(newValue);
+                  setTermsAndCondtion(newValue);
 
-                    // ✅ Restore focus + cursor properly
-                    requestAnimationFrame(() => {
-                      textarea.focus();
-                      textarea.setSelectionRange(start + 1, start + 1);
-                    });
-                  }
-                }}
+                  // ✅ Restore focus + cursor properly
+                  requestAnimationFrame(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + 1, start + 1);
+                  });
+                }
+              }}
             />
-             {/* <textarea
+            {/* <textarea
                 className="w-full h-32 focus:outline-none border border-gray-300 rounded p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 value={termsAndCondtion}
               disabled={readOnly}

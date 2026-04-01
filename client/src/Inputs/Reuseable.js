@@ -213,49 +213,51 @@ export const DropdownWithModal = forwardRef(
       String(o.show).toLowerCase().includes(search.toLowerCase()),
     );
 
-const handleSelect = (optionValue, fromKeyboard = false) => {
-  beforeChange();
-  setValue(optionValue);
-  setIsOpen(false);
-  setSearch("");
-  if (onBlur) onBlur();
-  if (fromKeyboard) {
-    setTimeout(() => {
-      if (!buttonRef.current) return;
+    const handleSelect = (optionValue, fromKeyboard = false) => {
+      beforeChange();
+      setValue(optionValue);
+      setIsOpen(false);
+      setSearch("");
+      if (onBlur) onBlur();
+      if (fromKeyboard) {
+        setTimeout(() => {
+          if (!buttonRef.current) return;
 
-      const allFocusable = Array.from(
-        document.querySelectorAll(
-          'input:not([disabled]):not([readonly]):not([type="hidden"]), select:not([disabled]), button:not([disabled])',
-        ),
-      ).filter(
-        (el) =>
-          el.offsetParent !== null &&
-          !el.closest('[data-skip-focus="true"]'),
-      );
+          const allFocusable = Array.from(
+            document.querySelectorAll(
+              'input:not([disabled]):not([readonly]):not([type="hidden"]), select:not([disabled]), button:not([disabled])',
+            ),
+          ).filter(
+            (el) =>
+              el.offsetParent !== null &&
+              !el.closest('[data-skip-focus="true"]'),
+          );
 
-      const currentIndex = allFocusable.indexOf(buttonRef.current);
+          const currentIndex = allFocusable.indexOf(buttonRef.current);
 
-      let nextInput = null;
+          let nextInput = null;
 
-      for (let i = currentIndex + 1; i < allFocusable.length; i++) {
-        const el = allFocusable[i];
-        nextInput = el;
-        break;
+          for (let i = currentIndex + 1; i < allFocusable.length; i++) {
+            const el = allFocusable[i];
+            nextInput = el;
+            break;
+          }
+
+          if (nextInput) {
+            nextInput.focus();
+
+            // open only dropdown buttons (not toggle/checkbox buttons)
+            if (
+              nextInput.tagName === "BUTTON" &&
+              nextInput.type !== "button" &&
+              !nextInput.querySelector('input[type="checkbox"]')
+            ) {
+              nextInput.click();
+            }
+          }
+        }, 50);
       }
-
-      if (nextInput) {
-        nextInput.focus();
-
-        // open only dropdown buttons (not toggle/checkbox buttons)
-        if (nextInput.tagName === "BUTTON" && 
-            nextInput.type !== "button" && 
-            !nextInput.querySelector('input[type="checkbox"]')) {
-          nextInput.click();
-        }
-      }
-    }, 50);
-  }
-};
+    };
 
     return (
       <div className={`mb-1 ${width}`} ref={containerRef}>
@@ -266,16 +268,23 @@ const handleSelect = (optionValue, fromKeyboard = false) => {
         )}
         <button
           ref={buttonRef}
+          autoFocus={autoFocus}
           type="button"
           disabled={isDisabled}
           tabIndex={tabIndex ?? undefined}
           onFocus={() => {
-            if (!isDisabled) {
-              openedByFocusRef.current = true;
-              updateDropdownPos();
-              setIsOpen(true);
+            if (!openOnFocus && !autoFocus) {
+              if (!isDisabled) {
+                openedByFocusRef.current = true;
+                updateDropdownPos();
+                setIsOpen(true);
+              }
+            } else {
             }
           }}
+          // onFocus={() => {
+          //   // ✅ do nothing (just focus)
+          // }}
           onClick={() => {
             if (!isDisabled) {
               if (openedByFocusRef.current) {
@@ -284,6 +293,28 @@ const handleSelect = (optionValue, fromKeyboard = false) => {
               }
               updateDropdownPos();
               setIsOpen((o) => !o);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (isDisabled) return;
+
+            // 🔥 DOWN ARROW → open dropdown
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              updateDropdownPos();
+              setIsOpen(true);
+            }
+
+            // 🔥 ENTER → toggle dropdown
+            if (e.key === "Enter") {
+              e.preventDefault();
+              updateDropdownPos();
+              setIsOpen((o) => !o);
+            }
+
+            // 🔥 ESC → close dropdown
+            if (e.key === "Escape") {
+              setIsOpen(false);
             }
           }}
           className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg text-left

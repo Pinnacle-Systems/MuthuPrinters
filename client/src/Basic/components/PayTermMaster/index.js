@@ -63,9 +63,9 @@ export default function Form({
   const syncFormWithDb = useCallback(
     (data) => {
       setName(data?.name ? data.name : "");
-      setDays(data?.days ? data.days : "");
-      setYears(data?.years ? data?.years : "");
-      setMonths(data?.months ? data?.months : "");
+      setDays(data?.days ? data.days : 0);
+      setYears(data?.years ? data?.years : 0);
+      setMonths(data?.months ? data?.months : 0);
       setActive(id ? (data?.active ? data.active : false) : true);
       setAliasName(data?.aliasName ? data?.aliasName : "");
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
@@ -91,10 +91,22 @@ export default function Form({
   };
 
   const validateData = (data) => {
-    if (data.name && data.days) {
-      return true;
+    if (!data.name) {
+      return { isValid: false, message: "Pay Term Name is required" };
     }
-    return false;
+    const hasValidDuration =
+      Number(data.days) > 0 ||
+      Number(data.months) > 0 ||
+      Number(data.years) > 0;
+
+    if (!hasValidDuration) {
+      return {
+        isValid: false,
+        message: "Enter at least one: Days, Months, or Years greater than 0",
+      };
+    }
+
+    return { isValid: true };
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -103,15 +115,13 @@ export default function Form({
       setId(returnData.data.id);
 
       if (onSuccess) {
-         await Swal.fire({
-                                 title: text + "  " + "Successfully",
-                                 icon: "success",
-                               });
+        await Swal.fire({
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
         onSuccess(returnData.data.id);
         return;
       }
-
-     
 
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
@@ -121,7 +131,7 @@ export default function Form({
         setForm(false);
         syncFormWithDb(undefined);
       }
-       await Swal.fire({
+      await Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
       });
@@ -142,13 +152,15 @@ export default function Form({
       name: upperName,
     };
 
-    if (!validateData(finalData)) {
+    const validation = validateData(finalData);
+
+    if (!validation.isValid) {
       Swal.fire({
-        title: "Please fill all required fields...!",
+        title: validation.message,
         icon: "error",
-          didClose:() =>{
+        didClose: () => {
           payTermNameRef?.current?.focus();
-        }
+        },
       });
       return;
     }
@@ -168,10 +180,9 @@ export default function Form({
       Swal.fire({
         text: "The Pay Term Name already exists.",
         icon: "warning",
-          didClose:() =>{
-
+        didClose: () => {
           payTermNameRef?.current?.focus();
-        }
+        },
       });
       return false;
     }
@@ -235,8 +246,7 @@ export default function Form({
     setReadOnly(false);
     setForm(true);
     setSearchValue("");
-      syncFormWithDb(undefined);
-
+    syncFormWithDb(undefined);
   };
 
   const handleView = (id) => {
@@ -292,12 +302,12 @@ export default function Form({
   ];
 
   const {
-      firstInputRef: payTermNameRef,
-      toggleButtonRef,
-      saveCloseButtonRef,
-      saveNewButtonRef,
-    } = refs;
-    const descriptionRef = useRef(null);
+    firstInputRef: payTermNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
+  const descriptionRef = useRef(null);
 
   useEffect(() => {
     if ((form || onSuccess) && payTermNameRef.current) {
@@ -339,9 +349,10 @@ export default function Form({
                     type="number"
                     min="0"
                     value={years}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setYears(e.target.value)}
                     readOnly={readOnly}
-                    disabled={readOnly}
+                    disabled={childRecord.current > 0}
                     className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
             focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
             transition-all duration-150 shadow-sm text-right"
@@ -355,10 +366,11 @@ export default function Form({
                     type="number"
                     min="0"
                     max="11"
+                    onFocus={(e) => e.target.select()}
                     value={months}
                     onChange={(e) => setMonths(e.target.value)}
                     readOnly={readOnly}
-                    disabled={readOnly}
+                    disabled={childRecord.current > 0}
                     className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
             focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
             transition-all duration-150 shadow-sm text-right"
@@ -373,9 +385,10 @@ export default function Form({
                     min="0"
                     max="29"
                     value={days}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setDays(e.target.value)}
                     readOnly={readOnly}
-                    disabled={readOnly}
+                    disabled={childRecord.current > 0}
                     className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
             focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
             transition-all duration-150 shadow-sm text-right"
@@ -399,7 +412,8 @@ export default function Form({
               required={true}
               readOnly={readOnly}
               ref={toggleButtonRef}
-                onKeyDown={handlers.handleToggleKeyDown}
+              onKeyDown={handlers.handleToggleKeyDown}
+              disabled={childRecord.current > 0}
             />
           </div>
         </div>
@@ -428,13 +442,13 @@ export default function Form({
     };
 
     return (
-      <div className="h-full flex flex-col bg-gray-200">
+      <div className="min-h-[380px] flex flex-col bg-gray-200">
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
           <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
             Delete Pay Term
           </h2>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
           {isLoadingRecord ? (
             <p className="text-xs text-gray-400">Checking records...</p>
           ) : childCount > 0 ? (
@@ -514,6 +528,8 @@ export default function Form({
           <button
             type="button"
             onClick={() => saveData("close")}
+            ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
             className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
           >
             <Check size={14} />
@@ -599,9 +615,9 @@ export default function Form({
                       onClick={() => saveData("close")}
                       className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                         border border-blue-600 flex items-center gap-1 text-xs"
-                        ref={saveCloseButtonRef} // ✅ Add ref
-                        tabIndex={0}
-                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
+                      ref={saveCloseButtonRef} // ✅ Add ref
+                      tabIndex={0}
+                      onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                     >
                       <Check size={14} />
                       {id ? "Update" : "Save & close"}
@@ -615,9 +631,9 @@ export default function Form({
                       onClick={() => saveData("new")}
                       className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                         border border-green-600 flex items-center gap-1 text-xs"
-                          onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
-                        ref={saveNewButtonRef} // ✅ Add ref
-                        tabIndex={0}
+                      onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                      ref={saveNewButtonRef} // ✅ Add ref
+                      tabIndex={0}
                     >
                       <Check size={14} />
                       {"Save & New"}

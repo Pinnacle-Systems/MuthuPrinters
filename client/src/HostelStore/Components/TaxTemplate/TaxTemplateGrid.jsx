@@ -60,34 +60,34 @@ const TaxTemplateGrid = ({ taxTemplateItems, setTaxTemplateItems, readOnly, para
                 taxTemplateItems.length !== 0 ?
                     <>
                         <div className={`w-full overflow-y-auto p-3 `}>
-                            <table className=" border border-gray-600 text-xs table-auto w-full">
-                                <thead className='bg-gray-100 top-0'>
+                            <table className="border-collapse border border-slate-300 text-xs table-auto w-full rounded-sm shadow-sm bg-white">
+                                <thead className='bg-slate-100 text-slate-700 top-0'>
                                     <tr>
-                                        <th className="table-data border border-gray-600 w-28">Tax Name</th>
-                                        <th className="table-data border border-gray-600 w-32">Display Name</th>
-                                        <th className="table-data border border-gray-600 ">Value</th>
-                                        <th className="table-data border border-gray-600">Amount</th>
-                                        <th className={` ${readOnly ? "hidden" : "w-5"}`}>
-                                            {readOnly ?
-                                                "" :
+                                        <th className="table-data border border-slate-300 w-28 py-1.5 font-semibold">Tax Name</th>
+                                        <th className="table-data border border-slate-300 w-32 py-1.5 font-semibold">Display Name</th>
+                                        <th className="table-data border border-slate-300 py-1.5 font-semibold">Value</th>
+                                        <th className="table-data border border-slate-300 py-1.5 font-semibold">Amount</th>
+                                        <th className={`border border-slate-300 ${readOnly ? "hidden" : "w-10"}`}>
+                                            {!readOnly && (
                                                 <div onClick={addRow}
-                                                    className='hover:cursor-pointer  py-2 flex items-center justify-center bg-green-600 text-white rounded'>
+                                                    className='hover:cursor-pointer mx-auto w-6 h-6 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-sm shadow-sm transition-colors' title="Add Row">
                                                     {PLUS}
                                                 </div>
-                                            }
+                                            )}
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className='overflow-y-auto border border-gray-600 h-full w-full'>
+                                <tbody>
                                     {taxTemplateItems.map((row, index) => (
-                                        <tr key={index} className="w-full">
-                                            <td className='flex justify-center items-center'>
-                                                <select disabled={readOnly}
-                                                    className='text-left w-full rounded border border-gray-600 h-8 py-2 focus:outline-none'
-                                                    value={row.taxTermId} onChange={(e) => handleInputChange(e, index, "taxTermId")}>
-                                                    <option hidden>
-                                                        Select
-                                                    </option>
+                                        <tr key={index} className="w-full hover:bg-slate-50 transition-colors">
+                                            <td className='border border-slate-300 '>
+                                                <select
+                                                    disabled={readOnly}
+                                                    className='text-left w-full rounded-sm border border-slate-300 h-8 px-1 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 transition-all bg-white'
+                                                    value={row.taxTermId}
+                                                    onChange={(e) => handleInputChange(e, index, "taxTermId")}
+                                                >
+                                                    <option hidden value="">Select</option>
                                                     {TaxTermList.data.map((taxItems) =>
                                                         <option value={taxItems.id} key={taxItems.id} hidden={findIdInTaxTerms(taxItems.id)}>
                                                             {taxItems.name}
@@ -95,48 +95,39 @@ const TaxTemplateGrid = ({ taxTemplateItems, setTaxTemplateItems, readOnly, para
                                                     )}
                                                 </select>
                                             </td>
-                                            <td>
+                                            <td className='border border-slate-300'>
                                                 <input
                                                     type="text"
-                                                    className="border border-gray-600 text-center rounded h-8 py-2 w-full"
-                                                    value={(row.displayName)}
+                                                    className="border border-slate-300 text-center rounded-sm h-8 w-full px-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 transition-all font-medium text-slate-700 bg-white"
+                                                    value={row.displayName}
                                                     disabled={readOnly}
-                                                    onChange={(event) =>
-                                                        handleInputChange(event, index, "displayName")
-                                                    }
+                                                    onChange={(event) => handleInputChange(event, index, "displayName")}
                                                 />
                                             </td>
-                                            <td>
+                                            <td className='border border-slate-300'>
                                                 <input
                                                     type="text"
-                                                    className="border border-gray-600 text-center rounded h-8 py-2 w-full"
-                                                    value={(row.value)}
+                                                    className="border border-slate-300 text-center rounded-sm h-8 w-full px-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 transition-all font-medium text-slate-700 bg-white"
+                                                    value={row.value}
                                                     disabled={readOnly}
-                                                    onChange={(event) =>
-                                                        handleInputChange(event, index, "value")
-                                                    }
+                                                    onChange={(event) => handleInputChange(event, index, "value")}
                                                 />
                                             </td>
-                                            <td>
+                                            <td className='border border-slate-300 '>
                                                 <input
                                                     type="text"
-                                                    className="border border-gray-600 text-center rounded h-8 py-2 w-full"
-                                                    value={(row.amount)}
+                                                    className="border border-slate-300 text-center rounded-sm h-8 w-full px-2 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 transition-all font-medium text-slate-700 bg-white"
+                                                    value={row.amount}
                                                     disabled={readOnly}
-                                                    onChange={(event) =>
-                                                        handleInputChange(event, index, "amount")
-                                                    }
+                                                    onChange={(event) => handleInputChange(event, index, "amount")}
                                                 />
                                             </td>
-                                            <td className={`border border-gray-600 hover:cursor-pointer ${readOnly ? "hidden" : ""} `}>
-                                                {readOnly
-                                                    ?
-                                                    ""
-                                                    :
-                                                    <div tabIndex={-1} onClick={() => handleDeleteRow(index)} className='flex justify-center px-2 py-2 items-center rounded bg-gray-300'>
+                                            <td className={`border border-slate-300  align-middle ${readOnly ? "hidden" : ""} `}>
+                                                {!readOnly && (
+                                                    <div tabIndex={-1} onClick={() => handleDeleteRow(index)} className='hover:cursor-pointer mx-auto flex justify-center h-7 w-7 items-center rounded-sm bg-rose-100 text-rose-600 hover:bg-rose-200 hover:text-white transition-colors'>
                                                         {DELETE}
                                                     </div>
-                                                }
+                                                )}
                                             </td>
                                         </tr>
                                     ))}

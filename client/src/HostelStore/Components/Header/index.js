@@ -23,7 +23,6 @@ import { push } from "../../../redux/features/opentabs";
 import Swal from "sweetalert2";
 import Logout from "../../../Basic/components/LogoutConfirm";
 import PageSearch from "./PageSearch";
-
 const BASE_URL = process.env.REACT_APP_SERVER_URL;
 
 const Header = ({ profile, setProfile }) => {
@@ -151,14 +150,13 @@ const Header = ({ profile, setProfile }) => {
         <img className="rounded-lg h-8" src={logo} alt="" />
       </div>
       <div className="mr-5 flex items-center space-x-5 text-sm">
-        <div className="relative border rounded">
+        <div className="relative">
           <PageSearch pageList={allowedPages} />
         </div>
         <p>WELCOME</p> &nbsp;{" "}
         <div className="text-black">{userName?.toUpperCase()}</div>
-        <div className="relative text-left">
+        <div className="relative text-left" ref={ref}>
           <button
-            ref={ref}
             onClick={toggleNavMenu}
             type="button"
             className="md:bg-transparent inline-flex  text-2xl justify-end"
@@ -173,108 +171,16 @@ const Header = ({ profile, setProfile }) => {
               alt="image"
             />
           </button>
-          {/* <div className="relative">
-                        <div
-                            className={`-ml-40 absolute  bg-gray-700 mt-2 origin-top-right rounded-md z-50 ${navBatItemsStyle}`}
-                        >
-                            <div className="bg-beige flex p-2 items-center rounded-lg">
-                                <div className="mr-2 w-12">
-                                    <img className="rounded-full" width={'30px'} height={'30px'}
-                                        src={dp}
-                                        alt="image" />
-                                </div>
-                                <div>
-                                    <div className="text-sm text-black my-0 py-0">
-                                        {secureLocalStorage.getItem(
-                                            sessionStorage.getItem("sessionId") + "username"
-                                        )}
-                                    </div>
-                                    <div className="text-[11px] p-0 text-gray-400 -mt-1 ">{singleData?.data?.email}</div>
-                                </div>
-                            </div>
-                            <button className="nav-dropdown-bg  z-99 p-2 w-full" onClick={() => { dispatch(push({ id: 1000000, name: "ACCOUNT SETTINGS" })) }}>
-                                <pre>ACCOUNT SETTINGS</pre>
-                            </button>
-                            {allowedPages.filter((page) => page.type === "AdminAccess")?.map((item, index) => (
-                                <button
-                                    key={index}
-                                    type="link"
-                                    className="nav-dropdown-bg z-99 p-2 text-start block w-full"
-                                    onClick={(e) => {
-                                        dispatch(push({ id: item.id, name: item.name }))
-                                        secureLocalStorage.setItem(
-                                            sessionStorage.getItem("sessionId") + "currentPage",
-                                            item.id
-                                        );
-                                    }}
-                                >
-                                    <pre>{item.name}</pre>
-                                </button>
-                            ))}
 
-                            <button className="nav-dropdown-bg z-50 p-2 w-full" onClick={() => setLogout(true)}>
-                                <pre>LOG OUT</pre>
-
-                            </button>
-
-                        </div>
-                    </div> */}
-          <div className="relative">
-            <div
-              className={`absolute -ml-[200px] mt-2 w-64 bg-gray-400 p-2 rounded-md z-50 ${navBatItemsStyle}`}
-            >
-              <div className="bg-beige flex p-2 items-center rounded-lg">
-                <div className="mr-2 w-12">
-                  <img
-                    className="rounded-full"
-                    width="30"
-                    height="30"
-                    src={dp}
-                    alt="image"
-                  />
-                </div>
-                <div>
-                  <div className="text-sm text-black">
-                    {secureLocalStorage.getItem(
-                      sessionStorage.getItem("sessionId") + "username",
-                    )}
-                  </div>
-                  <div className="text-[11px]  -mt-1">
-                    {singleData?.data?.email}
-                  </div>
-                </div>
-              </div>
-
-              <button className="nav-dropdown-bg p-2 w-full">
-                <pre>ACCOUNT SETTINGS</pre>
-              </button>
-
-              {allowedPages
-                .filter((page) => page.type === "AdminAccess")
-                .map((item, index) => (
-                  <button
-                    key={index}
-                    className="nav-dropdown-bg p-2 text-start w-full"
-                    onClick={() => {
-                      dispatch(push({ id: item.id, name: item.name }));
-                      secureLocalStorage.setItem(
-                        sessionStorage.getItem("sessionId") + "currentPage",
-                        item.id,
-                      );
-                    }}
-                  >
-                    <pre>{item.name}</pre>
-                  </button>
-                ))}
-
-              <button
-                className="nav-dropdown-bg p-2 w-full"
-                onClick={() => setLogout(true)}
-              >
-                <pre>LOG OUT</pre>
-              </button>
-            </div>
-          </div>
+          {!hideNavBar && (
+            <Profile
+              dp={dp}
+              setProfile={sethideNavBar}
+              items={allowedPages.filter((page) => page.type === "AdminAccess")}
+              setLogout={setLogout}
+              logout={logout}
+            />
+          )}
         </div>
       </div>
     </div>

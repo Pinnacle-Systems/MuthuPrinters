@@ -143,7 +143,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       Swal.fire({
         title: 'Please fill all required fields...!',
         icon: 'error',
-        didClose: () => {          countryNameRef?.current?.focus();
+        didClose: () => {
+          countryNameRef?.current?.focus();
         }
       });
       return;
@@ -161,7 +162,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       Swal.fire({
         text: "The Country Name already exists.",
         icon: "warning",
-         didClose: () => {          countryNameRef?.current?.focus();
+        didClose: () => {
+          countryNameRef?.current?.focus();
         }
       });
       return false;

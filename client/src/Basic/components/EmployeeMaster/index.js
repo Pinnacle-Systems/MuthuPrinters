@@ -7,19 +7,11 @@ import {
   useUpdateEmployeeMutation,
   useDeleteEmployeeMutation,
 } from "../../../redux/services/EmployeeMasterService";
-import { useGetCountriesQuery } from "../../../redux/services/CountryMasterService";
 import { useGetCityQuery } from "../../../redux/services/CityMasterService";
 import LiveWebCam from "../LiveWebCam";
-import FormHeader from "../FormHeader";
-import FormReport from "../FormReportTemplate";
+
 import { toast } from "react-toastify";
 import {
-  TextInput,
-  DropdownInput,
-  TextArea,
-  CurrencyInput,
-  DateInput,
-  DisabledInput,
   ReusableTable,
   ToggleButton,
   TextInputNew,
@@ -28,7 +20,6 @@ import {
   TextAreaNew,
   TextInputNew1,
 } from "../../../Inputs";
-import ReportTemplate from "../ReportTemplate";
 import {
   dropDownListObject,
   dropDownListMergedObject,
@@ -36,7 +27,6 @@ import {
 import Modal from "../../../UiComponents/Modal";
 import {
   statusDropdown,
-  employeeType,
   genderList,
   maritalStatusList,
   bloodList,
@@ -47,17 +37,12 @@ import { getCommonParams, viewBase64String } from "../../../Utils/helper";
 import SingleImageFileUploadComponent from "../SingleImageUploadComponent";
 import EmployeeLeavingForm from "./EmployeeLeavingForm";
 import { useGetDepartmentQuery } from "../../../redux/services/DepartmentMasterService";
-import EmployeeReport from "./Report";
-import { useDispatch } from "react-redux";
-import Loader from "../Loader";
 import { Check, LayoutGrid, Plus, Power, Table } from "lucide-react";
 import imageDefault from "../../../assets/default-dp.png";
 import Swal from "sweetalert2";
 import { CityMaster, DepartmentMaster, EmployeeCategoryMaster } from "..";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
-
-const MODEL = "Employee Master";
 
 export default function Form() {
   const [form, setForm] = useState(false);
@@ -97,7 +82,6 @@ export default function Form() {
   const [permanent, setPermanent] = useState("");
   const [active, setActive] = useState(true);
   const [bankName, setBankName] = useState("");
-  const [branchPrefixCategory, setBranchPrefixCategory] = useState("");
   // Employee Leaving form fields
   const [leavingForm, setLeavingForm] = useState(false);
 
@@ -110,7 +94,6 @@ export default function Form() {
   const [image, setImage] = useState(null);
 
   const childRecord = useRef(0);
-  const dispatch = useDispatch();
   const [view, setView] = useState("table");
 
   const { branchId, userId, companyId, finYearId } = getCommonParams();
@@ -120,33 +103,19 @@ export default function Form() {
       sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
-  const {
-    data: countriesList,
-    isLoading: isCountryLoading,
-    isFetching: isCountryFetching,
-  } = useGetCountriesQuery({ params });
 
-  const {
-    data: cityList,
-    isLoading: cityLoading,
-    isFetching: cityFetching,
-  } = useGetCityQuery({ params });
+  const { data: cityList } = useGetCityQuery({ params });
 
   const { data: employeeCategoryList } = useGetEmployeeCategoryQuery({
     params,
   });
 
   const { data: departmentList } = useGetDepartmentQuery({ params });
-  const {
-    data: allData,
-    isLoading,
-    isFetching,
-  } = useGetEmployeeQuery({ params, searchParams: searchValue });
+  const { data: allData } = useGetEmployeeQuery({
+    params,
+    searchParams: searchValue,
+  });
 
-  const isCurrentEmployeeDoctor = (employeeCategory) =>
-    employeeCategoryList.data
-      .find((cat) => parseInt(cat.id) === parseInt(employeeCategory))
-      ?.name?.toUpperCase() === "DOCTOR";
   const {
     data: singleData,
     isFetching: isSingleFetching,
@@ -178,7 +147,7 @@ export default function Form() {
         data?.commissionCharges ? data?.commissionCharges : "",
       );
       setGender(data?.gender ? data?.gender : "");
-      setRegNo(data?.regNo ? data?.regNo : "");
+      setRegNo(data?.regNo ? data?.regNo : "New");
       setJoiningDate(
         data?.joiningDate
           ? moment.utc(data?.joiningDate).format("YYYY-MM-DD")
@@ -261,27 +230,46 @@ export default function Form() {
     rejoinReason,
     bankName,
   };
+  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/; // ABCDE1234F
 
   const validateData = (data) => {
-    if (
-      data.name &&
-      data.gender &&
-      data.bloodGroup &&
-      data.dob &&
-      data.active &&
-      data.employeeCategoryId &&
-      data.department &&
-      data.joiningDate &&
-      data.mobile &&
-      data.localAddress &&
-      data?.permPincode &&
-      data.permCity &&
-      data?.maritalStatus
-    ) {
-      return true;
+    const requiredFields = [
+      { key: "name", label: "Employee Name" },
+      { key: "gender", label: "Gender" },
+      { key: "bloodGroup", label: "Blood Group" },
+      { key: "dob", label: "Date of Birth" },
+      { key: "employeeCategoryId", label: "Employee Category" },
+      { key: "department", label: "Department" },
+      { key: "joiningDate", label: "Joining Date" },
+      { key: "mobile", label: "Mobile Number" },
+      { key: "localAddress", label: "Address" },
+      { key: "permPincode", label: " Pincode" },
+      { key: "permCity", label: " City" },
+      { key: "maritalStatus", label: "Marital Status" },
+    ];
+
+    const missingField = requiredFields.find((field) => !data[field.key]);
+
+    if (missingField) {
+      return {
+        isValid: false,
+        message: `${missingField.label} is required`,
+      };
     }
-    return false;
+
+    return { isValid: true };
   };
+
+  const validateMobile = (mobile) => {
+    const mobileRegex = /^[6-9]\d{9}$/; // Indian mobile number format
+    return mobileRegex.test(mobile);
+  };
+
+  const validatePincode = (pincode) => {
+    const pincodeRegex = /^[1-9][0-9]{5}$/; // 6 digit pincode, not starting with 0
+    return pincodeRegex.test(pincode);
+  };
+
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
       let returnData;
@@ -334,14 +322,52 @@ export default function Form() {
   };
 
   const saveData = (nextProcess) => {
-    if (!validateData(data)) {
+    const validation = validateData(data);
+    if (!validation.isValid) {
       Swal.fire({
-        title: "Please fill all required fields...!",
+        title: "Validation Error",
+        text: validation.message,
         icon: "error",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
+    if (data.mobile && !validateMobile(data.mobile)) {
+      Swal.fire({
+        title: "Invalid Mobile Number",
+        text: "Please enter a valid 10-digit Indian mobile number starting with 6-9",
+        icon: "error",
+        confirmButtonColor: "#3085d6",
+        didClose: () => {
+          // Focus on mobile input field if you have a ref for it
+          // mobileRef.current?.focus();
+        },
       });
       return;
     }
 
+    // Step 3: Validate permanent pincode format
+    if (data.permPincode && !validatePincode(data.permPincode)) {
+      Swal.fire({
+        title: "Invalid Pincode",
+        text: "Please enter a valid 6-digit pincode",
+        icon: "error",
+        confirmButtonColor: "#3085d6",
+        didClose: () => {
+          // Focus on pincode input field if you have a ref for it
+          // pincodeRef.current?.focus();
+        },
+      });
+      return;
+    }
+    if (data.panNo && !panRegex.test(data.panNo.toUpperCase())) {
+      Swal.fire({
+        title: "Invalid PAN Number",
+        text: "Format: ABCDE1234F",
+        icon: "error",
+      });
+      return;
+    }
     let foundItem;
 
     if (id) {
@@ -360,8 +386,7 @@ export default function Form() {
       return;
     }
 
-    if(id){
-
+    if (id) {
       if (!window.confirm("Are you sure update the details ...?")) return;
     }
 
@@ -398,8 +423,7 @@ export default function Form() {
           title: "Deleted Successfully",
           icon: "success",
         });
-                                  syncFormWithDb(undefined);
-
+        syncFormWithDb(undefined);
       } catch (error) {
         toast.error("something went wrong");
       }
@@ -533,11 +557,9 @@ export default function Form() {
       if (!data.dob) newErrors.dob = "Date of Birth is required";
       if (!data.gender) newErrors.gender = "Gender is required";
     } else if (step === 4) {
-      if (!data.localAddress)
-        newErrors.localAddress = "Local Address is required";
-      if (!data.localPincode)
-        newErrors.localPincode = "Local Pincode is required";
-      if (!data.localCity) newErrors.localCity = "Local City is required";
+      if (!data.localAddress) newErrors.localAddress = " Address is required";
+      if (!data.localPincode) newErrors.localPincode = " Pincode is required";
+      if (!data.localCity) newErrors.localCity = " City is required";
     } else if (step === 6) {
       if (!data.active) newErrors.active = "Set Status";
     }
@@ -702,13 +724,6 @@ export default function Form() {
                       : "Employee Master"
                     : "Add New Employee"}
                 </h2>
-                {regNo && (
-                  <span
-                    className={`px-2 py-0.5 text-xs rounded-full ${active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
-                  >
-                    {regNo}
-                  </span>
-                )}
               </div>
 
               <div className="flex gap-2">
@@ -917,11 +932,11 @@ export default function Form() {
 
                       <div>
                         <TextInputNew1
-                          name="Chamber no"
+                          name="Designation"
                           value={chamberNo}
                           setValue={setChamberNo}
                           readOnly={readOnly}
-                          required={isCurrentEmployeeDoctor(employeeCategory)}
+                          // required={isCurrentEmployeeDoctor(employeeCategory)}
                           // disabled={childRecord.current > 0}
                         />
                       </div>
@@ -941,6 +956,16 @@ export default function Form() {
                             {errors.joiningDate}
                           </span>
                         )}
+                      </div>
+                      <div>
+                        <TextInputNew1
+                          name="Employee ID"
+                          value={regNo}
+                          setValue={setRegNo}
+                          readOnly={true}
+                          // required={isCurrentEmployeeDoctor(employeeCategory)}
+                          // disabled={childRecord.current > 0}
+                        />
                       </div>
                     </div>
                   </div>

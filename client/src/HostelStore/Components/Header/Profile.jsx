@@ -1,56 +1,25 @@
 import { LogOut } from 'lucide-react'
-import React, { useCallback, useEffect, useState } from 'react'
 import Modal from '../../../UiComponents/Modal';
 import { useNavigate } from 'react-router-dom';
 import secureLocalStorage from 'react-secure-storage';
 import { useGetUserByIdQuery } from '../../../redux/services/UsersMasterService';
-import { toast } from 'react-toastify';
-import axios from 'axios';
-import { PAGES_API, ROLES_API } from '../../../Api';
-import AccountDetailsDropDown from './AccountsDropDown';
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserCircle } from "@fortawesome/free-solid-svg-icons";
-import useOutsideClick from "../../../CustomHooks/handleOutsideClick";
-import { useDispatch } from "react-redux";
-import { push } from "../../../redux/features/opentabs";
-import Swal from 'sweetalert2';
+import { useDispatch } from 'react-redux';
+import { push } from '../../../redux/features/opentabs';
+import useOutsideClick from '../../../CustomHooks/handleOutsideClick';
+import { useState } from 'react';
 import Logout from '../../../Basic/components/LogoutConfirm';
 
-
-const BASE_URL = process.env.REACT_APP_SERVER_URL;
-
-
-const Profile = ({ dp, items, setProfile }) => {
-    const [logout, setLogout] = useState(false);
-    const navigate = useNavigate();
-
-    const branchId = secureLocalStorage.getItem(
-        sessionStorage.getItem("sessionId") + "currentBranchId"
-    )
-
-
-    const [allowedPages, setAllowedPages] = useState([]);
-    const [formReport, setFormReport] = useState(false)
+const Profile = ({ dp, setProfile, items = [], setLogout, logout }) => {
 
 
 
-
+    const toggleNavMenu = () => {
+        setProfile(false);
+    };
 
     const dispatch = useDispatch()
 
-    const [hideNavBar, sethideNavBar] = useState(true);
 
-    const navBatItemsStyle = hideNavBar ? "hidden" : "";
-
-    const handleOutsideClick = () => {
-        sethideNavBar(true);
-    };
-
-    const ref = useOutsideClick(handleOutsideClick);
-
-    const toggleNavMenu = () => {
-        sethideNavBar(!hideNavBar);
-    };
     const id = secureLocalStorage.getItem(sessionStorage.getItem("sessionId") + "userId")
     const {
         data: singleData,
@@ -58,127 +27,74 @@ const Profile = ({ dp, items, setProfile }) => {
         isLoading: isSingleLoading,
     } = useGetUserByIdQuery(id);
 
-
-    const retrieveAllowedPages = useCallback(() => {
-        const defaultAdminRaw = secureLocalStorage.getItem(
-            sessionStorage.getItem("sessionId") + "defaultAdmin"
-        );
-
-        let defaultAdmin = false;
-        try {
-            if (typeof defaultAdminRaw === "string") {
-                defaultAdmin = JSON.parse(defaultAdminRaw);
-            } else {
-                defaultAdmin = defaultAdminRaw;
-            }
-        } catch (e) {
-            console.error("Failed to parse defaultAdmin:", e);
-            defaultAdmin = false;
-        }
-        if (
-            defaultAdmin
-        ) {
-            axios({
-                method: "get",
-                url: BASE_URL + PAGES_API,
-                params: { active: true },
-            }).then(
-                (result) => {
-                    console.log("result", result.data.data);
-                    setAllowedPages(result.data.data);
-                },
-                (error) => {
-                    console.log(error);
-                    Swal.fire({
-                        title: "Server Down",
-                        icon: "error",
-
-                    });
-                }
-            );
-        } else {
-            axios({
-                method: "get",
-                url:
-                    BASE_URL +
-                    ROLES_API +
-                    `/${secureLocalStorage.getItem(
-                        sessionStorage.getItem("sessionId") + "userRoleId"
-                    )}`,
-            }).then(
-                (result) => {
-                    if (result.status === 200) {
-                        if (result.data.statusCode === 0) {
-                            setAllowedPages(
-                                result.data.data.RoleOnPage.filter(
-                                    (page) => page.page.active && page.read
-                                ).map((page) => {
-                                    return {
-                                        name: page.page.name,
-                                        type: page.page.type,
-                                        link: page.page.link,
-                                        id: page.page.id,
-                                        pageGroupId: page.page.pageGroupId
-                                    };
-                                })
-                            );
-                        }
-                    } else {
-                        console.log(result);
-                    }
-                },
-                (error) => {
-                    console.log(error);
-                    Swal.fire({
-                        title: "Server Down",
-                        icon: "error",
-
-                    });
-                }
-            );
-        }
-    }, []);
-    useEffect(retrieveAllowedPages, [retrieveAllowedPages]);
+    console.log("items", items, secureLocalStorage.setItem(
+        sessionStorage.getItem("sessionId") + "currentPage"))
 
 
 
     return (
-        <div className="absolute rounded-lg right-0 top-10 bg-white p-3 shadow w-[300px] z-10">
-            <Modal
-                isOpen={logout}
-                onClose={() => {
-                    setLogout(false);
-                }}
-                widthClass={""}
-            >
-                <Logout setLogout={setLogout} />
-            </Modal>
-            <div className="font-semibold">Profile</div>
-            <div className="bg-beige flex p-2 items-center rounded-lg">
-                <div className="mr-2 w-12">
-                    <img className="rounded-full" width={'30px'} height={'30px'} src={dp} alt="image" />
-                </div>
-                <div>
-                    <div className="text-sm text-black my-0 py-0">
-                        {secureLocalStorage.getItem(
-                            sessionStorage.getItem("sessionId") + "username"
-                        )}
+        <div className="absolute right-0 top-10 w-60 bg-white rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 z-50 overflow-hidden transition-all duration-200 ease-in-out transform origin-top-right">
+            <div className="flex flex-col">
+                {/* Header section with User Info */}
+                <div className="px-4 py-3 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100 flex items-center">
+                    <div className="h-10 w-10 rounded-full overflow-hidden border border-slate-200 shadow-sm flex-shrink-0 bg-white">
+                        <img className="h-full w-full object-cover" src={dp} alt="User avatar" />
                     </div>
-                    <div className="text-[11px] p-0 text-gray-400 -mt-1 ">{singleData?.data?.email}</div>
-                    {/* <button onClick={() => { navigate("/dashboard/accountsettings"); setProfile(false) }} className="button border border-black  rounded hover:bg-stone-900 hover:text-white mt-2">Edit Profile</button> */}
+                    <div className="ml-3 overflow-hidden">
+                        <p className="text-sm font-bold text-slate-800 truncate tracking-tight">
+                            {secureLocalStorage.getItem(sessionStorage.getItem("sessionId") + "username")}
+                        </p>
+                        <p className="text-[11px] font-medium text-slate-500 truncate mt-0.5">
+                            {singleData?.data?.email || "User Account"}
+                        </p>
+                    </div>
                 </div>
-            </div>
-            <AccountDetailsDropDown setLogout={setLogout} setProfile={setProfile}
-                items={allowedPages.filter((page) => page.type === "AdminAccess")}
-            />
-            <div className="flex text-[12px] items-center mt-3 pt-3 border-t mx-2" style={{ borderTopWidth: '0.5px', borderColor: '#dce1e9' }}>
-                <span onClick={() => setLogout(true)} className="flex items-center cursor-pointer">
-                    <LogOut className="mr-2" size={20} />
-                    Log Out
-                </span>
+
+                {/* Navigation items */}
+                <div className="p-1.5 flex flex-col gap-0.5 max-h-56 overflow-y-auto">
+                    <button
+                        onClick={() => {
+                            dispatch(push({ id: 1000000, name: "ACCOUNT SETTINGS" }));
+                            setProfile(true);
+                        }}
+                        className="w-full text-left px-2.5 py-2 text-xs font-semibold text-slate-700 rounded-md hover:bg-blue-100 transition-colors flex items-center"
+                    >
+                        Account Settings
+                    </button>
+                    {items.map((item, index) => (
+                        <button
+                            key={index}
+                            onClick={() => {
+                                dispatch(push({ id: item.id, name: item.name }));
+                                secureLocalStorage.setItem(
+                                    sessionStorage.getItem("sessionId") + "currentPage",
+                                    item.id
+                                );
+                                setProfile(true);
+                            }}
+                            className="w-full text-left px-2.5 py-2 text-xs font-medium text-slate-600 rounded-md hover:bg-slate-100 transition-colors truncate"
+                        >
+                            <span className="capitalize">{typeof item.name === 'string' ? item.name.toLowerCase() : item.name}</span>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Footer section with Logout */}
+                <div className="p-1.5 border-t border-slate-100 bg-slate-50">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setLogout(true);
+                            setProfile(true);
+                        }}
+                        className="w-full flex items-center px-2.5 py-2 text-xs font-bold text-rose-600 rounded-md hover:bg-rose-100 transition-colors"
+                    >
+                        <LogOut className="mr-2" size={14} strokeWidth={2.5} />
+                        Sign Out
+                    </button>
+                </div>
             </div>
         </div>
-
     )
 }
 

@@ -372,7 +372,7 @@ const {
         <Modal
           isOpen={form}
           form={form}
-          widthClass={"w-[620px] max-w-6xl h-[450px]"}
+          widthClass={"w-[550px] max-w-6xl h-[400px]"}
           onClose={() => {
             setForm(false);
             syncFormWithDb(undefined);
@@ -445,7 +445,7 @@ const {
                   <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
                     <fieldset className=" rounded mt-2">
                       <div className="">
-                        <div className="flex flex-wrap justify-between mt-4">
+                        {/* <div className="flex flex-wrap justify-between mt-4">
                           <div className="mb-3">
                             <CheckBox
                               name="Yarn"
@@ -482,7 +482,7 @@ const {
                               disabled={childRecord.current > 0}
                             />
                           </div>
-                        </div>
+                        </div> */}
                         <div className="flex-col">
                           <div className="mb-3 w-[48%]">
                             <DropdownInput
