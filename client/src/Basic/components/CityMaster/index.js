@@ -171,7 +171,9 @@ export default function Form({
         text: "The City Name already exists.",
         icon: "warning",
         timer: 1500,
-        showConfirmButton: false,
+          didClose:() =>{
+          countryNameRef?.current?.focus();
+        }
       });
       return false;
     }
@@ -179,6 +181,9 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "error",
+          didClose:() =>{
+          countryNameRef?.current?.focus();
+        }
       });
       return;
     }
@@ -473,7 +478,10 @@ export default function Form({
               <p className="text-red-600 font-semibold">
                 Cannot delete "{deleteLabel}"
               </p>
-              <button onClick={onClose}>Close</button>
+               <button type="button" onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                Close
+              </button>
             </>
           ) : (
             <>

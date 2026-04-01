@@ -875,7 +875,7 @@ export default function Form() {
                           readOnly={readOnly}
                           className={`w-[150px]`}
                           disabled={childRecord.current > 0}
-                          addNewLabel="+ Add New State"
+                          addNewLabel="+ Add New Employee Category"
                           childComponent={EmployeeCategoryMaster}
                           addNewModalWidth="w-[40%] h-[45%]"
                         />
@@ -904,7 +904,7 @@ export default function Form() {
                           readOnly={readOnly}
                           className={`w-[150px]`}
                           disabled={childRecord.current > 0}
-                          addNewLabel="+ Add New State"
+                          addNewLabel="+ Add New Department"
                           childComponent={DepartmentMaster}
                           addNewModalWidth="w-[40%] h-[45%]"
                         />

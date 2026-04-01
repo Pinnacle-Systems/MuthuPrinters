@@ -27,6 +27,7 @@ import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMas
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import { ItemGroup, UomMaster, SizeTemplate, HsnMaster } from "..";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 const MODEL = "Item Master";
 export default function Form() {
@@ -45,6 +46,7 @@ export default function Form() {
   const [sizeTemplateId, setSizeTemplateId] = useState("");
   const [uomId, setUomId] = useState("");
   const [dispatchInvalidate] = useInvalidateTags();
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const params = {
     companyId: secureLocalStorage.getItem(
@@ -172,7 +174,9 @@ export default function Form() {
         text: "The Item Name already exists.",
         icon: "warning",
         timer: 1500,
-        showConfirmButton: false,
+         didClose:() =>{
+          countryNameRef?.current?.focus();
+        }
       });
       return false;
     }
@@ -181,6 +185,9 @@ export default function Form() {
         title: "Please fill all required fields...!",
         icon: "success",
         timer: 1000,
+         didClose:() =>{
+          countryNameRef?.current?.focus();
+        }
       });
       return;
     }
@@ -253,8 +260,8 @@ export default function Form() {
     setId("");
     setForm(true);
     setSearchValue("");
-    syncFormWithDb(undefined);
     setReadOnly(false);
+    syncFormWithDb(undefined);
   };
 
   const ACTIVE = (
@@ -301,8 +308,12 @@ export default function Form() {
     setReadOnly(false);
   };
 
-  const countryNameRef = useRef(null);
-
+  const {
+        firstInputRef: countryNameRef,
+        toggleButtonRef,
+        saveCloseButtonRef,
+        saveNewButtonRef,
+      } = refs;
   useEffect(() => {
     if (form && countryNameRef.current) {
       countryNameRef.current.focus();
@@ -383,6 +394,9 @@ export default function Form() {
                       onClick={() => {
                         saveData("close");
                       }}
+                        ref={saveCloseButtonRef} // ✅ Add ref
+                        tabIndex={0}
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
                     >
@@ -400,6 +414,9 @@ export default function Form() {
                       }}
                       className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
+                    onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0}
                     >
                       <Check size={14} />
                       {"Save & New"}
@@ -606,6 +623,9 @@ export default function Form() {
                           setActive={setActive}
                           required={true}
                           readOnly={readOnly}
+                            ref={toggleButtonRef}
+                onKeyDown={handlers.handleToggleKeyDown}
+                tabIndex={0}
                         />
                       </div>
                     </fieldset>

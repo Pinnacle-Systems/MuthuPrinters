@@ -147,6 +147,8 @@ export default function Form() {
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
+         didClose: () => {          countryNameRef?.current?.focus();
+        }
         // draggable: true,
         // timer: 1000,
         // showConfirmButton: false,
@@ -169,6 +171,8 @@ export default function Form() {
       Swal.fire({
         text: "The Tax Template Name already exists.",
         icon: "warning",
+         didClose: () => {          countryNameRef?.current?.focus();
+        }
       });
       return false;
     }

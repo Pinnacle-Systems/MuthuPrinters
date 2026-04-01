@@ -7,6 +7,7 @@ import { ReusableTable, TextInputNew, ToggleButton } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { useAddSizeMasterMutation, useDeleteSizeMasterMutation, useGetSizeMasterByIdQuery, useGetSizeMasterQuery, useLazyGetSizeMasterByIdQuery, useUpdateSizeMasterMutation } from "../../../redux/services/SizemasterService";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 export default function Form() {
   const [form, setForm] = useState(false);
@@ -16,6 +17,7 @@ export default function Form() {
   const [name, setName] = useState("");
   const [isPoWise, setIsPowise] = useState(false);
   const [active, setActive] = useState(true);
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
@@ -74,7 +76,7 @@ export default function Form() {
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
       let returnData = await callback(data).unwrap();
-
+      
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
@@ -102,12 +104,13 @@ export default function Form() {
 
   const saveData = (nextProcess) => {
     if (!validateData(data)) {
-      toast.info("Please fill all required fields...!", {
-        position: "top-center",
-      });
+      
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
+          didClose:() =>{
+          countryNameRef?.current?.focus();
+        }
         // draggable: true,
         // timer: 1000,
         // showConfirmButton: false,
@@ -130,6 +133,9 @@ export default function Form() {
       Swal.fire({
         text: "The Size Name already exists.",
         icon: "warning",
+          didClose:() =>{
+          countryNameRef?.current?.focus();
+        }
       });
       return false;
     }
@@ -194,8 +200,8 @@ export default function Form() {
     setId("");
     setForm(true);
     setSearchValue("");
-    syncFormWithDb(undefined);
     setReadOnly(false);
+    syncFormWithDb(undefined);
   };
 
   const ACTIVE = (
@@ -244,7 +250,12 @@ export default function Form() {
     console.log("Edit");
   };
 
-  const countryNameRef = useRef(null);
+  const {
+      firstInputRef: countryNameRef,
+      toggleButtonRef,
+      saveCloseButtonRef,
+      saveNewButtonRef,
+    } = refs;
 
   useEffect(() => {
     if (form && countryNameRef.current) {
@@ -328,6 +339,9 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
+                    ref={saveCloseButtonRef} // ✅ Add ref
+                        tabIndex={0}
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {id ? "Update" : "Save & close"}
@@ -343,6 +357,9 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
+                   onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0}
                       >
                         <Check size={14} />
                         {"Save & New"}
@@ -380,6 +397,8 @@ export default function Form() {
                             setActive={setActive}
                             required={true}
                             readOnly={readOnly}
+                               ref={toggleButtonRef}
+                onKeyDown={handlers.handleToggleKeyDown}
                           />
                         </fieldset>
                       </div>

@@ -108,6 +108,10 @@ export default function Form({
     try {
       let returnData = await callback(data).unwrap();
       if (onSuccess) {
+         await Swal.fire({
+                  title: text + "  " + "Successfully",
+                  icon: "success",
+                });
         onSuccess(returnData?.data.id);
         return;
       }
@@ -137,6 +141,8 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
+         didClose: () => {          countryNameRef?.current?.focus();
+        }
       });
       return;
     }
@@ -160,7 +166,10 @@ export default function Form({
         text: "The Hsn Code already exists.",
         icon: "warning",
         timer: 1500,
-        showConfirmButton: false,
+        // showConfirmButton: false,
+        didClose: () => {
+          countryNameRef?.current?.focus();
+        }
       });
       return false;
     }
@@ -379,13 +388,27 @@ export default function Form({
               <p>
                 "{deleteLabel}" has {childCount} linked records.
               </p>
-              <button onClick={onClose}>Close</button>
+               <button type="button" onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                Close
+              </button>
             </>
           ) : (
             <>
-              <p>Are you sure to delete "{deleteLabel}"?</p>
-              <button onClick={onClose}>Cancel</button>
-              <button onClick={handleConfirmDelete}>Delete</button>
+              <p className="text-sm text-gray-700 text-center">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold">"{deleteLabel}"</span>?
+              </p>
+              <div className="flex gap-3">
+                <button type="button" onClick={onClose}
+                  className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                  Cancel
+                </button>
+                <button type="button" onClick={handleConfirmDelete}
+                  className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded">
+                  Delete
+                </button>
+              </div>
             </>
           )}
         </div>

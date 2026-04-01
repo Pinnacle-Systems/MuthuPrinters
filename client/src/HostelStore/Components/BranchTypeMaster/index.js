@@ -19,6 +19,7 @@ import {
   useGetbranchTypeQuery,
   useUpdatebranchTypeMutation,
 } from "../../../redux/services/BranchTypeMaster";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 const MODEL = "Department Master";
 
@@ -40,6 +41,7 @@ export default function Form({
   const [form, setForm] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   console.log(readOnly, "readOnly");
   const params = {
@@ -108,24 +110,28 @@ export default function Form({
       setId(returnData.data.id);
       // toast.success(text + "Successfully");
       if (onSuccess) {
+        await Swal.fire({
+                                                 title: text + "  " + "Successfully",
+                                                 icon: "success",
+                                               });
         onSuccess(returnData.data.id);
         return;
       }
-      Swal.fire({
-        title: text + "  " + "Successfully",
-        icon: "success",
-        didClose: () => {
-          countryNameRef.current?.focus();
-        },
-      });
+     
 
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
+                  countryNameRef.current?.focus();
+
       } else {
         setForm(false);
         syncFormWithDb(undefined);
       }
+       Swal.fire({
+        title: text + "  " + "Successfully",
+        icon: "success",
+      });
     } catch (error) {
       setForm(false);
     }
@@ -141,6 +147,9 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
+        didClose:() =>{
+          countryNameRef?.current?.focus();
+        }
       });
 
       return;
@@ -165,7 +174,9 @@ export default function Form({
         text: "The Branch Type  already exists.",
         icon: "warning",
         timer: 1500,
-        showConfirmButton: false,
+       didClose:() =>{
+          countryNameRef?.current?.focus();
+        }
       });
       return false;
     }
@@ -229,9 +240,7 @@ export default function Form({
     setReadOnly(false);
     setForm(true);
     setSearchValue("");
-    setTimeout(() => {
-      countryNameRef.current?.focus();
-    }, 100);
+   syncFormWithDb(undefined);
   };
 
   function onDataClick(id) {
@@ -284,7 +293,12 @@ export default function Form({
     },
   ];
 
-  const countryNameRef = useRef(null);
+ const {
+        firstInputRef: countryNameRef,
+        toggleButtonRef,
+        saveCloseButtonRef,
+        saveNewButtonRef,
+      } = refs;
 
   useEffect(() => {
     if ((form || onSuccess) && countryNameRef.current) {
@@ -326,6 +340,7 @@ export default function Form({
                       required={true}
                       readOnly={readOnly}
                       disabled={childRecord.current > 0}
+                       onKeyDown={handlers.handleToggleKeyDown}
                     />
                   </div>
                 </fieldset>
@@ -358,13 +373,13 @@ export default function Form({
     };
 
     return (
-      <div className="h-full flex flex-col bg-gray-200">
+      <div className=" min-h-[250px] flex flex-col bg-gray-200">
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
           <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
             Delete Branch Type
           </h2>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
           {isLoadingRecord ? (
             <p className="text-xs text-gray-400">Checking records...</p>
           ) : childCount > 0 ? (
@@ -445,6 +460,8 @@ export default function Form({
           <button
             type="button"
             onClick={() => saveData("close")}
+            ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
             className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
           >
             <Check size={14} />
@@ -658,6 +675,9 @@ export default function Form({
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                               border border-blue-600 flex items-center gap-1 text-xs"
+                              ref={saveCloseButtonRef} // ✅ Add ref
+                        tabIndex={0}
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {id ? "Update" : "Save & close"}
@@ -671,6 +691,9 @@ export default function Form({
                         onClick={() => {
                           saveData("new");
                         }}
+                         onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                               border border-green-600 flex items-center gap-1 text-xs"
                       >

@@ -13,6 +13,7 @@ import {
   useGetPaytermMasterQuery,
   useUpdatePaytermMasterMutation,
 } from "../../../redux/services/payTermMasterService";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 const MODEL = "Pay Term Master";
 
@@ -32,6 +33,7 @@ export default function Form({
   const [days, setDays] = useState("");
   const [active, setActive] = useState(true);
   const [aliasName, setAliasName] = useState("");
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
@@ -101,22 +103,28 @@ export default function Form({
       setId(returnData.data.id);
 
       if (onSuccess) {
+         await Swal.fire({
+                                 title: text + "  " + "Successfully",
+                                 icon: "success",
+                               });
         onSuccess(returnData.data.id);
         return;
       }
 
-      await Swal.fire({
-        title: text + "  " + "Successfully",
-        icon: "success",
-      });
+     
 
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
+        payTermNameRef?.current?.focus();
       } else {
         setForm(false);
         syncFormWithDb(undefined);
       }
+       await Swal.fire({
+        title: text + "  " + "Successfully",
+        icon: "success",
+      });
     } catch (error) {
       await Swal.fire({
         icon: "error",
@@ -138,8 +146,10 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "error",
+          didClose:() =>{
+          payTermNameRef?.current?.focus();
+        }
       });
-      payTermNameRef?.current?.focus();
       return;
     }
 
@@ -158,8 +168,11 @@ export default function Form({
       Swal.fire({
         text: "The Pay Term Name already exists.",
         icon: "warning",
+          didClose:() =>{
+
+          payTermNameRef?.current?.focus();
+        }
       });
-      payTermNameRef?.current?.focus();
       return false;
     }
 
@@ -222,9 +235,8 @@ export default function Form({
     setReadOnly(false);
     setForm(true);
     setSearchValue("");
-    setTimeout(() => {
-      payTermNameRef?.current?.focus();
-    }, 100);
+      syncFormWithDb(undefined);
+
   };
 
   const handleView = (id) => {
@@ -257,21 +269,21 @@ export default function Form({
       accessor: (item, index) => index + 1,
       className: "font-medium text-gray-900 w-12 text-center",
     },
-    {
-      header: "Days",
-      accessor: (item) => item.days,
-      className: "font-medium text-gray-900 text-center w-24",
-    },
+    // {
+    //   header: "Days",
+    //   accessor: (item) => item.days,
+    //   className: "font-medium text-gray-900 text-center w-24",
+    // },
     {
       header: "Pay Term",
       accessor: (item) => item.name,
       className: "font-medium text-gray-900 text-left uppercase w-64",
     },
-    {
-      header: "Alias Name",
-      accessor: (item) => item.aliasName || "-",
-      className: "font-medium text-gray-900 text-left w-48",
-    },
+    // {
+    //   header: "Alias Name",
+    //   accessor: (item) => item.aliasName || "-",
+    //   className: "font-medium text-gray-900 text-left w-48",
+    // },
     {
       header: "Status",
       accessor: (item) => (item.active ? ACTIVE : INACTIVE),
@@ -279,7 +291,13 @@ export default function Form({
     },
   ];
 
-  const payTermNameRef = useRef(null);
+  const {
+      firstInputRef: payTermNameRef,
+      toggleButtonRef,
+      saveCloseButtonRef,
+      saveNewButtonRef,
+    } = refs;
+    const descriptionRef = useRef(null);
 
   useEffect(() => {
     if ((form || onSuccess) && payTermNameRef.current) {
@@ -380,6 +398,8 @@ export default function Form({
               setActive={setActive}
               required={true}
               readOnly={readOnly}
+              ref={toggleButtonRef}
+                onKeyDown={handlers.handleToggleKeyDown}
             />
           </div>
         </div>
@@ -579,6 +599,9 @@ export default function Form({
                       onClick={() => saveData("close")}
                       className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                         border border-blue-600 flex items-center gap-1 text-xs"
+                        ref={saveCloseButtonRef} // ✅ Add ref
+                        tabIndex={0}
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                     >
                       <Check size={14} />
                       {id ? "Update" : "Save & close"}
@@ -592,6 +615,9 @@ export default function Form({
                       onClick={() => saveData("new")}
                       className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                         border border-green-600 flex items-center gap-1 text-xs"
+                          onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0}
                     >
                       <Check size={14} />
                       {"Save & New"}

@@ -451,7 +451,10 @@ export default function Form({
               <p className="text-red-600 font-semibold">
                 Cannot delete "{deleteLabel}"
               </p>
-              <button onClick={onClose}>Close</button>
+              <button type="button" onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                Close
+              </button>
             </>
           ) : (
             <>

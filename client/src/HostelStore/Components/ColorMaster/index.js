@@ -128,6 +128,8 @@ export default function Form() {
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
+          didClose: () => {          countryNameRef?.current?.focus();
+        }
       });
       return;
     }
@@ -144,6 +146,8 @@ export default function Form() {
       Swal.fire({
         text: "The Color Name already exists.",
         icon: "warning",
+          didClose: () => {          countryNameRef?.current?.focus();
+        }
       });
       return false;
     }

@@ -146,7 +146,6 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         didClose: () => {          countryNameRef?.current?.focus();
         }
       });
-      countryNameRef.current?.focus();
       return;
     }
     let foundItem;
@@ -162,8 +161,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       Swal.fire({
         text: "The Country Name already exists.",
         icon: "warning",
+         didClose: () => {          countryNameRef?.current?.focus();
+        }
       });
-      countryNameRef.current?.focus();
       return false;
     }
     if (id) {

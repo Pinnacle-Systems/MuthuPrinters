@@ -23,6 +23,7 @@ import { Check, Power } from "lucide-react";
 import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import Swal from "sweetalert2";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 const MODEL = "Employee Category Master";
 
@@ -40,6 +41,7 @@ export default function Form({
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [active, setActive] = useState(true);
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
@@ -102,6 +104,10 @@ export default function Form({
       setId("");
       syncFormWithDb(undefined);
       if (onSuccess) {
+         await Swal.fire({
+                                         title: text + "  " + "Successfully",
+                                         icon: "success",
+                                       });
         onSuccess(returnData.data.id);
         return;
       }
@@ -128,6 +134,9 @@ export default function Form({
       Swal.fire({
         text: "Please fill all required fields...!",
         icon: "warning",
+        didClose:() =>{
+          countryNameRef?.current?.focus();
+        }
       });
       return;
     }
@@ -143,6 +152,9 @@ export default function Form({
       Swal.fire({
         text: "The Employee Category Name already exists.",
         icon: "warning",
+        didClose:() =>{
+          countryNameRef?.current?.focus();
+        }
       });
       return false;
     }
@@ -199,6 +211,7 @@ export default function Form({
     setReadOnly(false);
     setForm(true);
     setSearchValue("");
+    syncFormWithDb(undefined);
   };
 
   function onDataClick(id) {
@@ -276,7 +289,12 @@ export default function Form({
     },
   ];
 
-  const countryNameRef = useRef(null);
+ const {
+      firstInputRef: countryNameRef,
+      toggleButtonRef,
+      saveCloseButtonRef,
+      saveNewButtonRef,
+    } = refs;
 
   useEffect(() => {
     if ((form || onSuccess) && countryNameRef.current) {
@@ -316,6 +334,8 @@ export default function Form({
                 setActive={setActive}
                 required={true}
                 readOnly={readOnly}
+                 ref={toggleButtonRef}
+                onKeyDown={handlers.handleToggleKeyDown}
               />
             </div>
           </div>
@@ -339,12 +359,12 @@ export default function Form({
     };
 
     return (
-      <div className="h-full flex flex-col bg-gray-200">
+      <div className="min-h-[250px] flex flex-col bg-gray-200">
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center bg-white">
           <h2 className="text-lg font-semibold">Delete Employee Category</h2>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded">
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
           {isLoadingRecord ? (
             <p>Checking...</p>
           ) : childCount > 0 ? (
@@ -353,14 +373,26 @@ export default function Form({
               <p>
                 "{deleteLabel}" has {childCount} linked records.
               </p>
-              <button onClick={onClose}>Close</button>
+               <button type="button" onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                Close
+              </button>
             </>
           ) : (
-            <>
-              <p>Are you sure delete "{deleteLabel}"?</p>
-              <div className="flex gap-2">
-                <button onClick={onClose}>Cancel</button>
-                <button onClick={handleConfirmDelete}>Delete</button>
+           <>
+              <p className="text-sm text-gray-700 text-center">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold">"{deleteLabel}"</span>?
+              </p>
+              <div className="flex gap-3">
+                <button type="button" onClick={onClose}
+                  className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                  Cancel
+                </button>
+                <button type="button" onClick={handleConfirmDelete}
+                  className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded">
+                  Delete
+                </button>
               </div>
             </>
           )}
@@ -382,6 +414,8 @@ export default function Form({
           <button
             type="button"
             onClick={() => saveData("close")}
+             ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
             className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
           >
             <Check size={14} />
@@ -522,6 +556,9 @@ export default function Form({
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
+                  ref={saveCloseButtonRef} // ✅ Add ref
+                        tabIndex={0}
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {id ? "Update" : "Save & close"}
@@ -537,6 +574,9 @@ export default function Form({
                         }}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
+                  onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0}
                       >
                         <Check size={14} />
                         {"Save & New"}

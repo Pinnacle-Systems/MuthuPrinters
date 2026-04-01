@@ -14,6 +14,7 @@ import {
 } from "../../../redux/uniformService/TermsAndContionService";
 import { ReusableTable, TextInputNew1, ToggleButton } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 const MODEL = "Terms & Conditions Master";
 
@@ -32,6 +33,7 @@ export default function Form({
   const [description, setDescription] = useState("");
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const params = {
     companyId: secureLocalStorage.getItem(
@@ -96,22 +98,28 @@ export default function Form({
       setId(returnData.data.id);
 
       if (onSuccess) {
+        await Swal.fire({
+                         title: text + "  " + "Successfully",
+                         icon: "success",
+                       });
         onSuccess(returnData.data.id);
         return;
       }
 
-      await Swal.fire({
-        title: text + "  " + "Successfully",
-        icon: "success",
-      });
+      
 
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
+        termsNameRef?.current?.focus();
       } else {
         setForm(false);
         syncFormWithDb(undefined);
       }
+      await Swal.fire({
+        title: text + "  " + "Successfully",
+        icon: "success",
+      });
     } catch (error) {
       await Swal.fire({
         icon: "error",
@@ -133,8 +141,10 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "error",
+        didClose:() =>{
+          termsNameRef?.current?.focus();
+        }
       });
-      termsNameRef?.current?.focus();
       return;
     }
 
@@ -153,8 +163,11 @@ export default function Form({
       Swal.fire({
         text: "The Terms & Conditions Name already exists.",
         icon: "warning",
+        didClose:() =>{
+
+          termsNameRef?.current?.focus();
+        }
       });
-      termsNameRef?.current?.focus();
       return false;
     }
 
@@ -217,9 +230,7 @@ export default function Form({
     setReadOnly(false);
     setForm(true);
     setSearchValue("");
-    setTimeout(() => {
-      termsNameRef?.current?.focus();
-    }, 100);
+    syncFormWithDb(undefined);
   };
 
   const ACTIVE = (
@@ -269,7 +280,12 @@ export default function Form({
     setReadOnly(false);
   };
 
-  const termsNameRef = useRef(null);
+  const {
+    firstInputRef: termsNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
   const descriptionRef = useRef(null);
 
   useEffect(() => {
@@ -338,6 +354,8 @@ export default function Form({
                 setActive={setActive}
                 required={true}
                 readOnly={readOnly}
+                ref={toggleButtonRef}
+                onKeyDown={handlers.handleToggleKeyDown}
               />
             </div>
           </fieldset>
@@ -543,6 +561,9 @@ export default function Form({
                         onClick={() => saveData("close")}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                           border border-blue-600 flex items-center gap-1 text-xs"
+                        ref={saveCloseButtonRef} // ✅ Add ref
+                        tabIndex={0}
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {id ? "Update" : "Save & close"}
@@ -556,6 +577,9 @@ export default function Form({
                         onClick={() => saveData("new")}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                           border border-green-600 flex items-center gap-1 text-xs"
+                        onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0}
                       >
                         <Check size={14} />
                         {"Save & New"}

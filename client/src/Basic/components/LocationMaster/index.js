@@ -21,6 +21,7 @@ import {
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { dropDownListObject } from "../../../Utils/contructObject";
 import Modal from "../../../UiComponents/Modal";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 const MODEL = "Location Master";
 
@@ -42,10 +43,16 @@ export default function Form({
   const [isGarments, setIsGarments] = useState(false);
   const [active, setActive] = useState(true);
   const [errors, setErrors] = useState({});
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
-
+const {
+      firstInputRef: payTermNameRef,
+      toggleButtonRef,
+      saveCloseButtonRef,
+      saveNewButtonRef,
+    } = refs;
   // Create refs for form fields
   const branchRef = useRef(null);
   const locationNameRef = useRef(null);
@@ -141,10 +148,25 @@ export default function Form({
       setId(returnData.data.id);
 
       if (onSuccess) {
+         await Swal.fire({
+                                         title: text + "  " + "Successfully",
+                                         icon: "success",
+                                       });
         onSuccess(returnData.data.id);
         return;
       }
 
+      
+
+      if (nextProcess == "new") {
+        syncFormWithDb(undefined);
+        onNew();
+        // Focus on branch field after Save & New
+       branchRef.current.focus();
+      } else {
+        setForm(false);
+        syncFormWithDb(undefined);
+      }
       Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
@@ -155,20 +177,6 @@ export default function Form({
           branchRef.current.focus();
         },
       });
-
-      if (nextProcess == "new") {
-        syncFormWithDb(undefined);
-        onNew();
-        // Focus on branch field after Save & New
-        setTimeout(() => {
-          if (branchRef.current) {
-            branchRef.current.focus();
-          }
-        }, 100);
-      } else {
-        setForm(false);
-        syncFormWithDb(undefined);
-      }
     } catch (error) {
       console.log("handle");
     }
@@ -197,7 +205,9 @@ export default function Form({
         text: "The Location Name already exists.",
         icon: "warning",
         timer: 1500,
-        showConfirmButton: false,
+        didClose:() =>{
+          branchRef?.current?.focus();
+        }
       });
       return false;
     }
@@ -206,6 +216,9 @@ export default function Form({
         title: "Please fill all required fields...!",
         icon: "success",
         timer: 1000,
+           didClose:() =>{
+          branchRef?.current?.focus();
+        }
       });
       return;
     }
@@ -279,6 +292,7 @@ export default function Form({
     setSearchValue("");
     syncFormWithDb(undefined);
     setReadOnly(false);
+    syncFormWithDb(undefined);
   };
 
   const ACTIVE = (
@@ -398,6 +412,9 @@ export default function Form({
                         onClick={() => saveData("close")}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                           border border-green-600 flex items-center gap-1 text-xs"
+                          ref={saveCloseButtonRef} // ✅ Add ref
+                        tabIndex={0}
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {id ? "Update" : "Save & close"}
@@ -408,6 +425,9 @@ export default function Form({
                           onClick={() => saveData("new")}
                           className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                             border border-blue-600 flex items-center gap-1 text-xs"
+                              onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0}
                         >
                           <Check size={14} />
                           {"Save & New"}
@@ -507,6 +527,8 @@ export default function Form({
                             setActive={setActive}
                             required={true}
                             readOnly={readOnly}
+                             ref={toggleButtonRef}
+                onKeyDown={handlers.handleToggleKeyDown}
                           />
                         </div>
                       </div>
