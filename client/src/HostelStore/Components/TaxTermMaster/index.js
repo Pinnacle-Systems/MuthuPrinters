@@ -118,8 +118,9 @@ export default function Form() {
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
-          didClose: () => {          countryNameRef?.current?.focus();
-        }
+        didClose: () => {
+          countryNameRef?.current?.focus();
+        },
         // draggable: true,
         // timer: 1000,
         // showConfirmButton: false,
@@ -142,8 +143,9 @@ export default function Form() {
       Swal.fire({
         text: "The Tax Term Name already exists.",
         icon: "warning",
-          didClose: () => {          countryNameRef?.current?.focus();
-        }
+        didClose: () => {
+          countryNameRef?.current?.focus();
+        },
       });
       return false;
     }
@@ -341,7 +343,6 @@ export default function Form() {
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
-          childRecordLabel="Tax Template Master"
         />
       </div>
 
@@ -393,7 +394,7 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
-                  ref={saveCloseButtonRef}
+                        ref={saveCloseButtonRef}
                         tabIndex={0} // ✅ Add tabIndex
                         onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
@@ -411,7 +412,7 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
-                   ref={saveNewButtonRef} // ✅ Add ref
+                        ref={saveNewButtonRef} // ✅ Add ref
                         tabIndex={0} // ✅ Add tabIndex
                         onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
                       >

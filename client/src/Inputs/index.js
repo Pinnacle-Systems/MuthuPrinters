@@ -7,7 +7,7 @@ import React, {
   useState,
 } from "react";
 import { MultiSelect } from "react-multi-select-component";
-import Select from "react-select";
+import Select, { components } from "react-select";
 import { findFromList } from "../Utils/helper";
 import {
   FaChevronLeft,
@@ -355,9 +355,17 @@ export const DropdownInput = forwardRef(
           defaultValue={defaultValue}
           required={required}
           className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
-          focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
-          transition-all duration-150 shadow-sm
-          ${className}`}
+    focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+    transition-all duration-150 shadow-sm
+    ${readOnly || disabled ? "bg-slate-100 cursor-not-allowed" : "bg-white cursor-pointer"}
+    ${!value || value === "" ? "text-gray-500" : "text-gray-800"}
+    ${className}
+    appearance-none bg-no-repeat bg-right pr-8`}
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+            backgroundSize: "12px",
+            backgroundPosition: "right 0.75rem center",
+          }}
           value={value}
           onChange={(e) => {
             beforeChange();
@@ -1510,11 +1518,13 @@ export const ReusableTable = ({
                                   {hasChildRecords &&
                                     hoveredDeleteId === item.id && (
                                       <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-2 bg-gray-900 text-white text-[12px] rounded shadow-lg whitespace-nowrap z-50">
-                                        Child Record Exist{" "}
+                                        Cannot Delete{" "}
                                         <span className="font-semibold">
-                                          {childRecordLabel ? "in " + childRecordLabel : ""}
+                                          {childRecordLabel
+                                            ? "in " + childRecordLabel
+                                            : ""}
                                         </span>
-                                        . Please Remove them First.
+                                        . Child records exist.
                                         {/* Arrow */}
                                         <div className="absolute right-full top-1/2 transform -translate-y-1/2 mr-1">
                                           <div className="border-4 border-transparent border-r-gray-900"></div>
@@ -1542,48 +1552,46 @@ export const ReusableTable = ({
   );
 };
 
-export const ToggleButton =forwardRef( ({
-  name,
-  value,
-  setActive,
-  required,
-  readOnly,
-  disabled = false,
-   onKeyDown,
-},ref) => {
-  const [isToggled, setIsToggled] = useState(false);
-   const labelRef = useRef(null); 
+export const ToggleButton = forwardRef(
+  (
+    { name, value, setActive, required, readOnly, disabled = false, onKeyDown },
+    ref,
+  ) => {
+    const [isToggled, setIsToggled] = useState(false);
+    const labelRef = useRef(null);
 
-   useImperativeHandle(ref, () => ({
+    useImperativeHandle(ref, () => ({
       focus: () => {
         labelRef.current?.focus();
-      }
+      },
     }));
 
-  useEffect(() => {
-    if (value) {
-      setIsToggled(true);
-    } else {
-      setIsToggled(false);
-    }
-  }, [value, isToggled]);
+    useEffect(() => {
+      if (value) {
+        setIsToggled(true);
+      } else {
+        setIsToggled(false);
+      }
+    }, [value, isToggled]);
 
-
-
-  return (
-    <div>
-      <div className="">
-        <label className={`block  font-bold text-slate-700 mb-1 text-xs`}>
-          {required ? <RequiredLabel name={name} /> : `${name}`}
-        </label>
-        <div className="flex items-center mt-1">
-          <label className="relative inline-flex items-center cursor-pointer"
-          ref={labelRef}
-           tabIndex={0}
-          
-               onKeyDown={(e) => {
+    return (
+      <div>
+        <div className="">
+          <label className={`block  font-bold text-slate-700 mb-1 text-xs`}>
+            {required ? <RequiredLabel name={name} /> : `${name}`}
+          </label>
+          <div className="flex items-center mt-1">
+            <label
+              className="relative inline-flex items-center cursor-pointer"
+              ref={labelRef}
+              tabIndex={0}
+              onKeyDown={(e) => {
                 // Handle Space or Enter to toggle
-                if ((e.key === ' ' || e.key === 'Enter') && !readOnly && !disabled) {
+                if (
+                  (e.key === " " || e.key === "Enter") &&
+                  !readOnly &&
+                  !disabled
+                ) {
                   e.preventDefault();
                   setIsToggled(!isToggled);
                   setActive(!value);
@@ -1593,34 +1601,34 @@ export const ToggleButton =forwardRef( ({
                   onKeyDown(e);
                 }
               }}
-          >
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={isToggled}
-              onChange={() => {
-                if (!readOnly) {
-                  setIsToggled(!isToggled);
-                  setActive(!value);
-                }
-              }}
-              disabled={disabled}
-              required
-             tabIndex={-1}
-              
-            />
-            <div className="w-12 h-6 bg-gray-300 rounded-full peer-checked:bg-green-500 peer transition duration-300"></div>
-            <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full peer-checked:translate-x-6 transition-transform duration-300 shadow-sm"></div>
-          </label>
+            >
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={isToggled}
+                onChange={() => {
+                  if (!readOnly) {
+                    setIsToggled(!isToggled);
+                    setActive(!value);
+                  }
+                }}
+                disabled={disabled}
+                required
+                tabIndex={-1}
+              />
+              <div className="w-12 h-6 bg-gray-300 rounded-full peer-checked:bg-green-500 peer transition duration-300"></div>
+              <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full peer-checked:translate-x-6 transition-transform duration-300 shadow-sm"></div>
+            </label>
 
-          <span className="ml-2 block text-xs font-bold text-gray-600">
-            {value ? "Active" : "Inactive"}
-          </span>
+            <span className="ml-2 block text-xs font-bold text-gray-600">
+              {value ? "Active" : "Inactive"}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 export const TextInputNew1 = forwardRef(
   (
@@ -1669,7 +1677,7 @@ export const TextInputNew1 = forwardRef(
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm ${readOnly || disabled ? "bg-slate-100" : ""}
           ${className}`}
-           onKeyDown={onKeyDown}
+          onKeyDown={onKeyDown}
         />
       </div>
     );
@@ -3232,6 +3240,7 @@ export function CustomInput({
     />
   );
 }
+
 export default function FxSelect({
   value,
   onChange,
@@ -3266,5 +3275,148 @@ export default function FxSelect({
       menuPortalTarget={document.body}
       inputId={inputId}
     />
+  );
+}
+
+export function FxSelectWithAdd({
+  value,
+  onChange,
+  options,
+  placeholder = "",
+  readOnly = false,
+  onBlur,
+  onKeyDown,
+  inputId,
+  addNew = false,
+  childComponent = null,
+  addNewModalWidth = "w-[40%] h-[48%]",
+}) {
+  const [showAddNewModal, setShowAddNewModal] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+
+  // Custom NoOptionsMessage component
+  // const NoOptionsMessage = (props) => {
+  //   if (!addNew || !childComponent) {
+  //     return <components.NoOptionsMessage {...props} />;
+  //   }
+
+  //   return (
+  //     <components.NoOptionsMessage {...props}>
+  //       <div
+  //         className="px-3 py-0.5 text-xs text-blue-600 font-semibold hover:bg-blue-100 cursor-pointer"
+  //         onClick={() => {
+  //           setShowAddNewModal(true);
+  //         }}
+  //         onMouseDown={(e) => {
+  //           e.preventDefault(); // Prevent blur
+  //           e.stopPropagation();
+  //         }}
+  //       >
+  //         + Create New "{searchValue}"
+  //       </div>
+  //     </components.NoOptionsMessage>
+  //   );
+  // };
+
+  const handleAddNewSuccess = (newValue) => {
+    // optional: mimic beforeChange if needed
+    if (onChange) {
+      onChange(newValue); // set selected value
+    }
+
+    setShowAddNewModal(false);
+    setSearchValue("");
+
+    // 🔥 important (same as DropdownWithModal)
+    if (onBlur) onBlur();
+  };
+
+  const MenuList = (props) => {
+    return (
+      <components.MenuList {...props}>
+        {props.children}
+
+        {addNew && childComponent && searchValue && (
+          <div
+            className="px-3 py-1 text-xs text-blue-600 font-semibold hover:bg-blue-100 cursor-pointer border-t"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowAddNewModal(true);
+            }}
+          >
+            + Create New "{searchValue.toUpperCase()}"
+          </div>
+        )}
+      </components.MenuList>
+    );
+  };
+
+  return (
+    <>
+      <Select
+        styles={customStyles}
+        onInputChange={(value, { action }) => {
+          if (action === "input-change") {
+            setSearchValue(value.toUpperCase()); // store uppercase
+          }
+          return value; // ❗ return original (important)
+        }}
+        components={{
+          MenuList,
+          IndicatorSeparator: () => null, // remove separator
+        }}
+        isClearable
+        isDisabled={readOnly}
+        options={options}
+        value={options.find((opt) => opt.value === value) || null}
+        onChange={(selected) => onChange(selected?.value || "")}
+        onBlur={onBlur}
+        onKeyDown={(e) => {
+          // Handle Enter key on "Create New" option
+          if (e.key === "Enter" && addNew && childComponent && searchValue) {
+            const hasExactMatch = options.some(
+              (opt) =>
+                opt.label.trim().toLowerCase() ===
+                searchValue.trim().toLowerCase(),
+            );
+            if (!hasExactMatch) {
+              e.preventDefault();
+              setShowAddNewModal(true);
+            }
+          }
+          if (onKeyDown) onKeyDown(e);
+        }}
+        placeholder={placeholder}
+        menuPortalTarget={document.body}
+        inputId={inputId}
+        noOptionsMessage={() => "No options"}
+      />
+      {showAddNewModal && childComponent && (
+        <Modal
+          isOpen={showAddNewModal}
+          onClose={() => {
+            setShowAddNewModal(false);
+            setSearchValue("");
+          }}
+          widthClass={addNewModalWidth}
+        >
+          {(() => {
+            const AddNewComponent = childComponent;
+            return (
+              <AddNewComponent
+                onSuccess={handleAddNewSuccess}
+                onClose={() => {
+                  setShowAddNewModal(false);
+                  setSearchValue("");
+                }}
+                defaultName={searchValue.toUpperCase()} // Pass the search term to pre-fill
+                embeddedMode={true}
+              />
+            );
+          })()}
+        </Modal>
+      )}
+    </>
   );
 }

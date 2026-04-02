@@ -36,6 +36,8 @@ import { useGetPurchaseInwardEntryForBillByIdQuery } from "../../../redux/unifor
 import { calculateTaxWithHSNBreakupAndInsertIntoInwardItems } from "./taxSummary";
 import PoSummary from "../PurchaseOrder/PoSummary";
 import Modal from "../../../UiComponents/Modal";
+import { PartyMaster, TaxTemplate } from "..";
+import { DropdownWithModal } from "../../../Inputs/Reuseable";
 
 const PurchaseBillEntryForm = ({
   onClose,
@@ -470,7 +472,7 @@ const PurchaseBillEntryForm = ({
                 // autoFocus={true}
                 ref={supplierRef}
               />
-              <DropdownInput
+              {/* <DropdownInput
                 name="Tax Type"
                 options={dropDownListObject(
                   taxTypeList ? taxTypeList?.data : [],
@@ -481,6 +483,25 @@ const PurchaseBillEntryForm = ({
                 setValue={setTaxTemplateId}
                 required={true}
                 readOnly={readOnly}
+              /> */}
+              <DropdownWithModal
+                name="Tax Type"
+                options={dropDownListObject(
+                  id
+                    ? taxTypeList?.data
+                    : taxTypeList?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={taxTemplateId}
+                setValue={setTaxTemplateId}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Tax Template"
+                childComponent={TaxTemplate}
+                addNewModalWidth="w-[82%] h-[85%]"
               />
             </div>
           </div>
@@ -491,7 +512,7 @@ const PurchaseBillEntryForm = ({
             </h2>
             <div className="flex gap-x-4">
               <div className="w-[400px]">
-                <ReusableSearchableInput
+                {/* <ReusableSearchableInput
                   label="Supplier"
                   component="PartyMaster"
                   placeholder="Search Supplier"
@@ -504,6 +525,28 @@ const PurchaseBillEntryForm = ({
                   required={true}
                   disabled={id}
                   isSupplier={true}
+                /> */}
+                <DropdownWithModal
+                  name="Supplier"
+                  options={dropDownListObject(
+                    id
+                      ? supplierList?.data?.filter((item) => item?.isSupplier)
+                      : supplierList?.data?.filter(
+                          (item) => item?.active && item?.isSupplier,
+                        ),
+                    "name",
+                    "id",
+                  )}
+                  value={supplierId}
+                  setValue={setSupplierId}
+                  required={true}
+                  readOnly={readOnly}
+                  className={`w-[150px]`}
+                  // disabled={childRecord.current > 0}
+                  addNewLabel="+ Add New Supplier"
+                  childComponent={PartyMaster}
+                  addNewModalWidth="w-[90%] h-[95%]"
+                  disabled={id}
                 />
               </div>
               <div className="w-[150px]">

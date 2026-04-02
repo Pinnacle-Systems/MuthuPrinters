@@ -25,6 +25,10 @@ const useInvalidateTags = () => {
       payload: ["TaxTermMaster"],
     },
     {
+      type: `taxTemplate/invalidateTags`,
+      payload: ["TaxTemplate"],
+    },
+    {
       type: `StyleItemMaster/invalidateTags`,
       payload: ["StyleItemMaster"],
     },

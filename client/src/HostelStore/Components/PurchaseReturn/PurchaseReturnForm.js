@@ -33,6 +33,9 @@ import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvali
 import Modal from "../../../UiComponents/Modal";
 import tw from "../../../Utils/tailwind-react-pdf";
 import PurchaseReturnPrintFormat from "./Print-Format/PurchaseReturnPrintFormat";
+import { PartyMaster } from "..";
+import { DropdownWithModal } from "../../../Inputs/Reuseable";
+import { LocationMaster } from "../../../Basic/components";
 
 const PurchaseReturnForm = ({
   onClose,
@@ -447,7 +450,7 @@ const PurchaseReturnForm = ({
                 // autoFocus={true}
                 ref={supplierRef}
               />
-              <DropdownInput
+              {/* <DropdownInput
                 name="Location"
                 options={dropDownListObject(
                   id
@@ -460,6 +463,26 @@ const PurchaseReturnForm = ({
                 setValue={setStoreId}
                 required={true}
                 readOnly={id}
+              /> */}
+              <DropdownWithModal
+                name="Location"
+                options={dropDownListObject(
+                  id
+                    ? storeOptions
+                    : storeOptions?.filter((item) => item?.active),
+                  "storeName",
+                  "id",
+                )}
+                value={storeId}
+                setValue={setStoreId}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Location"
+                childComponent={LocationMaster}
+                addNewModalWidth="w-[40%] h-[48%]"
+                disabled={id}
               />
               <DropdownInput
                 name="Return Type"
@@ -493,7 +516,7 @@ const PurchaseReturnForm = ({
             </h2>
             <div className="grid grid-cols-2 gap-1">
               <div className="col-span-2">
-                <ReusableSearchableInput
+                {/* <ReusableSearchableInput
                   label="Supplier Id"
                   component="PartyMaster"
                   placeholder="Search Supplier Id..."
@@ -506,6 +529,28 @@ const PurchaseReturnForm = ({
                   required={true}
                   disabled={id}
                   isSupplier={true}
+                /> */}
+                <DropdownWithModal
+                  name="Supplier"
+                  options={dropDownListObject(
+                    id
+                      ? supplierList?.data?.filter((item) => item?.isSupplier)
+                      : supplierList?.data?.filter(
+                          (item) => item?.active && item?.isSupplier,
+                        ),
+                    "name",
+                    "id",
+                  )}
+                  value={supplierId}
+                  setValue={setSupplierId}
+                  required={true}
+                  readOnly={readOnly}
+                  className={`w-[150px]`}
+                  // disabled={childRecord.current > 0}
+                  addNewLabel="+ Add New Supplier"
+                  childComponent={PartyMaster}
+                  addNewModalWidth="w-[90%] h-[95%]"
+                  disabled={id}
                 />
               </div>
               <TextInput

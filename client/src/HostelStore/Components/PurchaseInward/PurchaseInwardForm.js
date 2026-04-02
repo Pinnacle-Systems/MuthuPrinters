@@ -30,6 +30,9 @@ import { useGetLocationMasterQuery } from "../../../redux/services/LocationMaste
 import { useGetPoItemsQuery } from "../../../redux/uniformService/PoServices";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
+import { PartyMaster } from "../index.js";
+import { LocationMaster } from "../../../Basic/components/index.js";
+import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 
 const PurchaseInwardForm = ({
   onClose,
@@ -410,7 +413,7 @@ const PurchaseInwardForm = ({
                 // autoFocus={true}
                 ref={supplierRef}
               />
-              <DropdownInput
+              {/* <DropdownInput
                 name="Location"
                 options={dropDownListObject(
                   id
@@ -423,6 +426,26 @@ const PurchaseInwardForm = ({
                 setValue={setStoreId}
                 required={true}
                 readOnly={id}
+              /> */}
+              <DropdownWithModal
+                name="Location"
+                options={dropDownListObject(
+                  id
+                    ? storeOptions
+                    : storeOptions?.filter((item) => item?.active),
+                  "storeName",
+                  "id",
+                )}
+                value={storeId}
+                setValue={setStoreId}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Location"
+                childComponent={LocationMaster}
+                addNewModalWidth="w-[40%] h-[48%]"
+                disabled={id}
               />
               <DropdownInput
                 name="Inward Type"
@@ -456,7 +479,7 @@ const PurchaseInwardForm = ({
             </h2>
             <div className="grid grid-cols-2 gap-1">
               <div className="col-span-2">
-                <ReusableSearchableInput
+                {/* <ReusableSearchableInput
                   label="Supplier"
                   component="PartyMaster"
                   placeholder="Search Supplier"
@@ -469,6 +492,28 @@ const PurchaseInwardForm = ({
                   required={true}
                   disabled={id}
                   isSupplier={true}
+                /> */}
+                <DropdownWithModal
+                  name="Supplier"
+                  options={dropDownListObject(
+                    id
+                      ? supplierList?.data?.filter((item) => item?.isSupplier)
+                      : supplierList?.data?.filter(
+                          (item) => item?.active && item?.isSupplier,
+                        ),
+                    "name",
+                    "id",
+                  )}
+                  value={supplierId}
+                  setValue={setSupplierId}
+                  required={true}
+                  readOnly={readOnly}
+                  className={`w-[150px]`}
+                  // disabled={childRecord.current > 0}
+                  addNewLabel="+ Add New Supplier"
+                  childComponent={PartyMaster}
+                  addNewModalWidth="w-[90%] h-[95%]"
+                  disabled={id}
                 />
               </div>
               <TextInput

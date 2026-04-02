@@ -39,7 +39,8 @@ import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/t
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
-import { PayTermMaster } from "../../../Basic/components";
+import { PayTermMaster, TermsAndCondition } from "../../../Basic/components";
+import { PartyMaster, TaxTemplate } from "..";
 
 const PurchaseOrderForm = ({
   onClose,
@@ -474,6 +475,15 @@ const PurchaseOrderForm = ({
     supplierRef.current?.focus();
   }, []);
 
+  useEffect(() => {
+    if (!id) {
+      const selectedTerm = termsData?.data?.find(
+        (item) => String(item.id) === String(termsId),
+      );
+      setTermsAndCondtion(selectedTerm?.description || "");
+    }
+  }, [termsId]);
+
   return (
     <>
       <Modal
@@ -612,7 +622,7 @@ const PurchaseOrderForm = ({
                 disabled={orderId || id}
               />
 
-              <DropdownInput
+              {/* <DropdownInput
                 name="Tax Type"
                 options={dropDownListObject(
                   taxTypeList ? taxTypeList?.data : [],
@@ -623,6 +633,25 @@ const PurchaseOrderForm = ({
                 setValue={setTaxTemplateId}
                 required={true}
                 readOnly={readOnly}
+              /> */}
+              <DropdownWithModal
+                name="Tax Type"
+                options={dropDownListObject(
+                  id
+                    ? taxTypeList?.data
+                    : taxTypeList?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={taxTemplateId}
+                setValue={setTaxTemplateId}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Tax Template"
+                childComponent={TaxTemplate}
+                addNewModalWidth="w-[82%] h-[85%]"
               />
               {!readOnly && id && (
                 <div className="col-span-1 mt-3">
@@ -658,7 +687,7 @@ const PurchaseOrderForm = ({
             </h2>
             <div className="grid grid-cols-2 gap-2">
               <div className="col-span-2">
-                <ReusableSearchableInput
+                {/* <ReusableSearchableInput
                   label="Supplier"
                   component="PartyMaster"
                   placeholder="Search Supplier ..."
@@ -673,6 +702,28 @@ const PurchaseOrderForm = ({
                   required={true}
                   disabled={id}
                   isSupplier={true}
+                /> */}
+                <DropdownWithModal
+                  name="Supplier"
+                  options={dropDownListObject(
+                    id
+                      ? supplierList?.data?.filter((item) => item?.isSupplier)
+                      : supplierList?.data?.filter(
+                          (item) => item?.active && item?.isSupplier,
+                        ),
+                    "name",
+                    "id",
+                  )}
+                  value={supplierId}
+                  setValue={setSupplierId}
+                  required={true}
+                  readOnly={readOnly}
+                  className={`w-[150px]`}
+                  // disabled={childRecord.current > 0}
+                  addNewLabel="+ Add New Supplier"
+                  childComponent={PartyMaster}
+                  addNewModalWidth="w-[90%] h-[95%]"
+                  disabled={id}
                 />
               </div>
 
@@ -737,10 +788,24 @@ const PurchaseOrderForm = ({
                     readOnly={readOnly}
                   />
                 ) : (
-                  <DropdownInput
+                  // <DropdownInput
+                  //   name="Delivery To"
+                  //   options={dropDownListObject(
+                  //     supplierList?.data,
+                  //     "name",
+                  //     "id",
+                  //   )}
+                  //   value={deliveryToId}
+                  //   setValue={setDeliveryToId}
+                  //   required={true}
+                  //   readOnly={readOnly}
+                  // />
+                  <DropdownWithModal
                     name="Delivery To"
                     options={dropDownListObject(
-                      supplierList?.data,
+                      id
+                        ? supplierList?.data
+                        : supplierList?.data?.filter((item) => item?.active),
                       "name",
                       "id",
                     )}
@@ -748,6 +813,11 @@ const PurchaseOrderForm = ({
                     setValue={setDeliveryToId}
                     required={true}
                     readOnly={readOnly}
+                    className={`w-[150px]`}
+                    // disabled={childRecord.current > 0}
+                    addNewLabel="+ Add New Customer"
+                    childComponent={PartyMaster}
+                    addNewModalWidth="w-[90%] h-[95%]"
                   />
                 )}
               </div>
@@ -776,11 +846,11 @@ const PurchaseOrderForm = ({
         <div className="grid grid-cols-4 gap-3">
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
             <div className="flex flex-col gap-2">
-              <h2 className="font-bold text-slate-700 mb-2 text-base">
+              {/* <h2 className="font-bold text-slate-700 mb-2 text-base">
                 Terms & Conditions
-              </h2>
+              </h2> */}
 
-              <select
+              {/* <select
                 value={termsId}
                 onChange={(e) => {
                   const selectedId = e.target.value;
@@ -805,7 +875,27 @@ const PurchaseOrderForm = ({
                     {blend?.name.substring(0, 50)}
                   </option>
                 ))}
-              </select>
+              </select> */}
+              <DropdownWithModal
+                name="Terms & Conditions"
+                options={dropDownListObject(
+                  id
+                    ? termsData?.data
+                    : termsData?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={termsId}
+                setValue={setTermsId}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Terms and Condition"
+                childComponent={TermsAndCondition}
+                addNewModalWidth="w-[40%] h-[70%]"
+                disabled={id}
+              />
             </div>
           </div>
 
@@ -915,6 +1005,7 @@ const PurchaseOrderForm = ({
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => saveData("new")}
+              type="button"
               className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
             >
               <FiSave className="w-4 h-4 mr-2" />

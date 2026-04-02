@@ -111,24 +111,22 @@ export default function Form({
       // toast.success(text + "Successfully");
       if (onSuccess) {
         await Swal.fire({
-                                                 title: text + "  " + "Successfully",
-                                                 icon: "success",
-                                               });
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
         onSuccess(returnData.data.id);
         return;
       }
-     
 
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
-                  countryNameRef.current?.focus();
-
+        countryNameRef.current?.focus();
       } else {
         setForm(false);
         syncFormWithDb(undefined);
       }
-       Swal.fire({
+      Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
       });
@@ -147,9 +145,9 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
-        didClose:() =>{
+        didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
       });
 
       return;
@@ -174,9 +172,9 @@ export default function Form({
         text: "The Branch Type  already exists.",
         icon: "warning",
         timer: 1500,
-       didClose:() =>{
+        didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
       });
       return false;
     }
@@ -240,7 +238,7 @@ export default function Form({
     setReadOnly(false);
     setForm(true);
     setSearchValue("");
-   syncFormWithDb(undefined);
+    syncFormWithDb(undefined);
   };
 
   function onDataClick(id) {
@@ -293,12 +291,12 @@ export default function Form({
     },
   ];
 
- const {
-        firstInputRef: countryNameRef,
-        toggleButtonRef,
-        saveCloseButtonRef,
-        saveNewButtonRef,
-      } = refs;
+  const {
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
 
   useEffect(() => {
     if ((form || onSuccess) && countryNameRef.current) {
@@ -340,7 +338,7 @@ export default function Form({
                       required={true}
                       readOnly={readOnly}
                       disabled={childRecord.current > 0}
-                       onKeyDown={handlers.handleToggleKeyDown}
+                      onKeyDown={handlers.handleToggleKeyDown}
                     />
                   </div>
                 </fieldset>
@@ -624,7 +622,6 @@ export default function Form({
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={10}
-          childRecordLabel="Customer / Supplier Master"
         />
       </div>
 
@@ -675,7 +672,7 @@ export default function Form({
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                               border border-blue-600 flex items-center gap-1 text-xs"
-                              ref={saveCloseButtonRef} // ✅ Add ref
+                        ref={saveCloseButtonRef} // ✅ Add ref
                         tabIndex={0}
                         onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
@@ -691,7 +688,7 @@ export default function Form({
                         onClick={() => {
                           saveData("new");
                         }}
-                         onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
                         ref={saveNewButtonRef} // ✅ Add ref
                         tabIndex={0}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 

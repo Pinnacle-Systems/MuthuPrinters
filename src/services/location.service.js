@@ -13,13 +13,14 @@ async function get(req) {
       _count: {
         select: {
           purchaseInwards: true,
+          purchaseCancels: true,
         },
       },
-      Location:{
-        select:{
-          branchName:true
-        }
-      }
+      Location: {
+        select: {
+          branchName: true,
+        },
+      },
     },
   });
   return {
@@ -27,7 +28,7 @@ async function get(req) {
     data: data.map((item) => {
       return {
         ...item,
-        childRecord: item._count.purchaseInwards,
+        childRecord: item._count.purchaseInwards + item._count.purchaseCancels,
       };
     }),
   };

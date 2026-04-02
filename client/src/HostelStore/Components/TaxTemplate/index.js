@@ -38,7 +38,7 @@ export default function Form({
 } = {}) {
   const [form, setForm] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
-  const [id, setId] = useState("");
+  const [id, setId] = useState(editId || deleteId || "");
 
   const [name, setName] = useState("");
   const [active, setActive] = useState(true);
@@ -85,6 +85,7 @@ export default function Form({
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetTaxTemplateByIdQuery(id, { skip: !id });
+
   const [trigger, { data: LazyData }] = useLazyGetTaxTemplateByIdQuery();
   const [addData] = useAddTaxTemplateMutation();
   const [updateData] = useUpdateTaxTemplateMutation();
@@ -101,10 +102,8 @@ export default function Form({
   );
 
   useEffect(() => {
-    if (id) {
-      syncFormWithDb(singleData?.data);
-    } else {
-      syncFormWithDb(undefined);
+    if (singleData?.data) {
+      syncFormWithDb(singleData.data);
     }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
@@ -363,27 +362,49 @@ export default function Form({
           toast.error(res?.data?.message || "Cannot delete");
           return;
         }
-        toast.success("State deleted successfully");
+        toast.success("Tax Template deleted successfully");
         onSuccess?.();
       } catch (err) {
-        toast.error(err?.data?.message || "Failed to delete state");
+        toast.error(err?.data?.message || "Failed to delete Tax Template");
       }
     };
 
     return (
-      <div className="min-h-[250px] flex flex-col bg-gray-200">
+      <div className="min-h-[500px] flex flex-col bg-gray-200">
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center bg-white">
           <h2 className="text-lg font-semibold">Delete Tax Template</h2>
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
           {isLoadingRecord ? (
-            <p>Checking...</p>
+            <p className="text-xs text-gray-400">Checking records...</p>
           ) : childCount > 0 ? (
             <>
-              <p className="text-red-600 font-semibold">
-                Cannot delete "{deleteLabel}"
-              </p>
+              <div className="flex flex-col items-center gap-2">
+                <svg
+                  className="w-10 h-10 text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                  />
+                </svg>
+                <p className="text-sm font-semibold text-red-600">
+                  Cannot Delete
+                </p>
+                <p className="text-xs text-gray-600 text-center">
+                  <span className="font-semibold">"{deleteLabel}"</span> has{" "}
+                  <span className="font-semibold text-red-600">
+                    {childCount} linked record{childCount > 1 ? "s" : ""}
+                  </span>
+                  . Remove them first before deleting this Tax Template.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={onClose}
@@ -394,15 +415,20 @@ export default function Form({
             </>
           ) : (
             <>
-              <p>Are you sure delete "{deleteLabel}"?</p>
-              <div className="flex gap-2">
+              <p className="text-sm text-gray-700 text-center">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold">"{deleteLabel}"</span>?
+              </p>
+              <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={onClose}
                   className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleConfirmDelete}
                   className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded"
                 >
@@ -424,7 +450,7 @@ export default function Form({
       >
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
           <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
-            {editId ? "Edit State" : "Add New State"}
+            {editId ? "Edit Tax Template" : "Add New Tax Template"}
           </h2>
           <button
             type="button"
@@ -519,7 +545,6 @@ export default function Form({
           onDelete={deleteData}
           itemsPerPage={15}
           setReadOnly={setReadOnly}
-          childRecordLabel="Purchase Module"
         />
       </div>
 

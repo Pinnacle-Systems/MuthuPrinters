@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import FxSelect from "../../../Inputs";
+import FxSelect, { FxSelectWithAdd } from "../../../Inputs";
 import Swal from "sweetalert2";
 import Modal from "../../../UiComponents/Modal";
 import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
 import PoItemsSelection from "./PoItemsSelection";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
 import { getUniqueArrayBySize } from "../../../Utils/helper";
+import { ColorMaster, Size, StyleItemMaster } from "..";
 
 const InwardItems = ({
   id,
@@ -209,6 +210,7 @@ const InwardItems = ({
                   setFillGrid(true);
                 }
               }}
+              type="button"
             >
               Fill Po Items
             </button>
@@ -303,15 +305,14 @@ const InwardItems = ({
             <tbody>
               {(inwardItems ? inwardItems : [])?.map((row, index) => (
                 <tr
-                                    className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
-
+                  className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
                   key={index}
                 >
                   <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
                     {index + 1}
                   </td>
                   <td className=" text-[11px] border border-gray-300 text-left">
-                    <FxSelect
+                    <FxSelectWithAdd
                       inputId={`styleItemId-input-${index}`}
                       value={row.styleItemId}
                       onChange={(val) =>
@@ -333,10 +334,13 @@ const InwardItems = ({
                           handleInputChange("", index, "styleItemId");
                         }
                       }}
+                      addNew={true}
+                      childComponent={StyleItemMaster}
+                      addNewModalWidth="w-[50%] h-[55%]"
                     />
                   </td>
                   <td className="py-0.5 border border-gray-300 text-[11px] ">
-                    <FxSelect
+                    <FxSelectWithAdd
                       value={row.sizeId}
                       onChange={(val) =>
                         handleInputChange(val, index, "sizeId")
@@ -362,10 +366,13 @@ const InwardItems = ({
                           handleInputChange("", index, "sizeId");
                         }
                       }}
+                      addNew={true}
+                      childComponent={Size}
+                      addNewModalWidth="w-[30%] h-[45%]"
                     />
                   </td>
                   <td className="py-0.5 border border-gray-300 text-[11px] ">
-                    <FxSelect
+                    <FxSelectWithAdd
                       value={row.colorId}
                       onChange={(val) =>
                         handleInputChange(val, index, "colorId")
@@ -386,6 +393,9 @@ const InwardItems = ({
                           handleInputChange("", index, "colorId");
                         }
                       }}
+                      addNew={true}
+                      childComponent={ColorMaster}
+                      addNewModalWidth="w-[30%] h-[45%]"
                     />
                   </td>
                   <td className="py-0.5 border border-gray-300 text-[11px] ">
@@ -767,8 +777,7 @@ const InwardItems = ({
                     <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
                       {inwardItems
                         ?.reduce(
-                          (sum, row) =>
-                            sum + (Number(row.balQty) || 0),
+                          (sum, row) => sum + (Number(row.balQty) || 0),
                           0,
                         )
                         .toFixed(2)}

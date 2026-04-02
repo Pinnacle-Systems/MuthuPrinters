@@ -19,15 +19,14 @@ import {
 } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 
-const MODEL = "Color Master";
-
-export default function Form() {
+export default function Form({ onSuccess, defaultName = "" }) {
   const [form, setForm] = useState(false);
 
   const [readOnly, setReadOnly] = useState(false);
   const [id, setId] = useState("");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName || "");
   const [pantone, setPantone] = useState("");
   const [active, setActive] = useState(true);
   const [isGrey, setIsGrey] = useState(false);
@@ -36,6 +35,7 @@ export default function Form() {
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const params = {
     companyId: secureLocalStorage.getItem(
@@ -64,7 +64,7 @@ export default function Form() {
     (data) => {
       if (!id) {
         setReadOnly(false);
-        setName("");
+        setName(defaultName || "");
         setPantone("");
         setIsGrey(false);
         setActive(id ? data?.active : true);
@@ -105,7 +105,14 @@ export default function Form() {
       setId(returnData?.data?.id);
       // toast.success(text + "Successfully");
       setForm(false);
-
+      if (onSuccess) {
+        await Swal.fire({
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
+        onSuccess(returnData?.data.id);
+        return;
+      }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
@@ -118,6 +125,7 @@ export default function Form() {
         title: text + "  " + "Successfully",
         icon: "success",
       });
+      dispatchInvalidate();
     } catch (error) {
       console.log("handle");
     }
@@ -128,8 +136,9 @@ export default function Form() {
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
-          didClose: () => {          countryNameRef?.current?.focus();
-        }
+        didClose: () => {
+          countryNameRef?.current?.focus();
+        },
       });
       return;
     }
@@ -146,8 +155,9 @@ export default function Form() {
       Swal.fire({
         text: "The Color Name already exists.",
         icon: "warning",
-          didClose: () => {          countryNameRef?.current?.focus();
-        }
+        didClose: () => {
+          countryNameRef?.current?.focus();
+        },
       });
       return false;
     }
@@ -277,10 +287,93 @@ export default function Form() {
   } = refs;
 
   useEffect(() => {
-    if (form && countryNameRef.current) {
+    if ((form || onSuccess) && countryNameRef.current) {
       countryNameRef.current.focus();
     }
-  }, [form]);
+  }, [form, onSuccess]);
+
+  useEffect(() => {
+    if (onSuccess) {
+      setTimeout(() => {
+        // 🔥 force blur whoever is holding focus (react-select)
+        if (document.activeElement) {
+          document.activeElement.blur();
+        }
+
+        // then focus your input
+        countryNameRef.current?.focus();
+      }, 50); // small delay important
+    }
+  }, [onSuccess]);
+
+  const formBody = (
+    <div className="flex-1 p-3 ">
+      <div className="grid grid-cols-1  gap-3  h-full ">
+        <div className="lg:col-span-2 space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+            <div className="space-y-4 ">
+              <div className="grid grid-cols-2  gap-3  h-full">
+                <fieldset className="my-1 space-y-2">
+                  <TextInputNew1
+                    name="Color"
+                    type="text"
+                    value={name}
+                    setValue={setName}
+                    required={true}
+                    readOnly={readOnly}
+                    disabled={childRecord.current > 0}
+                    ref={countryNameRef}
+                    onKeyDown={handlers.handleLastInputKeyDown}
+                  />
+                  {/* <div className="grid grid-cols-2">
+                                                   <TextInput name="Pantone" type="text" value={pantone} setValue={setPantone} required={true} readOnly={readOnly} disabled={(childRecord.current > 0)} />
+                                                   <div className={`h-20 w-32`} style={{ backgroundColor: pantone }}></div>
+                                               </div> */}
+                  {/* <CheckBox name="Grey" readOnly={readOnly} value={isGrey} setValue={setIsGrey} /> */}
+
+                  <ToggleButton
+                    name="Active"
+                    readOnly={readOnly}
+                    value={active}
+                    setValue={setActive}
+                    onKeyDown={handlers.handleToggleKeyDown}
+                    ref={toggleButtonRef}
+                  />
+                </fieldset>
+                <div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+  if (onSuccess) {
+    return (
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            Add New Color
+          </h2>
+          <button
+            type="button"
+            onClick={() => saveData("close")}
+            ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
+            className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+          >
+            <Check size={14} />
+            Save
+          </button>
+        </div>
+
+        {formBody}
+      </div>
+    );
+  }
 
   return (
     <div onKeyDown={handleKeyDown} className="p-1">
@@ -307,7 +400,6 @@ export default function Form() {
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
-          childRecordLabel="Purchase Module"
         />
       </div>
 
@@ -359,7 +451,7 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
-                   ref={saveCloseButtonRef} // ✅ Add ref
+                        ref={saveCloseButtonRef} // ✅ Add ref
                         tabIndex={0}
                         onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
@@ -377,8 +469,8 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
-                  onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
-                    ref={saveNewButtonRef} // ✅ Add ref
+                        onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        ref={saveNewButtonRef} // ✅ Add ref
                         tabIndex={0}
                       >
                         <Check size={14} />
@@ -389,49 +481,7 @@ export default function Form() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto p-3 ">
-                <div className="grid grid-cols-1  gap-3  h-full ">
-                  <div className="lg:col-span-2 space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                      <div className="space-y-4 ">
-                        <div className="grid grid-cols-2  gap-3  h-full">
-                          <fieldset className="my-1 space-y-2">
-                            <TextInputNew1
-                              name="Color"
-                              type="text"
-                              value={name}
-                              setValue={setName}
-                              required={true}
-                              readOnly={readOnly}
-                              disabled={childRecord.current > 0}
-                              ref={countryNameRef}
-                                              onKeyDown={handlers.handleLastInputKeyDown}
-
-                            />
-                            {/* <div className="grid grid-cols-2">
-                                                   <TextInput name="Pantone" type="text" value={pantone} setValue={setPantone} required={true} readOnly={readOnly} disabled={(childRecord.current > 0)} />
-                                                   <div className={`h-20 w-32`} style={{ backgroundColor: pantone }}></div>
-                                               </div> */}
-                            {/* <CheckBox name="Grey" readOnly={readOnly} value={isGrey} setValue={setIsGrey} /> */}
-                           
-
-                            <ToggleButton
-                              name="Active"
-                              readOnly={readOnly}
-                              value={active}
-                              setValue={setActive}
-                              onKeyDown={handlers.handleToggleKeyDown}
-                ref={toggleButtonRef}
-                            />
-                            
-                          </fieldset>
-                          <div></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {formBody}
             </div>
           </Modal>
         )}

@@ -3,24 +3,26 @@ import secureLocalStorage from "react-secure-storage";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import { Check, Power } from "lucide-react";
-import { ReusableTable, TextInputNew, ToggleButton } from "../../../Inputs";
+import { ReusableTable, TextInputNew, TextInputNew1, ToggleButton } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { useAddSizeMasterMutation, useDeleteSizeMasterMutation, useGetSizeMasterByIdQuery, useGetSizeMasterQuery, useLazyGetSizeMasterByIdQuery, useUpdateSizeMasterMutation } from "../../../redux/services/SizemasterService";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 
-export default function Form() {
+export default function Form({ onSuccess, defaultName = "" }) {
   const [form, setForm] = useState(false);
 
   const [readOnly, setReadOnly] = useState(false);
   const [id, setId] = useState("");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName || "");
   const [isPoWise, setIsPowise] = useState(false);
   const [active, setActive] = useState(true);
   const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const params = {
     companyId: secureLocalStorage.getItem(
@@ -45,7 +47,7 @@ export default function Form() {
 
   const syncFormWithDb = useCallback(
     (data) => {
-      setName(data?.name ? data.name : "");
+      setName(data?.name ? data.name : defaultName || "");
       setIsPowise(id ? (data?.isPoWise ? data.isPoWise : false) : false);
       setActive(id ? (data?.active ? data.active : false) : true);
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
@@ -76,7 +78,14 @@ export default function Form() {
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
       let returnData = await callback(data).unwrap();
-      
+      if (onSuccess) {
+        await Swal.fire({
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
+        onSuccess(returnData?.data.id);
+        return;
+      }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
@@ -84,7 +93,7 @@ export default function Form() {
 
       } else {
         setForm(false);
-                        syncFormWithDb(undefined);
+        syncFormWithDb(undefined);
 
       }
       Swal.fire({
@@ -97,6 +106,8 @@ export default function Form() {
         //     Swal.showLoading();
         // }
       });
+      dispatchInvalidate();
+
     } catch (error) {
       console.log("handle");
     }
@@ -104,11 +115,11 @@ export default function Form() {
 
   const saveData = (nextProcess) => {
     if (!validateData(data)) {
-      
+
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
-          didClose:() =>{
+        didClose: () => {
           countryNameRef?.current?.focus();
         }
         // draggable: true,
@@ -133,13 +144,13 @@ export default function Form() {
       Swal.fire({
         text: "The Size Name already exists.",
         icon: "warning",
-          didClose:() =>{
+        didClose: () => {
           countryNameRef?.current?.focus();
         }
       });
       return false;
     }
-    if(id){
+    if (id) {
 
       if (!window.confirm("Are you sure update the details ...?")) {
         return;
@@ -179,7 +190,7 @@ export default function Form() {
             //     Swal.showLoading();
             // }
           });
-                          syncFormWithDb(undefined);
+          syncFormWithDb(undefined);
 
         } catch (error) {
           toast.error("something went wrong");
@@ -251,17 +262,100 @@ export default function Form() {
   };
 
   const {
-      firstInputRef: countryNameRef,
-      toggleButtonRef,
-      saveCloseButtonRef,
-      saveNewButtonRef,
-    } = refs;
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
 
   useEffect(() => {
-    if (form && countryNameRef.current) {
+    if ((form || onSuccess) && countryNameRef.current) {
       countryNameRef.current.focus();
     }
-  }, [form]);
+  }, [form, onSuccess]);
+
+
+  useEffect(() => {
+    if (onSuccess) {
+      setTimeout(() => {
+        // 🔥 force blur whoever is holding focus (react-select)
+        if (document.activeElement) {
+          document.activeElement.blur();
+        }
+
+        // then focus your input
+        countryNameRef.current?.focus();
+      }, 50); // small delay important
+    }
+  }, [onSuccess]);
+
+  const formBody = (
+    <div className="flex-1 p-3">
+      <div className="grid grid-cols-1  gap-3  h-full">
+        <div className="lg:col-span- space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+            <div className="space-y-4 ">
+              <fieldset className=" rounded mt-2">
+                <div className="grid grid-cols-2 my-2">
+                  <div className="w-[50%">
+                    <TextInputNew1
+                      ref={countryNameRef}
+                      name="Size"
+                      type="text"
+                      value={name}
+                      setValue={setName}
+                      required={true}
+                      readOnly={readOnly}
+                      disabled={childRecord.current > 0}
+                    />
+                  </div>
+                  {/* <CheckBox name="Po wise" readOnly={readOnly} value={isPoWise} setValue={setIsPowise} /> */}
+                </div>
+                <ToggleButton
+                  name="Status"
+                  options={statusDropdown}
+                  value={active}
+                  setActive={setActive}
+                  required={true}
+                  readOnly={readOnly}
+                  ref={toggleButtonRef}
+                  onKeyDown={handlers.handleToggleKeyDown}
+                />
+              </fieldset>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  if (onSuccess) {
+    return (
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            Add New Size
+          </h2>
+          <button
+            type="button"
+            onClick={() => saveData("close")}
+            ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
+            className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+          >
+            <Check size={14} />
+            Save
+          </button>
+        </div>
+
+        {formBody}
+      </div>
+    );
+  }
+
   return (
     <div onKeyDown={handleKeyDown} className="p-1 h-[87%]">
       <div className="w-full flex bg-white p-1 justify-between  items-center">
@@ -287,7 +381,6 @@ export default function Form() {
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
-          childRecordLabel="Size Template Master"
         />
       </div>
 
@@ -339,7 +432,7 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
-                    ref={saveCloseButtonRef} // ✅ Add ref
+                        ref={saveCloseButtonRef} // ✅ Add ref
                         tabIndex={0}
                         onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
@@ -357,7 +450,7 @@ export default function Form() {
                         }}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
-                   onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
                         ref={saveNewButtonRef} // ✅ Add ref
                         tabIndex={0}
                       >
@@ -369,43 +462,7 @@ export default function Form() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto p-3">
-                <div className="grid grid-cols-1  gap-3  h-full">
-                  <div className="lg:col-span- space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                      <div className="space-y-4 ">
-                        <fieldset className=" rounded mt-2">
-                          <div className="grid grid-cols-2 my-2">
-                            <div className="w-[50%">
-                              <TextInputNew
-                                name="Size"
-                                type="text"
-                                value={name}
-                                setValue={setName}
-                                required={true}
-                                readOnly={readOnly}
-                                disabled={childRecord.current > 0}
-                                ref={countryNameRef}
-                              />
-                            </div>
-                            {/* <CheckBox name="Po wise" readOnly={readOnly} value={isPoWise} setValue={setIsPowise} /> */}
-                          </div>
-                          <ToggleButton
-                            name="Status"
-                            options={statusDropdown}
-                            value={active}
-                            setActive={setActive}
-                            required={true}
-                            readOnly={readOnly}
-                               ref={toggleButtonRef}
-                onKeyDown={handlers.handleToggleKeyDown}
-                          />
-                        </fieldset>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {formBody}
             </div>
           </Modal>
         )}

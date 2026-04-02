@@ -102,12 +102,12 @@ export default function Form({
       let returnData = await callback(data).unwrap();
       setId("");
       syncFormWithDb(undefined);
-      
+
       if (onSuccess) {
-         await Swal.fire({
-                                         title: text + "  " + "Successfully",
-                                         icon: "success",
-                                       });
+        await Swal.fire({
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
         onSuccess(returnData?.data.id);
         return;
       }
@@ -118,8 +118,7 @@ export default function Form({
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
-                                  syncFormWithDb(undefined);
-
+        syncFormWithDb(undefined);
       }
       Swal.fire({
         title: text + "  " + "Successfully",
@@ -135,9 +134,9 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "error",
-        didClose:() =>{
+        didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
       });
       return;
     }
@@ -157,14 +156,13 @@ export default function Form({
       Swal.fire({
         title: "The Uom Name already exists.",
         icon: "error",
-          didClose:() =>{
+        didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
       });
       return;
     }
-    if(id){
-
+    if (id) {
       if (!window.confirm("Are you sure update the details ...?")) {
         return;
       }
@@ -206,8 +204,7 @@ export default function Form({
               title: "Deleted Successfully",
               icon: "success",
             });
-                                      syncFormWithDb(undefined);
-
+            syncFormWithDb(undefined);
           } else {
             Swal.fire({
               icon: "error",
@@ -233,7 +230,7 @@ export default function Form({
     setId("");
     setForm(true);
     setSearchValue("");
-    setReadOnly(false); 
+    setReadOnly(false);
     syncFormWithDb(undefined);
   };
 
@@ -289,12 +286,12 @@ export default function Form({
   ];
 
   const {
-        firstInputRef: countryNameRef,
-        toggleButtonRef,
-        saveCloseButtonRef,
-        saveNewButtonRef,
-      } = refs;
-      const descriptionRef = useRef(null);
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
+  const descriptionRef = useRef(null);
 
   const formBody = (
     <div className="flex-1 p-3 ">
@@ -325,8 +322,8 @@ export default function Form({
                       required={true}
                       readOnly={readOnly}
                       disabled={childRecord.current > 0}
-                       ref={toggleButtonRef}
-                onKeyDown={handlers.handleToggleKeyDown}
+                      ref={toggleButtonRef}
+                      onKeyDown={handlers.handleToggleKeyDown}
                     />
                   </div>
                 </fieldset>
@@ -367,7 +364,7 @@ export default function Form({
     return (
       <div className="min-h-[250px] flex flex-col bg-gray-200">
         <div className="border-b py-2 px-4 mx-3 mt-4 bg-white">
-          <h2 className="text-lg font-semibold">Delete Item Group</h2>
+          <h2 className="text-lg font-semibold">Delete Uom</h2>
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
@@ -379,29 +376,38 @@ export default function Form({
               <p>
                 "{deleteLabel}" has {childCount} linked records.
               </p>
-              <button type="button" onClick={onClose}
-                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+              >
                 Close
               </button>
             </>
           ) : (
             <>
               <>
-              <p className="text-sm text-gray-700 text-center">
-                Are you sure you want to delete{" "}
-                <span className="font-semibold">"{deleteLabel}"</span>?
-              </p>
-              <div className="flex gap-3">
-                <button type="button" onClick={onClose}
-                  className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
-                  Cancel
-                </button>
-                <button type="button" onClick={handleConfirmDelete}
-                  className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded">
-                  Delete
-                </button>
-              </div>
-            </>
+                <p className="text-sm text-gray-700 text-center">
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold">"{deleteLabel}"</span>?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmDelete}
+                    className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </>
             </>
           )}
         </div>
@@ -422,7 +428,7 @@ export default function Form({
           <button
             type="button"
             onClick={() => saveData("close")}
-             ref={saveCloseButtonRef}
+            ref={saveCloseButtonRef}
             onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
             className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
           >
@@ -463,7 +469,6 @@ export default function Form({
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={10}
-          childRecordLabel="Item Master"
         />
       </div>
 
@@ -513,7 +518,7 @@ export default function Form({
                         onClick={() => {
                           saveData("close");
                         }}
-                          ref={saveCloseButtonRef} // ✅ Add ref
+                        ref={saveCloseButtonRef} // ✅ Add ref
                         tabIndex={0}
                         onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
@@ -531,7 +536,7 @@ export default function Form({
                         onClick={() => {
                           saveData("new");
                         }}
-                         onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
                         ref={saveNewButtonRef} // ✅ Add ref
                         tabIndex={0}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 

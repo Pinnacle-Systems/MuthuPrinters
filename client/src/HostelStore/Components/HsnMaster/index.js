@@ -76,7 +76,7 @@ export default function Form({
     },
     [id],
   );
-    const {
+  const {
     firstInputRef: countryNameRef,
     toggleButtonRef,
     saveCloseButtonRef,
@@ -108,10 +108,10 @@ export default function Form({
     try {
       let returnData = await callback(data).unwrap();
       if (onSuccess) {
-         await Swal.fire({
-                  title: text + "  " + "Successfully",
-                  icon: "success",
-                });
+        await Swal.fire({
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
         onSuccess(returnData?.data.id);
         return;
       }
@@ -124,8 +124,7 @@ export default function Form({
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
-                        syncFormWithDb(undefined);
-
+        syncFormWithDb(undefined);
       }
       Swal.fire({
         title: `${text}  Successfullty`,
@@ -141,8 +140,9 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
-         didClose: () => {          countryNameRef?.current?.focus();
-        }
+        didClose: () => {
+          countryNameRef?.current?.focus();
+        },
       });
       return;
     }
@@ -169,12 +169,11 @@ export default function Form({
         // showConfirmButton: false,
         didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
       });
       return false;
     }
-    if(id){
-
+    if (id) {
       if (!window.confirm("Are you sure update the details ...?")) {
         return;
       }
@@ -213,8 +212,7 @@ export default function Form({
             title: "Deleted" + "  " + "Successfully",
             icon: "success",
           });
-                          syncFormWithDb(undefined);
-
+          syncFormWithDb(undefined);
         } catch (error) {
           toast.error("something went wrong");
         }
@@ -325,8 +323,7 @@ export default function Form({
                     required={true}
                     readOnly={readOnly}
                     disabled={childRecord.current > 0}
-                                    onKeyDown={handlers.handleLastInputKeyDown}
-
+                    onKeyDown={handlers.handleLastInputKeyDown}
                   />
                 </div>
                 <ToggleButton
@@ -337,7 +334,7 @@ export default function Form({
                   required={true}
                   readOnly={readOnly}
                   ref={toggleButtonRef}
-                onKeyDown={handlers.handleToggleKeyDown}
+                  onKeyDown={handlers.handleToggleKeyDown}
                 />
               </fieldset>
             </div>
@@ -388,8 +385,11 @@ export default function Form({
               <p>
                 "{deleteLabel}" has {childCount} linked records.
               </p>
-               <button type="button" onClick={onClose}
-                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+              >
                 Close
               </button>
             </>
@@ -400,12 +400,18 @@ export default function Form({
                 <span className="font-semibold">"{deleteLabel}"</span>?
               </p>
               <div className="flex gap-3">
-                <button type="button" onClick={onClose}
-                  className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+                >
                   Cancel
                 </button>
-                <button type="button" onClick={handleConfirmDelete}
-                  className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded">
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded"
+                >
                   Delete
                 </button>
               </div>
@@ -429,7 +435,7 @@ export default function Form({
           <button
             type="button"
             onClick={() => saveData("close")}
-             ref={saveCloseButtonRef}
+            ref={saveCloseButtonRef}
             onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
             className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
           >
@@ -468,7 +474,6 @@ export default function Form({
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
-          childRecordLabel="Style Item Master"
         />
       </div>
 
@@ -514,7 +519,7 @@ export default function Form({
                         onClick={() => {
                           saveData("close");
                         }}
-                         ref={saveCloseButtonRef} // ✅ Add ref
+                        ref={saveCloseButtonRef} // ✅ Add ref
                         tabIndex={0}
                         onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
@@ -532,8 +537,8 @@ export default function Form({
                         onClick={() => {
                           saveData("new");
                         }}
-                         onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
-                    ref={saveNewButtonRef} // ✅ Add ref
+                        onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        ref={saveNewButtonRef} // ✅ Add ref
                         tabIndex={0}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                                                  border border-green-600 flex items-center gap-1 text-xs"

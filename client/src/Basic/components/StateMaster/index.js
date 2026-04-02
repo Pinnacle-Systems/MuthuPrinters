@@ -124,11 +124,11 @@ export default function Form({
       // toast.success(text + "Successfully");
       if (onSuccess) {
         await Swal.fire({
-                 title: text + "  " + "Successfully",
-                 icon: "success",
-               });
-               onSuccess(returnData.data.id);
-               return;
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
+        onSuccess(returnData.data.id);
+        return;
       }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
@@ -154,9 +154,9 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
-        didClose:() => {
+        didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
       });
       return;
     }
@@ -175,9 +175,9 @@ export default function Form({
       Swal.fire({
         text: "The State Name already exists.",
         icon: "warning",
-         didClose:() => {
+        didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
       });
       return false;
     }
@@ -451,8 +451,11 @@ export default function Form({
               <p className="text-red-600 font-semibold">
                 Cannot delete "{deleteLabel}"
               </p>
-              <button type="button" onClick={onClose}
-                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+              >
                 Close
               </button>
             </>
@@ -618,7 +621,6 @@ export default function Form({
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
-          childRecordLabel="City Master"
         />
       </div>
 

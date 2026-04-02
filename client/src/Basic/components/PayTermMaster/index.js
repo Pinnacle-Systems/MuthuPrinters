@@ -566,7 +566,6 @@ export default function Form({
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={10}
-          childRecordLabel="Purchase Order"
         />
       </div>
 

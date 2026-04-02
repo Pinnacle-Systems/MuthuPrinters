@@ -13,6 +13,7 @@ import { useDeletePurchaseCancelMutation } from "../../../redux/uniformService/P
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -37,6 +38,8 @@ export default function Form() {
     setShowForm(true);
     setReadOnly(false);
   };
+  const [dispatchInvalidate] = useInvalidateTags();
+
   const [removeData] = useDeletePurchaseCancelMutation();
   const handleDelete = async (id) => {
     setId(id);
@@ -61,6 +64,7 @@ export default function Form() {
           timer: 1000,
         });
         invalidatePurchaseModule();
+        dispatchInvalidate();
         setShowForm(false);
       } catch (error) {
         Swal.fire({

@@ -47,11 +47,11 @@ export default function Form({
 
   const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
   const {
-      firstInputRef: sizeNameRef,
-      toggleButtonRef,
-      saveCloseButtonRef,
-      saveNewButtonRef,
-    } = refs;
+    firstInputRef: sizeNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
   const params = {
     companyId: secureLocalStorage.getItem(
       sessionStorage.getItem("sessionId") + "userCompanyId"
@@ -149,10 +149,10 @@ export default function Form({
     try {
       let returnData = await callback(data).unwrap();
       if (onSuccess) {
-          await Swal.fire({
-                                         title: text + "  " + "Successfully",
-                                         icon: "success",
-                                       });
+        await Swal.fire({
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
         onSuccess(returnData.data.id);
         return;
       }
@@ -162,7 +162,7 @@ export default function Form({
         sizeNameRef?.current?.focus();
       } else {
         setForm(false);
-                        syncFormWithDb(undefined);
+        syncFormWithDb(undefined);
 
       }
 
@@ -199,7 +199,7 @@ export default function Form({
         text: "The Size Template already exists.",
         icon: "warning",
         timer: 1500,
-         didClose:() =>{
+        didClose: () => {
           sizeNameRef?.current?.focus();
         }
       });
@@ -211,13 +211,13 @@ export default function Form({
         icon: "error",
         title: "Submission error",
         text: "Please fill all required fields...!",
-         didClose:() =>{
+        didClose: () => {
           sizeNameRef?.current?.focus();
         }
       });
       return;
     }
-    if(id){
+    if (id) {
 
       if (!window.confirm("Are you sure update the details ...?")) {
         return;
@@ -299,7 +299,7 @@ export default function Form({
             timer: 1000,
           });
           setForm(false);
-                          syncFormWithDb(undefined);
+          syncFormWithDb(undefined);
 
         } catch (error) {
           Swal.fire({
@@ -382,8 +382,8 @@ export default function Form({
                   setActive={setActive}
                   required={true}
                   readOnly={readOnly}
-                    ref={toggleButtonRef}
-                onKeyDown={handlers.handleToggleKeyDown}
+                  ref={toggleButtonRef}
+                  onKeyDown={handlers.handleToggleKeyDown}
                 />
               </div>
             </fieldset>
@@ -469,7 +469,7 @@ export default function Form({
           <button
             type="button"
             onClick={() => saveData("close")}
-             ref={saveCloseButtonRef}
+            ref={saveCloseButtonRef}
             onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
             className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
           >
@@ -510,7 +510,6 @@ export default function Form({
           onEdit={handleEdit}
           onDelete={handleDelete}
           itemsPerPage={10}
-          childRecordLabel="Item Master"
         />
       </div>
 
@@ -561,9 +560,9 @@ export default function Form({
                       }}
                       className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                                  border border-blue-600 flex items-center gap-1 text-xs"
-                                  ref={saveCloseButtonRef} // ✅ Add ref
-                        tabIndex={0}
-                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
+                      ref={saveCloseButtonRef} // ✅ Add ref
+                      tabIndex={0}
+                      onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                     >
                       <Check size={14} />
                       {id ? "Update" : "Save & close"}
@@ -579,9 +578,9 @@ export default function Form({
                       }}
                       className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                                  border border-green-600 flex items-center gap-1 text-xs"
-                                  onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
-                        ref={saveNewButtonRef} // ✅ Add ref
-                        tabIndex={0}
+                      onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                      ref={saveNewButtonRef} // ✅ Add ref
+                      tabIndex={0}
                     >
                       <Check size={14} />
                       {"Save & New"}

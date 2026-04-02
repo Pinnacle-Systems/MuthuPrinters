@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import FxSelect from "../../../Inputs";
 import Swal from "sweetalert2";
 import Modal from "../../../UiComponents/Modal";
@@ -62,6 +62,16 @@ const CancelItems = ({
     };
     setCancelItems([...cancelItems, newRow]);
   };
+  const fillItemsButtonRef = useRef(null);
+
+  // Add useEffect to focus the button when supplierId changes
+  useEffect(() => {
+    if (supplierId && fillItemsButtonRef.current) {
+      setTimeout(() => {
+        fillItemsButtonRef.current?.focus();
+      }, 100);
+    }
+  }, [supplierId]);
   const [triggerGetStyleItem, { data: styleData }] =
     useLazyGetStyleItemMasterByIdQuery();
   const handleInputChange = async (value, index, field) => {
@@ -178,6 +188,8 @@ const CancelItems = ({
                   setFillGrid(true);
                 }
               }}
+              tabIndex={0}
+              ref={fillItemsButtonRef}
               onClick={() => {
                 if (!supplierId) {
                   Swal.fire({
@@ -190,6 +202,7 @@ const CancelItems = ({
                   setFillGrid(true);
                 }
               }}
+              type="button"
             >
               Fill Items
             </button>

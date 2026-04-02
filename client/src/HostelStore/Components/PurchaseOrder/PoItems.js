@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import secureLocalStorage from "react-secure-storage";
 import { CLOSE_ICON, VIEW } from "../../../icons";
 import FxSelect from "../../../Inputs";
+import { FxSelectWithAdd } from "../../../Inputs";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import Modal from "../../../UiComponents/Modal";
@@ -9,6 +10,7 @@ import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
 import { useMemo } from "react";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
 import { getUniqueArrayBySize } from "../../../Utils/helper";
+import { ColorMaster, Size, StyleItemMaster } from "..";
 
 const PoItems = ({
   id,
@@ -329,7 +331,7 @@ const PoItems = ({
                       {count++}
                     </td>
                     <td className=" text-[11px] border border-gray-300 text-left">
-                      <FxSelect
+                      <FxSelectWithAdd
                         inputId={`styleItemId-input-${index}`}
                         value={row.styleItemId}
                         onChange={(val) =>
@@ -355,6 +357,9 @@ const PoItems = ({
                             handleInputChange("", index, "styleItemId");
                           }
                         }}
+                        addNew={true}
+                        childComponent={StyleItemMaster}
+                        addNewModalWidth="w-[50%] h-[57%]"
                       />
                     </td>
                     <td className="py-0.5 border border-gray-300 text-[11px] ">
@@ -386,17 +391,11 @@ const PoItems = ({
                       />
                     </td>
                     <td className="py-0.5 border border-gray-300 text-[11px] ">
-                      <FxSelect
+                      <FxSelectWithAdd
                         value={row.sizeId}
                         onChange={(val) =>
                           handleInputChange(val, index, "sizeId")
                         }
-                        // options={(sizeList?.data || [])
-                        //   .filter((item) => (id ? true : item.active))
-                        //   .map((item) => ({
-                        //     label: item.name,
-                        //     value: item.id,
-                        //   }))}
                         options={getUniqueArrayBySize(
                           styleItemList?.data,
                           sizeList?.data,
@@ -418,10 +417,13 @@ const PoItems = ({
                             handleInputChange("", index, "sizeId");
                           }
                         }}
+                        addNew={true}
+                        childComponent={Size}
+                        addNewModalWidth="w-[30%] h-[45%]"
                       />
                     </td>
                     <td className="py-0.5 border border-gray-300 text-[11px] ">
-                      <FxSelect
+                      <FxSelectWithAdd
                         value={row.colorId}
                         onChange={(val) =>
                           handleInputChange(val, index, "colorId")
@@ -442,6 +444,9 @@ const PoItems = ({
                             handleInputChange("", index, "colorId");
                           }
                         }}
+                        addNew={true}
+                        childComponent={ColorMaster}
+                        addNewModalWidth="w-[30%] h-[45%]"
                       />
                     </td>
                     <td className="py-0.5 border border-gray-300 text-[11px] ">

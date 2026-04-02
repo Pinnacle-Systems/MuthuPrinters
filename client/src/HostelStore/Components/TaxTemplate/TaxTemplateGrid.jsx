@@ -83,7 +83,7 @@ const TaxTemplateGrid = ({ taxTemplateItems, setTaxTemplateItems, readOnly, para
                                             <td className='border border-slate-300 '>
                                                 <select
                                                     disabled={readOnly}
-                                                    className='text-left w-full rounded-sm border border-slate-300 h-8 px-1 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 transition-all bg-white'
+                                                    className='text-left w-auto rounded-sm border border-slate-300 h-8 px-1 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 transition-all bg-white'
                                                     value={row.taxTermId}
                                                     onChange={(e) => handleInputChange(e, index, "taxTermId")}
                                                 >

@@ -8,18 +8,18 @@ const TaxTemplateApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: BASE_URL,
   }),
-  tagTypes: ["Party"],
+  tagTypes: ["TaxTemplate"],
   endpoints: (builder) => ({
     getTaxTemplate: builder.query({
-      query: ({params, searchParams}) => {
-        if(searchParams){
+      query: ({ params, searchParams }) => {
+        if (searchParams) {
           return {
-            url: TAX_TEMPLATE_API +"/search/"+searchParams,
+            url: TAX_TEMPLATE_API + "/search/" + searchParams,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
             },
-            params
+            params,
           };
         }
         return {
@@ -28,10 +28,10 @@ const TaxTemplateApi = createApi({
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
-          params
+          params,
         };
       },
-      providesTags: ["Party"],
+      providesTags: ["TaxTemplate"],
     }),
     getTaxTemplateById: builder.query({
       query: (id) => {
@@ -43,7 +43,7 @@ const TaxTemplateApi = createApi({
           },
         };
       },
-      providesTags: ["Party"],
+      providesTags: ["TaxTemplate"],
     }),
     addTaxTemplate: builder.mutation({
       query: (payload) => ({
@@ -51,24 +51,24 @@ const TaxTemplateApi = createApi({
         method: "POST",
         body: payload,
       }),
-      invalidatesTags: ["Party"],
+      invalidatesTags: ["TaxTemplate"],
     }),
     updateTaxTemplate: builder.mutation({
-      query: ({id, body}) => {
+      query: ({ id, body }) => {
         return {
           url: `${TAX_TEMPLATE_API}/${id}`,
           method: "PUT",
           body,
         };
       },
-      invalidatesTags: ["Party"],
+      invalidatesTags: ["TaxTemplate"],
     }),
     deleteTaxTemplate: builder.mutation({
       query: (id) => ({
         url: `${TAX_TEMPLATE_API}/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Party"],
+      invalidatesTags: ["TaxTemplate"],
     }),
   }),
 });

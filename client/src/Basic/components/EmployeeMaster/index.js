@@ -84,6 +84,7 @@ export default function Form() {
   const [bankName, setBankName] = useState("");
   // Employee Leaving form fields
   const [leavingForm, setLeavingForm] = useState(false);
+  const [employeeId, setEmployeeId] = useState("");
 
   const [leavingDate, setLeavingDate] = useState("");
   const [leavingReason, setLeavingReason] = useState("");
@@ -180,6 +181,7 @@ export default function Form() {
         sessionStorage.getItem("sessionId") + "currentEmployeeSelected",
         data?.id,
       );
+      setEmployeeId(data?.employeeId ? data?.employeeId : "");
     },
     [id],
   );
@@ -229,6 +231,7 @@ export default function Form() {
     canRejoin,
     rejoinReason,
     bankName,
+    employeeId,
   };
   const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/; // ABCDE1234F
 
@@ -241,6 +244,7 @@ export default function Form() {
       { key: "employeeCategoryId", label: "Employee Category" },
       { key: "department", label: "Department" },
       { key: "joiningDate", label: "Joining Date" },
+      { key: "employeeId", label: "Employee ID" },
       { key: "mobile", label: "Mobile Number" },
       { key: "localAddress", label: "Address" },
       { key: "permPincode", label: " Pincode" },
@@ -629,7 +633,6 @@ export default function Form() {
                 onEdit={handleEdit}
                 onDelete={deleteData}
                 itemsPerPage={10}
-                childRecordLabel="User Master"
               />
             </div>
           ) : (
@@ -960,11 +963,11 @@ export default function Form() {
                       <div>
                         <TextInputNew1
                           name="Employee ID"
-                          value={regNo}
-                          setValue={setRegNo}
-                          readOnly={true}
-                          // required={isCurrentEmployeeDoctor(employeeCategory)}
-                          // disabled={childRecord.current > 0}
+                          value={employeeId}
+                          setValue={setEmployeeId}
+                          readOnly={readOnly}
+                          required={true}
+                          disabled={childRecord.current > 0}
                         />
                       </div>
                     </div>

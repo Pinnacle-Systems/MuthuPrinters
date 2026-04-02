@@ -28,14 +28,13 @@ import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import { ItemGroup, UomMaster, SizeTemplate, HsnMaster } from "..";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
-
 const MODEL = "Item Master";
-export default function Form() {
+export default function Form({ onSuccess, defaultName = "" }) {
   const [form, setForm] = useState(false);
 
   const [readOnly, setReadOnly] = useState(false);
   const [id, setId] = useState("");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName || "");
   const [accessory, setAccessory] = useState(false);
   const [active, setActive] = useState(false);
   const [aliasName, setAliasName] = useState("");
@@ -79,7 +78,7 @@ export default function Form() {
     (data) => {
       if (!id) {
         setReadOnly(false);
-        setName("");
+        setName(defaultName || "");
         setActive(id ? data?.active : true);
         setAliasName(data?.aliasName ? data?.aliasName : "");
         setHsnId(data?.hsnId ? data?.hsnId : "");
@@ -127,7 +126,14 @@ export default function Form() {
     try {
       let returnData = await callback(data).unwrap();
       setId(returnData.data.id);
-
+      if (onSuccess) {
+        await Swal.fire({
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
+        onSuccess(returnData?.data.id);
+        return;
+      }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
@@ -145,7 +151,7 @@ export default function Form() {
         //   Swal.showLoading();
         // },
       });
-                                syncFormWithDb(undefined);
+      syncFormWithDb(undefined);
 
       dispatchInvalidate();
     } catch (error) {
@@ -174,9 +180,9 @@ export default function Form() {
         text: "The Item Name already exists.",
         icon: "warning",
         timer: 1500,
-         didClose:() =>{
+        didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
       });
       return false;
     }
@@ -185,14 +191,13 @@ export default function Form() {
         title: "Please fill all required fields...!",
         icon: "success",
         timer: 1000,
-         didClose:() =>{
+        didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
       });
       return;
     }
-    if(id){
-
+    if (id) {
       if (!window.confirm("Are you sure save the details ...?")) {
         return;
       }
@@ -232,7 +237,7 @@ export default function Form() {
             icon: "success",
             timer: 1000,
           });
-                                    syncFormWithDb(undefined);
+          syncFormWithDb(undefined);
 
           setForm(false);
           dispatchInvalidate();
@@ -309,16 +314,251 @@ export default function Form() {
   };
 
   const {
-        firstInputRef: countryNameRef,
-        toggleButtonRef,
-        saveCloseButtonRef,
-        saveNewButtonRef,
-      } = refs;
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
   useEffect(() => {
-    if (form && countryNameRef.current) {
+    if ((form || onSuccess) && countryNameRef.current) {
       countryNameRef.current.focus();
     }
-  }, [form]);
+  }, [form, onSuccess]);
+
+  const formBody = (
+    <div className="flex-1 p-3">
+      <div className="grid grid-cols-1  gap-3  h-full">
+        <div className="lg:col-span- space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+            <fieldset className=" rounded mt-2">
+              <div className="w-full grid grid-cols-3 gap-3">
+                <div className="mb-3">
+                  <TextInputNew1
+                    ref={countryNameRef}
+                    name="Item Name"
+                    type="text"
+                    value={name}
+                    setValue={setName}
+                    required={true}
+                    readOnly={readOnly}
+                    disabled={childRecord.current > 0}
+                  />
+                </div>
+                <div className="mb-3">
+                  <TextInputNew1
+                    name="Alias Name"
+                    type="text"
+                    value={aliasName}
+                    setValue={setAliasName}
+                    readOnly={readOnly}
+                    disabled={childRecord.current > 0}
+                  />
+                </div>
+                <div className="mb-3">
+                  {/* <DropdownInput
+                            name="Item Group"
+                            options={dropDownListObject(
+                              id
+                                ? itemGroupList?.data
+                                : itemGroupList?.data?.filter(
+                                    (item) => item.active,
+                                  ),
+                              "name",
+                              "id",
+                            )}
+                            value={itemGroupId}
+                            setValue={(value) => {
+                              setItemGroupId(value);
+                            }}
+                            readOnly={readOnly}
+                            disabled={childRecord.current > 0}
+                            clear={true}
+                            required={true}
+                          /> */}
+                  <DropdownWithModal
+                    name="Item Group"
+                    options={dropDownListObject(
+                      id
+                        ? itemGroupList?.data
+                        : itemGroupList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={itemGroupId}
+                    setValue={setItemGroupId}
+                    required={true}
+                    readOnly={readOnly}
+                    className={`w-[150px]`}
+                    disabled={childRecord.current > 0}
+                    addNewLabel="+ Add New Item Group"
+                    childComponent={ItemGroup}
+                    addNewModalWidth="w-[40%] h-[45%]"
+                  />
+                </div>
+                <div className="mb-3">
+                  {/* <DropdownInput
+                            name="UOM"
+                            options={dropDownListObject(
+                              id
+                                ? uomList?.data
+                                : uomList?.data?.filter((item) => item.active),
+                              "name",
+                              "id",
+                            )}
+                            value={uomId}
+                            setValue={(value) => {
+                              setUomId(value);
+                            }}
+                            required={true}
+                            disabled={childRecord.current > 0}
+                            readOnly={readOnly}
+                          /> */}
+                  <DropdownWithModal
+                    name="Uom"
+                    options={dropDownListObject(
+                      id
+                        ? uomList?.data
+                        : uomList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={uomId}
+                    setValue={setUomId}
+                    required={true}
+                    readOnly={readOnly}
+                    className={`w-[150px]`}
+                    disabled={childRecord.current > 0}
+                    addNewLabel="+ Add New Uom"
+                    childComponent={UomMaster}
+                    addNewModalWidth="w-[40%] h-[45%]"
+                  />
+                </div>
+                <div className="mb-3">
+                  <DropdownWithModal
+                    name="Size Template"
+                    options={dropDownListObject(
+                      id
+                        ? sizeTemplateList?.data
+                        : sizeTemplateList?.data?.filter(
+                            (item) => item?.active,
+                          ),
+                      "name",
+                      "id",
+                    )}
+                    value={sizeTemplateId}
+                    setValue={setSizeTemplateId}
+                    required={true}
+                    readOnly={readOnly}
+                    className={`w-[150px]`}
+                    disabled={childRecord.current > 0}
+                    addNewLabel="+ Add New Size Template"
+                    childComponent={SizeTemplate}
+                    addNewModalWidth="w-[40%] h-[62%]"
+                  />
+                  {/* <DropdownInput
+                            name="Size Template"
+                            options={dropDownListObject(
+                              id
+                                ? sizeTemplateList?.data
+                                : sizeTemplateList?.data?.filter(
+                                    (item) => item.active,
+                                  ),
+                              "name",
+                              "id",
+                            )}
+                            value={sizeTemplateId}
+                            setValue={(value) => {
+                              setSizeTemplateId(value);
+                            }}
+                            readOnly={readOnly}
+                            clear={true}
+                            disabled={childRecord.current > 0}
+                          /> */}
+                </div>
+                <div className="mb-3">
+                  {/* <DropdownInput
+                            name="HSN"
+                            options={dropDownListObject(
+                              id
+                                ? hsnList?.data
+                                : hsnList?.data?.filter((item) => item.active),
+                              "name",
+                              "id",
+                            )}
+                            value={hsnId}
+                            setValue={(value) => {
+                              setHsnId(value);
+                            }}
+                            readOnly={readOnly}
+                            clear={true}
+                            disabled={childRecord.current > 0}
+                          /> */}
+                  <DropdownWithModal
+                    name="Hsn"
+                    options={dropDownListObject(
+                      id
+                        ? hsnList?.data
+                        : hsnList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={hsnId}
+                    setValue={setHsnId}
+                    readOnly={readOnly}
+                    className={`w-[150px]`}
+                    disabled={childRecord.current > 0}
+                    addNewLabel="+ Add New Hsn"
+                    childComponent={HsnMaster}
+                    addNewModalWidth="w-[40%] h-[50%]"
+                  />
+                </div>
+              </div>
+              <div className="mb-5">
+                <ToggleButton
+                  name="Status"
+                  options={statusDropdown}
+                  value={active}
+                  setActive={setActive}
+                  required={true}
+                  readOnly={readOnly}
+                  ref={toggleButtonRef}
+                  onKeyDown={handlers.handleToggleKeyDown}
+                  tabIndex={0}
+                />
+              </div>
+            </fieldset>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (onSuccess) {
+    return (
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            Add New Style Item
+          </h2>
+          <button
+            type="button"
+            onClick={() => saveData("close")}
+            ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
+            className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+          >
+            <Check size={14} />
+            Save
+          </button>
+        </div>
+
+        {formBody}
+      </div>
+    );
+  }
 
   return (
     <div onKeyDown={handleKeyDown} className="p-1">
@@ -346,7 +586,6 @@ export default function Form() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           itemsPerPage={10}
-          childRecordLabel="Purchase Module"
         />
       </div>
       {form && (
@@ -394,9 +633,9 @@ export default function Form() {
                       onClick={() => {
                         saveData("close");
                       }}
-                        ref={saveCloseButtonRef} // ✅ Add ref
-                        tabIndex={0}
-                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
+                      ref={saveCloseButtonRef} // ✅ Add ref
+                      tabIndex={0}
+                      onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
                     >
@@ -414,9 +653,9 @@ export default function Form() {
                       }}
                       className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
-                    onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
-                        ref={saveNewButtonRef} // ✅ Add ref
-                        tabIndex={0}
+                      onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                      ref={saveNewButtonRef} // ✅ Add ref
+                      tabIndex={0}
                     >
                       <Check size={14} />
                       {"Save & New"}
@@ -426,213 +665,7 @@ export default function Form() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-3">
-              <div className="grid grid-cols-1  gap-3  h-full">
-                <div className="lg:col-span- space-y-3">
-                  <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                    <fieldset className=" rounded mt-2">
-                      <div className="w-full grid grid-cols-3 gap-3">
-                        <div className="mb-3">
-                          <TextInputNew1
-                            ref={countryNameRef}
-                            name="Item Name"
-                            type="text"
-                            value={name}
-                            setValue={setName}
-                            required={true}
-                            readOnly={readOnly}
-                            disabled={childRecord.current > 0}
-                          />
-                        </div>
-                        <div className="mb-3">
-                          <TextInputNew1
-                            name="Alias Name"
-                            type="text"
-                            value={aliasName}
-                            setValue={setAliasName}
-                            readOnly={readOnly}
-                            disabled={childRecord.current > 0}
-                          />
-                        </div>
-                        <div className="mb-3">
-                          {/* <DropdownInput
-                            name="Item Group"
-                            options={dropDownListObject(
-                              id
-                                ? itemGroupList?.data
-                                : itemGroupList?.data?.filter(
-                                    (item) => item.active,
-                                  ),
-                              "name",
-                              "id",
-                            )}
-                            value={itemGroupId}
-                            setValue={(value) => {
-                              setItemGroupId(value);
-                            }}
-                            readOnly={readOnly}
-                            disabled={childRecord.current > 0}
-                            clear={true}
-                            required={true}
-                          /> */}
-                          <DropdownWithModal
-                            name="Item Group"
-                            options={dropDownListObject(
-                              id
-                                ? itemGroupList?.data
-                                : itemGroupList?.data?.filter(
-                                    (item) => item?.active,
-                                  ),
-                              "name",
-                              "id",
-                            )}
-                            value={itemGroupId}
-                            setValue={setItemGroupId}
-                            required={true}
-                            readOnly={readOnly}
-                            className={`w-[150px]`}
-                            disabled={childRecord.current > 0}
-                            addNewLabel="+ Add New Item Group"
-                            childComponent={ItemGroup}
-                            addNewModalWidth="w-[40%] h-[45%]"
-                          />
-                        </div>
-                        <div className="mb-3">
-                          {/* <DropdownInput
-                            name="UOM"
-                            options={dropDownListObject(
-                              id
-                                ? uomList?.data
-                                : uomList?.data?.filter((item) => item.active),
-                              "name",
-                              "id",
-                            )}
-                            value={uomId}
-                            setValue={(value) => {
-                              setUomId(value);
-                            }}
-                            required={true}
-                            disabled={childRecord.current > 0}
-                            readOnly={readOnly}
-                          /> */}
-                          <DropdownWithModal
-                            name="Uom"
-                            options={dropDownListObject(
-                              id
-                                ? uomList?.data
-                                : uomList?.data?.filter((item) => item?.active),
-                              "name",
-                              "id",
-                            )}
-                            value={uomId}
-                            setValue={setUomId}
-                            required={true}
-                            readOnly={readOnly}
-                            className={`w-[150px]`}
-                            disabled={childRecord.current > 0}
-                            addNewLabel="+ Add New Uom"
-                            childComponent={UomMaster}
-                            addNewModalWidth="w-[40%] h-[45%]"
-                          />
-                        </div>
-                        <div className="mb-3">
-                          <DropdownWithModal
-                            name="Size Template"
-                            options={dropDownListObject(
-                              id
-                                ? sizeTemplateList?.data
-                                : sizeTemplateList?.data?.filter(
-                                    (item) => item?.active,
-                                  ),
-                              "name",
-                              "id",
-                            )}
-                            value={sizeTemplateId}
-                            setValue={setSizeTemplateId}
-                            required={true}
-                            readOnly={readOnly}
-                            className={`w-[150px]`}
-                            disabled={childRecord.current > 0}
-                            addNewLabel="+ Add New Size Template"
-                            childComponent={SizeTemplate}
-                            addNewModalWidth="w-[40%] h-[62%]"
-                          />
-                          {/* <DropdownInput
-                            name="Size Template"
-                            options={dropDownListObject(
-                              id
-                                ? sizeTemplateList?.data
-                                : sizeTemplateList?.data?.filter(
-                                    (item) => item.active,
-                                  ),
-                              "name",
-                              "id",
-                            )}
-                            value={sizeTemplateId}
-                            setValue={(value) => {
-                              setSizeTemplateId(value);
-                            }}
-                            readOnly={readOnly}
-                            clear={true}
-                            disabled={childRecord.current > 0}
-                          /> */}
-                        </div>
-                        <div className="mb-3">
-                          {/* <DropdownInput
-                            name="HSN"
-                            options={dropDownListObject(
-                              id
-                                ? hsnList?.data
-                                : hsnList?.data?.filter((item) => item.active),
-                              "name",
-                              "id",
-                            )}
-                            value={hsnId}
-                            setValue={(value) => {
-                              setHsnId(value);
-                            }}
-                            readOnly={readOnly}
-                            clear={true}
-                            disabled={childRecord.current > 0}
-                          /> */}
-                          <DropdownWithModal
-                            name="Hsn"
-                            options={dropDownListObject(
-                              id
-                                ? hsnList?.data
-                                : hsnList?.data?.filter((item) => item?.active),
-                              "name",
-                              "id",
-                            )}
-                            value={hsnId}
-                            setValue={setHsnId}
-                            readOnly={readOnly}
-                            className={`w-[150px]`}
-                            disabled={childRecord.current > 0}
-                            addNewLabel="+ Add New Hsn"
-                            childComponent={HsnMaster}
-                            addNewModalWidth="w-[40%] h-[50%]"
-                          />
-                        </div>
-                      </div>
-                      <div className="mb-5">
-                        <ToggleButton
-                          name="Status"
-                          options={statusDropdown}
-                          value={active}
-                          setActive={setActive}
-                          required={true}
-                          readOnly={readOnly}
-                            ref={toggleButtonRef}
-                onKeyDown={handlers.handleToggleKeyDown}
-                tabIndex={0}
-                        />
-                      </div>
-                    </fieldset>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {formBody}
           </div>
         </Modal>
       )}

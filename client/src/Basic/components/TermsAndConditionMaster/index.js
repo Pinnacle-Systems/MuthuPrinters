@@ -99,14 +99,12 @@ export default function Form({
 
       if (onSuccess) {
         await Swal.fire({
-                         title: text + "  " + "Successfully",
-                         icon: "success",
-                       });
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
         onSuccess(returnData.data.id);
         return;
       }
-
-      
 
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
@@ -141,9 +139,9 @@ export default function Form({
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "error",
-        didClose:() =>{
+        didClose: () => {
           termsNameRef?.current?.focus();
-        }
+        },
       });
       return;
     }
@@ -163,10 +161,9 @@ export default function Form({
       Swal.fire({
         text: "The Terms & Conditions Name already exists.",
         icon: "warning",
-        didClose:() =>{
-
+        didClose: () => {
           termsNameRef?.current?.focus();
-        }
+        },
       });
       return false;
     }
@@ -473,6 +470,8 @@ export default function Form({
           <button
             type="button"
             onClick={() => saveData("close")}
+            ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
             className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
           >
             <Check size={14} />
@@ -511,7 +510,6 @@ export default function Form({
           onEdit={handleEdit}
           onDelete={deleteData}
           itemsPerPage={15}
-          childRecordLabel="Purchase Order"
         />
       </div>
 

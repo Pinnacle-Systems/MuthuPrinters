@@ -12,8 +12,6 @@ import {
 
 import { useGetCityQuery } from "../../../redux/services/CityMasterService";
 
-import FormHeader from "../../../Basic/components/FormHeader";
-import FormReport from "../../../Basic/components/FormReportTemplate";
 import { toast } from "react-toastify";
 import {
   TextInput,
@@ -54,14 +52,24 @@ import { useGetPartyBranchByIdQuery } from "../../../redux/services/PartyBranchM
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { BranchTypeMaster } from "..";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
-export default function Form({ partyId, onCloseForm, childId }) {
+export default function Form({
+  partyId,
+  onCloseForm,
+  childId,
+  onSuccess,
+  onClose,
+  editId,
+  deleteId,
+  deleteLabel,
+} = {}) {
   const [form, setForm] = useState(false);
   const [aadharNo, setAadharNo] = useState("");
 
   const [readOnly, setReadOnly] = useState(false);
 
-  const [id, setId] = useState("");
+  const [id, setId] = useState(editId || deleteId || "");
   const [panNo, setPanNo] = useState("");
   const [name, setName] = useState("");
   const [aliasName, setAliasName] = useState("");
@@ -154,6 +162,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
   const [updateData] = useUpdatePartyMutation();
   const [removeData] = useDeletePartyMutation();
   const [dispatchInvalidate] = useInvalidateTags();
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -384,6 +393,13 @@ export default function Form({ partyId, onCloseForm, childId }) {
     return pincodeRegex.test(pincode);
   };
 
+  const {
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
+
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
       const formData = new FormData();
@@ -416,6 +432,14 @@ export default function Form({ partyId, onCloseForm, childId }) {
       } else {
         returnData = await callback(formData).unwrap();
       }
+      if (onSuccess) {
+        await Swal.fire({
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
+        onSuccess(returnData.data.id);
+        return;
+      }
       dispatchInvalidate();
 
       if (nextProcess == "new") {
@@ -433,6 +457,9 @@ export default function Form({ partyId, onCloseForm, childId }) {
       Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
+        didClose: () => {
+          countryNameRef?.current?.focus();
+        },
       });
     } catch (error) {
       console.log("handle");
@@ -473,14 +500,14 @@ export default function Form({ partyId, onCloseForm, childId }) {
       return [...prev, ...newArray];
     });
   }, [setAttachments, attachments]);
-  const countryNameRef = useRef(null);
 
   useEffect(() => {
-    if (form && countryNameRef.current) {
+    if ((form || onSuccess) && countryNameRef.current) {
       countryNameRef.current.focus();
     }
-  }, [form]);
+  }, [form, onSuccess]);
   const alphaNum12 = /^[A-Z0-9]{15}$/;
+
   const saveData = (nextProcess) => {
     // Branch validations
     if (isBranch && !parentId) {
@@ -1454,6 +1481,842 @@ export default function Form({ partyId, onCloseForm, childId }) {
     );
   }
 
+  const formBody = (
+    <div className="flex-1 p-3">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <div className="lg:col-span-4 space-y-3 ">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-[330px] overflow-y-auto">
+            <h3 className="font-medium text-gray-800 mb-2 text-sm">
+              Basic Details
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-row items-center gap-4 col-span-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={isCustomer}
+                    onChange={(e) => setIsCustomer(e.target.checked)}
+                    disabled={readOnly}
+                  />
+                  <label className="block text-xs font-bold text-gray-600">
+                    Customer
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={isSupplier}
+                    onChange={(e) => setIsSupplier(e.target.checked)}
+                    disabled={readOnly}
+                  />
+                  <label className="block text-xs font-bold text-gray-600">
+                    Supplier
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={isBranch}
+                    onChange={(e) => {
+                      if (parentId || branchTypeId) {
+                        setParentId("");
+                        setBranchTypeId("");
+                        setName("");
+                        setPartyCode("");
+                        setPanNo("");
+                        setAadharNo("");
+                        setGstNo("");
+                        setMsmeNo("");
+                        setCinNo("");
+                      }
+                      setIsBranch(e.target.checked);
+                    }}
+                    disabled={readOnly}
+                  />
+                  <label className="block text-xs font-bold text-gray-600">
+                    Add Branch
+                  </label>
+                </div>
+              </div>
+
+              <div className="col-span-2">
+                <DropdownInputNew
+                  name="Customer/supplier"
+                  options={dropDownListObject(
+                    id
+                      ? allData?.data?.filter(
+                          (i) => i.id != id && !i.parentId && i.gstNo,
+                        )
+                      : allData?.data?.filter(
+                          (item) =>
+                            item.active &&
+                            item.id != id &&
+                            !item.parentId &&
+                            item.gstNo,
+                        ),
+                    "name",
+                    "id",
+                  )}
+                  value={parentId}
+                  setValue={(value) => {
+                    setParentId(value);
+                    setName(findFromList(value, allData?.data, "name"));
+                  }}
+                  // setValue={setParentId}
+                  readOnly={readOnly}
+                  required={true}
+                  disabled={childRecord.current > 0 || !isBranch}
+                />
+              </div>
+              <div className="col-span-2">
+                {/* <DropdownInputNew
+                            name="Branch Type"
+                            options={dropDownListObject(
+                              id
+                                ? branchTypeData?.data
+                                : branchTypeData?.data?.filter(
+                                    (item) => item.active,
+                                  ),
+                              "name",
+                              "id" || [],
+                            )}
+                            value={branchTypeId}
+                            openOnFocus={true}
+                            setValue={(value) => {
+                              setBranchTypeId(value);
+                            }}
+                            required={true}
+                            readOnly={readOnly}
+                            disabled={
+                              childRecord.current > 0 || !isBranch || !parentId
+                            }
+                          /> */}
+                <DropdownWithModal
+                  name="Branch Type"
+                  options={dropDownListObject(
+                    id
+                      ? branchTypeData?.data
+                      : branchTypeData?.data?.filter((item) => item.active),
+                    "name",
+                    "id",
+                  )}
+                  value={branchTypeId}
+                  setValue={(value) => {
+                    setBranchTypeId(value);
+                  }}
+                  required={true}
+                  readOnly={readOnly}
+                  disabled={childRecord.current > 0 || !isBranch || !parentId}
+                  addNewLabel="+ Add New Branch Type"
+                  childComponent={BranchTypeMaster}
+                  addNewModalWidth="w-[40%] h-[45%]"
+                />
+              </div>
+              {!isBranch && (
+                <div className="col-span-2">
+                  <TextInputNew1
+                    name={`${isSupplier ? "Supplier Name" : "Customer Name"}`}
+                    type="text"
+                    value={name}
+                    inputClass="h-8"
+                    ref={countryNameRef}
+                    setValue={setName}
+                    required={true}
+                    readOnly={readOnly}
+                    disabled={childRecord.current > 0}
+                    onBlur={(e) => {
+                      if (aliasName) return;
+                      setAliasName(e.target.value);
+                    }}
+                    className="focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              )}
+
+              {isBranch && (
+                <div className="col-span-2">
+                  <TextInputNew1
+                    name="Branch Name"
+                    inputClass="h-10"
+                    value={name}
+                    setValue={setName}
+                    required={true}
+                    readOnly={readOnly}
+                    disabled={childRecord.current > 0}
+                  />
+                </div>
+              )}
+              {/* <div className="col-span-2">
+                                                    <TextInputNew1
+                                                        name="Alias Name"
+                                                        type="text"
+                                                        inputClass="h-8"
+                                                        value={aliasName}
+                                                        setValue={setAliasName}
+                                                        readOnly={readOnly}
+                                                        disabled={childRecord.current > 0}
+                                                        className="focus:ring-2 focus:ring-blue-100"
+                                                    />
+                                                </div> */}
+              <div className="col-span-1">
+                <TextInputNew1
+                  name="Code"
+                  type="text"
+                  value={partyCode}
+                  required={true}
+                  setValue={setPartyCode}
+                  readOnly={readOnly}
+                  disabled={childRecord.current > 0}
+                  className="focus:ring-2 focus:ring-blue-100 w-10"
+                />
+              </div>
+
+              <div className=" ml-2 mt-1">
+                <ToggleButton
+                  name="Status"
+                  options={statusDropdown}
+                  value={active}
+                  setActive={setActive}
+                  required={true}
+                  readOnly={readOnly}
+                  className="bg-gray-100 p-1 rounded-lg"
+                  activeClass="bg-[#f1f1f0] shadow-sm text-blue-600"
+                  inactiveClass="text-gray-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="lg:col-span-4 space-y-3 ">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-[330px] overflow-y-auto">
+            <h3 className="font-medium text-gray-800 mb-2 text-sm">
+              Address Details
+            </h3>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="col-span-2">
+                  <TextAreaNew
+                    name="Address"
+                    inputClass="h-10"
+                    value={address}
+                    setValue={setAddress}
+                    required={true}
+                    readOnly={readOnly}
+                    d
+                    isabled={childRecord.current > 0}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <div className="grid grid-cols-5 gap-2">
+                    <div className="col-span-5">
+                      <TextInputNew1
+                        name="Land Mark"
+                        type="text"
+                        value={landMark}
+                        setValue={setlandMark}
+                        readOnly={readOnly}
+                        // disabled={childRecord.current > 0}
+                        className="focus:ring-2 focus:ring-blue-100 w-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <div className=" grid grid-cols-5 gap-3">
+                    <div className="col-span-4">
+                      {/* <DropdownInputNew
+                                  name="City/State Name"
+                                  options={dropDownListMergedObject(
+                                    id
+                                      ? cityList?.data
+                                      : cityList?.data?.filter(
+                                          (item) => item.active,
+                                        ),
+                                    "name",
+                                    "id",
+                                  )}
+                                  country={country}
+                                  masterName="CITY MASTER"
+                                  // lastTab={activeTab}
+                                  value={city}
+                                  setValue={setCity}
+                                  required={true}
+                                  readOnly={readOnly}
+                                  // disabled={childRecord.current > 0}
+                                  className="focus:ring-2 focus:ring-blue-100"
+                                /> */}
+                      <DropdownWithModal
+                        name="City/State Name"
+                        options={dropDownListMergedObject(
+                          id
+                            ? cityList?.data
+                            : cityList?.data?.filter((item) => item.active),
+                          "name",
+                          "id",
+                        )}
+                        country={country}
+                        masterName="CITY MASTER"
+                        // lastTab={activeTab}
+                        value={city}
+                        setValue={setCity}
+                        required={true}
+                        readOnly={readOnly}
+                        className="focus:ring-2 focus:ring-blue-100"
+                        addNewLabel="+ Add New City"
+                        childComponent={CityMaster}
+                        addNewModalWidth="w-[50%] h-[55%]"
+                      />
+                    </div>
+                    <TextInputNew1
+                      name="Pincode"
+                      type="number"
+                      value={pincode}
+                      required={true}
+                      setValue={setPincode}
+                      readOnly={readOnly}
+                      // disabled={childRecord.current > 0}
+                      className="focus:ring-2 focus:ring-blue-100 w-10"
+                    />
+                  </div>
+                </div>
+
+                {/* <div className="">
+                                                        <TextInputNew
+                                                            name={"Contact Number"}
+                                                            value={contact}
+
+                                                            setValue={setContact}
+                                                            readOnly={readOnly}
+                                                            disabled={childRecord.current > 0}
+                                                            className="focus:ring-2 focus:ring-blue-100 w-10"
+                                                        />
+                                                    </div>
+                                                    <div className="">
+                                                        <TextInputNew1
+                                                            name={"Email"}
+                                                            type="text"
+                                                            value={email}
+
+                                                            setValue={setEmail}
+                                                            readOnly={readOnly}
+                                                            disabled={childRecord.current > 0}
+                                                            className="focus:ring-2 focus:ring-blue-100 w-10"
+                                                        />
+
+                                                    </div> */}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="lg:col-span-4 space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200  h-[330px]">
+            <h3 className="font-medium text-gray-800 mb-2 text-sm">
+              Contact Details
+            </h3>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="col-span-2">
+                  <TextInputNew1
+                    name="Contact Person Name"
+                    type="text"
+                    value={contactPersonName}
+                    setValue={setContactPersonName}
+                    readOnly={readOnly}
+                    // disabled={childRecord.current > 0}
+                    className="focus:ring-2 focus:ring-blue-100 w-10"
+                  />
+                </div>
+
+                <TextInputNew1
+                  name="Designation"
+                  type="text"
+                  value={designation}
+                  setValue={setDesignation}
+                  readOnly={readOnly}
+                  // disabled={childRecord.current > 0}
+                  className="focus:ring-2 focus:ring-blue-100 w-10"
+                />
+                <TextInputNew1
+                  name="Department"
+                  type="text"
+                  value={department}
+                  setValue={setDepartment}
+                  readOnly={readOnly}
+                  // disabled={childRecord.current > 0}
+                  className="focus:ring-2 focus:ring-blue-100 w-10"
+                />
+                <div className="col-span-2">
+                  <TextInputNew
+                    name="Email"
+                    type="text"
+                    value={contactPersonEmail}
+                    setValue={setContactPersonEmail}
+                    readOnly={readOnly}
+                    // disabled={childRecord.current > 0}
+                    className="focus:ring-2 focus:ring-blue-100 w-10"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <TextInputNew
+                    name="Contact Number"
+                    value={contactNumber}
+                    setValue={setContactNumber}
+                    readOnly={readOnly}
+                    // disabled={childRecord.current > 0}
+                    className="focus:ring-2 focus:ring-blue-100 w-10"
+                  />
+                </div>
+                {/* <div className='col-span-1'>
+                                                        <TextInputNew
+                                                            name="Alternative Contact Number"
+                                                            type="number"
+                                                            value={alterContactNumber}
+                                                            setValue={setAlterContactNumber}
+
+                                                            // readOnly={readOnly}
+                                                            // disabled={childRecord.current > 0}
+                                                            className="focus:ring-2 focus:ring-blue-100 w-10"
+                                                        />
+                                                    </div> */}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-4 space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-[240px]">
+            <h3 className="font-medium text-gray-800 mb-2 text-sm">
+              Business Details
+            </h3>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                {/* <DropdownInput
+                                                    name="Currency"
+                                                    options={dropDownListObject(
+                                                        id
+                                                            ? currencyList?.data ?? []
+                                                            : currencyList?.data?.filter(
+                                                                (item) => item.active
+                                                            ) ?? [],
+                                                        "name",
+                                                        "id"
+                                                    )}
+                                                    // lastTab={activeTab}
+                                                    masterName="CURRENCY MASTER"
+                                                    value={currency}
+                                                    setValue={setCurrency}
+                                                    readOnly={readOnly}
+                                                    disabled={childRecord.current > 0}
+                                                    className="focus:ring-2 focus:ring-blue-100"
+                                                /> */}
+
+                {/* <DropdownInput
+                                                    name="PayTerm"
+                                                    options={dropDownListObject(
+                                                        id
+                                                            ? payTermList?.data
+                                                            : payTermList?.data?.filter((item) => item.active),
+                                                        "name",
+                                                        "id"
+                                                    )}
+                                                    value={payTermDay}
+                                                    setValue={setPayTermDay}
+                                                    // required={true}
+                                                    readOnly={readOnly}
+                                                    disabled={childRecord.current > 0}
+                                                    className="focus:ring-2 focus:ring-blue-100"
+                                                /> */}
+                <TextInputNew
+                  name="Pan No"
+                  type="pan_no"
+                  value={panNo}
+                  setValue={setPanNo}
+                  readOnly={readOnly}
+                  // disabled={childRecord.current > 0}
+                  className="focus:ring-2 focus:ring-blue-100"
+                />
+                <TextInput
+                  name="Aadhar No"
+                  type="text"
+                  value={aadharNo}
+                  setValue={setAadharNo}
+                  readOnly={readOnly || parentId || isBranch}
+                  required={true}
+                  disabled={parentId || isBranch}
+                  className="focus:ring-2 focus:ring-blue-100"
+                />
+                <TextInputNew
+                  name="GST No"
+                  type="text"
+                  value={gstNo}
+                  setValue={setGstNo}
+                  readOnly={readOnly || parentId || isBranch}
+                  // required={true}
+                  disabled={parentId || isBranch}
+                  className="focus:ring-2 focus:ring-blue-100"
+                />
+                <TextInputNew
+                  name="MSME CERTFICATE  No"
+                  type="text"
+                  value={msmeNo}
+                  setValue={setMsmeNo}
+                  readOnly={readOnly}
+                  // disabled={childRecord.current > 0}
+                  className="focus:ring-2 focus:ring-blue-100"
+                />
+                <TextInputNew
+                  name="CIN No"
+                  type="text"
+                  value={cinNo}
+                  setValue={setCinNo}
+                  readOnly={readOnly}
+                  className="focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="lg:col-span-4 space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-[240px]">
+            <h3 className="font-medium text-gray-800 mb-2 text-sm">
+              Bank Details
+            </h3>
+            <div className="space-y-2">
+              <TextInputNew1
+                name="Bank Name"
+                type="text"
+                value={bankname}
+                setValue={setBankName}
+                readOnly={readOnly}
+                // disabled={childRecord.current > 0}
+                className="focus:ring-2 focus:ring-blue-100 w-10"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="col-span-2">
+                  <TextInputNew1
+                    name="Branch Name"
+                    type="text"
+                    value={bankBranchName}
+                    setValue={setBankBranchName}
+                    readOnly={readOnly}
+                    // disabled={childRecord.current > 0}
+                    className="focus:ring-2 focus:ring-blue-100 w-10"
+                  />
+                </div>
+
+                <TextInputNew
+                  name="Account Number"
+                  type="text"
+                  value={accountNumber}
+                  setValue={setAccountNumber}
+                  readOnly={readOnly}
+                  // disabled={childRecord.current > 0}
+                  className="focus:ring-2 focus:ring-blue-100 w-10"
+                />
+                <TextInputNew
+                  name="IFSC CODE"
+                  type="text"
+                  value={ifscCode}
+                  setValue={setIfscCode}
+                  readOnly={readOnly}
+                  // disabled={childRecord.current > 0}
+                  className="focus:ring-2 focus:ring-blue-100 w-10"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="lg:col-span-4 space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200  h-[240px]">
+            <h3 className="font-medium text-gray-800 mb-2 text-sm">
+              Attachments
+            </h3>
+
+            <div className="max-h-[200px] overflow-auto">
+              <div className="grid grid-cols-1 gap-3  border-collapse bg-[#F1F1F0]   shadow-sm overflow-auto">
+                <table className="bg-gray-200 text-gray-800 text-sm table-auto w-full">
+                  <thead className=" py-2  font-medium  top-o sticky">
+                    <tr>
+                      <th className="py-2  text-xs  w-10 text-center border-r border-white/50">
+                        S.No
+                      </th>
+                      {/* <th className="py-2  font-medium  w-24 text-center border-r border-white/50">Date</th> */}
+                      {/* <th className="py-1 px-3 w-32 text-left border border-gray-400">User</th> */}
+                      <th className="py-2  text-xs w-60 center border-white/50">
+                        {" "}
+                        Name
+                      </th>
+                      <th className="py-2  text-xs center w-60 border-r border-white/50">
+                        File
+                      </th>
+                      <th className="py-2  text-xs  w-10 text-center">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {attachments?.map((item, index) => (
+                      <tr
+                        key={index}
+                        className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${
+                          index % 2 === 0 ? "bg-white" : "bg-gray-100"
+                        }`}
+                      >
+                        <td className="border-r border-white/50 center h-8 text-center ">
+                          {index + 1}
+                        </td>
+
+                        <td className=" border-r border-white/50' h-8 ">
+                          <input
+                            type="text"
+                            className="text-left rounded py-1 px-2 w-full  focus:outline-none focus:ring focus:border-blue-300"
+                            value={item?.name}
+                            onChange={(e) =>
+                              handleInputChange(e.target.value, index, "name")
+                            }
+                          />
+                        </td>
+                        <td className="border-r border-white/50 h-8">
+                          <div className="flex items-center gap-2">
+                            {/* Hidden File Input */}
+                            {!readOnly && !item.filePath && (
+                              <>
+                                <input
+                                  type="file"
+                                  id={`file-upload-${index}`}
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    if (e.target.files[0]) {
+                                      handleInputChange(
+                                        renameFile(e.target.files[0]),
+                                        index,
+                                        "filePath",
+                                      );
+                                    }
+                                  }}
+                                />
+
+                                {/* Attach Icon */}
+                                <label
+                                  htmlFor={`file-upload-${index}`}
+                                  className="cursor-pointer flex items-center justify-center p-1 bg-gray-100 rounded hover:bg-gray-200"
+                                  title="Attach file"
+                                >
+                                  📎
+                                </label>
+                              </>
+                            )}
+
+                            {/* Show File + Actions */}
+                            {item.filePath && (
+                              <>
+                                <span className="truncate max-w-[120px]">
+                                  {item.filePath?.name ?? item.filePath}
+                                </span>
+
+                                <button
+                                  onClick={() => {
+                                    if (item.filePath instanceof File) {
+                                      window.open(
+                                        URL.createObjectURL(item.filePath),
+                                      );
+                                    } else {
+                                      window.open(
+                                        getImageUrlPath(item.filePath),
+                                      );
+                                    }
+                                  }}
+                                  className="text-blue-600 text-xs hover:underline"
+                                >
+                                  View
+                                </button>
+
+                                {!readOnly && (
+                                  <button
+                                    onClick={() =>
+                                      handleInputChange("", index, "filePath")
+                                    }
+                                    className="text-red-600 text-xs"
+                                    title="Remove file"
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="w-[30px] border-gray-200 h-8">
+                          <div className="flex items-center justify-center gap-1">
+                            {/* Add Button */}
+                            <button
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addNewComments();
+                                }
+                              }}
+                              onClick={addNewComments}
+                              className="flex items-center px-1 bg-blue-50 rounded"
+                            >
+                              <Plus size={18} className="text-blue-800" />
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              className="flex items-center px-1 bg-red-50 rounded"
+                              onClick={() => deleteRow(index)}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 text-red-800"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (deleteId) {
+    const childCount = singleData?.data?.childRecord ?? 0;
+    const isLoadingRecord = isSingleFetching || isSingleLoading;
+
+    const handleConfirmDelete = async () => {
+      try {
+        const res = await removeData(deleteId).unwrap();
+        if (res?.statusCode === 1) {
+          toast.error(res?.data?.message || "Cannot delete");
+          return;
+        }
+        toast.success("Customer / Supplier deleted successfully");
+        onSuccess?.();
+      } catch (err) {
+        toast.error(
+          err?.data?.message || "Failed to delete Customer / Supplier",
+        );
+      }
+    };
+
+    return (
+      <div className="min-h-[650px] flex flex-col bg-gray-200">
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center bg-white">
+          <h2 className="text-lg font-semibold">Delete Customer / Supplier</h2>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
+          {isLoadingRecord ? (
+            <p className="text-xs text-gray-400">Checking records...</p>
+          ) : childCount > 0 ? (
+            <>
+              <div className="flex flex-col items-center gap-2">
+                <svg
+                  className="w-10 h-10 text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                  />
+                </svg>
+                <p className="text-sm font-semibold text-red-600">
+                  Cannot Delete
+                </p>
+                <p className="text-xs text-gray-600 text-center">
+                  <span className="font-semibold">"{deleteLabel}"</span> has{" "}
+                  <span className="font-semibold text-red-600">
+                    {childCount} linked record{childCount > 1 ? "s" : ""}
+                  </span>
+                  . Remove them first before deleting this Customer / Supplier.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+              >
+                Close
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-700 text-center">
+                Are you sure you want to delete{" "}
+                <span className="font-semibold">"{deleteLabel}"</span>?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded"
+                >
+                  Delete
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (onSuccess) {
+    return (
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            {editId ? "Edit Customer/Supplier" : "Add New Customer/Supplier"}
+          </h2>
+          <button
+            type="button"
+            onClick={() => saveData("close")}
+            ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
+            className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+          >
+            <Check size={14} />
+            {editId ? "Update" : "Save"}
+          </button>
+        </div>
+
+        {formBody}
+      </div>
+    );
+  }
+
   return (
     <>
       <div onKeyDown={handleKeyDown}>
@@ -1545,7 +2408,6 @@ export default function Form({ partyId, onCloseForm, childId }) {
             onEdit={handleEdit}
             onDelete={deleteData}
             itemsPerPage={15}
-            childRecordLabel="Purchase Module"
           />
         </div>
 
@@ -1634,6 +2496,9 @@ export default function Form({ partyId, onCloseForm, childId }) {
                           }}
                           className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                                                     border border-blue-600 flex items-center gap-1 text-xs"
+                          ref={saveCloseButtonRef}
+                          tabIndex={0} // ✅ Add tabIndex
+                          onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                         >
                           <Check size={14} />
                           {id ? "Update" : "Save & close"}
@@ -1649,6 +2514,9 @@ export default function Form({ partyId, onCloseForm, childId }) {
                           }}
                           className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                                                     border border-green-600 flex items-center gap-1 text-xs"
+                          ref={saveNewButtonRef} // ✅ Add ref
+                          tabIndex={0} // ✅ Add tabIndex
+                          onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
                         >
                           <Check size={14} />
                           {"Save & New"}
@@ -1659,745 +2527,7 @@ export default function Form({ partyId, onCloseForm, childId }) {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto p-3">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                  <div className="lg:col-span-4 space-y-3 ">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-[330px] overflow-y-auto">
-                      <h3 className="font-medium text-gray-800 mb-2 text-sm">
-                        Basic Details
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="flex flex-row items-center gap-4 col-span-2 mb-2">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={isCustomer}
-                              onChange={(e) => setIsCustomer(e.target.checked)}
-                              disabled={readOnly}
-                            />
-                            <label className="block text-xs font-bold text-gray-600">
-                              Customer
-                            </label>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={isSupplier}
-                              onChange={(e) => setIsSupplier(e.target.checked)}
-                              disabled={readOnly}
-                            />
-                            <label className="block text-xs font-bold text-gray-600">
-                              Supplier
-                            </label>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={isBranch}
-                              onChange={(e) => {
-                                if (parentId || branchTypeId) {
-                                  setParentId("");
-                                  setBranchTypeId("");
-                                  setName("");
-                                  setPartyCode("");
-                                  setPanNo("");
-                                  setAadharNo("");
-                                  setGstNo("");
-                                  setMsmeNo("");
-                                  setCinNo("");
-                                }
-                                setIsBranch(e.target.checked);
-                              }}
-                              disabled={readOnly}
-                            />
-                            <label className="block text-xs font-bold text-gray-600">
-                              Add Branch
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="col-span-2">
-                          <DropdownInputNew
-                            name="Customer/supplier"
-                            options={dropDownListObject(
-                              id
-                                ? allData?.data?.filter(
-                                    (i) => i.id != id && !i.parentId && i.gstNo,
-                                  )
-                                : allData?.data?.filter(
-                                    (item) =>
-                                      item.active &&
-                                      item.id != id &&
-                                      !item.parentId &&
-                                      item.gstNo,
-                                  ),
-                              "name",
-                              "id",
-                            )}
-                            value={parentId}
-                            setValue={(value) => {
-                              setParentId(value);
-                              setName(
-                                findFromList(value, allData?.data, "name"),
-                              );
-                            }}
-                            // setValue={setParentId}
-                            readOnly={readOnly}
-                            required={true}
-                            disabled={childRecord.current > 0 || !isBranch}
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          {/* <DropdownInputNew
-                            name="Branch Type"
-                            options={dropDownListObject(
-                              id
-                                ? branchTypeData?.data
-                                : branchTypeData?.data?.filter(
-                                    (item) => item.active,
-                                  ),
-                              "name",
-                              "id" || [],
-                            )}
-                            value={branchTypeId}
-                            openOnFocus={true}
-                            setValue={(value) => {
-                              setBranchTypeId(value);
-                            }}
-                            required={true}
-                            readOnly={readOnly}
-                            disabled={
-                              childRecord.current > 0 || !isBranch || !parentId
-                            }
-                          /> */}
-                          <DropdownWithModal
-                            name="Branch Type"
-                            options={dropDownListObject(
-                              id
-                                ? branchTypeData?.data
-                                : branchTypeData?.data?.filter(
-                                    (item) => item.active,
-                                  ),
-                              "name",
-                              "id",
-                            )}
-                            value={branchTypeId}
-                            setValue={(value) => {
-                              setBranchTypeId(value);
-                            }}
-                            required={true}
-                            readOnly={readOnly}
-                            disabled={
-                              childRecord.current > 0 || !isBranch || !parentId
-                            }
-                            addNewLabel="+ Add New Branch Type"
-                            childComponent={BranchTypeMaster}
-                            addNewModalWidth="w-[40%] h-[45%]"
-                          />
-                        </div>
-                        {!isBranch && (
-                          <div className="col-span-2">
-                            <TextInputNew1
-                              name={`${isSupplier ? "Supplier Name" : "Customer Name"}`}
-                              type="text"
-                              value={name}
-                              inputClass="h-8"
-                              ref={countryNameRef}
-                              setValue={setName}
-                              required={true}
-                              readOnly={readOnly}
-                              disabled={childRecord.current > 0}
-                              onBlur={(e) => {
-                                if (aliasName) return;
-                                setAliasName(e.target.value);
-                              }}
-                              className="focus:ring-2 focus:ring-blue-100"
-                            />
-                          </div>
-                        )}
-
-                        {isBranch && (
-                          <div className="col-span-2">
-                            <TextInputNew1
-                              name="Branch Name"
-                              inputClass="h-10"
-                              value={name}
-                              setValue={setName}
-                              required={true}
-                              readOnly={readOnly}
-                              disabled={childRecord.current > 0}
-                            />
-                          </div>
-                        )}
-                        {/* <div className="col-span-2">
-                                                    <TextInputNew1
-                                                        name="Alias Name"
-                                                        type="text"
-                                                        inputClass="h-8"
-                                                        value={aliasName}
-                                                        setValue={setAliasName}
-                                                        readOnly={readOnly}
-                                                        disabled={childRecord.current > 0}
-                                                        className="focus:ring-2 focus:ring-blue-100"
-                                                    />
-                                                </div> */}
-                        <div className="col-span-1">
-                          <TextInputNew1
-                            name="Code"
-                            type="text"
-                            value={partyCode}
-                            required={true}
-                            setValue={setPartyCode}
-                            readOnly={readOnly}
-                            disabled={childRecord.current > 0}
-                            className="focus:ring-2 focus:ring-blue-100 w-10"
-                          />
-                        </div>
-
-                        <div className=" ml-2 mt-1">
-                          <ToggleButton
-                            name="Status"
-                            options={statusDropdown}
-                            value={active}
-                            setActive={setActive}
-                            required={true}
-                            readOnly={readOnly}
-                            className="bg-gray-100 p-1 rounded-lg"
-                            activeClass="bg-[#f1f1f0] shadow-sm text-blue-600"
-                            inactiveClass="text-gray-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="lg:col-span-4 space-y-3 ">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-[330px] overflow-y-auto">
-                      <h3 className="font-medium text-gray-800 mb-2 text-sm">
-                        Address Details
-                      </h3>
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="col-span-2">
-                            <TextAreaNew
-                              name="Address"
-                              inputClass="h-10"
-                              value={address}
-                              setValue={setAddress}
-                              required={true}
-                              readOnly={readOnly}
-                              d
-                              isabled={childRecord.current > 0}
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <div className="grid grid-cols-5 gap-2">
-                              <div className="col-span-5">
-                                <TextInputNew1
-                                  name="Land Mark"
-                                  type="text"
-                                  value={landMark}
-                                  setValue={setlandMark}
-                                  readOnly={readOnly}
-                                  // disabled={childRecord.current > 0}
-                                  className="focus:ring-2 focus:ring-blue-100 w-10"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <div className="col-span-2">
-                            <div className=" grid grid-cols-5 gap-3">
-                              <div className="col-span-4">
-                                {/* <DropdownInputNew
-                                  name="City/State Name"
-                                  options={dropDownListMergedObject(
-                                    id
-                                      ? cityList?.data
-                                      : cityList?.data?.filter(
-                                          (item) => item.active,
-                                        ),
-                                    "name",
-                                    "id",
-                                  )}
-                                  country={country}
-                                  masterName="CITY MASTER"
-                                  // lastTab={activeTab}
-                                  value={city}
-                                  setValue={setCity}
-                                  required={true}
-                                  readOnly={readOnly}
-                                  // disabled={childRecord.current > 0}
-                                  className="focus:ring-2 focus:ring-blue-100"
-                                /> */}
-                                <DropdownWithModal
-                                  name="City/State Name"
-                                  options={dropDownListMergedObject(
-                                    id
-                                      ? cityList?.data
-                                      : cityList?.data?.filter(
-                                          (item) => item.active,
-                                        ),
-                                    "name",
-                                    "id",
-                                  )}
-                                  country={country}
-                                  masterName="CITY MASTER"
-                                  // lastTab={activeTab}
-                                  value={city}
-                                  setValue={setCity}
-                                  required={true}
-                                  readOnly={readOnly}
-                                  className="focus:ring-2 focus:ring-blue-100"
-                                  addNewLabel="+ Add New City"
-                                  childComponent={CityMaster}
-                                  addNewModalWidth="w-[50%] h-[55%]"
-                                />
-                              </div>
-                              <TextInputNew1
-                                name="Pincode"
-                                type="number"
-                                value={pincode}
-                                required={true}
-                                setValue={setPincode}
-                                readOnly={readOnly}
-                                // disabled={childRecord.current > 0}
-                                className="focus:ring-2 focus:ring-blue-100 w-10"
-                              />
-                            </div>
-                          </div>
-
-                          {/* <div className="">
-                                                        <TextInputNew
-                                                            name={"Contact Number"}
-                                                            value={contact}
-
-                                                            setValue={setContact}
-                                                            readOnly={readOnly}
-                                                            disabled={childRecord.current > 0}
-                                                            className="focus:ring-2 focus:ring-blue-100 w-10"
-                                                        />
-                                                    </div>
-                                                    <div className="">
-                                                        <TextInputNew1
-                                                            name={"Email"}
-                                                            type="text"
-                                                            value={email}
-
-                                                            setValue={setEmail}
-                                                            readOnly={readOnly}
-                                                            disabled={childRecord.current > 0}
-                                                            className="focus:ring-2 focus:ring-blue-100 w-10"
-                                                        />
-
-                                                    </div> */}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="lg:col-span-4 space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200  h-[330px]">
-                      <h3 className="font-medium text-gray-800 mb-2 text-sm">
-                        Contact Details
-                      </h3>
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="col-span-2">
-                            <TextInputNew1
-                              name="Contact Person Name"
-                              type="text"
-                              value={contactPersonName}
-                              setValue={setContactPersonName}
-                              readOnly={readOnly}
-                              // disabled={childRecord.current > 0}
-                              className="focus:ring-2 focus:ring-blue-100 w-10"
-                            />
-                          </div>
-
-                          <TextInputNew1
-                            name="Designation"
-                            type="text"
-                            value={designation}
-                            setValue={setDesignation}
-                            readOnly={readOnly}
-                            // disabled={childRecord.current > 0}
-                            className="focus:ring-2 focus:ring-blue-100 w-10"
-                          />
-                          <TextInputNew1
-                            name="Department"
-                            type="text"
-                            value={department}
-                            setValue={setDepartment}
-                            readOnly={readOnly}
-                            // disabled={childRecord.current > 0}
-                            className="focus:ring-2 focus:ring-blue-100 w-10"
-                          />
-                          <div className="col-span-2">
-                            <TextInputNew
-                              name="Email"
-                              type="text"
-                              value={contactPersonEmail}
-                              setValue={setContactPersonEmail}
-                              readOnly={readOnly}
-                              // disabled={childRecord.current > 0}
-                              className="focus:ring-2 focus:ring-blue-100 w-10"
-                            />
-                          </div>
-                          <div className="col-span-2">
-                            <TextInputNew
-                              name="Contact Number"
-                              value={contactNumber}
-                              setValue={setContactNumber}
-                              readOnly={readOnly}
-                              // disabled={childRecord.current > 0}
-                              className="focus:ring-2 focus:ring-blue-100 w-10"
-                            />
-                          </div>
-                          {/* <div className='col-span-1'>
-                                                        <TextInputNew
-                                                            name="Alternative Contact Number"
-                                                            type="number"
-                                                            value={alterContactNumber}
-                                                            setValue={setAlterContactNumber}
-
-                                                            // readOnly={readOnly}
-                                                            // disabled={childRecord.current > 0}
-                                                            className="focus:ring-2 focus:ring-blue-100 w-10"
-                                                        />
-                                                    </div> */}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-4 space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-[240px]">
-                      <h3 className="font-medium text-gray-800 mb-2 text-sm">
-                        Business Details
-                      </h3>
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          {/* <DropdownInput
-                                                    name="Currency"
-                                                    options={dropDownListObject(
-                                                        id
-                                                            ? currencyList?.data ?? []
-                                                            : currencyList?.data?.filter(
-                                                                (item) => item.active
-                                                            ) ?? [],
-                                                        "name",
-                                                        "id"
-                                                    )}
-                                                    // lastTab={activeTab}
-                                                    masterName="CURRENCY MASTER"
-                                                    value={currency}
-                                                    setValue={setCurrency}
-                                                    readOnly={readOnly}
-                                                    disabled={childRecord.current > 0}
-                                                    className="focus:ring-2 focus:ring-blue-100"
-                                                /> */}
-
-                          {/* <DropdownInput
-                                                    name="PayTerm"
-                                                    options={dropDownListObject(
-                                                        id
-                                                            ? payTermList?.data
-                                                            : payTermList?.data?.filter((item) => item.active),
-                                                        "name",
-                                                        "id"
-                                                    )}
-                                                    value={payTermDay}
-                                                    setValue={setPayTermDay}
-                                                    // required={true}
-                                                    readOnly={readOnly}
-                                                    disabled={childRecord.current > 0}
-                                                    className="focus:ring-2 focus:ring-blue-100"
-                                                /> */}
-                          <TextInputNew
-                            name="Pan No"
-                            type="pan_no"
-                            value={panNo}
-                            setValue={setPanNo}
-                            readOnly={readOnly}
-                            // disabled={childRecord.current > 0}
-                            className="focus:ring-2 focus:ring-blue-100"
-                          />
-                          <TextInput
-                            name="Aadhar No"
-                            type="text"
-                            value={aadharNo}
-                            setValue={setAadharNo}
-                            readOnly={readOnly || parentId || isBranch}
-                            required={true}
-                            disabled={parentId || isBranch}
-                            className="focus:ring-2 focus:ring-blue-100"
-                          />
-                          <TextInputNew
-                            name="GST No"
-                            type="text"
-                            value={gstNo}
-                            setValue={setGstNo}
-                            readOnly={readOnly || parentId || isBranch}
-                            // required={true}
-                            disabled={parentId || isBranch}
-                            className="focus:ring-2 focus:ring-blue-100"
-                          />
-                          <TextInputNew
-                            name="MSME CERTFICATE  No"
-                            type="text"
-                            value={msmeNo}
-                            setValue={setMsmeNo}
-                            readOnly={readOnly}
-                            // disabled={childRecord.current > 0}
-                            className="focus:ring-2 focus:ring-blue-100"
-                          />
-                          <TextInputNew
-                            name="CIN No"
-                            type="text"
-                            value={cinNo}
-                            setValue={setCinNo}
-                            readOnly={readOnly}
-                            className="focus:ring-2 focus:ring-blue-100"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="lg:col-span-4 space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-[240px]">
-                      <h3 className="font-medium text-gray-800 mb-2 text-sm">
-                        Bank Details
-                      </h3>
-                      <div className="space-y-2">
-                        <TextInputNew1
-                          name="Bank Name"
-                          type="text"
-                          value={bankname}
-                          setValue={setBankName}
-                          readOnly={readOnly}
-                          // disabled={childRecord.current > 0}
-                          className="focus:ring-2 focus:ring-blue-100 w-10"
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="col-span-2">
-                            <TextInputNew1
-                              name="Branch Name"
-                              type="text"
-                              value={bankBranchName}
-                              setValue={setBankBranchName}
-                              readOnly={readOnly}
-                              // disabled={childRecord.current > 0}
-                              className="focus:ring-2 focus:ring-blue-100 w-10"
-                            />
-                          </div>
-
-                          <TextInputNew
-                            name="Account Number"
-                            type="text"
-                            value={accountNumber}
-                            setValue={setAccountNumber}
-                            readOnly={readOnly}
-                            // disabled={childRecord.current > 0}
-                            className="focus:ring-2 focus:ring-blue-100 w-10"
-                          />
-                          <TextInputNew
-                            name="IFSC CODE"
-                            type="text"
-                            value={ifscCode}
-                            setValue={setIfscCode}
-                            readOnly={readOnly}
-                            // disabled={childRecord.current > 0}
-                            className="focus:ring-2 focus:ring-blue-100 w-10"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="lg:col-span-4 space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200  h-[240px]">
-                      <h3 className="font-medium text-gray-800 mb-2 text-sm">
-                        Attachments
-                      </h3>
-
-                      <div className="max-h-[200px] overflow-auto">
-                        <div className="grid grid-cols-1 gap-3  border-collapse bg-[#F1F1F0]   shadow-sm overflow-auto">
-                          <table className="bg-gray-200 text-gray-800 text-sm table-auto w-full">
-                            <thead className=" py-2  font-medium  top-o sticky">
-                              <tr>
-                                <th className="py-2  text-xs  w-10 text-center border-r border-white/50">
-                                  S.No
-                                </th>
-                                {/* <th className="py-2  font-medium  w-24 text-center border-r border-white/50">Date</th> */}
-                                {/* <th className="py-1 px-3 w-32 text-left border border-gray-400">User</th> */}
-                                <th className="py-2  text-xs w-60 center border-white/50">
-                                  {" "}
-                                  Name
-                                </th>
-                                <th className="py-2  text-xs center w-60 border-r border-white/50">
-                                  File
-                                </th>
-                                <th className="py-2  text-xs  w-10 text-center">
-                                  Actions
-                                </th>
-                              </tr>
-                            </thead>
-
-                            <tbody>
-                              {attachments?.map((item, index) => (
-                                <tr
-                                  key={index}
-                                  className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${
-                                    index % 2 === 0 ? "bg-white" : "bg-gray-100"
-                                  }`}
-                                >
-                                  <td className="border-r border-white/50 center h-8 text-center ">
-                                    {index + 1}
-                                  </td>
-
-                                  <td className=" border-r border-white/50' h-8 ">
-                                    <input
-                                      type="text"
-                                      className="text-left rounded py-1 px-2 w-full  focus:outline-none focus:ring focus:border-blue-300"
-                                      value={item?.name}
-                                      onChange={(e) =>
-                                        handleInputChange(
-                                          e.target.value,
-                                          index,
-                                          "name",
-                                        )
-                                      }
-                                    />
-                                  </td>
-                                  <td className="border-r border-white/50 h-8">
-                                    <div className="flex items-center gap-2">
-                                      {/* Hidden File Input */}
-                                      {!readOnly && !item.filePath && (
-                                        <>
-                                          <input
-                                            type="file"
-                                            id={`file-upload-${index}`}
-                                            className="hidden"
-                                            onChange={(e) => {
-                                              if (e.target.files[0]) {
-                                                handleInputChange(
-                                                  renameFile(e.target.files[0]),
-                                                  index,
-                                                  "filePath",
-                                                );
-                                              }
-                                            }}
-                                          />
-
-                                          {/* Attach Icon */}
-                                          <label
-                                            htmlFor={`file-upload-${index}`}
-                                            className="cursor-pointer flex items-center justify-center p-1 bg-gray-100 rounded hover:bg-gray-200"
-                                            title="Attach file"
-                                          >
-                                            📎
-                                          </label>
-                                        </>
-                                      )}
-
-                                      {/* Show File + Actions */}
-                                      {item.filePath && (
-                                        <>
-                                          <span className="truncate max-w-[120px]">
-                                            {item.filePath?.name ??
-                                              item.filePath}
-                                          </span>
-
-                                          <button
-                                            onClick={() => {
-                                              if (
-                                                item.filePath instanceof File
-                                              ) {
-                                                window.open(
-                                                  URL.createObjectURL(
-                                                    item.filePath,
-                                                  ),
-                                                );
-                                              } else {
-                                                window.open(
-                                                  getImageUrlPath(
-                                                    item.filePath,
-                                                  ),
-                                                );
-                                              }
-                                            }}
-                                            className="text-blue-600 text-xs hover:underline"
-                                          >
-                                            View
-                                          </button>
-
-                                          {!readOnly && (
-                                            <button
-                                              onClick={() =>
-                                                handleInputChange(
-                                                  "",
-                                                  index,
-                                                  "filePath",
-                                                )
-                                              }
-                                              className="text-red-600 text-xs"
-                                              title="Remove file"
-                                            >
-                                              ✕
-                                            </button>
-                                          )}
-                                        </>
-                                      )}
-                                    </div>
-                                  </td>
-
-                                  <td className="w-[30px] border-gray-200 h-8">
-                                    <div className="flex items-center justify-center gap-1">
-                                      {/* Add Button */}
-                                      <button
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            addNewComments();
-                                          }
-                                        }}
-                                        onClick={addNewComments}
-                                        className="flex items-center px-1 bg-blue-50 rounded"
-                                      >
-                                        <Plus
-                                          size={18}
-                                          className="text-blue-800"
-                                        />
-                                      </button>
-
-                                      {/* Delete Button */}
-                                      <button
-                                        className="flex items-center px-1 bg-red-50 rounded"
-                                        onClick={() => deleteRow(index)}
-                                      >
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          className="h-4 w-4 text-red-800"
-                                          viewBox="0 0 20 20"
-                                          fill="currentColor"
-                                        >
-                                          <path
-                                            fillRule="evenodd"
-                                            d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                            clipRule="evenodd"
-                                          />
-                                        </svg>
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {formBody}
             </div>
           </Modal>
         )}

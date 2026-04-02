@@ -323,7 +323,7 @@ export const DropdownWithModal = forwardRef(
           ${isDisabled ? "bg-slate-100 cursor-not-allowed" : "bg-white cursor-pointer"}
           ${className}`}
         >
-          <span className={selectedLabel ? "text-gray-800" : "text-gray-400"}>
+          <span className={selectedLabel ? "text-gray-800" : "text-gray-500"}>
             {selectedLabel || "Select"}
           </span>
           <svg
