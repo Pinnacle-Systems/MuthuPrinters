@@ -24,6 +24,7 @@ import { Check, Power } from "lucide-react";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService";
 import { toast } from "react-toastify";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 
 const MODEL = "Size Template Master";
 export default function Form({
@@ -44,6 +45,7 @@ export default function Form({
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
   const [errors, setErrors] = useState({});
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
   const {
@@ -170,6 +172,8 @@ export default function Form({
         title: text + "  " + "Successfully",
         icon: "success",
       });
+      dispatchInvalidate();
+
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -299,6 +303,8 @@ export default function Form({
             timer: 1000,
           });
           setForm(false);
+          dispatchInvalidate();
+
           syncFormWithDb(undefined);
 
         } catch (error) {

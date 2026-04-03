@@ -13,6 +13,8 @@ async function get(req) {
       _count: {
         select: {
           sizeTemplateLists: true,
+          poItems: true,
+          inwardItems: true,
         },
       },
     },
@@ -22,7 +24,10 @@ async function get(req) {
     data: data.map((item) => {
       return {
         ...item,
-        childRecord: item._count.sizeTemplateLists,
+        childRecord:
+          item._count.sizeTemplateLists +
+          item._count.poItems +
+          item._count.inwardItems,
       };
     }),
   };

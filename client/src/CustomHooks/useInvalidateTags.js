@@ -73,6 +73,10 @@ const useInvalidateTags = () => {
       payload: ["SizeMaster"],
     },
     {
+      type: `sizeTemplate/invalidateTags`,
+      payload: ["SizeTemplate"],
+    },
+    {
       type: `uomMaster/invalidateTags`,
       payload: ["Uom"],
     },
