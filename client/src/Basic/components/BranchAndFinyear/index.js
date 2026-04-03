@@ -158,10 +158,10 @@ const BranchAndFinYearForm = ({ setIsGlobalOpen }) => {
           </div>
           <div>
             <h2 className="text-[15px] font-bold tracking-tight">
-              Active Context
+              Session Details
             </h2>
             <p className="text-gray-500 text-[12px] mt-0.5 leading-none">
-              Branch and financial year
+              Please select your working environment.
             </p>
           </div>
         </div>

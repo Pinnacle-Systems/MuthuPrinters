@@ -232,36 +232,31 @@ export default function Form() {
     rejoinReason,
     bankName,
     employeeId,
+    employeeCategory,
   };
   const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/; // ABCDE1234F
 
   const validateData = (data) => {
-    const requiredFields = [
-      { key: "name", label: "Employee Name" },
-      { key: "gender", label: "Gender" },
-      { key: "bloodGroup", label: "Blood Group" },
-      { key: "dob", label: "Date of Birth" },
-      { key: "employeeCategoryId", label: "Employee Category" },
-      { key: "department", label: "Department" },
-      { key: "joiningDate", label: "Joining Date" },
-      { key: "employeeId", label: "Employee ID" },
-      { key: "mobile", label: "Mobile Number" },
-      { key: "localAddress", label: "Address" },
-      { key: "permPincode", label: " Pincode" },
-      { key: "permCity", label: " City" },
-      { key: "maritalStatus", label: "Marital Status" },
-    ];
+    let newErrors = {};
 
-    const missingField = requiredFields.find((field) => !data[field.key]);
+    if (!data.name) newErrors.name = "Full Name is required";
+    if (!data.gender) newErrors.gender = "Gender is required";
+    if (!data.bloodGroup) newErrors.bloodGroup = "Blood Group is required";
+    if (!data.dob) newErrors.dob = "Date of Birth is required";
+    if (!data.employeeCategory)
+      newErrors.employeeCategory = "Employee Category is required";
+    if (!data.department) newErrors.department = "Department is required";
+    if (!data.joiningDate) newErrors.joiningDate = "Joining Date is required";
+    if (!data.employeeId) newErrors.employeeId = "Employee Id is required";
+    if (!data.mobile) newErrors.mobile = "Mobile No is required";
+    if (!data.localAddress) newErrors.localAddress = "Address is required";
+    if (!data.permCity) newErrors.permCity = "City is required";
+    if (!data.permPincode) newErrors.permPincode = "Pincode is required";
+    if (!data.maritalStatus)
+      newErrors.maritalStatus = "Marital Status is required";
 
-    if (missingField) {
-      return {
-        isValid: false,
-        message: `${missingField.label} is required`,
-      };
-    }
-
-    return { isValid: true };
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const validateMobile = (mobile) => {
@@ -326,13 +321,11 @@ export default function Form() {
   };
 
   const saveData = (nextProcess) => {
-    const validation = validateData(data);
-    if (!validation.isValid) {
+    if (!validateData(data)) {
       Swal.fire({
-        title: "Validation Error",
-        text: validation.message,
+        title: "Please fill all required fields...!",
         icon: "error",
-        confirmButtonColor: "#3085d6",
+        didClose: () => countryNameRef.current?.focus(),
       });
       return;
     }
@@ -550,7 +543,7 @@ export default function Form() {
   const validateStep = () => {
     let newErrors = {};
     if (step === 1) {
-      if (!data.employeeCategoryId)
+      if (!data.employeeCategory)
         newErrors.employeeCategory = "Employee Category is required";
       if (!data.name) newErrors.name = "Name is required";
       if (!data.joiningDate) newErrors.joiningDate = "Joining Date is required";
@@ -579,6 +572,15 @@ export default function Form() {
     }
   }, [form]);
 
+  const clearError = (field) => {
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const errorClass = (field) =>
+    errors[field] ? "border-red-500 bg-red-50" : "";
+
   return (
     <div onKeyDown={handleKeyDown} className="p-1 ">
       <div className="w-full flex bg-white p-1 justify-between  items-center">
@@ -590,7 +592,7 @@ export default function Form() {
               onNew();
               //   setNewForm(true);
             }}
-            className="bg-white border text-xs border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white px-4 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
+            className="bg-white border text-xs border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             <Plus size={16} />
             Add New Employee
@@ -715,6 +717,7 @@ export default function Form() {
             setForm(false);
             syncFormWithDb(undefined);
             setId("");
+            setErrors({});
           }}
         >
           <div className="h-full flex flex-col bg-gray-200">
@@ -773,11 +776,15 @@ export default function Form() {
                         ref={countryNameRef}
                         name="Full Name"
                         value={name}
-                        setValue={setName}
+                        setValue={(val) => {
+                          setName(val);
+                          clearError("name");
+                        }}
                         required={true}
                         readOnly={readOnly}
                         disabled={childRecord.current > 0}
                         onKeyDown={(e) => handleKeyNext(e, input2Ref)}
+                        className={errorClass("name")}
                       />
                       {errors.name && (
                         <span className="text-red-500 text-xs ml-1">
@@ -792,10 +799,14 @@ export default function Form() {
                             name="Gender"
                             options={genderList}
                             value={gender}
-                            setValue={setGender}
+                            setValue={(val) => {
+                              setGender(val);
+                              clearError("gender");
+                            }}
                             required
                             readOnly={readOnly}
                             disabled={childRecord.current > 0}
+                            className={errorClass("gender")}
                           />
                           {errors.gender && (
                             <span className="text-red-500 text-xs ml-1">
@@ -809,10 +820,14 @@ export default function Form() {
                             name="Blood Group"
                             options={bloodList}
                             value={bloodGroup}
-                            setValue={setBloodGroup}
+                            setValue={(val) => {
+                              setBloodGroup(val);
+                              clearError("bloodGroup");
+                            }}
                             required={true}
                             readOnly={readOnly}
                             disabled={childRecord.current > 0}
+                            className={errorClass("bloodGroup")}
                           />
                           {errors.bloodGroup && (
                             <span className="text-red-500 text-xs ml-1">
@@ -821,21 +836,26 @@ export default function Form() {
                           )}
                         </div>
                       </div>
-
-                      <DateInputNew
-                        name="Date of Birth"
-                        value={dob}
-                        setValue={setDob}
-                        required
-                        readOnly={readOnly}
-                        disabled={childRecord.current > 0}
-                        type={"date"}
-                      />
-                      {errors.dob && (
-                        <span className="text-red-500 text-xs ml-1">
-                          {errors.dob}
-                        </span>
-                      )}
+                      <div>
+                        <DateInputNew
+                          name="Date of Birth"
+                          value={dob}
+                          setValue={(val) => {
+                            setDob(val);
+                            clearError("dob");
+                          }}
+                          required
+                          readOnly={readOnly}
+                          disabled={childRecord.current > 0}
+                          type={"date"}
+                          className={errorClass("dob")}
+                        />
+                        {errors.dob && (
+                          <span className="text-red-500 text-xs ml-1 mt-1">
+                            {errors.dob}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -870,7 +890,7 @@ export default function Form() {
                 </div>
 
                 <div className="lg:col-span-5 space-y-3 ">
-                  <div className="bg-white p-3 rounded-md border border-gray-200 h-[230px]">
+                  <div className="bg-white p-3 rounded-md border border-gray-200">
                     <h3 className="font-medium text-gray-800 mb-2 text-sm">
                       Official Details
                     </h3>
@@ -888,14 +908,18 @@ export default function Form() {
                             "id",
                           )}
                           value={employeeCategory}
-                          setValue={setEmployeeCategory}
+                          setValue={(val) => {
+                            setEmployeeCategory(val);
+                            clearError("employeeCategory");
+                          }}
                           required={true}
                           readOnly={readOnly}
-                          className={`w-[150px]`}
+                          // className={`w-[150px]`}
                           disabled={childRecord.current > 0}
                           addNewLabel="+ Add New Employee Category"
                           childComponent={EmployeeCategoryMaster}
                           addNewModalWidth="w-[40%] h-[45%]"
+                          className={errorClass("employeeCategory")}
                         />
                         {errors.employeeCategory && (
                           <span className="text-red-500 text-xs ml-1">
@@ -917,10 +941,13 @@ export default function Form() {
                             "id",
                           )}
                           value={department}
-                          setValue={setDepartment}
+                          setValue={(val) => {
+                            setDepartment(val);
+                            clearError("department");
+                          }}
                           required={true}
                           readOnly={readOnly}
-                          className={`w-[150px]`}
+                          className={errorClass("department")}
                           disabled={childRecord.current > 0}
                           addNewLabel="+ Add New Department"
                           childComponent={DepartmentMaster}
@@ -948,11 +975,15 @@ export default function Form() {
                         <DateInputNew
                           name="Joining Date"
                           value={joiningDate}
-                          setValue={setJoiningDate}
+                          setValue={(val) => {
+                            setJoiningDate(val);
+                            clearError("joiningDate");
+                          }}
                           required={true}
                           readOnly={readOnly}
                           disabled={childRecord.current > 0}
                           type={"date"}
+                          className={errorClass("joiningDate")}
                         />
                         {errors.joiningDate && (
                           <span className="text-red-500 text-xs ml-1">
@@ -964,11 +995,20 @@ export default function Form() {
                         <TextInputNew1
                           name="Employee ID"
                           value={employeeId}
-                          setValue={setEmployeeId}
+                          setValue={(val) => {
+                            setEmployeeId(val);
+                            clearError("employeeId");
+                          }}
                           readOnly={readOnly}
                           required={true}
                           disabled={childRecord.current > 0}
+                          className={errorClass("employeeId")}
                         />
+                        {errors.employeeId && (
+                          <span className="text-red-500 text-xs ml-1">
+                            {errors.employeeId}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -998,10 +1038,14 @@ export default function Form() {
                           name="Marital Status"
                           options={maritalStatusList}
                           value={maritalStatus}
-                          setValue={setMaritalStatus}
+                          setValue={(val) => {
+                            setMaritalStatus(val);
+                            clearError("maritalStatus");
+                          }}
                           required
                           readOnly={readOnly}
                           // disabled={childRecord.current > 0}
+                          className={errorClass("maritalStatus")}
                         />
                         {errors.maritalStatus && (
                           <span className="text-red-500 text-xs ml-1">
@@ -1015,6 +1059,7 @@ export default function Form() {
                           name="Pan No"
                           value={panNo}
                           setValue={setPanNo}
+                          type="pan_no"
                           readOnly={readOnly}
                           // disabled={childRecord.current > 0}
                         />
@@ -1102,21 +1147,32 @@ export default function Form() {
                     </div>
                   </div>
 
-                  <div className="bg-white p-3 rounded-md border border-gray-200 sticky h-[250px]">
+                  <div className="bg-white p-3 rounded-md border border-gray-200 sticky">
                     <h3 className="font-medium text-gray-800 mb-2 text-sm">
                       Contact Information
                     </h3>
                     <div className="space-y-2">
                       <div className="grid grid-cols-2 gap-2">
-                        <TextInputNew
-                          name="Mobile No"
-                          type="number"
-                          value={mobile}
-                          setValue={setMobile}
-                          required={true}
-                          readOnly={readOnly}
-                          // disabled={childRecord.current > 0}
-                        />
+                        <div>
+                          <TextInputNew
+                            name="Mobile No"
+                            type="mobile"
+                            value={mobile}
+                            setValue={(val) => {
+                              setMobile(val);
+                              clearError("mobile");
+                            }}
+                            required={true}
+                            readOnly={readOnly}
+                            // disabled={childRecord.current > 0}
+                            className={errorClass("mobile")}
+                          />
+                          {errors.mobile && (
+                            <span className="text-red-500 text-xs ml-1">
+                              {errors.mobile}
+                            </span>
+                          )}
+                        </div>
 
                         <TextInputNew
                           name="Email Id"
@@ -1127,54 +1183,80 @@ export default function Form() {
                           // disabled={childRecord.current > 0}
                         />
                       </div>
+                      <div>
+                        <TextAreaNew
+                          name="Address"
+                          rows="2"
+                          value={localAddress}
+                          setValue={(val) => {
+                            setlocalAddress(val);
+                            clearError("localAddress");
+                          }}
+                          required
+                          readOnly={readOnly}
+                          className={errorClass("localAddress")}
 
-                      <TextAreaNew
-                        name="Address"
-                        rows="2"
-                        value={localAddress}
-                        setValue={setlocalAddress}
-                        required
-                        readOnly={readOnly}
-                        // disabled={childRecord.current > 0}
-                      />
-                      {errors.localAddress && (
-                        <span className="text-red-500 text-xs ml-1">
-                          {errors.localAddress}
-                        </span>
-                      )}
+                          // disabled={childRecord.current > 0}
+                        />
+                        {errors.localAddress && (
+                          <span className="text-red-500 text-xs ml-1 mt-1">
+                            {errors.localAddress}
+                          </span>
+                        )}
+                      </div>
 
                       <div className="grid grid-cols-2 gap-2">
-                        <TextInputNew
-                          name="Pincode"
-                          type="number"
-                          value={permPincode}
-                          setValue={setPermPincode}
-                          readOnly={readOnly}
-                          // disabled={childRecord.current > 0}
-                          required
-                        />
-
-                        <DropdownWithModal
-                          name="City/State Name"
-                          options={dropDownListMergedObject(
-                            id
-                              ? cityList?.data
-                              : cityList?.data?.filter((item) => item.active),
-                            "name",
-                            "id",
+                        <div>
+                          <TextInputNew
+                            name="Pincode"
+                            type="pincode"
+                            value={permPincode}
+                            setValue={(val) => {
+                              setPermPincode(val);
+                              clearError("permPincode");
+                            }}
+                            readOnly={readOnly}
+                            // disabled={childRecord.current > 0}
+                            required
+                            className={errorClass("permPincode")}
+                          />
+                          {errors.permPincode && (
+                            <span className="text-red-500 text-xs ml-1">
+                              {errors.permPincode}
+                            </span>
                           )}
-                          // country={country}
-                          masterName="CITY MASTER"
-                          // lastTab={activeTab}
-                          value={permCity}
-                          setValue={setPermCity}
-                          required={true}
-                          readOnly={readOnly}
-                          className="focus:ring-2 focus:ring-blue-100"
-                          addNewLabel="+ Add New City"
-                          childComponent={CityMaster}
-                          addNewModalWidth="w-[40%] h-[55%]"
-                        />
+                        </div>
+                        <div>
+                          <DropdownWithModal
+                            name="City/State Name"
+                            options={dropDownListMergedObject(
+                              id
+                                ? cityList?.data
+                                : cityList?.data?.filter((item) => item.active),
+                              "name",
+                              "id",
+                            )}
+                            // country={country}
+                            masterName="CITY MASTER"
+                            // lastTab={activeTab}
+                            value={permCity}
+                            setValue={(val) => {
+                              setPermCity(val);
+                              clearError("permCity");
+                            }}
+                            required={true}
+                            readOnly={readOnly}
+                            className={`focus:ring-2 focus:ring-blue-100 ${errorClass("permCity")}`}
+                            addNewLabel="+ Add New City"
+                            childComponent={CityMaster}
+                            addNewModalWidth="w-[40%] h-[55%]"
+                          />
+                          {errors.permCity && (
+                            <span className="text-red-500 text-xs ml-1">
+                              {errors.permCity}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

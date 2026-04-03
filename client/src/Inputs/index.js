@@ -1168,14 +1168,97 @@ export const TextInputNew = forwardRef(
 
         <input
           ref={ref}
-          type={type}
-          value={value}
-          onChange={(e) =>
-            type === "number"
-              ? setValue(e.target.value)
-              : handleOnChange(e, setValue)
+          type={
+            type === "pan_no" ||
+            type === "aadhar" ||
+            type === "gst_no" ||
+            type === "pincode" ||
+            type === "mobile"
+              ? "text"
+              : type
           }
+          value={value}
+          onChange={(e) => {
+            if (type === "pan_no") {
+              const raw = e.target.value
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, "");
+              let formatted = "";
+              for (let i = 0; i < Math.min(raw.length, 10); i++) {
+                if (i < 5) {
+                  if (/[A-Z]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                } else if (i < 9) {
+                  if (/[0-9]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                } else {
+                  if (/[A-Z]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                }
+              }
+              setValue(formatted);
+            } else if (type === "gst_no") {
+              const raw = e.target.value
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, "");
+              let formatted = "";
+              for (let i = 0; i < Math.min(raw.length, 15); i++) {
+                if (i < 2) {
+                  if (/[0-9]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                } else if (i < 7) {
+                  if (/[A-Z]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                } else if (i < 11) {
+                  if (/[0-9]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                } else if (i === 11) {
+                  if (/[A-Z]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                } else if (i === 12) {
+                  if (/[0-9]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                } else if (i === 13) {
+                  if (/[A-Z]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                } else {
+                  if (/[A-Z0-9]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                }
+              }
+              setValue(formatted);
+            } else if (type === "aadhar") {
+              const digits = e.target.value.replace(/\D/g, "").slice(0, 12);
+              setValue(digits);
+            } else if (type === "pincode") {
+              const digits = e.target.value.replace(/\D/g, "").slice(0, 6);
+              setValue(digits);
+            } else if (type === "mobile") {
+              const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+              setValue(digits);
+            } else if (type === "number") {
+              setValue(e.target.value);
+            } else {
+              handleOnChange(e, setValue);
+            }
+          }}
           onKeyDown={(e) => {
+            // if (e.key === " ") {
+            //   e.preventDefault();
+            // }
+            if (
+              (type === "aadhar" || type === "pincode" || type === "mobile") &&
+              !/[\d]/.test(e.key) &&
+              ![
+                "Backspace",
+                "Delete",
+                "ArrowLeft",
+                "ArrowRight",
+                "Tab",
+              ].includes(e.key)
+            ) {
+              e.preventDefault();
+            }
             if (e.key === "Enter" && nextRef?.current) {
               nextRef.current?.showPicker();
             }
@@ -1188,7 +1271,8 @@ export const TextInputNew = forwardRef(
           max={max ? String(max) : undefined}
           className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
-          transition-all duration-150 shadow-sm ${readOnly || disabled ? "bg-slate-100" : ""}
+          transition-all duration-150 shadow-sm 
+          ${readOnly || disabled ? "bg-slate-100" : ""}
           ${className}`}
         />
       </div>
@@ -1652,7 +1736,7 @@ export const TextInputNew1 = forwardRef(
     ref,
   ) => {
     return (
-      <div className={`mb ${width}`}>
+      <div className={`mb-1 ${width}`}>
         {name && (
           <label className="block text-xs font-bold text-gray-600 mb-1">
             {required ? <RequiredLabel name={label ? label : name} /> : name}
@@ -2692,7 +2776,7 @@ export const DateInputNew = forwardRef(
       }
     };
     return (
-      <div className="grid-cols-1 md:grid-cols-3 items-center md:px-1">
+      <div className="grid-cols-1 md:grid-cols-3 items-center md:px-1 mb-1">
         {name && (
           <label
             className={`block  font-bold text-slate-700 mb-1 text-xs ${
@@ -2744,7 +2828,7 @@ export const TextAreaNew = ({
   onBlur = null,
 }) => {
   return (
-    <div className=" w-full">
+    <div className=" w-full mb-1">
       {name && (
         <label className="block text-xs font-bold text-gray-600 mb-1">
           {required ? <RequiredLabel name={label ?? name} /> : (label ?? name)}
@@ -3290,6 +3374,7 @@ export function FxSelectWithAdd({
   addNew = false,
   childComponent = null,
   addNewModalWidth = "w-[40%] h-[48%]",
+  nextRef,
 }) {
   const [showAddNewModal, setShowAddNewModal] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -3356,6 +3441,7 @@ export function FxSelectWithAdd({
     <>
       <Select
         styles={customStyles}
+        tabSelectsValue={false}
         onInputChange={(value, { action }) => {
           if (action === "input-change") {
             setSearchValue(value.toUpperCase()); // store uppercase
@@ -3373,7 +3459,12 @@ export function FxSelectWithAdd({
         onChange={(selected) => onChange(selected?.value || "")}
         onBlur={onBlur}
         onKeyDown={(e) => {
-          // Handle Enter key on "Create New" option
+          if (e.key === "Tab") {
+            e.preventDefault();
+            nextRef?.current?.focus();
+          }
+          // Handle Enter key on "Creat
+          // e New" option
           if (e.key === "Enter" && addNew && childComponent && searchValue) {
             const hasExactMatch = options.some(
               (opt) =>

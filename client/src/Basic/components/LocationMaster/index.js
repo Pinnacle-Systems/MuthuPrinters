@@ -572,7 +572,7 @@ export default function Form({
               setForm(true);
               onNew();
             }}
-            className="bg-white border font-segoe border-green-600 text-green-600 hover:bg-green-700 hover:text-white text-sm px-2  rounded-md shadow transition-colors duration-200 flex items-center gap-2"
+            className="bg-white border font-segoe border-green-600 text-green-600 hover:bg-green-700 hover:text-white text-xs px-2  rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             + Add New Location
           </button>

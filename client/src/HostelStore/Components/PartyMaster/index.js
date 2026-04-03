@@ -66,6 +66,7 @@ export default function Form({
 } = {}) {
   const [form, setForm] = useState(false);
   const [aadharNo, setAadharNo] = useState("");
+  const [errors, setErrors] = useState({});
 
   const [readOnly, setReadOnly] = useState(false);
 
@@ -354,26 +355,23 @@ export default function Form({
     isBranch,
     branchTypeId,
     aadharNo,
+    city,
   };
 
   const validateData = (data) => {
-    const requiredFields = [
-      { key: "name", label: "Name" },
-      { key: "partyCode", label: "Party Code" },
-      { key: "active", label: "Active Status" },
-      { key: "address", label: "Address" },
-      { key: "cityId", label: "City" },
-      { key: "pincode", label: "Pincode" },
-      { key: "aadharNo", label: "Aadhar Number" },
-    ];
+    let newErrors = {};
 
-    const missing = requiredFields.find((f) => !data[f.key]);
+    if (!data.name) newErrors.name = "Name is required";
+    if (!data.partyCode) newErrors.partyCode = "Party Code is required";
+    if (data.active === undefined || data.active === null)
+      newErrors.active = "Active Status is required";
+    if (!data.address) newErrors.address = "Address is required";
+    if (!data.city) newErrors.city = "City is required";
+    if (!data.pincode) newErrors.pincode = "Pincode is required";
 
-    if (missing) {
-      return { isValid: false, message: `${missing.label} is required` };
-    }
+    setErrors(newErrors);
 
-    return { isValid: true };
+    return Object.keys(newErrors).length === 0;
   };
 
   const showAlert = (message, type = "error") => {
@@ -518,10 +516,13 @@ export default function Form({
       return showAlert("Choose Branch Type", "warning");
     }
 
-    // Required fields
-    const validation = validateData(data);
-    if (!validation.isValid) {
-      return showAlert(validation.message);
+    if (!validateData(data)) {
+      Swal.fire({
+        title: "Please fill all required fields...!",
+        icon: "error",
+        didClose: () => countryNameRef.current?.focus(),
+      });
+      return;
     }
 
     // Pincode
@@ -530,7 +531,7 @@ export default function Form({
     }
 
     // Aadhar
-    if (!aadharRegex.test(data.aadharNo)) {
+    if (data.aadharNo && !aadharRegex.test(data.aadharNo)) {
       return showAlert("Aadhar must be 12 digits");
     }
 
@@ -742,16 +743,10 @@ export default function Form({
       className: "font-medium text-gray-900 w-12  text-center",
     },
     {
-      header: "Category",
-      accessor: (item, index) => (item?.isCustomer ? "Customer" : "Supplier"),
-      className: "font-medium text-gray-900 w-18 uppercase text-left pl-2",
-    },
-
-    {
-      header: reportName,
+      header: "Name",
       accessor: (item) => item?.name,
       //   cellClass: () => "font-medium text-gray-900",
-      className: "font-medium text-gray-900 text-left uppercase w-[500px]",
+      className: "font-medium text-gray-900 text-left uppercase w-96",
     },
     {
       header: "Branch Type",
@@ -759,6 +754,30 @@ export default function Form({
       //   cellClass: () => "font-medium text-gray-900",
       className: "font-medium text-gray-900 text-left uppercase w-40 pl-2",
     },
+    {
+      header: "Customer/Supplier",
+      accessor: (item) =>
+        item.isCustomer && item.isSupplier
+          ? "Customer/Supplier"
+          : item.isCustomer
+            ? "Customer"
+            : item.isSupplier
+              ? "Supplier"
+              : "",
+      cellClass: () => "font-medium text-gray-900",
+      className: "text-gray-800 uppercase w-40",
+    },
+    {
+      header: "Address",
+      accessor: (item) => item.address,
+      cellClass: () => "font-medium text-gray-900",
+      className: "text-gray-800 uppercase w-96",
+    },
+    // {
+    //   header: "Category",
+    //   accessor: (item, index) => (item?.isCustomer ? "Customer" : "Supplier"),
+    //   className: "font-medium text-gray-900 w-18 uppercase text-left pl-2",
+    // },
 
     {
       header: "Status",
@@ -789,6 +808,15 @@ export default function Form({
     filterParty = allData?.data;
   }
   //   const { data: currencyList } = useGetCurrencyMasterQuery({ params });
+
+  const errorClass = (field) =>
+    errors[field] ? "border-red-500 bg-red-50" : "";
+
+  const clearError = (field) => {
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
 
   if (partyId) {
     return (
@@ -1621,7 +1649,10 @@ export default function Form({
                     value={name}
                     inputClass="h-8"
                     ref={countryNameRef}
-                    setValue={setName}
+                    setValue={(val) => {
+                      setName(val);
+                      clearError("name");
+                    }}
                     required={true}
                     readOnly={readOnly}
                     disabled={childRecord.current > 0}
@@ -1629,8 +1660,13 @@ export default function Form({
                       if (aliasName) return;
                       setAliasName(e.target.value);
                     }}
-                    className="focus:ring-2 focus:ring-blue-100"
+                    className={`focus:ring-2 focus:ring-blue-100 ${errorClass("name")}`}
                   />
+                  {errors.name && (
+                    <span className="text-red-500 text-xs ml-1">
+                      {errors.name}
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -1665,11 +1701,19 @@ export default function Form({
                   type="text"
                   value={partyCode}
                   required={true}
-                  setValue={setPartyCode}
+                  setValue={(val) => {
+                    setPartyCode(val);
+                    clearError("partyCode");
+                  }}
                   readOnly={readOnly}
                   disabled={childRecord.current > 0}
-                  className="focus:ring-2 focus:ring-blue-100 w-10"
+                  className={`focus:ring-2 focus:ring-blue-100 ${errorClass("partyCode")}`}
                 />
+                {errors.partyCode && (
+                  <span className="text-red-500 text-xs ml-1">
+                    {errors.partyCode}
+                  </span>
+                )}
               </div>
 
               <div className=" ml-2 mt-1">
@@ -1700,12 +1744,21 @@ export default function Form({
                     name="Address"
                     inputClass="h-10"
                     value={address}
-                    setValue={setAddress}
+                    setValue={(val) => {
+                      setAddress(val);
+                      clearError("address");
+                    }}
                     required={true}
                     readOnly={readOnly}
                     d
                     isabled={childRecord.current > 0}
+                    errorClass={errorClass("address")}
                   />
+                  {errors.address && (
+                    <span className="text-red-500 text-xs ml-1">
+                      {errors.address}
+                    </span>
+                  )}
                 </div>
                 <div className="col-span-2">
                   <div className="grid grid-cols-5 gap-2">
@@ -1757,27 +1810,43 @@ export default function Form({
                         )}
                         country={country}
                         masterName="CITY MASTER"
+                        required={true}
                         // lastTab={activeTab}
                         value={city}
-                        setValue={setCity}
-                        required={true}
+                        setValue={(val) => {
+                          setCity(val);
+                          clearError("city");
+                        }}
                         readOnly={readOnly}
-                        className="focus:ring-2 focus:ring-blue-100"
+                        className={`focus:ring-2 focus:ring-blue-100 ${errorClass("city")}`}
                         addNewLabel="+ Add New City"
                         childComponent={CityMaster}
                         addNewModalWidth="w-[50%] h-[55%]"
                       />
+                      {errors.city && (
+                        <span className="text-red-500 text-xs ml-1">
+                          {errors.city}
+                        </span>
+                      )}
                     </div>
-                    <TextInputNew1
+                    <TextInputNew
                       name="Pincode"
-                      type="number"
+                      type="pincode"
                       value={pincode}
                       required={true}
-                      setValue={setPincode}
+                      setValue={(val) => {
+                        setPincode(val);
+                        clearError("pincode");
+                      }}
                       readOnly={readOnly}
                       // disabled={childRecord.current > 0}
-                      className="focus:ring-2 focus:ring-blue-100 w-10"
+                      className={`focus:ring-2 focus:ring-blue-100 w-10 ${errorClass("pincode")}`}
                     />
+                    {/* {errors.pincode && (
+                      <span className="text-red-500 text-xs ml-1">
+                        {errors.pincode}
+                      </span>
+                    )} */}
                   </div>
                 </div>
 
@@ -1936,19 +2005,18 @@ export default function Form({
                   // disabled={childRecord.current > 0}
                   className="focus:ring-2 focus:ring-blue-100"
                 />
-                <TextInput
+                <TextInputNew
                   name="Aadhar No"
-                  type="text"
+                  type="aadhar"
                   value={aadharNo}
                   setValue={setAadharNo}
                   readOnly={readOnly || parentId || isBranch}
-                  required={true}
                   disabled={parentId || isBranch}
                   className="focus:ring-2 focus:ring-blue-100"
                 />
                 <TextInputNew
                   name="GST No"
-                  type="text"
+                  type="gst_no"
                   value={gstNo}
                   setValue={setGstNo}
                   readOnly={readOnly || parentId || isBranch}
@@ -2294,7 +2362,7 @@ export default function Form({
     return (
       <div
         onKeyDown={handleKeyDown}
-        className="h-full flex flex-col bg-gray-200"
+        className="h-full flex flex-col bg-gray-200 overflow-hidden"
       >
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
           <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
@@ -2311,8 +2379,7 @@ export default function Form({
             {editId ? "Update" : "Save"}
           </button>
         </div>
-
-        {formBody}
+        <div className="overflow-y-auto">{formBody}</div>
       </div>
     );
   }
@@ -2334,7 +2401,7 @@ export default function Form({
                   // syncFormWithDbNew(undefined)
                   setParentId("");
                 }}
-                className="bg-white border text-xs border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white px-4 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
+                className="bg-white border text-xs border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
               >
                 <Plus size={12} />
                 <span className=" ">Add New Customer/Supplier</span>
@@ -2415,12 +2482,13 @@ export default function Form({
           <Modal
             isOpen={form}
             form={form}
-            widthClass={"w-[90%] h-[95%]"}
+            widthClass={"w-[90%] h-[98%] overflow-hidden"}
             onClose={() => {
               setForm(false);
               syncFormWithDb(undefined);
               syncFormWithDbNew(undefined);
               setId("");
+              setErrors({});
             }}
           >
             <div className="h-full flex flex-col bg-gray-200 ">
@@ -2527,7 +2595,11 @@ export default function Form({
                 </div>
               </div>
 
-              {formBody}
+              <div className="flex-1 overflow-y-auto">
+                {" "}
+                {/* Wrap formBody with scrollable container */}
+                {formBody}
+              </div>
             </div>
           </Modal>
         )}

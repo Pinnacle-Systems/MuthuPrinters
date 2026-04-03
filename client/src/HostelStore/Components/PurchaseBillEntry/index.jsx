@@ -81,7 +81,7 @@ export default function Form() {
   const { data: uomList } = useGetUnitOfMeasurementMasterQuery({ params });
   const { data: hsnList } =
     useGetHsnMasterQuery({ params });
-const { data: taxTypeList, isLoading: isTaxLoading, isFetching: isTaxfetching } =
+  const { data: taxTypeList, isLoading: isTaxLoading, isFetching: isTaxfetching } =
     useGetTaxTemplateQuery({ params: { ...params } });
   return (
     <>
@@ -98,7 +98,7 @@ const { data: taxTypeList, isLoading: isTaxLoading, isFetching: isTaxfetching } 
 
           <div className="flex items-center gap-2">
             <button
-              className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800 px-4 py-1 rounded-md flex items-center gap-2 text-sm"
+              className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800  py-1 rounded-md flex items-center gap-2 text-xs px-2"
               onClick={() => {
                 setShowForm(true);
                 onNew();

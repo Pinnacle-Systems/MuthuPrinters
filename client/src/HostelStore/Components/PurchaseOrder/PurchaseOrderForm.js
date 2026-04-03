@@ -1,4 +1,4 @@
-import { FaFileAlt } from "react-icons/fa";
+import { IoArrowBackCircleSharp } from "react-icons/io5";
 
 import {
   CheckBox,
@@ -63,7 +63,7 @@ const PurchaseOrderForm = ({
   branchData,
 }) => {
   const today = new Date();
-
+  const [pendingAction, setPendingAction] = useState(null);
   const [docDate, setDocDate] = useState(
     moment.utc(today).format("YYYY-MM-DD"),
   );
@@ -90,6 +90,7 @@ const PurchaseOrderForm = ({
   const [isNewVersion, setIsNewVersion] = useState(false);
   const [quoteVersion, setQuoteVersion] = useState("");
   const supplierRef = useRef(null);
+  const termsRef = useRef(null);
   const [dispatchInvalidate] = useInvalidateTags();
 
   const [requirementId, setRequirementId] = useState("");
@@ -221,18 +222,84 @@ const PurchaseOrderForm = ({
             dispatchInvalidate();
 
             if (returnData.statusCode === 0) {
-              if (nextProcess == "new") {
-                setId("");
-                setDocId("New");
-                syncFormWithDb(undefined);
+              // ✅ Show print confirmation only for new entries
+              if (!id) {
+                Swal.fire({
+                  icon: "question",
+                  title: "Do You Want to Print?",
+                  showCancelButton: true,
+                  confirmButtonText: "Yes, Print",
+                  cancelButtonText: "No, Thanks [Esc]",
+                  confirmButtonColor: "#3085d6",
+                  cancelButtonColor: "#6b7280",
+                  focusConfirm: true, // ✅ Auto-focus confirm button
+                  allowEnterKey: true, // ✅ Allow Enter to confirm
+                  allowEscapeKey: true, // ✅ Allow Escape to cancel
+                  didOpen: () => {
+                    // ✅ Ensure confirm button is focused when modal opens
+                    const confirmButton = Swal.getConfirmButton();
+                    const cancelButton = Swal.getCancelButton();
 
-                // ✅ Focus the Bill Type dropdown after all state updates
-                setTimeout(() => {
-                  supplierRef.current?.focus();
-                }, 100);
-              }
-              if (nextProcess == "close") {
-                onClose();
+                    if (confirmButton) {
+                      confirmButton.focus();
+
+                      // ✅ Add keyboard navigation
+                      confirmButton.addEventListener("keydown", (e) => {
+                        if (e.key === "Tab" && !e.shiftKey) {
+                          e.preventDefault();
+                          cancelButton?.focus();
+                        }
+                      });
+                    }
+
+                    if (cancelButton) {
+                      cancelButton.addEventListener("keydown", (e) => {
+                        if (e.key === "Tab" && e.shiftKey) {
+                          e.preventDefault();
+                          confirmButton?.focus();
+                        }
+                      });
+                    }
+                  },
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    // ✅ User clicked "Yes, Print"
+                    setPrintModalOpen(true);
+                    // Set the ID so the print modal can access the saved data
+                    if (returnData?.data?.id) {
+                      setId(returnData.data.id);
+                    }
+                    setPendingAction(nextProcess);
+                  } else {
+                    // ✅ User clicked "No, Thanks" - proceed with normal flow
+                    if (nextProcess === "new") {
+                      syncFormWithDb(undefined);
+                      setId("");
+                      setDocId("New");
+
+                      setTimeout(() => {
+                        supplierRef.current?.focus();
+                      }, 300);
+                    }
+                    if (nextProcess === "close") {
+                      onClose();
+                    }
+                  }
+                });
+              } else {
+                // ✅ For updates, proceed normally without print prompt
+                if (nextProcess === "new") {
+                  setId("");
+                  setDocId("New");
+                  syncFormWithDb(undefined);
+
+                  setTimeout(() => {
+                    supplierRef.current?.focus();
+                  }, 100);
+                }
+                if (nextProcess === "close") {
+                  onClose();
+                }
               }
             } else {
               toast.error(returnData?.message);
@@ -333,8 +400,10 @@ const PurchaseOrderForm = ({
     if (!validateData(data)) {
       return;
     }
-    if (!window.confirm("Are you sure save the details ...?")) {
-      return;
+    if (id) {
+      if (!window.confirm("Are you sure update the details ...?")) {
+        return;
+      }
     }
     if (nextProcess == "draft" && !id) {
       handleSubmitCustom(
@@ -428,7 +497,7 @@ const PurchaseOrderForm = ({
     let charCode = String.fromCharCode(event.which).toLowerCase();
     if ((event.ctrlKey || event.metaKey) && charCode === "s") {
       event.preventDefault();
-      saveData();
+      saveData("close");
     }
   };
 
@@ -506,11 +575,28 @@ const PurchaseOrderForm = ({
           quoteVersion={quoteVersion}
           totals={totals}
           id={id}
+          setSummary={setSummary}
         />
       </Modal>
       <Modal
         isOpen={printModalOpen}
-        onClose={() => setPrintModalOpen(false)}
+        onClose={() => {
+          setPrintModalOpen(false);
+
+          // Execute pending action after print modal closes
+          if (pendingAction === "new") {
+            setId("");
+            setDocId("New");
+            syncFormWithDb(undefined);
+            setTimeout(() => {
+              supplierRef.current?.focus();
+            }, 100);
+          }
+          if (pendingAction === "close") {
+            onClose();
+          }
+          setPendingAction(null);
+        }}
         widthClass={"w-[90%] h-[90%]"}
       >
         <PDFViewer style={tw("w-full h-full")}>
@@ -539,9 +625,9 @@ const PurchaseOrderForm = ({
               onClose();
             }}
             className="text-indigo-600 hover:text-indigo-700"
-            title="Open Report"
+            title="Back to Report"
           >
-            <FaFileAlt className="w-5 h-5" />
+            <IoArrowBackCircleSharp className="w-7 h-7" />
           </button>
         </div>
       </div>
@@ -575,35 +661,31 @@ const PurchaseOrderForm = ({
                 // autoFocus={true}
                 ref={supplierRef}
               /> */}
-              <DropdownWithModal
-                name="Pay Term"
-                options={dropDownListObject(
-                  id
-                    ? payTermList?.data
-                    : payTermList?.data?.filter((item) => item?.active),
-                  "name",
-                  "id",
-                )}
-                value={payTermId}
-                setValue={setPayTermId}
-                required={true}
-                readOnly={readOnly}
-                className={`w-[150px]`}
-                // disabled={childRecord.current > 0}
-                addNewLabel="+ Add New Pay Term"
-                childComponent={PayTermMaster}
-                addNewModalWidth="w-[40%] h-[66%]"
-                openOnFocus={false}
-                autoFocus={true}
-              />
-              <DateInputNew
-                name="Delivery Date"
-                value={dueDate}
-                setValue={setDueDate}
-                type={"date"}
-                required={true}
-                readOnly={readOnly}
-              />
+              {!readOnly && id && (
+                <div className="col-span-1 mt-3">
+                  <CheckBox
+                    name="New Version"
+                    value={isNewVersion}
+                    setValue={setIsNewVersion}
+                    readOnly={readOnly}
+                    className="w-full"
+                    disabled={childRecordCount > 0}
+                  />
+                </div>
+              )}
+              {Boolean(id) && quoteVersionOptions.length > 0 && (
+                <DropdownInput
+                  readOnly={readOnly}
+                  name="Current Version"
+                  value={quoteVersion}
+                  setValue={(value) => setQuoteVersion(value)}
+                  options={quoteVersionOptions.map((i) => ({
+                    show: i,
+                    value: i,
+                  }))}
+                  className="w-full"
+                />
+              )}
             </div>
           </div>
 
@@ -620,6 +702,7 @@ const PurchaseOrderForm = ({
                 required={true}
                 readOnly={readOnly}
                 disabled={orderId || id}
+                ref={supplierRef}
               />
 
               {/* <DropdownInput
@@ -653,31 +736,25 @@ const PurchaseOrderForm = ({
                 childComponent={TaxTemplate}
                 addNewModalWidth="w-[82%] h-[85%]"
               />
-              {!readOnly && id && (
-                <div className="col-span-1 mt-3">
-                  <CheckBox
-                    name="New Version"
-                    value={isNewVersion}
-                    setValue={setIsNewVersion}
-                    readOnly={readOnly}
-                    className="w-full"
-                    disabled={childRecordCount > 0}
-                  />
-                </div>
-              )}
-              {Boolean(id) && quoteVersionOptions.length > 0 && (
-                <DropdownInput
-                  readOnly={readOnly}
-                  name="Current Version"
-                  value={quoteVersion}
-                  setValue={(value) => setQuoteVersion(value)}
-                  options={quoteVersionOptions.map((i) => ({
-                    show: i,
-                    value: i,
-                  }))}
-                  className="w-full"
-                />
-              )}
+              <DropdownWithModal
+                name="Pay Term"
+                options={dropDownListObject(
+                  id
+                    ? payTermList?.data
+                    : payTermList?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={payTermId}
+                setValue={setPayTermId}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Pay Term"
+                childComponent={PayTermMaster}
+                addNewModalWidth="w-[40%] h-[66%]"
+              />
             </div>
           </div>
 
@@ -821,6 +898,14 @@ const PurchaseOrderForm = ({
                   />
                 )}
               </div>
+              <DateInputNew
+                name="Delivery Date"
+                value={dueDate}
+                setValue={setDueDate}
+                type={"date"}
+                required={true}
+                readOnly={readOnly}
+              />
             </div>
           </div>
         </div>
@@ -840,6 +925,7 @@ const PurchaseOrderForm = ({
             itemGroupList={itemGroupList}
             sizeList={sizeList}
             colorList={colorList}
+            termsRef={termsRef}
           />
         </fieldset>
 
@@ -877,6 +963,7 @@ const PurchaseOrderForm = ({
                 ))}
               </select> */}
               <DropdownWithModal
+                ref={termsRef}
                 name="Terms & Conditions"
                 options={dropDownListObject(
                   id
@@ -887,7 +974,6 @@ const PurchaseOrderForm = ({
                 )}
                 value={termsId}
                 setValue={setTermsId}
-                required={true}
                 readOnly={readOnly}
                 className={`w-[150px]`}
                 // disabled={childRecord.current > 0}
@@ -901,6 +987,7 @@ const PurchaseOrderForm = ({
 
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm flex items-center">
             <textarea
+              // ref={termsRef}
               disabled={readOnly}
               className="w-full h-20 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
               value={termsAndCondtion}
@@ -1004,19 +1091,32 @@ const PurchaseOrderForm = ({
           {/* Left Buttons */}
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => saveData("new")}
-              type="button"
-              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
-            >
-              <FiSave className="w-4 h-4 mr-2" />
-              Save & New
-            </button>
-            <button
               onClick={() => saveData("close")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  saveData("close");
+                  e.stopPropagation();
+                }
+              }}
               className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
             >
               <HiOutlineRefresh className="w-4 h-4 mr-2" />
               Save & Close
+            </button>
+            <button
+              onClick={() => saveData("new")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  saveData("new");
+                }
+              }}
+              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
+            >
+              <FiSave className="w-4 h-4 mr-2" />
+              Save & New
             </button>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -1041,6 +1141,21 @@ const PurchaseOrderForm = ({
                 }
                 setSummary(true);
               }}
+              onKeyDown={(e) => {
+                if (!taxTemplateId) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toast.info("Please Select Tax Template !", {
+                    position: "top-center",
+                  });
+                  return;
+                }
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSummary(true);
+                }
+              }}
             >
               View Po Summary
             </button>
@@ -1049,6 +1164,13 @@ const PurchaseOrderForm = ({
               onClick={() => {
                 // handlePrint()
                 setPrintModalOpen(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setPrintModalOpen(true);
+                }
               }}
             >
               <FiPrinter className="w-4 h-4 mr-2" />

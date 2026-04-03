@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import secureLocalStorage from "react-secure-storage";
 import { CLOSE_ICON, VIEW } from "../../../icons";
 import FxSelect from "../../../Inputs";
@@ -28,6 +28,7 @@ const PoItems = ({
   itemGroupList,
   sizeList,
   colorList,
+  termsRef,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -44,6 +45,7 @@ const PoItems = ({
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
   const [focusedRowIndex, setFocusedRowIndex] = useState(null);
+  const actionRefs = useRef([]);
   const addRow = () => {
     const newRow = {
       styleItemId: "",
@@ -224,11 +226,21 @@ const PoItems = ({
   //   }
   // }, [poItems]); // This will run whenever poItems change
 
+  const focusActionCell = (index) => {
+    setTimeout(() => {
+      actionRefs.current[index]?.focus();
+    }, 200); // wait for modal close render
+  };
+
   return (
     <>
       <Modal
         isOpen={Number.isInteger(currentSelectedIndex)}
-        onClose={() => setCurrentSelectedIndex("")}
+        onClose={() => {
+          const index = currentSelectedIndex;
+          setCurrentSelectedIndex("");
+          focusActionCell(index); // 🔥 restore focus
+        }}
       >
         <TaxDetailsFullTemplate
           readOnly={readOnly}
@@ -239,6 +251,7 @@ const PoItems = ({
           handleInputChange={handleInputChange}
           id={id}
           isNewVersion={isNewVersion}
+          onCloseFocus={focusActionCell}
         />
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[250px] overflow-auto  w-full">
@@ -360,6 +373,7 @@ const PoItems = ({
                         addNew={true}
                         childComponent={StyleItemMaster}
                         addNewModalWidth="w-[50%] h-[57%]"
+                        nextRef={termsRef}
                       />
                     </td>
                     <td className="py-0.5 border border-gray-300 text-[11px] ">
@@ -568,6 +582,8 @@ const PoItems = ({
                         className="text-center rounded py-1 w-20"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
+                            e.preventDefault();
+                            e.stopPropagation();
                             setCurrentSelectedIndex(index);
                           }
                         }}
@@ -585,6 +601,7 @@ const PoItems = ({
 
                     <td className="w-2 border border-gray-300">
                       <input
+                        ref={(el) => (actionRefs.current[index] = el)}
                         onContextMenu={(e) => {
                           if (!readOnly) {
                             handleRightClick(e, index, "");

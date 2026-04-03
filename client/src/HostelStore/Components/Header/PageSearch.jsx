@@ -90,16 +90,16 @@ const PageSearch = ({ pageList }) => {
   };
 
   return (
-    <div className="relative w-[300px]" ref={inputRef}>
+    <div className="relative w-[275px]" ref={inputRef}>
       {/* Search Input */}
       <div className="relative group">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
+        <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
           <Search sx={{ fontSize: 20 }} />
         </div>
         <input
           type="text"
-          placeholder="Search pages..."
-          className="w-full pl-10 pr-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl 
+          placeholder="SEARCH PAGES..."
+          className="w-full pl-8 pr-4 py-2.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-xl 
       focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 
       hover:border-gray-300 transition-all duration-200 shadow-sm h-8
       placeholder:text-gray-400 placeholder:font-normal"
@@ -129,24 +129,24 @@ const PageSearch = ({ pageList }) => {
       {isListShow && filteredPages.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-white rounded-xl shadow-2xl overflow-hidden animate-slideDown border-2 border-blue-400">
           {/* Header */}
-          <div className="px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+          {/* <div className="px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
             <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
               {filteredPages.length} {filteredPages.length === 1 ? 'Page' : 'Pages'} Found
             </p>
-          </div>
+          </div> */}
 
           {/* Results */}
           <ul
             ref={listRef}
-            className="max-h-[280px] overflow-auto py-1 custom-scrollbar"
+            className="max-h-[225px] overflow-auto py-1 custom-scrollbar"
           >
             {filteredPages.map((page, index) => (
               <li
                 key={page.id}
-                className={`group px-4 py-2 mx-1 my-0.5 text-sm font-medium cursor-pointer transition-all duration-150 flex items-center justify-between rounded-lg
+                className={`group px-1.5 py-0.5 mx-1 my-0.5 text-xs font-medium cursor-pointer transition-all duration-150 flex items-center justify-between rounded-lg
               ${index === focusedIndex
                     ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700"
-                    : "text-gray-700 hover:bg-gray-50"
+                    : "text-gray-600 hover:bg-gray-50"
                   }`}
                 onClick={() => handleSelectPage(page)}
                 onMouseEnter={() => setFocusedIndex(index)}

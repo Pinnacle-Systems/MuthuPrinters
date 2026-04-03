@@ -225,7 +225,7 @@ export const DropdownWithModal = forwardRef(
 
           const allFocusable = Array.from(
             document.querySelectorAll(
-              'input:not([disabled]):not([readonly]):not([type="hidden"]), select:not([disabled]), button:not([disabled])',
+              'input:not([disabled]):not([readonly]):not([type="hidden"]), textarea:not([disabled]):not([readonly]), select:not([disabled]), button:not([disabled])',
             ),
           ).filter(
             (el) =>
@@ -267,7 +267,14 @@ export const DropdownWithModal = forwardRef(
           </label>
         )}
         <button
-          ref={buttonRef}
+          ref={(el) => {
+            buttonRef.current = el;
+            if (typeof ref === "function") {
+              ref(el);
+            } else if (ref) {
+              ref.current = el;
+            }
+          }}
           autoFocus={autoFocus}
           type="button"
           disabled={isDisabled}

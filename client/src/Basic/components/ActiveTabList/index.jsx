@@ -67,7 +67,7 @@ const ActiveTabList = () => {
     "PURCHASE ORDER": <PurchaseOrder />,
     "PURCHASE CANCEL": <PurchaseCancel />,
     "PURCHASE INWARD": <PurchaseInward />,
-    "CUSTOMER/SUPPLIER MASTER": <PartyMaster />,
+    "CUSTOMER / SUPPLIER MASTER": <PartyMaster />,
     "SALES BILL ENTRY": <SalesBillEntry />,
     "PURCHASE RETURN": <PurchaseReturn />,
     "SALES RETURN": <SalesReturn />,
@@ -102,7 +102,7 @@ const ActiveTabList = () => {
     "ITEM GROUP MASTER": <ItemGroup />,
     "GSM MASTER": <Gsm />,
     "SIZE MASTER": <Size />,
-    "SIZE TEMPLATE MASTER": <SizeTemplate /> 
+    "SIZE TEMPLATE MASTER": <SizeTemplate />
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

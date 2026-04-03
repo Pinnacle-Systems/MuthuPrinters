@@ -1,4 +1,4 @@
-import { FaFileAlt } from "react-icons/fa";
+import { IoArrowBackCircleSharp } from "react-icons/io5";
 
 import {
   DateInputNew,
@@ -351,9 +351,11 @@ const PurchaseBillEntryForm = ({
     if (!validateData(data)) {
       return;
     }
-    // if (!window.confirm("Are you sure save the details ...?")) {
-    //   return;
-    // }
+    if (id) {
+      if (!window.confirm("Are you sure save the details ...?")) {
+        return;
+      }
+    }
     if (nextProcess == "draft" && !id) {
       handleSubmitCustom(
         addData,
@@ -387,7 +389,7 @@ const PurchaseBillEntryForm = ({
     let charCode = String.fromCharCode(event.which).toLowerCase();
     if ((event.ctrlKey || event.metaKey) && charCode === "s") {
       event.preventDefault();
-      saveData();
+      saveData("close");
     }
   };
   useEffect(() => {
@@ -419,13 +421,12 @@ const PurchaseBillEntryForm = ({
           </h1>
           <button
             onClick={() => {
-              // onNew();
               onClose();
             }}
             className="text-indigo-600 hover:text-indigo-700"
-            title="Open Report"
+            title="Back to Report"
           >
-            <FaFileAlt className="w-5 h-5" />
+            <IoArrowBackCircleSharp className="w-7 h-7" />
           </button>
         </div>
       </div>

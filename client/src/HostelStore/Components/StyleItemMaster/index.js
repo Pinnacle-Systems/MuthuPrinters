@@ -37,7 +37,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
   const [name, setName] = useState(defaultName || "");
   const [accessory, setAccessory] = useState(false);
   const [active, setActive] = useState(false);
-  const [aliasName, setAliasName] = useState("");
+  const [aliasName, setAliasName] = useState(defaultName || "");
   const [hsnId, setHsnId] = useState("");
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
@@ -76,23 +76,14 @@ export default function Form({ onSuccess, defaultName = "" }) {
 
   const syncFormWithDb = useCallback(
     (data) => {
-      if (!id) {
-        setReadOnly(false);
-        setName(defaultName || "");
-        setActive(id ? data?.active : true);
-        setAliasName(data?.aliasName ? data?.aliasName : "");
-        setHsnId(data?.hsnId ? data?.hsnId : "");
-        childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      } else {
-        setName(data?.name || "");
-        setActive(id ? (data?.active ?? false) : true);
-        setAliasName(data?.aliasName ? data?.aliasName : "");
-        setHsnId(data?.hsnId ? data?.hsnId : "");
-        setItemGroupId(data?.itemGroupId ? data?.itemGroupId : "");
-        setUomId(data?.uomId ? data?.uomId : "");
-        setSizeTemplateId(data?.sizeTemplateId ? data?.sizeTemplateId : "");
-        childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      }
+      setName(data?.name || defaultName || "");
+      setActive(id ? (data?.active ?? false) : true);
+      setAliasName(data?.aliasName || defaultName || "");
+      setHsnId(data?.hsnId ? data?.hsnId : "");
+      setItemGroupId(data?.itemGroupId ? data?.itemGroupId : "");
+      setUomId(data?.uomId ? data?.uomId : "");
+      setSizeTemplateId(data?.sizeTemplateId ? data?.sizeTemplateId : "");
+      childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
     [id],
   );
@@ -116,7 +107,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
   };
 
   const validateData = (data) => {
-    if (data.name && data.itemGroupId && data?.uomId && data?.sizeTemplateId) {
+    if (data.name && data.itemGroupId && data?.uomId) {
       return true;
     }
     return false;
@@ -447,7 +438,6 @@ export default function Form({ onSuccess, defaultName = "" }) {
                     )}
                     value={sizeTemplateId}
                     setValue={setSizeTemplateId}
-                    required={true}
                     readOnly={readOnly}
                     className={`w-[150px]`}
                     disabled={childRecord.current > 0}
@@ -572,7 +562,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
               setForm(true);
               onNew();
             }}
-            className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-sm px-4 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
+            className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             + Add New Item
           </button>

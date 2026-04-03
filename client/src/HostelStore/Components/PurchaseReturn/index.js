@@ -4,7 +4,10 @@ import PurchaseReturnFormReport from "./PurchaseReturnFormReport.js";
 import { getCommonParams } from "../../../Utils/helper.js";
 import { FaPlus } from "react-icons/fa";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
-import { useGetBranchByIdQuery, useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
+import {
+  useGetBranchByIdQuery,
+  useGetBranchQuery,
+} from "../../../redux/services/BranchMasterService.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
 import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices";
@@ -26,9 +29,9 @@ export default function Form() {
     finYearId,
   };
 
-  const {
-    data: branchData,
-  } = useGetBranchByIdQuery(branchId, { skip: !branchId });
+  const { data: branchData } = useGetBranchByIdQuery(branchId, {
+    skip: !branchId,
+  });
 
   const handleView = (orderId) => {
     setId(orderId);
@@ -107,7 +110,7 @@ export default function Form() {
 
           <div className="flex items-center gap-2">
             <button
-              className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800 px-4 py-1 rounded-md flex items-center gap-2 text-sm"
+              className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800  py-1 rounded-md flex items-center gap-2 text-xs px-2"
               onClick={() => {
                 setShowForm(true);
                 onNew();

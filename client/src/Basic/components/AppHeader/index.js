@@ -14,30 +14,31 @@ import { useGetPageGroupQuery } from "../../../redux/services/PageGroupMasterSer
 import MultiLevelDropDown from "../../../UiComponents/MultiSelectDropDown";
 import useLogout from "../../../CustomHooks/useLogout";
 
-import Anugraha from "../../../assets/fish.png"
+import Anugraha from "../../../assets/fish.png";
 import { Dropdown } from "react-multi-select-component";
 import PageSearch from "./PageSearch";
-
 
 const BASE_URL = process.env.REACT_APP_SERVER_URL;
 
 const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
-  useLogout()
+  useLogout();
   const [hideNavBar, sethideNavBar] = useState(true);
 
   const navBatItemsStyle = hideNavBar ? "hidden" : "";
 
   const [allowedPages, setAllowedPages] = useState([]);
 
-
   console.log("alowed Pages", allowedPages);
 
-  const { data: pageGroup, isLoading, isFetching } = useGetPageGroupQuery({ searchParams: "" })
+  const {
+    data: pageGroup,
+    isLoading,
+    isFetching,
+  } = useGetPageGroupQuery({ searchParams: "" });
 
   const toggleNavMenu = () => {
     sethideNavBar(!hideNavBar);
   };
-
 
   // const defaultAdmin = JSON.parse(
   //   secureLocalStorage.getItem(
@@ -45,14 +46,12 @@ const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
   //   )
   // );
 
-
-
   const retrieveAllowedPages = useCallback(() => {
     if (
       JSON.parse(
         secureLocalStorage.getItem(
-          sessionStorage.getItem("sessionId") + "defaultAdmin"
-        )
+          sessionStorage.getItem("sessionId") + "defaultAdmin",
+        ),
       )
     ) {
       axios({
@@ -67,7 +66,7 @@ const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
         (error) => {
           console.log(error);
           toast.error("Server Down", { autoClose: 5000 });
-        }
+        },
       );
     } else {
       axios({
@@ -76,7 +75,7 @@ const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
           BASE_URL +
           ROLES_API +
           `/${secureLocalStorage.getItem(
-            sessionStorage.getItem("sessionId") + "userRoleId"
+            sessionStorage.getItem("sessionId") + "userRoleId",
           )}`,
       }).then(
         (result) => {
@@ -84,16 +83,16 @@ const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
             if (result.data.statusCode === 0) {
               setAllowedPages(
                 result.data.data.RoleOnPage.filter(
-                  (page) => page.page.active && page.read
+                  (page) => page.page.active && page.read,
                 ).map((page) => {
                   return {
                     name: page.page.name,
                     type: page.page.type,
                     link: page.page.link,
                     id: page.page.id,
-                    pageGroupId: page.page.pageGroupId
+                    pageGroupId: page.page.pageGroupId,
                   };
-                })
+                }),
               );
             }
           } else {
@@ -103,7 +102,7 @@ const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
         (error) => {
           console.log(error);
           toast.error("Server Down", { autoClose: 5000 });
-        }
+        },
       );
     }
   }, []);
@@ -113,16 +112,30 @@ const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
     expireWarningDiv.style.display = "none";
   };
   function findElement(id, arr) {
-    if (!arr) return ""
-    let data = arr.find(item => parseInt(item.id) === parseInt(id))
-    return data ? data.name : ""
+    if (!arr) return "";
+    let data = arr.find((item) => parseInt(item.id) === parseInt(id));
+    return data ? data.name : "";
   }
-  const masters = allowedPages.filter((page) => page.type === "Masters")
-  const mastersGroup = [...new Set(masters.map(page => page.pageGroupId))].map(pageId => { return { id: pageId, name: findElement(pageId, pageGroup?.data) } })
-  const transactions = allowedPages.filter((page) => page.type === "Transactions")
-  const transactionsGroup = [...new Set(transactions.map(page => page.pageGroupId))].map(pageId => { return { id: pageId, name: findElement(pageId, pageGroup?.data) } })
-  const reports = allowedPages.filter((page) => page.type === "Reports")
-  const reportGroups = [...new Set(reports.map(page => page.pageGroupId))].map(pageId => { return { id: pageId, name: findElement(pageId, pageGroup?.data) } })
+  const masters = allowedPages.filter((page) => page.type === "Masters");
+  const mastersGroup = [
+    ...new Set(masters.map((page) => page.pageGroupId)),
+  ].map((pageId) => {
+    return { id: pageId, name: findElement(pageId, pageGroup?.data) };
+  });
+  const transactions = allowedPages.filter(
+    (page) => page.type === "Transactions",
+  );
+  const transactionsGroup = [
+    ...new Set(transactions.map((page) => page.pageGroupId)),
+  ].map((pageId) => {
+    return { id: pageId, name: findElement(pageId, pageGroup?.data) };
+  });
+  const reports = allowedPages.filter((page) => page.type === "Reports");
+  const reportGroups = [
+    ...new Set(reports.map((page) => page.pageGroupId)),
+  ].map((pageId) => {
+    return { id: pageId, name: findElement(pageId, pageGroup?.data) };
+  });
 
   return (
     <div className="relative">
@@ -153,24 +166,39 @@ const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
             <div
               className={`block mt-4 lg:inline-block lg:mt-0  mr-4 ${navBatItemsStyle}`}
             >
-              <MultiLevelDropDown heading={"Masters"} groups={mastersGroup} pages={masters} />
+              <MultiLevelDropDown
+                heading={"Masters"}
+                groups={mastersGroup}
+                pages={masters}
+              />
             </div>
             <div
               className={`block mt-4 lg:inline-block lg:mt-0  mr-4 ${navBatItemsStyle}`}
             >
-              <MultiLevelDropDown heading={"Transactions"} groups={transactionsGroup} pages={transactions} />
+              <MultiLevelDropDown
+                heading={"Transactions"}
+                groups={transactionsGroup}
+                pages={transactions}
+              />
             </div>
             <div
               className={`block mt-4 lg:inline-block lg:mt-0  mr-4 ${navBatItemsStyle}`}
             >
-              <MultiLevelDropDown heading={"Reports"} groups={reportGroups} pages={reports} />
+              <MultiLevelDropDown
+                heading={"Reports"}
+                groups={reportGroups}
+                pages={reports}
+              />
             </div>
           </div>
           <div className="nav-item flex justify-between gap-3 items-center">
             <PageSearch pageList={allowedPages} />
             <div
               className="text-lg"
-              onClick={() => { setIsGlobalOpen(true) }}>
+              onClick={() => {
+                setIsGlobalOpen(true);
+              }}
+            >
               {GLOBE_ICON}
             </div>
             <div className="flex">
@@ -179,11 +207,12 @@ const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
               <pre>
                 {" "}
                 {secureLocalStorage.getItem(
-                  sessionStorage.getItem("sessionId") + "username"
+                  sessionStorage.getItem("sessionId") + "username",
                 )}
               </pre>
             </div>
-            <AccountDetailsDropDown setLogout={setLogout}
+            <AccountDetailsDropDown
+              setLogout={setLogout}
               items={allowedPages.filter((page) => page.type === "AdminAccess")}
             />
           </div>
@@ -201,7 +230,7 @@ const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
           {" "}
           Your Subscription Plan will Expire on{" "}
           {secureLocalStorage.getItem(
-            sessionStorage.getItem("sessionId") + "latestActivePlanExpireDate"
+            sessionStorage.getItem("sessionId") + "latestActivePlanExpireDate",
           )}
           .{" "}
         </p>
