@@ -1027,7 +1027,7 @@ const PurchaseOrderForm = ({
           </div>
 
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-            <h2 className="font-medium text-slate-700 mb-2 text-base">
+            <h2 className="font-semibold text-slate-700 mb-2 text-xs">
               Remarks
             </h2>
             <textarea
@@ -1036,7 +1036,7 @@ const PurchaseOrderForm = ({
               onChange={(e) => {
                 setRemarks(e.target.value);
               }}
-              className="w-full h-10 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
+              className="w-full h-14 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
               placeholder="Additional notes..."
             />
           </div>

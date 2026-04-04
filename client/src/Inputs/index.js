@@ -3441,7 +3441,7 @@ export function FxSelectWithAdd({
     <>
       <Select
         styles={customStyles}
-        tabSelectsValue={false}
+        tabSelectsValue={!!value}
         onInputChange={(value, { action }) => {
           if (action === "input-change") {
             setSearchValue(value.toUpperCase()); // store uppercase
@@ -3460,8 +3460,12 @@ export function FxSelectWithAdd({
         onBlur={onBlur}
         onKeyDown={(e) => {
           if (e.key === "Tab") {
-            e.preventDefault();
-            nextRef?.current?.focus();
+            if (!value) {
+              e.preventDefault();
+              nextRef?.current?.focus();
+            }
+            // ✅ If value exists → let react-select handle normally
+            return;
           }
           // Handle Enter key on "Creat
           // e New" option

@@ -261,7 +261,7 @@ const PoItems = ({
         <div
           className={`w-full min-h-[200px] max-h-[200px] overflow-y-auto  my-1`}
         >
-          <table className=" border-collapse table-fixed">
+          <table className="w-full border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
               <tr>
                 <th
@@ -275,12 +275,12 @@ const PoItems = ({
                   Description of Goods<span className="text-red-500">*</span>
                 </th>
                 <th
-                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-36 px-4 py-2 text-center font-medium text-[13px]`}
                 >
                   Item Group
                 </th>
                 <th
-                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-20 px-4 py-2 text-center font-medium text-[13px]`}
                 >
                   Size
                 </th>
@@ -316,7 +316,7 @@ const PoItems = ({
                   Net Amount
                 </th> */}
                 <th
-                  className={`w-24 px-1 py-2 text-center font-medium text-[13px] `}
+                  className={`w-20 px-1 py-2 text-center font-medium text-[13px] `}
                 >
                   Tax Details
                 </th>
@@ -576,7 +576,7 @@ const PoItems = ({
                       />
                     </td> */}
 
-                    <td className=" py-0.5 border border-gray-300 text-[11px] text-right">
+                    <td className=" py-0.5 border border-gray-300 text-[11px] text-right w-20">
                       <button
                         disabled={!row?.styleItemId}
                         className="text-center rounded py-1 w-20"
@@ -611,7 +611,9 @@ const PoItems = ({
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
-                            addRow();
+                            if (index === poItems.length - 1) {
+                              addRow();
+                            }
                           }
                         }}
                         disabled={id ? !isNewVersion : readOnly}
