@@ -591,7 +591,7 @@ const PoItems = ({
                     <td className=" py-0.5 border border-gray-300 text-[11px] text-right w-20">
                       <button
                         disabled={!row?.styleItemId}
-                        className="text-center rounded py-1 w-20"
+                        className="text-center rounded py-1 w-20 table-data-input"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
