@@ -53,6 +53,7 @@ const PurchaseReturnForm = ({
   branchData,
 }) => {
   const today = new Date();
+  const [pendingAction, setPendingAction] = useState(null);
 
   const [docDate, setDocDate] = useState(
     moment.utc(today).format("YYYY-MM-DD"),
@@ -218,18 +219,84 @@ const PurchaseReturnForm = ({
             invalidatePurchaseModule();
 
             if (returnData.statusCode === 0) {
-              if (nextProcess == "new") {
-                setId(0);
-                setDocId("New");
-                syncFormWithDb(undefined);
+              // ✅ Show print confirmation only for new entries
+              if (!id) {
+                Swal.fire({
+                  icon: "question",
+                  title: "Do You Want to Print?",
+                  showCancelButton: true,
+                  confirmButtonText: "Yes, Print",
+                  cancelButtonText: "No [Esc]",
+                  confirmButtonColor: "#3085d6",
+                  cancelButtonColor: "#6b7280",
+                  focusConfirm: true, // ✅ Auto-focus confirm button
+                  allowEnterKey: true, // ✅ Allow Enter to confirm
+                  allowEscapeKey: true, // ✅ Allow Escape to cancel
+                  didOpen: () => {
+                    // ✅ Ensure confirm button is focused when modal opens
+                    const confirmButton = Swal.getConfirmButton();
+                    const cancelButton = Swal.getCancelButton();
 
-                // ✅ Focus after all state updates
-                setTimeout(() => {
-                  supplierRef.current?.focus();
-                }, 100);
-              }
-              if (nextProcess == "close") {
-                onClose();
+                    if (confirmButton) {
+                      confirmButton.focus();
+
+                      // ✅ Add keyboard navigation
+                      confirmButton.addEventListener("keydown", (e) => {
+                        if (e.key === "Tab" && !e.shiftKey) {
+                          e.preventDefault();
+                          cancelButton?.focus();
+                        }
+                      });
+                    }
+
+                    if (cancelButton) {
+                      cancelButton.addEventListener("keydown", (e) => {
+                        if (e.key === "Tab" && e.shiftKey) {
+                          e.preventDefault();
+                          confirmButton?.focus();
+                        }
+                      });
+                    }
+                  },
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    // ✅ User clicked "Yes, Print"
+                    setPrintModalOpen(true);
+                    // Set the ID so the print modal can access the saved data
+                    if (returnData?.data?.id) {
+                      setId(returnData.data.id);
+                    }
+                    setPendingAction(nextProcess);
+                  } else {
+                    // ✅ User clicked "No, Thanks" - proceed with normal flow
+                    if (nextProcess === "new") {
+                      syncFormWithDb(undefined);
+                      setId("");
+                      setDocId("New");
+
+                      setTimeout(() => {
+                        supplierRef.current?.focus();
+                      }, 300);
+                    }
+                    if (nextProcess === "close") {
+                      onClose();
+                    }
+                  }
+                });
+              } else {
+                // ✅ For updates, proceed normally without print prompt
+                if (nextProcess === "new") {
+                  setId("");
+                  setDocId("New");
+                  syncFormWithDb(undefined);
+
+                  setTimeout(() => {
+                    supplierRef.current?.focus();
+                  }, 100);
+                }
+                if (nextProcess === "close") {
+                  onClose();
+                }
               }
             } else {
               toast.error(returnData?.message);
@@ -375,7 +442,23 @@ const PurchaseReturnForm = ({
     <>
       <Modal
         isOpen={printModalOpen}
-        onClose={() => setPrintModalOpen(false)}
+        onClose={() => {
+          setPrintModalOpen(false);
+
+          // Execute pending action after print modal closes
+          if (pendingAction === "new") {
+            setId("");
+            setDocId("New");
+            syncFormWithDb(undefined);
+            setTimeout(() => {
+              supplierRef.current?.focus();
+            }, 100);
+          }
+          if (pendingAction === "close") {
+            onClose();
+          }
+          setPendingAction(null);
+        }}
         widthClass={"w-[90%] h-[90%]"}
       >
         <PDFViewer style={tw("w-full h-full")}>
