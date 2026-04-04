@@ -412,3 +412,23 @@ export function getUniqueArrayBySize(rowData, allData, key, itemId) {
 
   return allData?.filter((all) => uniqueIds?.includes(all?.id)) || [];
 }
+
+export const ModeChip = ({ id, readOnly }) => {
+  if (id && readOnly) {
+    return (
+      <span className="mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-red-500 text-white">
+        Read
+      </span>
+    );
+  }
+
+  if (id && !readOnly) {
+    return (
+      <span className="mt-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-600 text-white">
+        Edit
+      </span>
+    );
+  }
+
+  return null;
+};

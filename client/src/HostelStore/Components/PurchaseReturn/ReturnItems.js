@@ -38,6 +38,8 @@ const ReturnItems = ({
     alreadyReturnQty: "",
     inwardQty: "",
   };
+  const [focusedField, setFocusedField] = useState(null);
+
   const [contextMenu, setContextMenu] = useState(null);
   const [fillGrid, setFillGrid] = useState(false);
   const addRow = () => {
@@ -169,11 +171,11 @@ const ReturnItems = ({
         />
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[250px] overflow-auto  w-full">
-        <div className="flex items-center my-2">
+        <div className="flex items-center my-2 justify-between">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
           {!id && (
             <button
-              className="font-bold  bord ml-[1125px] text-sm bg-blue-500 rounded-md text-white px-2"
+              className="font-bold  bord text-sm bg-blue-500 rounded-md text-white px-2"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -207,7 +209,7 @@ const ReturnItems = ({
         <div
           className={`w-full min-h-[200px] max-h-[200px] overflow-y-auto  my-2`}
         >
-          <table className=" border-collapse table-fixed">
+          <table className="w-full border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
               <tr>
                 <th
@@ -275,6 +277,11 @@ const ReturnItems = ({
                 <tr
                   className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
                   key={index}
+                  onContextMenu={(e) => {
+                    if (!readOnly) {
+                      handleRightClick(e, index, "");
+                    }
+                  }}
                 >
                   <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
                     {index + 1}
@@ -388,7 +395,7 @@ const ReturnItems = ({
                         type="number"
                         className="text-right rounded py-1 px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
-                        value={row?.poQty}
+                        value={row?.poQty ? Number(row.poQty).toFixed(2) : ""}
                         onChange={(e) =>
                           handleInputChange(e.target.value, index, "poQty")
                         }
@@ -413,7 +420,9 @@ const ReturnItems = ({
                       type="number"
                       className="text-right rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.inwardQty}
+                      value={
+                        row?.inwardQty ? Number(row.inwardQty).toFixed(2) : ""
+                      }
                       onChange={(e) =>
                         handleInputChange(e.target.value, index, "inwardQty")
                       }
@@ -436,7 +445,11 @@ const ReturnItems = ({
                       type="number"
                       className="text-right rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.alreadyReturnQty}
+                      value={
+                        row?.alreadyReturnQty
+                          ? Number(row.alreadyReturnQty).toFixed(2)
+                          : ""
+                      }
                       onChange={(e) =>
                         handleInputChange(
                           e.target.value,
@@ -467,7 +480,7 @@ const ReturnItems = ({
                       type="number"
                       className="text-right rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.balQty}
+                      value={row?.balQty ? Number(row.balQty).toFixed(2) : ""}
                       onChange={(e) =>
                         handleInputChange(e.target.value, index, "balQty")
                       }
@@ -500,9 +513,18 @@ const ReturnItems = ({
                       }}
                       min={"0"}
                       type="number"
-                      className="text-right rounded py-1 px-1 w-full table-data-input"
-                      onFocus={(e) => e.target.select()}
-                      value={row?.returnQty}
+                      className="text-right py-1 px-1 w-full table-data-input"
+                      onFocus={(e) => {
+                        e.target.select();
+                        setFocusedField(`${index}`);
+                      }}
+                      value={
+                        focusedField === `${index}`
+                          ? (row?.returnQty ?? "")
+                          : row?.returnQty
+                            ? Number(row.returnQty).toFixed(2)
+                            : ""
+                      }
                       onChange={(e) =>
                         handleInputChange(e.target.value, index, "returnQty")
                       }
@@ -534,7 +556,12 @@ const ReturnItems = ({
                         //   });
                         //   return;
                         // }
-                        handleInputChange(e.target.value, index, "returnQty");
+                        const val = e.target.value;
+                        handleInputChange(
+                          val ? Number(val).toFixed(2) : "",
+                          index,
+                          "returnQty",
+                        );
                       }}
                       disabled={readOnly || (row.stockQty ?? 0) > 0}
                     />
@@ -542,12 +569,7 @@ const ReturnItems = ({
 
                   <td className="w-2 border border-gray-300">
                     <input
-                      onContextMenu={(e) => {
-                        if (!readOnly) {
-                          handleRightClick(e, index, "");
-                        }
-                      }}
-                      className="w-full"
+                      className="w-full table-data-input"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();

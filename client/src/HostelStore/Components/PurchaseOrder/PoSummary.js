@@ -16,6 +16,7 @@ const PoSummary = ({
   id,
   setSummary,
 }) => {
+  const amount = Math.abs(totals?.net || 0);
   return (
     <div className={`bg-gray-200 rounded z-50 w-[500px] `}>
       <table className="border border-gray-500 w-full text-xs text-start">
@@ -159,9 +160,14 @@ const PoSummary = ({
                 name="value"
                 className="h-7 w-full text-right"
                 value={
-                  numberToWords
-                    .toWords(totals?.net || 0)
-                    .replace(/\b\w/g, (c) => c.toUpperCase()) + " Only"
+                  amount === 0
+                    ? "Rupees Zero Only"
+                    : "Rupees " +
+                      numberToWords
+                        .toWords(amount)
+                        .replace(/[-,]/g, "") // ❌ remove hyphen + comma
+                        .replace(/\b\w/g, (c) => c.toUpperCase()) +
+                      " Only"
                 }
               />
             </td>

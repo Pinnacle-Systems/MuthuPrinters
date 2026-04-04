@@ -46,6 +46,8 @@ const CancelItems = ({
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [fillGrid, setFillGrid] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
+
   const addRow = () => {
     const newRow = {
       poId: "",
@@ -192,11 +194,11 @@ const CancelItems = ({
         />
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[250px] overflow-auto  w-full">
-        <div className="flex items-center my-2">
+        <div className="flex items-center my-2 justify-between">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
           {!id && (
             <button
-              className="font-bold  bord ml-[1210px] text-sm bg-blue-500 rounded-md text-white px-2"
+              className="font-bold  bord text-sm bg-blue-500 rounded-md text-white px-2"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -226,7 +228,7 @@ const CancelItems = ({
         <div
           className={`w-full min-h-[200px] max-h-[200px] overflow-y-auto  my-2`}
         >
-          <table className=" border-collapse table-fixed">
+          <table className="w-full border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
               <tr>
                 <th
@@ -301,6 +303,11 @@ const CancelItems = ({
                 <tr
                   className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
                   key={index}
+                  onContextMenu={(e) => {
+                    if (!readOnly) {
+                      handleRightClick(e, index, "");
+                    }
+                  }}
                 >
                   <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
                     {index + 1}
@@ -420,9 +427,9 @@ const CancelItems = ({
                       }}
                       min={"0"}
                       type="number"
-                      className="text-right rounded py-1 px-1 w-full table-data-input"
+                      className="text-right py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.poQty}
+                      value={row?.poQty ? Number(row.poQty).toFixed(2) : ""}
                       onChange={(e) =>
                         handleInputChange(e.target.value, index, "poQty")
                       }
@@ -443,9 +450,13 @@ const CancelItems = ({
                       }}
                       min={"0"}
                       type="number"
-                      className="text-right rounded py-1 px-1 w-full table-data-input"
+                      className="text-right py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.alreadyCancelQty}
+                      value={
+                        row?.alreadyCancelQty
+                          ? Number(row.alreadyCancelQty).toFixed(2)
+                          : ""
+                      }
                       onChange={(e) =>
                         handleInputChange(
                           e.target.value,
@@ -476,7 +487,11 @@ const CancelItems = ({
                       type="number"
                       className="text-right rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.alreadyInwardQty}
+                      value={
+                        row?.alreadyInwardQty
+                          ? Number(row.alreadyInwardQty).toFixed(2)
+                          : ""
+                      }
                       onChange={(e) =>
                         handleInputChange(
                           e.target.value,
@@ -507,7 +522,11 @@ const CancelItems = ({
                       type="number"
                       className="text-right rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.alreadyReturnQty}
+                      value={
+                        row?.alreadyReturnQty
+                          ? Number(row.alreadyReturnQty).toFixed(2)
+                          : ""
+                      }
                       onChange={(e) =>
                         handleInputChange(
                           e.target.value,
@@ -538,7 +557,7 @@ const CancelItems = ({
                       type="number"
                       className="text-right rounded py-1 px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
-                      value={row?.balQty}
+                      value={row?.balQty ? Number(row.balQty).toFixed(2) : ""}
                       onChange={(e) =>
                         handleInputChange(e.target.value, index, "balQty")
                       }
@@ -571,9 +590,18 @@ const CancelItems = ({
                       }}
                       min={"0"}
                       type="number"
-                      className="text-right rounded py-1 px-1 w-full table-data-input"
-                      onFocus={(e) => e.target.select()}
-                      value={row?.cancelQty}
+                      className="text-right py-1 px-1 w-full table-data-input"
+                      onFocus={(e) => {
+                        e.target.select();
+                        setFocusedField(`${index}`);
+                      }}
+                      value={
+                        focusedField === `${index}`
+                          ? (row?.cancelQty ?? "")
+                          : row?.cancelQty
+                            ? Number(row.cancelQty).toFixed(2)
+                            : ""
+                      }
                       onChange={(e) =>
                         handleInputChange(e.target.value, index, "cancelQty")
                       }
@@ -608,7 +636,12 @@ const CancelItems = ({
                         //   });
                         //   return;
                         // }
-                        handleInputChange(e.target.value, index, "cancelQty");
+                        const val = e.target.value;
+                        handleInputChange(
+                          val ? Number(val).toFixed(2) : "",
+                          index,
+                          "cancelQty",
+                        );
                       }}
                       disabled={readOnly || (row.stockQty ?? 0) > 0}
                     />
@@ -616,12 +649,7 @@ const CancelItems = ({
 
                   <td className="w-2 border border-gray-300">
                     <input
-                      onContextMenu={(e) => {
-                        if (!readOnly) {
-                          handleRightClick(e, index, "");
-                        }
-                      }}
-                      className="w-full"
+                      className="w-full table-data-input"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();

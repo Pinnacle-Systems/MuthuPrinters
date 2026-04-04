@@ -3378,108 +3378,169 @@ export function FxSelectWithAdd({
 }) {
   const [showAddNewModal, setShowAddNewModal] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const selectRef = useRef(null);
 
-  // Custom NoOptionsMessage component
-  // const NoOptionsMessage = (props) => {
-  //   if (!addNew || !childComponent) {
-  //     return <components.NoOptionsMessage {...props} />;
-  //   }
+  const CREATE_NEW_VALUE = "__CREATE_NEW__";
 
-  //   return (
-  //     <components.NoOptionsMessage {...props}>
-  //       <div
-  //         className="px-3 py-0.5 text-xs text-blue-600 font-semibold hover:bg-blue-100 cursor-pointer"
-  //         onClick={() => {
-  //           setShowAddNewModal(true);
-  //         }}
-  //         onMouseDown={(e) => {
-  //           e.preventDefault(); // Prevent blur
-  //           e.stopPropagation();
-  //         }}
-  //       >
-  //         + Create New "{searchValue}"
-  //       </div>
-  //     </components.NoOptionsMessage>
-  //   );
-  // };
+  // ✅ Helper function to focus next field
+  const focusNextField = () => {
+    setTimeout(() => {
+      const current = selectRef.current?.controlRef;
+      if (!current) return;
+
+      // ✅ find current TD
+      const currentTd = current.closest("td");
+      if (!currentTd) return;
+
+      const currentTr = currentTd.parentElement;
+      const tds = Array.from(currentTr.querySelectorAll("td"));
+
+      const currentIndex = tds.indexOf(currentTd);
+
+      let nextTd = null;
+
+      // 👉 find next valid td (skip readonly / empty)
+      for (let i = currentIndex + 1; i < tds.length; i++) {
+        const td = tds[i];
+
+        const focusable = td.querySelector(
+          `
+  input:not([disabled]):not([readonly]),
+  textarea:not([disabled]):not([readonly]),
+  select:not([disabled]),
+  .react-select__control[aria-disabled="false"]
+`,
+        );
+
+        if (focusable) {
+          nextTd = td;
+          break;
+        }
+      }
+
+      // 👉 if not found → go to next row
+      if (!nextTd) {
+        const nextRow = currentTr.nextElementSibling;
+        if (nextRow) {
+          nextTd = nextRow.querySelector("td");
+        }
+      }
+
+      if (nextTd) {
+        const el = nextTd.querySelector(
+          'input:not([disabled]):not([readonly]), .react-select__control:not([aria-disabled="true"])',
+        );
+
+        el?.focus();
+      }
+    }, 50);
+  };
 
   const handleAddNewSuccess = (newValue) => {
-    // optional: mimic beforeChange if needed
     if (onChange) {
-      onChange(newValue); // set selected value
+      onChange(newValue);
     }
 
     setShowAddNewModal(false);
     setSearchValue("");
 
-    // 🔥 important (same as DropdownWithModal)
     if (onBlur) onBlur();
+
+    // ✅ Focus next field after creating new item
+    focusNextField();
   };
 
-  const MenuList = (props) => {
-    return (
-      <components.MenuList {...props}>
-        {props.children}
+  const CustomOption = (props) => {
+    const isCreateNew = props.data.value === CREATE_NEW_VALUE;
 
-        {addNew && childComponent && searchValue && (
-          <div
-            className="px-3 py-1 text-xs text-blue-600 font-semibold hover:bg-blue-100 cursor-pointer border-t"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setShowAddNewModal(true);
-            }}
-          >
-            + Create New "{searchValue.toUpperCase()}"
-          </div>
-        )}
-      </components.MenuList>
-    );
+    if (isCreateNew) {
+      return (
+        <div
+          {...props.innerProps}
+          className={`px-3 py-1 text-xs text-blue-600 font-semibold cursor-pointer border-t ${
+            props.isFocused ? "bg-blue-100" : ""
+          }`}
+        >
+          + Create New "{searchValue.toUpperCase()}"
+        </div>
+      );
+    }
+
+    return <components.Option {...props} />;
+  };
+
+  const getOptionsWithCreateNew = () => {
+    const filteredOptions = options.filter((option) => {
+      if (!searchValue) return true;
+      return option.label.toLowerCase().startsWith(searchValue.toLowerCase());
+    });
+
+    if (addNew && childComponent && searchValue) {
+      return [
+        ...filteredOptions,
+        {
+          label: `+ Create New "${searchValue.toUpperCase()}"`,
+          value: CREATE_NEW_VALUE,
+        },
+      ];
+    }
+
+    return filteredOptions;
   };
 
   return (
     <>
       <Select
+        ref={selectRef}
         styles={customStyles}
         tabSelectsValue={!!value}
         onInputChange={(value, { action }) => {
           if (action === "input-change") {
-            setSearchValue(value.toUpperCase()); // store uppercase
+            setSearchValue(value.toUpperCase());
           }
-          return value; // ❗ return original (important)
+          return value;
         }}
         components={{
-          MenuList,
-          IndicatorSeparator: () => null, // remove separator
+          Option: CustomOption,
+          IndicatorSeparator: () => null,
         }}
         isClearable
         isDisabled={readOnly}
-        options={options}
+        options={getOptionsWithCreateNew()}
         value={options.find((opt) => opt.value === value) || null}
-        onChange={(selected) => onChange(selected?.value || "")}
+        onChange={(selected) => {
+          if (selected?.value === CREATE_NEW_VALUE) {
+            setShowAddNewModal(true);
+          } else {
+            const val = selected?.value || "";
+
+            onChange(val);
+
+            // ✅ Move focus immediately after selection
+            focusNextField();
+          }
+        }}
         onBlur={onBlur}
+        filterOption={() => true}
         onKeyDown={(e) => {
+          // ✅ Handle Enter key - focus next field
+          if (e.key === "Enter") {
+            // If a value is selected, focus next field
+            if (value) {
+              e.preventDefault();
+              focusNextField();
+              return;
+            }
+          }
+
           if (e.key === "Tab") {
             if (!value && nextRef) {
               e.preventDefault();
               nextRef?.current?.focus();
             }
-            // ✅ If value exists → let react-select handle normally
             return;
           }
-          // Handle Enter key on "Creat
-          // e New" option
-          if (e.key === "Enter" && addNew && childComponent && searchValue) {
-            const hasExactMatch = options.some(
-              (opt) =>
-                opt.label.trim().toLowerCase() ===
-                searchValue.trim().toLowerCase(),
-            );
-            if (!hasExactMatch) {
-              e.preventDefault();
-              setShowAddNewModal(true);
-            }
-          }
+
           if (onKeyDown) onKeyDown(e);
         }}
         placeholder={placeholder}
@@ -3505,7 +3566,7 @@ export function FxSelectWithAdd({
                   setShowAddNewModal(false);
                   setSearchValue("");
                 }}
-                defaultName={searchValue.toUpperCase()} // Pass the search term to pre-fill
+                defaultName={searchValue.toUpperCase()}
                 embeddedMode={true}
               />
             );

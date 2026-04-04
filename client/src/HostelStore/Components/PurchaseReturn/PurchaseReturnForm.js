@@ -14,6 +14,7 @@ import {
   findFromList,
   getCommonParams,
   isGridDatasValid,
+  ModeChip,
 } from "../../../Utils/helper";
 import { toast } from "react-toastify";
 import { FiEdit2, FiPrinter, FiSave } from "react-icons/fi";
@@ -475,7 +476,10 @@ const PurchaseReturnForm = ({
       </Modal>
       <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
         <div className="flex justify-between items-center">
-          <h1 className="text-lg font-bold text-gray-800">Purchase Return</h1>
+          <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            Purchase Return
+            <ModeChip id={id} readOnly={readOnly} />
+          </h1>
           <button
             onClick={() => {
               onClose();
@@ -753,6 +757,7 @@ const PurchaseReturnForm = ({
                   e.stopPropagation();
                 }
               }}
+              disabled={readOnly}
               className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
             >
               <HiOutlineRefresh className="w-4 h-4 mr-2" />
@@ -767,6 +772,7 @@ const PurchaseReturnForm = ({
                   saveData("new");
                 }
               }}
+              disabled={readOnly}
               className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
             >
               <FiSave className="w-4 h-4 mr-2" />

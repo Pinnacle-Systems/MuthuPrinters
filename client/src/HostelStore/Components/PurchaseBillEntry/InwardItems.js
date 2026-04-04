@@ -104,7 +104,7 @@ const InwardItems = ({
   };
 
   const handleDeleteAllRows = () => {
-    setInwardItems(Array.from({ length: 5 }, () => ({ ...EMPTY_ROW })));
+    setInwardItems(Array.from({ length: 4 }, () => ({ ...EMPTY_ROW })));
   };
 
   const handleRightClick = (event, rowIndex, type) => {
@@ -131,7 +131,7 @@ const InwardItems = ({
   useEffect(() => {
     // If edit mode (id exists)
     if (id && inwardItems?.length > 0) {
-      const requiredRows = 5;
+      const requiredRows = 4;
       const missingRows = requiredRows - inwardItems.length;
 
       if (missingRows > 0) {
@@ -144,7 +144,7 @@ const InwardItems = ({
 
     // If create mode (no id)
     if (!id && (!inwardItems || inwardItems.length === 0)) {
-      setInwardItems(Array.from({ length: 5 }, () => ({ ...EMPTY_ROW })));
+      setInwardItems(Array.from({ length: 4 }, () => ({ ...EMPTY_ROW })));
     }
   }, [id, inwardItems]);
 
@@ -192,11 +192,11 @@ const InwardItems = ({
         />
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm min-h-[260px] overflow-auto  w-full">
-        <div className="flex items-center my-2">
+        <div className="flex items-center justify-between my-2">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
           {!id && (
             <button
-              className={`font-bold  bord ml-[1220px] text-sm bg-blue-500 rounded-md text-white px-2
+              className={`font-bold  bord text-sm bg-blue-500 rounded-md text-white px-2
               `}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -225,7 +225,7 @@ const InwardItems = ({
         <div
           className={`w-full min-h-[210px] max-h-[210px] overflow-y-auto  my-2`}
         >
-          <table className=" border-collapse table-fixed">
+          <table className=" w-full border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
               <tr>
                 <th
@@ -305,6 +305,11 @@ const InwardItems = ({
                 <tr
                   className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
                   key={index}
+                  onContextMenu={(e) => {
+                    if (!readOnly) {
+                      handleRightClick(e, index, "");
+                    }
+                  }}
                 >
                   <td className="w-12 border border-gray-300 text-[11px] py-1.5  text-center p-0.5">
                     {index + 1}
@@ -338,10 +343,10 @@ const InwardItems = ({
                     {row.Uom?.name}
                   </td>
                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right pr-1">
-                    {row?.inwardQty}
+                    {row?.inwardQty ? Number(row.inwardQty).toFixed(2) : ""}
                   </td>
                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right pr-1">
-                    {row?.price}
+                    {row?.price ? Number(row.price).toFixed(2) : ""}
                   </td>
                   <td className="py-0.5 border border-gray-300 text-[11px]">
                     <input
@@ -380,12 +385,7 @@ const InwardItems = ({
                   </td>
                   <td className="w-2 border border-gray-300 bg-transparent">
                     <input
-                      onContextMenu={(e) => {
-                        if (!readOnly) {
-                          handleRightClick(e, index, "");
-                        }
-                      }}
-                      className="w-full bg-transparent"
+                      className="w-full bg-transparent table-data-input"
                       // onKeyDown={(e) => {
                       //   if (e.key === "Enter") {
                       //     e.preventDefault();

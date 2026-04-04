@@ -13,6 +13,7 @@ import {
   findFromList,
   getCommonParams,
   isGridDatasValid,
+  ModeChip,
 } from "../../../Utils/helper";
 
 import { toast } from "react-toastify";
@@ -417,8 +418,9 @@ const PurchaseBillEntryForm = ({
       </Modal>
       <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
         <div className="flex justify-between items-center">
-          <h1 className="text-lg font-bold text-gray-800">
+          <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
             Purchase Bill Entry
+            <ModeChip id={id} readOnly={readOnly} />
           </h1>
           <button
             onClick={() => {
@@ -716,6 +718,7 @@ const PurchaseBillEntryForm = ({
                   e.stopPropagation();
                 }
               }}
+              disabled={readOnly}
               className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
             >
               <HiOutlineRefresh className="w-4 h-4 mr-2" />
@@ -730,6 +733,7 @@ const PurchaseBillEntryForm = ({
                   saveData("new");
                 }
               }}
+              disabled={readOnly}
               className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
             >
               <FiSave className="w-4 h-4 mr-2" />

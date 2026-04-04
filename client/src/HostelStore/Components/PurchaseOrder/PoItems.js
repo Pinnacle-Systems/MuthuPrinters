@@ -44,7 +44,7 @@ const PoItems = ({
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
-  const [focusedRowIndex, setFocusedRowIndex] = useState(null);
+  const [focusedField, setFocusedField] = useState(null);
   const actionRefs = useRef([]);
   const addRow = () => {
     const newRow = {
@@ -339,6 +339,11 @@ const PoItems = ({
                   <tr
                     className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
                     key={index}
+                    onContextMenu={(e) => {
+                      if (!readOnly) {
+                        handleRightClick(e, index, "");
+                      }
+                    }}
                   >
                     <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
                       {count++}
@@ -376,7 +381,7 @@ const PoItems = ({
                         nextRef={termsRef}
                       />
                     </td>
-                    <td className="py-0.5 border border-gray-300 text-[11px] ">
+                    <td className=" border border-gray-300 text-[11px] ">
                       <FxSelect
                         value={row.itemGroupId}
                         onChange={(val) =>
@@ -403,6 +408,7 @@ const PoItems = ({
                           }
                         }}
                       />
+                      {/* {row.itemGroupId} */}
                     </td>
                     <td className="py-0.5 border border-gray-300 text-[11px] ">
                       <FxSelectWithAdd
@@ -487,25 +493,33 @@ const PoItems = ({
                         }}
                       />
                     </td>
-                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
                       <input
-                        onKeyDown={(e) => {
-                          if (e.code === "Minus" || e.code === "NumpadSubtract")
-                            e.preventDefault();
-                          if (e.key === "Delete") {
-                            handleInputChange("", index, "qty");
-                          }
-                        }}
-                        min={"0"}
                         type="number"
-                        className="text-right rounded py-1 px-1 w-full table-data-input"
-                        onFocus={(e) => e.target.select()}
-                        value={row?.qty}
+                        min="0"
+                        className="text-right py-1 px-1 w-full table-data-input"
+                        onFocus={(e) => {
+                          e.target.select();
+                          setFocusedField(`${index}-qty`);
+                        }}
+                        value={
+                          focusedField === `${index}-qty`
+                            ? (row?.qty ?? "")
+                            : row?.qty
+                              ? Number(row.qty).toFixed(2)
+                              : ""
+                        }
                         onChange={(e) =>
                           handleInputChange(e.target.value, index, "qty")
                         }
                         onBlur={(e) => {
-                          handleInputChange(e.target.value, index, "qty");
+                          const val = e.target.value;
+                          handleInputChange(
+                            val ? Number(val).toFixed(2) : "",
+                            index,
+                            "qty",
+                          );
+                          setFocusedField(null);
                         }}
                         disabled={
                           id
@@ -516,33 +530,31 @@ const PoItems = ({
                     </td>
                     <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
                       <input
-                        onKeyDown={(e) => {
-                          if (e.code === "Minus" || e.code === "NumpadSubtract")
-                            e.preventDefault();
-                          if (e.key === "Delete") {
-                            handleInputChange("", index, "price");
-                          }
-                        }}
-                        min={"0"}
                         type="number"
-                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        min="0"
+                        className="text-right py-1 px-1 w-full table-data-input"
                         onFocus={(e) => {
-                          setFocusedRowIndex(index);
                           e.target.select();
+                          setFocusedField(`${index}-price`);
                         }}
                         value={
-                          focusedRowIndex === index
-                            ? (row?.price ?? "") // show raw value while editing
+                          focusedField === `${index}-price`
+                            ? (row?.price ?? "")
                             : row?.price
-                              ? Number(row.price).toFixed(2) // format nicely otherwise
+                              ? Number(row.price).toFixed(2)
                               : ""
                         }
                         onChange={(e) =>
                           handleInputChange(e.target.value, index, "price")
                         }
                         onBlur={(e) => {
-                          handleInputChange(e.target.value, index, "price");
-                          setFocusedRowIndex(null);
+                          const val = e.target.value;
+                          handleInputChange(
+                            val ? Number(val).toFixed(2) : "",
+                            index,
+                            "price",
+                          );
+                          setFocusedField(null);
                         }}
                         disabled={id ? !isNewVersion : readOnly}
                       />
@@ -551,7 +563,7 @@ const PoItems = ({
                       <input
                         type="number"
                         onFocus={(e) => e.target.select()}
-                        className="text-right rounded py-1 px-1 w-full"
+                        className="text-right rounded py-1 px-1 w-full "
                         value={
                           !row.qty || !row.price
                             ? 0.0
@@ -602,12 +614,7 @@ const PoItems = ({
                     <td className="w-2 border border-gray-300">
                       <input
                         ref={(el) => (actionRefs.current[index] = el)}
-                        onContextMenu={(e) => {
-                          if (!readOnly) {
-                            handleRightClick(e, index, "");
-                          }
-                        }}
-                        className="w-full"
+                        className="w-full table-data-input"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();

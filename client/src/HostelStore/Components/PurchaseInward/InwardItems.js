@@ -49,6 +49,7 @@ const InwardItems = ({
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
   const [fillGrid, setFillGrid] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
 
   const skipFocusRef = useRef(false);
 
@@ -198,11 +199,11 @@ const InwardItems = ({
         />
       </Modal>
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm min-h-[270px] overflow-auto  w-full">
-        <div className="flex items-center my-2">
+        <div className="flex items-center my-2 justify-between">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
           {inwardType !== "Direct Inward" && !id && (
             <button
-              className={`font-bold bord ml-[1250px] text-sm bg-blue-500 rounded-md text-white px-2`}
+              className={`font-bold bord text-sm bg-blue-500 rounded-md text-white px-2`}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -230,7 +231,7 @@ const InwardItems = ({
         <div
           className={`w-full min-h-[205px] max-h-[205px] overflow-y-auto  my-2`}
         >
-          <table className=" border-collapse table-fixed">
+          <table className="w-full border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
               <tr>
                 <th
@@ -318,6 +319,11 @@ const InwardItems = ({
                 <tr
                   className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
                   key={index}
+                  onContextMenu={(e) => {
+                    if (!readOnly) {
+                      handleRightClick(e, index, "");
+                    }
+                  }}
                 >
                   <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
                     {index + 1}
@@ -446,7 +452,7 @@ const InwardItems = ({
                         type="number"
                         className="text-right rounded py-1 px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
-                        value={row?.poQty}
+                        value={row?.poQty ? Number(row.poQty).toFixed(2) : ""}
                         onChange={(e) =>
                           handleInputChange(e.target.value, index, "poQty")
                         }
@@ -475,7 +481,11 @@ const InwardItems = ({
                         type="number"
                         className="text-right rounded py-1 px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
-                        value={row?.alreadyCancelQty}
+                        value={
+                          row?.alreadyCancelQty
+                            ? Number(row.alreadyCancelQty).toFixed(2)
+                            : ""
+                        }
                         onChange={(e) =>
                           handleInputChange(
                             e.target.value,
@@ -512,7 +522,11 @@ const InwardItems = ({
                         type="number"
                         className="text-right rounded py-1 px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
-                        value={row?.alreadyInwardQty}
+                        value={
+                          row?.alreadyInwardQty
+                            ? Number(row.alreadyInwardQty).toFixed(2)
+                            : ""
+                        }
                         onChange={(e) =>
                           handleInputChange(
                             e.target.value,
@@ -549,7 +563,11 @@ const InwardItems = ({
                         type="number"
                         className="text-right rounded py-1 px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
-                        value={row?.alreadyReturnQty}
+                        value={
+                          row?.alreadyReturnQty
+                            ? Number(row.alreadyReturnQty).toFixed(2)
+                            : ""
+                        }
                         onChange={(e) =>
                           handleInputChange(
                             e.target.value,
@@ -586,7 +604,7 @@ const InwardItems = ({
                         type="number"
                         className="text-right rounded py-1 px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
-                        value={row?.balQty}
+                        value={row?.balQty ? Number(row.balQty).toFixed(2) : ""}
                         onChange={(e) =>
                           handleInputChange(e.target.value, index, "balQty")
                         }
@@ -614,13 +632,28 @@ const InwardItems = ({
                         min={"0"}
                         type="number"
                         className="text-right rounded py-1 px-1 w-full table-data-input"
-                        onFocus={(e) => e.target.select()}
-                        value={row?.price}
+                        onFocus={(e) => {
+                          e.target.select();
+                          setFocusedField(`${index}-price`);
+                        }}
+                        value={
+                          focusedField === `${index}-price`
+                            ? (row?.price ?? "")
+                            : row?.price
+                              ? Number(row.price).toFixed(2)
+                              : ""
+                        }
                         onChange={(e) =>
                           handleInputChange(e.target.value, index, "price")
                         }
                         onBlur={(e) => {
-                          handleInputChange(e.target.value, index, "price");
+                          const val = e.target.value;
+                          handleInputChange(
+                            val ? Number(val).toFixed(2) : "",
+                            index,
+                            "price",
+                          );
+                          setFocusedField(null);
                         }}
                         disabled={
                           readOnly ||
@@ -641,34 +674,44 @@ const InwardItems = ({
                         if (e.key === "Delete") {
                           handleInputChange("", index, "inwardQty");
                         }
+                        if (inwardType !== "Direct Inward") {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            skipFocusRef.current = false; // reset flag before blur fires
 
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          skipFocusRef.current = false; // reset flag before blur fires
-
-                          setTimeout(() => {
-                            if (!skipFocusRef.current) {
-                              if (inwardType !== "Direct Inward") {
-                                const next = document.querySelector(
-                                  `#inwardQty-input-${index + 1}`,
-                                );
-                                if (next) next.focus();
-                              } else {
-                                const next = document.querySelector(
-                                  `#styleItemId-input-${index + 1}`,
-                                );
-                                if (next) next.focus();
+                            setTimeout(() => {
+                              if (!skipFocusRef.current) {
+                                if (inwardType !== "Direct Inward") {
+                                  const next = document.querySelector(
+                                    `#inwardQty-input-${index + 1}`,
+                                  );
+                                  if (next) next.focus();
+                                } else {
+                                  const next = document.querySelector(
+                                    `#styleItemId-input-${index + 1}`,
+                                  );
+                                  if (next) next.focus();
+                                }
                               }
-                            }
-                          }, 100);
+                            }, 100);
+                          }
                         }
                       }}
                       min={"0"}
                       type="number"
-                      className="text-right rounded py-1 px-1 w-full table-data-input"
-                      onFocus={(e) => e.target.select()}
-                      value={row?.inwardQty}
+                      className="text-right py-1 px-1 w-full table-data-input"
+                      onFocus={(e) => {
+                        e.target.select();
+                        setFocusedField(`${index}-inwardQty`);
+                      }}
+                      value={
+                        focusedField === `${index}-inwardQty`
+                          ? (row?.inwardQty ?? "")
+                          : row?.inwardQty
+                            ? Number(row.inwardQty).toFixed(2)
+                            : ""
+                      }
                       onChange={(e) =>
                         handleInputChange(e.target.value, index, "inwardQty")
                       }
@@ -727,7 +770,13 @@ const InwardItems = ({
                         //   return;
                         // }
 
-                        handleInputChange(e.target.value, index, "inwardQty");
+                        const val = e.target.value;
+                        handleInputChange(
+                          val ? Number(val).toFixed(2) : "",
+                          index,
+                          "inwardQty",
+                        );
+                        setFocusedField(null);
                       }}
                       disabled={readOnly || (row.stockQty ?? 0) > 0}
                     />
@@ -735,12 +784,7 @@ const InwardItems = ({
 
                   <td className="w-2 border border-gray-300">
                     <input
-                      onContextMenu={(e) => {
-                        if (!readOnly) {
-                          handleRightClick(e, index, "");
-                        }
-                      }}
-                      className="w-full"
+                      className="w-full table-data-input"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();

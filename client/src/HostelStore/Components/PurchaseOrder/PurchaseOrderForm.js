@@ -15,6 +15,7 @@ import {
   findFromList,
   getCommonParams,
   isGridDatasValid,
+  ModeChip,
 } from "../../../Utils/helper";
 import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 import { toast } from "react-toastify";
@@ -553,6 +554,43 @@ const PurchaseOrderForm = ({
     }
   }, [termsId]);
 
+  const getTitleChip = (text) => {
+    if (id && readOnly) {
+      return {
+        label: `View ${text}`,
+        className: "bg-gray-200 text-gray-700",
+      };
+    }
+    if (id && !readOnly) {
+      return {
+        label: `Edit ${text}`,
+        className: "bg-blue-100 text-blue-700",
+      };
+    }
+    if (!id && !readOnly) {
+      return {
+        label: `Create ${text}`,
+        className: "bg-green-100 text-green-700",
+      };
+    }
+    return { label: "", className: "" };
+  };
+
+  const getModeChip = () => {
+    if (id && readOnly) {
+      return { label: "Read", className: "bg-red-600 text-white" };
+    }
+    if (id && !readOnly) {
+      return { label: "Edit", className: "bg-yellow-600 text-white" };
+    }
+    if (!id && !readOnly) {
+      return;
+    }
+    return null;
+  };
+
+  const chip = getModeChip();
+
   return (
     <>
       <Modal
@@ -619,7 +657,10 @@ const PurchaseOrderForm = ({
       </Modal>
       <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
         <div className="flex justify-between items-center">
-          <h1 className="text-lg font-bold text-gray-800">Purchase Order</h1>
+          <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            Purchase Order
+            <ModeChip id={id} readOnly={readOnly} />
+          </h1>
           <button
             onClick={() => {
               onClose();
@@ -989,6 +1030,7 @@ const PurchaseOrderForm = ({
             <textarea
               // ref={termsRef}
               disabled={readOnly}
+              readOnly={readOnly}
               className="w-full h-20 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
               value={termsAndCondtion}
               onChange={(e) => setTermsAndCondtion(e.target.value)}
@@ -1099,6 +1141,7 @@ const PurchaseOrderForm = ({
                   e.stopPropagation();
                 }
               }}
+              disabled={readOnly}
               className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
             >
               <HiOutlineRefresh className="w-4 h-4 mr-2" />
@@ -1113,6 +1156,7 @@ const PurchaseOrderForm = ({
                   saveData("new");
                 }
               }}
+              disabled={readOnly}
               className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
             >
               <FiSave className="w-4 h-4 mr-2" />
