@@ -115,7 +115,15 @@ const PurchaseInwardItemsSelection = ({
         </h2>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => {
+            onClose();
+
+            setTimeout(() => {
+              const firstInput = document.querySelector("#inwardQty-input-0");
+              firstInput?.focus();
+              firstInput?.select();
+            }, 100);
+          }}
           className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                      border border-green-600 flex items-center gap-1 text-xs"
         >
@@ -191,7 +199,7 @@ const PurchaseInwardItemsSelection = ({
                       UOM
                     </th>
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
-                    PO Qty
+                      PO Qty
 
 
                     </th>

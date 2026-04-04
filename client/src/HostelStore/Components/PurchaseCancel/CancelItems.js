@@ -40,6 +40,9 @@ const CancelItems = ({
     itemGroupId: "",
     sizeId: "",
     colorId: "",
+    alreadyInwardQty: "",
+    alreadyCancelQty: "",
+    alreadyReturnQty: "",
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [fillGrid, setFillGrid] = useState(false);
@@ -59,6 +62,8 @@ const CancelItems = ({
       sizeId: "",
       colorId: "",
       alreadyCancelQty: "",
+      alreadyInwardQty: "",
+      alreadyReturnQty: "",
     };
     setCancelItems([...cancelItems, newRow]);
   };
@@ -158,7 +163,17 @@ const CancelItems = ({
     <>
       <Modal
         isOpen={fillGrid}
-        onClose={() => setFillGrid(false)}
+        onClose={() => {
+          setFillGrid(false);
+
+          setTimeout(() => {
+            const firstInput = document.querySelector("#cancelQty-input-0");
+            if (firstInput) {
+              firstInput.focus();
+              firstInput.select(); // optional UX 🔥
+            }
+          }, 100); // small delay important
+        }}
         widthClass={"w-[90%] h-[90%]"}
       >
         <PurchaseItemsSelection
@@ -573,20 +588,26 @@ const CancelItems = ({
                             title: "Invalid Qty",
                             text: `Cancel Qty cannot be More than Balance Qty! - ${minQty}`,
                             confirmButtonText: "OK",
+                            didClose: () => {
+                              const currentInput = document.querySelector(
+                                `#cancelQty-input-${index}`,
+                              );
+                              currentInput?.focus();
+                            },
                           });
                           return;
                         }
 
-                        if (e.target.value == 0) {
-                          e.target.value = "";
-                          Swal.fire({
-                            icon: "warning",
-                            title: "Invalid Qty",
-                            text: `Minimum Qty is 1`,
-                            confirmButtonText: "OK",
-                          });
-                          return;
-                        }
+                        // if (e.target.value == 0) {
+                        //   e.target.value = "";
+                        //   Swal.fire({
+                        //     icon: "warning",
+                        //     title: "Invalid Qty",
+                        //     text: `Minimum Qty is 1`,
+                        //     confirmButtonText: "OK",
+                        //   });
+                        //   return;
+                        // }
                         handleInputChange(e.target.value, index, "cancelQty");
                       }}
                       disabled={readOnly || (row.stockQty ?? 0) > 0}

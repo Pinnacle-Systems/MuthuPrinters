@@ -140,7 +140,17 @@ const ReturnItems = ({
     <>
       <Modal
         isOpen={fillGrid}
-        onClose={() => setFillGrid(false)}
+        onClose={() => {
+          setFillGrid(false);
+
+          setTimeout(() => {
+            const firstInput = document.querySelector("#returnQty-input-0");
+            if (firstInput) {
+              firstInput.focus();
+              firstInput.select(); // optional UX 🔥
+            }
+          }, 100); // small delay important
+        }}
         widthClass={"w-[90%] h-[90%]"}
       >
         <PurchaseInwardItemsSelection
@@ -507,20 +517,23 @@ const ReturnItems = ({
                             title: "Invalid Qty",
                             text: `Return Qty cannot be More than Balance Qty! - ${minQty}`,
                             confirmButtonText: "OK",
+                            didClose: () => {
+                              e.target.focus();
+                            },
                           });
                           return;
                         }
 
-                        if (e.target.value == 0) {
-                          e.target.value = "";
-                          Swal.fire({
-                            icon: "warning",
-                            title: "Invalid Qty",
-                            text: `Minimum Qty is 1`,
-                            confirmButtonText: "OK",
-                          });
-                          return;
-                        }
+                        // if (e.target.value == 0) {
+                        //   e.target.value = "";
+                        //   Swal.fire({
+                        //     icon: "warning",
+                        //     title: "Invalid Qty",
+                        //     text: `Minimum Qty is 1`,
+                        //     confirmButtonText: "OK",
+                        //   });
+                        //   return;
+                        // }
                         handleInputChange(e.target.value, index, "returnQty");
                       }}
                       disabled={readOnly || (row.stockQty ?? 0) > 0}

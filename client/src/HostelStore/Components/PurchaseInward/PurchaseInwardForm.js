@@ -71,6 +71,7 @@ const PurchaseInwardForm = ({
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
   const supplierRef = useRef(null);
   const [dispatchInvalidate] = useInvalidateTags();
+  const vehicleRef = useRef(null);
 
   const { userId, finYearId, branchId } = getCommonParams();
   const { data: locationData } = useGetLocationMasterQuery({
@@ -557,6 +558,7 @@ const PurchaseInwardForm = ({
             setSearchDocId={setSearchDocId}
             setSearchDocDate={setSearchDocDate}
             searchDocDate={searchDocDate}
+            vehicleRef={vehicleRef}
           />
         </fieldset>
 
@@ -566,6 +568,7 @@ const PurchaseInwardForm = ({
               Vehicle No
             </h2>
             <textarea
+              ref={vehicleRef}
               readOnly={readOnly}
               value={vehicleNo}
               onChange={(e) => {
@@ -574,6 +577,28 @@ const PurchaseInwardForm = ({
               className="w-full overflow-auto h-10 px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
               placeholder="Vehicle Details..."
               disabled={readOnly}
+              onKeyDown={(e) => {
+                if (e.ctrlKey && e.key === "Enter") {
+                  e.preventDefault();
+
+                  const textarea = e.target;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+
+                  const newValue =
+                    vehicleNo.substring(0, start) +
+                    "\n" +
+                    vehicleNo.substring(end);
+
+                  setVehicleNo(newValue);
+
+                  // ✅ Restore focus + cursor properly
+                  requestAnimationFrame(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + 1, start + 1);
+                  });
+                }
+              }}
             />
           </div>
 
@@ -589,6 +614,26 @@ const PurchaseInwardForm = ({
               }}
               className="w-full h-10 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
               placeholder="Additional notes..."
+              onKeyDown={(e) => {
+                if (e.ctrlKey && e.key === "Enter") {
+                  e.preventDefault();
+
+                  const textarea = e.target;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+
+                  const newValue =
+                    remarks.substring(0, start) + "\n" + remarks.substring(end);
+
+                  setRemarks(newValue);
+
+                  // ✅ Restore focus + cursor properly
+                  requestAnimationFrame(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + 1, start + 1);
+                  });
+                }
+              }}
             />
           </div>
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
@@ -625,29 +670,46 @@ const PurchaseInwardForm = ({
           {/* Left Buttons */}
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => saveData("new")}
-              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
-            >
-              <FiSave className="w-4 h-4 mr-2" />
-              Save & New
-            </button>
-            <button
               onClick={() => saveData("close")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  saveData("close");
+                  e.stopPropagation();
+                }
+              }}
               className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
             >
               <HiOutlineRefresh className="w-4 h-4 mr-2" />
               Save & Close
             </button>
+            <button
+              onClick={() => saveData("new")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  saveData("new");
+                }
+              }}
+              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
+            >
+              <FiSave className="w-4 h-4 mr-2" />
+              Save & New
+            </button>
           </div>
 
           <div className="flex gap-2 flex-wrap">
-            <button
-              className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-sm"
-              onClick={() => setReadOnly(false)}
-            >
-              <FiEdit2 className="w-4 h-4 mr-2" />
-              Edit
-            </button>
+            {!id ||
+              (readOnly && (
+                <button
+                  className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-sm"
+                  onClick={() => setReadOnly(false)}
+                >
+                  <FiEdit2 className="w-4 h-4 mr-2" />
+                  Edit
+                </button>
+              ))}
           </div>
         </div>
       </div>

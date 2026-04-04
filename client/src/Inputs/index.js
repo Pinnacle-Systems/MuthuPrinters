@@ -3460,7 +3460,7 @@ export function FxSelectWithAdd({
         onBlur={onBlur}
         onKeyDown={(e) => {
           if (e.key === "Tab") {
-            if (!value) {
+            if (!value && nextRef) {
               e.preventDefault();
               nextRef?.current?.focus();
             }

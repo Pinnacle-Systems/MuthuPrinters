@@ -29,6 +29,7 @@ const InwardItems = ({
   setSearchDocId,
   setSearchDocDate,
   searchDocDate,
+  vehicleRef,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -168,7 +169,17 @@ const InwardItems = ({
       </Modal>
       <Modal
         isOpen={fillGrid}
-        onClose={() => setFillGrid(false)}
+        onClose={() => {
+          setFillGrid(false);
+
+          setTimeout(() => {
+            const firstInput = document.querySelector("#inwardQty-input-0");
+            if (firstInput) {
+              firstInput.focus();
+              firstInput.select(); // optional UX 🔥
+            }
+          }, 100); // small delay important
+        }}
         widthClass={"w-[90%] h-[90%]"}
       >
         <PoItemsSelection
@@ -337,6 +348,7 @@ const InwardItems = ({
                       addNew={true}
                       childComponent={StyleItemMaster}
                       addNewModalWidth="w-[50%] h-[55%]"
+                      nextRef={vehicleRef}
                     />
                   </td>
                   <td className="py-0.5 border border-gray-300 text-[11px] ">
@@ -674,6 +686,12 @@ const InwardItems = ({
                               title: "Invalid Qty",
                               text: `Inward Qty cannot be More than Balance Qty! - ${maxQty}`,
                               confirmButtonText: "OK",
+                              didClose: () => {
+                                const currentInput = document.querySelector(
+                                  `#inwardQty-input-${index}`,
+                                );
+                                currentInput?.focus();
+                              },
                             });
                             return;
                           }
@@ -686,22 +704,28 @@ const InwardItems = ({
                               title: "Invalid Qty",
                               text: `Inward Qty cannot be Less than Already Return Qty! - ${minQty}`,
                               confirmButtonText: "OK",
+                              didClose: () => {
+                                const currentInput = document.querySelector(
+                                  `#inwardQty-input-${index}`,
+                                );
+                                currentInput?.focus();
+                              },
                             });
                             return;
                           }
                         }
 
-                        if (e.target.value == 0) {
-                          skipFocusRef.current = true; // 🚩 Swal will open, block focus
-                          Swal.fire({
-                            icon: "warning",
-                            title: "Invalid Qty",
-                            text: `Minimum Qty is 1`,
-                            confirmButtonText: "OK",
-                          });
-                          e.target.value = "";
-                          return;
-                        }
+                        // if (e.target.value == 0) {
+                        //   skipFocusRef.current = true; // 🚩 Swal will open, block focus
+                        //   Swal.fire({
+                        //     icon: "warning",
+                        //     title: "Invalid Qty",
+                        //     text: `Minimum Qty is 1`,
+                        //     confirmButtonText: "OK",
+                        //   });
+                        //   e.target.value = "";
+                        //   return;
+                        // }
 
                         handleInputChange(e.target.value, index, "inwardQty");
                       }}
@@ -720,7 +744,13 @@ const InwardItems = ({
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
-                          addRow();
+                          if (inwardType === "Direct Inward") {
+                            if (index === inwardItems.length - 1) {
+                              addRow();
+                            }
+                          } else {
+                            addRow();
+                          }
                         }
                       }}
                       disabled={readOnly}

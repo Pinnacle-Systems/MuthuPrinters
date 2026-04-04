@@ -412,6 +412,7 @@ const PurchaseBillEntryForm = ({
           taxTypeId={taxTemplateId}
           readOnly={readOnly}
           totals={totals}
+          setSummary={setSummary}
         />
       </Modal>
       <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
@@ -707,18 +708,32 @@ const PurchaseBillEntryForm = ({
           {/* Left Buttons */}
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => saveData("new")}
-              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
-            >
-              <FiSave className="w-4 h-4 mr-2" />
-              Save & New
-            </button>
-            <button
               onClick={() => saveData("close")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  saveData("close");
+                  e.stopPropagation();
+                }
+              }}
               className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
             >
               <HiOutlineRefresh className="w-4 h-4 mr-2" />
               Save & Close
+            </button>
+            <button
+              onClick={() => saveData("new")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  saveData("new");
+                }
+              }}
+              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
+            >
+              <FiSave className="w-4 h-4 mr-2" />
+              Save & New
             </button>
           </div>
 

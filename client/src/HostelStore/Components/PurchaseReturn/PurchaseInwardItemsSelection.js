@@ -110,7 +110,15 @@ const PurchaseInwardItemsSelection = ({
         </h2>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => {
+            onClose();
+
+            setTimeout(() => {
+              const firstInput = document.querySelector("#returnQty-input-0");
+              firstInput?.focus();
+              firstInput?.select();
+            }, 100);
+          }}
           className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                      border border-green-600 flex items-center gap-1 text-xs"
         >

@@ -608,29 +608,46 @@ const PurchaseCancelForm = ({
           {/* Left Buttons */}
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => saveData("new")}
-              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
-            >
-              <FiSave className="w-4 h-4 mr-2" />
-              Save & New
-            </button>
-            <button
               onClick={() => saveData("close")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  saveData("close");
+                  e.stopPropagation();
+                }
+              }}
               className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
             >
               <HiOutlineRefresh className="w-4 h-4 mr-2" />
               Save & Close
             </button>
+            <button
+              onClick={() => saveData("new")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  saveData("new");
+                }
+              }}
+              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
+            >
+              <FiSave className="w-4 h-4 mr-2" />
+              Save & New
+            </button>
           </div>
 
           <div className="flex gap-2 flex-wrap">
-            <button
-              className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-sm"
-              onClick={() => setReadOnly(false)}
-            >
-              <FiEdit2 className="w-4 h-4 mr-2" />
-              Edit
-            </button>
+            {!id ||
+              (readOnly && (
+                <button
+                  className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-sm"
+                  onClick={() => setReadOnly(false)}
+                >
+                  <FiEdit2 className="w-4 h-4 mr-2" />
+                  Edit
+                </button>
+              ))}
           </div>
         </div>
       </div>
