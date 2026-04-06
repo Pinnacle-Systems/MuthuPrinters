@@ -16,6 +16,7 @@ import { useDeletePurchaseReturnMutation } from "../../../redux/services/Purchas
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
+import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -94,7 +95,11 @@ export default function Form() {
   const { data: hsnList } = useGetHsnMasterQuery({ params });
   const { data: sizeList } = useGetSizeMasterQuery({ params });
   const { data: colorList } = useGetColorMasterQuery({ params });
-
+  const {
+    data: termsData,
+    isLoading,
+    isFetching,
+  } = useGetTermsandCondtionsQuery({ params });
   return (
     <>
       <div
@@ -152,6 +157,7 @@ export default function Form() {
           sizeList={sizeList}
           colorList={colorList}
           branchData={branchData}
+          termsData={termsData}
         />
       )}
     </>

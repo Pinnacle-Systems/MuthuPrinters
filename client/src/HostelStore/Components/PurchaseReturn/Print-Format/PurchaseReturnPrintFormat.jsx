@@ -53,37 +53,39 @@ const PurchaseReturnPrintFormat = ({
 }) => {
     if (!singleData) return null;
 
-    const docId             = singleData?.docId || "";
-    const docDate           = singleData?.docDate || "";
-    const dcNo              = singleData?.dcNo || "";
-    const dcDate            = singleData?.dcDate || "";
-    const remarks           = singleData?.remarks || "";
+    const docId = singleData?.docId || "";
+    const docDate = singleData?.docDate || "";
+    const dcNo = singleData?.dcNo || "";
+    const dcDate = singleData?.dcDate || "";
+    const remarks = singleData?.remarks || "";
     const termsAndCondition = singleData?.termsAndCondition || "";
-    const supplierDetails   = singleData?.Supplier ||
+    const supplierDetails = singleData?.Supplier ||
         supplierList?.data?.find(s => parseInt(s.id) === parseInt(singleData?.supplierId)) || {};
 
     const returnItems = (singleData?.purchaseReturnItems || []).filter(
         (item) => item.styleItemId || item.StyleItem?.id
     );
 
-    const totalPoQty            = returnItems.reduce((s, r) => s + (parseFloat(r.poQty) || 0), 0);
-    const totalInwardQty        = returnItems.reduce((s, r) => s + (parseFloat(r.inwardQty) || 0), 0);
+    const totalPoQty = returnItems.reduce((s, r) => s + (parseFloat(r.poQty) || 0), 0);
+    const totalInwardQty = returnItems.reduce((s, r) => s + (parseFloat(r.inwardQty) || 0), 0);
     const totalAlreadyReturnQty = returnItems.reduce((s, r) => s + (parseFloat(r.alreadyReturnQty) || 0), 0);
-    const totalBalQty           = returnItems.reduce((s, r) => s + (parseFloat(r.balQty) || 0), 0);
-    const totalReturnQty        = returnItems.reduce((s, r) => s + (parseFloat(r.returnQty) || 0), 0);
+    const totalBalQty = returnItems.reduce((s, r) => s + (parseFloat(r.balQty) || 0), 0);
+    const totalReturnQty = returnItems.reduce((s, r) => s + (parseFloat(r.returnQty) || 0), 0);
 
     const columns = [
-        { label: "S.No",                flex: 0.5  },
-        { label: "Description",         flex: 3.5  },
-        { label: "Size",                flex: 1.2  },
-        { label: "Color",               flex: 1.2  },
-        { label: "UOM",                 flex: 1    },
-        { label: "PO Qty",              flex: 1    },
-        { label: "Inward Qty",          flex: 1    },
-        { label: "Already\nReturn Qty", flex: 1.2  },
-        { label: "Balance Qty",         flex: 1    },
-        { label: "Return Qty",          flex: 1    },
+        { label: "S.No", flex: 0.5 },
+        { label: "Description", flex: 3.5 },
+        { label: "Size", flex: 1.2 },
+        { label: "Color", flex: 1.2 },
+        { label: "UOM", flex: 1 },
+        { label: "PO Qty", flex: 1 },
+        { label: "Inward Qty", flex: 1 },
+        { label: "Already\nReturn Qty", flex: 1.2 },
+        { label: "Balance Qty", flex: 1 },
+        { label: "Return Qty", flex: 1 },
     ];
+
+    const ROW_HEIGHT = 18;
 
     return (
         <Document>
@@ -96,8 +98,8 @@ const PurchaseReturnPrintFormat = ({
                             <Text style={styles.companyText}>{branchData?.address || ""}</Text>
                             {[
                                 { label: "Mobile", value: branchData?.contactMobile },
-                                { label: "Email",  value: branchData?.contactEmail  },
-                                { label: "GST No", value: branchData?.gstNo         },
+                                { label: "Email", value: branchData?.contactEmail },
+                                { label: "GST No", value: branchData?.gstNo },
                             ].map(({ label, value }) => (
                                 <View key={label} style={{ flexDirection: "row" }}>
                                     <Text style={[styles.companyText, { width: 45 }]}>{label}</Text>
@@ -121,10 +123,10 @@ const PurchaseReturnPrintFormat = ({
                     {/* ── DOC META ── */}
                     <View style={{ alignItems: "flex-end", marginTop: 5, marginBottom: 3, marginRight: 7 }}>
                         {[
-                            { label: "Return No",   value: docId },
+                            { label: "Return No", value: docId },
                             { label: "Return Date", value: getDateFromDateTimeToDisplay(docDate) },
-                            { label: "DC No",       value: dcNo },
-                            { label: "DC Date",     value: dcDate ? getDateFromDateTimeToDisplay(dcDate) : "" },
+                            { label: "DC No", value: dcNo },
+                            { label: "DC Date", value: dcDate ? getDateFromDateTimeToDisplay(dcDate) : "" },
                         ].map(({ label, value }) => (
                             <View key={label} style={{ flexDirection: "row", marginBottom: 3 }}>
                                 <Text style={[styles.companyText, { width: 65 }]}>{label}</Text>
@@ -145,8 +147,8 @@ const PurchaseReturnPrintFormat = ({
                                     {branchData?.address || ""}
                                 </Text>
                                 {[
-                                    { label: "GST No", value: branchData?.gstNo         },
-                                    { label: "Mobile", value: branchData?.contactMobile  },
+                                    { label: "GST No", value: branchData?.gstNo },
+                                    { label: "Mobile", value: branchData?.contactMobile },
                                 ].map(({ label, value }) => value ? (
                                     <View key={label} style={{ flexDirection: "row" }}>
                                         <Text style={[styles.companyText, { width: 55 }]}>{label}</Text>
@@ -167,8 +169,8 @@ const PurchaseReturnPrintFormat = ({
                                 </Text>
                                 {[
                                     { label: "Mobile No", value: supplierDetails?.contactPersonNumber },
-                                    { label: "GST No",    value: supplierDetails?.gstNo               },
-                                    { label: "Email",     value: supplierDetails?.email                },
+                                    { label: "GST No", value: supplierDetails?.gstNo },
+                                    { label: "Email", value: supplierDetails?.email },
                                 ].map(({ label, value }) => value ? (
                                     <View key={label} style={{ flexDirection: "row" }}>
                                         <Text style={[styles.companyText, { width: 55 }]}>{label}</Text>
@@ -196,47 +198,91 @@ const PurchaseReturnPrintFormat = ({
                     </View>
 
                     {/* ── TABLE ROWS ── */}
-                    {returnItems.map((row, index) => (
-                        <View
-                            key={index}
-                            style={{
-                                flexDirection: "row",
-                                borderLeft: "1 solid #000",
-                                borderRight: "1 solid #000",
-                                backgroundColor: index % 2 === 0 ? "#ffffff" : "#f5f7ff",
-                            }}
-                        >
-                            <Text style={[styles.td, { flex: 0.5 }]}>{index + 1}</Text>
-                            <Text style={[styles.td, { flex: 3.5, textAlign: "left" }]}>
-                                {row?.StyleItem?.name || findFromList(row.styleItemId, styleItemList?.data, "name")}
-                            </Text>
-                            <Text style={[styles.td, { flex: 1.2 }]}>
-                                {row?.Size?.name || findFromList(row.sizeId, sizeList?.data, "name")}
-                            </Text>
-                            <Text style={[styles.td, { flex: 1.2 }]}>
-                                {row?.Color?.name || findFromList(row.colorId, colorList?.data, "name")}
-                            </Text>
-                            <Text style={[styles.td, { flex: 1 }]}>
-                                {row?.Uom?.name || findFromList(row.uomId, uomList?.data, "name")}
-                            </Text>
-                            <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
-                                {row?.poQty ? parseFloat(row.poQty).toFixed(2) : ""}
-                            </Text>
-                            <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
-                                {row?.inwardQty ? parseFloat(row.inwardQty).toFixed(2) : ""}
-                            </Text>
-                            <Text style={[styles.td, { flex: 1.2, textAlign: "right" }]}>
-                                {row?.alreadyReturnQty ? parseFloat(row.alreadyReturnQty).toFixed(2) : ""}
-                            </Text>
-                            <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
-                                {row?.balQty ? parseFloat(row.balQty).toFixed(2) : ""}
-                            </Text>
-                            {/* last td — no borderRight (row View handles it) */}
-                            <Text style={[styles.td, { flex: 1, textAlign: "right", borderRight: 0 }]}>
-                                {row?.returnQty ? parseFloat(row.returnQty).toFixed(2) : ""}
-                            </Text>
-                        </View>
-                    ))}
+                    {(() => {
+                        const minRows = 16;
+
+                        const filledRows = returnItems.map((row, index) => (
+                            <View
+                                key={index}
+                                style={{
+                                    flexDirection: "row",
+                                    borderBottom: "1 solid #d1d5db",
+                                    minHeight: ROW_HEIGHT
+                                }}
+                            >
+                                <Text style={[styles.td, { flex: 0.5 }]}>{index + 1}</Text>
+
+                                <Text style={[styles.td, { flex: 3.5, textAlign: "left" }]}>
+                                    {row?.StyleItem?.name ||
+                                        findFromList(row.styleItemId, styleItemList?.data, "name")}
+                                </Text>
+
+                                <Text style={[styles.td, { flex: 1.2 }]}>
+                                    {row?.Size?.name ||
+                                        findFromList(row.sizeId, sizeList?.data, "name")}
+                                </Text>
+
+                                <Text style={[styles.td, { flex: 1.2 }]}>
+                                    {row?.Color?.name ||
+                                        findFromList(row.colorId, colorList?.data, "name")}
+                                </Text>
+
+                                <Text style={[styles.td, { flex: 1 }]}>
+                                    {row?.Uom?.name ||
+                                        findFromList(row.uomId, uomList?.data, "name")}
+                                </Text>
+
+                                <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
+                                    {row?.poQty ? parseFloat(row.poQty).toFixed(2) : ""}
+                                </Text>
+
+                                <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
+                                    {row?.inwardQty ? parseFloat(row.inwardQty).toFixed(2) : ""}
+                                </Text>
+
+                                <Text style={[styles.td, { flex: 1.2, textAlign: "right" }]}>
+                                    {row?.alreadyReturnQty
+                                        ? parseFloat(row.alreadyReturnQty).toFixed(2)
+                                        : ""}
+                                </Text>
+
+                                <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
+                                    {row?.balQty ? parseFloat(row.balQty).toFixed(2) : ""}
+                                </Text>
+
+                                <Text style={[styles.td, { flex: 1, textAlign: "right", borderRight: 0 }]}>
+                                    {row?.returnQty ? parseFloat(row.returnQty).toFixed(2) : ""}
+                                </Text>
+                            </View>
+                        ));
+
+                        // ✅ Empty rows
+                        const emptyRowsCount = Math.max(0, minRows - returnItems.length);
+
+                        const emptyRows = Array.from({ length: emptyRowsCount }).map((_, i) => (
+                            <View
+                                key={`empty-${i}`}
+                                style={{
+                                    flexDirection: "row",
+                                    borderBottom: "1 solid #d1d5db",
+                                    minHeight: ROW_HEIGHT
+                                }}
+                            >
+                                <Text style={[styles.td, { flex: 0.5 }]} />
+                                <Text style={[styles.td, { flex: 3.5 }]} />
+                                <Text style={[styles.td, { flex: 1.2 }]} />
+                                <Text style={[styles.td, { flex: 1.2 }]} />
+                                <Text style={[styles.td, { flex: 1 }]} />
+                                <Text style={[styles.td, { flex: 1 }]} />
+                                <Text style={[styles.td, { flex: 1 }]} />
+                                <Text style={[styles.td, { flex: 1.2 }]} />
+                                <Text style={[styles.td, { flex: 1 }]} />
+                                <Text style={[styles.td, { flex: 1, borderRight: 0 }]} />
+                            </View>
+                        ));
+
+                        return [...filledRows, ...emptyRows];
+                    })()}
 
                     {/* ── TOTAL ROW ── */}
                     <View style={{
@@ -252,20 +298,20 @@ const PurchaseReturnPrintFormat = ({
                         </Text>
                         <Text style={{ flex: 1.2, fontSize: 8, padding: 3, color: "#fff", borderRight: "1 solid #fff" }} />
                         <Text style={{ flex: 1.2, fontSize: 8, padding: 3, color: "#fff", borderRight: "1 solid #fff" }} />
-                        <Text style={{ flex: 1,   fontSize: 8, padding: 3, color: "#fff", borderRight: "1 solid #fff" }} />
-                        <Text style={{ flex: 1,   fontSize: 8, fontWeight: "bold", textAlign: "right", padding: 3, color: "#fff", borderRight: "1 solid #fff" }}>
+                        <Text style={{ flex: 1, fontSize: 8, padding: 3, color: "#fff", borderRight: "1 solid #fff" }} />
+                        <Text style={{ flex: 1, fontSize: 8, fontWeight: "bold", textAlign: "right", padding: 3, color: "#fff", borderRight: "1 solid #fff" }}>
                             {totalPoQty.toFixed(2)}
                         </Text>
-                        <Text style={{ flex: 1,   fontSize: 8, fontWeight: "bold", textAlign: "right", padding: 3, color: "#fff", borderRight: "1 solid #fff" }}>
+                        <Text style={{ flex: 1, fontSize: 8, fontWeight: "bold", textAlign: "right", padding: 3, color: "#fff", borderRight: "1 solid #fff" }}>
                             {totalInwardQty.toFixed(2)}
                         </Text>
                         <Text style={{ flex: 1.2, fontSize: 8, fontWeight: "bold", textAlign: "right", padding: 3, color: "#fff", borderRight: "1 solid #fff" }}>
                             {totalAlreadyReturnQty.toFixed(2)}
                         </Text>
-                        <Text style={{ flex: 1,   fontSize: 8, fontWeight: "bold", textAlign: "right", padding: 3, color: "#fff", borderRight: "1 solid #fff" }}>
+                        <Text style={{ flex: 1, fontSize: 8, fontWeight: "bold", textAlign: "right", padding: 3, color: "#fff", borderRight: "1 solid #fff" }}>
                             {totalBalQty.toFixed(2)}
                         </Text>
-                        <Text style={{ flex: 1,   fontSize: 8, fontWeight: "bold", textAlign: "right", padding: 3, color: "#fff" }}>
+                        <Text style={{ flex: 1, fontSize: 8, fontWeight: "bold", textAlign: "right", padding: 3, color: "#fff" }}>
                             {totalReturnQty.toFixed(2)}
                         </Text>
                     </View>

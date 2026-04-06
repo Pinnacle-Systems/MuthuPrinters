@@ -36,7 +36,7 @@ import tw from "../../../Utils/tailwind-react-pdf";
 import PurchaseReturnPrintFormat from "./Print-Format/PurchaseReturnPrintFormat";
 import { PartyMaster } from "..";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
-import { LocationMaster } from "../../../Basic/components";
+import { LocationMaster, TermsAndCondition } from "../../../Basic/components";
 
 const PurchaseReturnForm = ({
   onClose,
@@ -52,6 +52,7 @@ const PurchaseReturnForm = ({
   sizeList,
   colorList,
   branchData,
+  termsData,
 }) => {
   const today = new Date();
   const [pendingAction, setPendingAction] = useState(null);
@@ -77,7 +78,8 @@ const PurchaseReturnForm = ({
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const supplierRef = useRef(null);
-
+  const [termsId, setTermsId] = useState("");
+  const termsRef = useRef(null);
   const { userId, finYearId, branchId } = getCommonParams();
 
   const { data: locationData } = useGetLocationMasterQuery({
@@ -169,6 +171,7 @@ const PurchaseReturnForm = ({
         data?.termsAndCondition ? data.termsAndCondition : "",
       );
       setInvNo(data?.invNo ? data?.invNo : "");
+      setTermsId(data?.termsId ? data?.termsId : "");
     },
     [id],
   );
@@ -197,6 +200,7 @@ const PurchaseReturnForm = ({
     returnItems: returnItems?.filter((po) => po.styleItemId),
     finYearId,
     invNo,
+    termsId,
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -438,6 +442,15 @@ const PurchaseReturnForm = ({
   useEffect(() => {
     supplierRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (!id) {
+      const selectedTerm = termsData?.data?.find(
+        (item) => String(item.id) === String(termsId),
+      );
+      setTermsAndCondition(selectedTerm?.description || "");
+    }
+  }, [termsId]);
 
   return (
     <>
@@ -684,9 +697,9 @@ const PurchaseReturnForm = ({
           />
         </fieldset>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
-            <h2 className="font-medium text-slate-700 mb-2 text-base">
+            {/* <h2 className="font-medium text-slate-700 mb-2 text-base">
               Terms & Conditions
             </h2>
             <textarea
@@ -698,13 +711,73 @@ const PurchaseReturnForm = ({
               className="w-full overflow-auto h-14 px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
               placeholder="Terms Details..."
               disabled={readOnly}
-            />
+            /> */}
+            <div className="flex flex-col gap-2">
+              <DropdownWithModal
+                ref={termsRef}
+                name="Terms & Conditions"
+                options={dropDownListObject(
+                  id
+                    ? termsData?.data
+                    : termsData?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={termsId}
+                setValue={setTermsId}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Terms and Condition"
+                childComponent={TermsAndCondition}
+                addNewModalWidth="w-[40%] h-[70%]"
+                disabled={id}
+              />
+            </div>
           </div>
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm flex items-center">
+            <textarea
+              // ref={termsRef}
+              disabled={readOnly}
+              readOnly={readOnly}
+              className="w-full h-20 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
+              value={termsAndCondition}
+              onChange={(e) => setTermsAndCondition(e.target.value)}
+              placeholder="Type Terms & Conditions..."
+              onKeyDown={(e) => {
+                if (e.ctrlKey && e.key === "Enter") {
+                  e.preventDefault();
 
+                  const textarea = e.target;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+
+                  const newValue =
+                    termsAndCondition.substring(0, start) +
+                    "\n" +
+                    termsAndCondition.substring(end);
+
+                  setTermsAndCondition(newValue);
+
+                  // ✅ Restore focus + cursor properly
+                  requestAnimationFrame(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + 1, start + 1);
+                  });
+                }
+              }}
+            />
+            {/* <textarea
+                className="w-full h-32 focus:outline-none border border-gray-300 rounded p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                value={termsAndCondtion}
+              disabled={readOnly}
+                onChange={(e) => setTermsAndCondtion(e.target.value)}
+              placeholder="Type Terms & Conditions..."
+                
+              /> */}
+          </div>
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-            <h2 className="font-medium text-slate-700 mb-2 text-base">
-              Remarks
-            </h2>
+            <h2 className="font-medium text-slate-700 mb-2 text-xs">Remarks</h2>
             <textarea
               readOnly={readOnly}
               value={remarks}

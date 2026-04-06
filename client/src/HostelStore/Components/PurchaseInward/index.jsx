@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PurchaseInwardForm from "./PurchaseInwardForm.js";
 import PurchaseInwardFormReport from "./PurchaseInwardFormReport.js"
 import { getCommonParams } from "../../../Utils/helper.js";
@@ -14,16 +14,19 @@ import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService
 import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
+import { useSelector } from "react-redux";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
   const [id, setId] = useState("");
   const [readOnly, setReadOnly] = useState(false);
-  // const dispatch = useDispatch();
   const { branchId, companyId, finYearId, userId } = getCommonParams()
   const params = {
     branchId, companyId, finYearId
   };
+  const [fromPoSupplierId, setFromPoSupplierId] = useState(""); // ⬅️
+  const [fromPoId, setFromPoId] = useState("");
+  const [fromPoType, setFromPoType] = useState("")
   const [trigger, { data: singleData,
     isFetching: isSingleFetching,
     isLoading: isSingleLoading, }] =
@@ -107,6 +110,38 @@ export default function Form() {
   const { data: sizeList } = useGetSizeMasterQuery({ params });
   const { data: colorList } = useGetColorMasterQuery({ params });
 
+  const tabParams = useSelector((state) =>
+    state.openTabs.tabs.find((t) => t.name === "PURCHASE INWARD")?.params
+  );
+  const lastProcessedTimestamp = useRef(null);
+
+  useEffect(() => {
+    // Skip if no params or already processed this exact timestamp
+    if (!tabParams?.supplierId || !tabParams?.timestamp) return;
+    if (tabParams.timestamp === lastProcessedTimestamp.current) return;
+
+    // ⬅️ Mark as processed BEFORE setting state
+    lastProcessedTimestamp.current = tabParams.timestamp;
+
+    setFromPoSupplierId(tabParams.supplierId);
+    setFromPoId(tabParams.poId);
+    setFromPoType(tabParams.poType === "ORDER" ? "Order Purchase Inward" : "General Purchase Inward");
+    setId("");
+    setReadOnly(false);
+    setShowForm(true);
+
+    // ❌ NO clearTabParams here — that's what's breaking it
+
+  }, [tabParams]);
+
+  const handleClose = () => {
+    setShowForm(false);
+    setFromPoSupplierId("");   // ⬅️ clear on close
+    setFromPoId("");
+    setReadOnly(false);
+  };
+
+
   return (
     <>
       <div
@@ -153,6 +188,9 @@ export default function Form() {
           onClose={() => {
             setShowForm(false);
             setReadOnly((prev) => !prev);
+            setFromPoSupplierId("");   // ⬅️ clear on close
+            setFromPoId("");
+            setFromPoType("");
           }}
           setShowForm={setShowForm}
           supplierList={supplierList}
@@ -163,6 +201,13 @@ export default function Form() {
           onNew={onNew}
           sizeList={sizeList}
           colorList={colorList}
+          fromPoId={fromPoId}
+          fromPoSupplierId={fromPoSupplierId}
+          fromPoType={fromPoType}
+          setFromPoId={setFromPoId}
+          setFromPoSupplierId={setFromPoSupplierId}
+          setFromPoType={setFromPoType}
+          handleClose={handleClose}
         />
       )}
     </>

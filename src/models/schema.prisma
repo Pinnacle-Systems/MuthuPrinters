@@ -1222,13 +1222,15 @@ model PoItems {
 }
 
 model TermsAndConditions {
-  id          Int      @id @default(autoincrement())
-  description String?  @db.LongText
-  name        String?
-  active      Boolean? @default(true)
-  Company     Company? @relation(fields: [companyId], references: [id])
-  companyId   Int?
-  pos         Po[]
+  id                    Int                    @id @default(autoincrement())
+  description           String?                @db.LongText
+  name                  String?
+  active                Boolean?               @default(true)
+  Company               Company?               @relation(fields: [companyId], references: [id])
+  companyId             Int?
+  pos                   Po[]
+  purchaseInwardReturns PurchaseInwardReturn[]
+  purchaseCancels       PurchaseCancel[]
 }
 
 model PayTerm {
@@ -1337,6 +1339,8 @@ model PurchaseInwardReturn {
   supplierId          Int?
   active              Boolean               @default(true)
   termsAndCondition   String?
+  Terms               TermsAndConditions?   @relation(fields: [termsId], references: [id])
+  termsId             Int?
   remarks             String?               @db.LongText
   returnType          String?
   Store               Location?             @relation(fields: [storeId], references: [id])
@@ -1388,6 +1392,8 @@ model PurchaseCancel {
   supplierId          Int?
   active              Boolean               @default(true)
   termsAndCondition   String?
+  Terms               TermsAndConditions?   @relation(fields: [termsId], references: [id])
+  termsId             Int?
   remarks             String?               @db.LongText
   poType              String?
   Store               Location?             @relation(fields: [storeId], references: [id])

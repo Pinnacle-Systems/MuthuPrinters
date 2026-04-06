@@ -7,7 +7,7 @@ import PoItemsSelection from "./PoItemsSelection";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
 import { getUniqueArrayBySize } from "../../../Utils/helper";
 import { ColorMaster, Size, StyleItemMaster } from "..";
-
+import { useGetPoItemsQuery } from "../../../redux/uniformService/PoServices";
 const InwardItems = ({
   id,
   inwardItems,
@@ -30,6 +30,7 @@ const InwardItems = ({
   setSearchDocDate,
   searchDocDate,
   vehicleRef,
+  fromPoId,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -153,6 +154,64 @@ const InwardItems = ({
     }
   }, [id, inwardItems]);
 
+  const {
+    data: poItemsData,
+    isLoading: isPoItemsLoading,
+    isFetching: isPoItemsFetching,
+  } = useGetPoItemsQuery(
+    {
+      params: {
+        branchId,
+        supplierId,
+        pagination: true,
+        dataPerPage: "100",
+        pageNumber: 1,
+        poType: inwardType,
+      },
+    },
+    { skip: !supplierId || !fromPoId }, // ⬅️ only fetch when needed
+  );
+
+  useEffect(() => {
+    if (!fromPoId || !poItemsData?.data) return;
+
+    // Filter only items belonging to this specific PO
+    const filtered = poItemsData.data.filter(
+      (item) => parseInt(item.poId) === parseInt(fromPoId),
+    );
+
+    if (filtered.length === 0) return;
+
+    const mapped = filtered.map((item) => ({
+      styleItemId: item.styleItemId || "",
+      hsnId: item.hsnId || "",
+      uomId: item.uomId || "",
+      itemGroupId: item.itemGroupId || "",
+      sizeId: item.sizeId || "",
+      colorId: item.colorId || "",
+      poId: item.poId || "",
+      poQty: item.qty || "",
+      alreadyInwardQty: item.alreadyInwardQty || 0,
+      alreadyCancelQty: item.alreadyCancelQty || 0,
+      alreadyReturnQty: item.alreadyReturnQty || 0,
+      balQty: item.balQty ?? item.qty,
+      inwardQty: "", // ⬅️ user fills this
+      price: item.price || "",
+    }));
+
+    // Pad to minimum 4 rows
+    const padded = [
+      ...mapped,
+      ...Array.from({ length: Math.max(0, 4 - mapped.length) }, () => ({
+        ...EMPTY_ROW,
+      })),
+    ];
+
+    setInwardItems(padded);
+  }, [fromPoId, poItemsData]);
+
+  const showFillButton = inwardType !== "Direct Inward" && !id && !fromPoId;
+
   return (
     <>
       <Modal
@@ -201,7 +260,7 @@ const InwardItems = ({
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm min-h-[270px] overflow-auto  w-full">
         <div className="flex items-center my-2 justify-between">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
-          {inwardType !== "Direct Inward" && !id && (
+          {showFillButton && (
             <button
               className={`font-bold bord text-sm bg-blue-500 rounded-md text-white px-2`}
               onKeyDown={(e) => {
@@ -226,6 +285,11 @@ const InwardItems = ({
             >
               Fill Po Items
             </button>
+          )}
+          {fromPoId && !id && (
+            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+              Auto-filled from PO
+            </span>
           )}
         </div>
         <div

@@ -16,6 +16,7 @@ import {
 import ReactPaginate from "react-paginate";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { useGetPurchaseInwardEntryQuery } from "../../../redux/uniformService/PurchaseInwardEntry";
+import { Tooltip } from "@mui/material";
 
 const PurchaseInwardFormReport = ({
   onClick,
@@ -54,7 +55,13 @@ const PurchaseInwardFormReport = ({
 
   useEffect(() => {
     setCurrentPageNumber(1);
-  }, [serachDocNo, searchClientName, searchDate, searchSupplier, searchInwardType]);
+  }, [
+    serachDocNo,
+    searchClientName,
+    searchDate,
+    searchSupplier,
+    searchInwardType,
+  ]);
 
   const companyId = secureLocalStorage.getItem(
     sessionStorage.getItem("sessionId") + "userCompanyId",
@@ -324,7 +331,9 @@ const PurchaseInwardFormReport = ({
                         className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${
                           index % 2 === 0 ? "bg-white" : "bg-gray-100"
                         }`}
-                        onClick={() => {onClick(dataObj.id)}}
+                        onClick={() => {
+                          onClick(dataObj.id);
+                        }}
                       >
                         <td className="text-center ">{index + 1}</td>
 
@@ -380,24 +389,39 @@ const PurchaseInwardFormReport = ({
                                 </button>
                               )}
                               {onDelete && (
-                                <button
-                                  className=" text-red-800 flex items-center gap-1 px-1  bg-red-50 rounded"
-                                  onClick={() => onDelete(dataObj.id)}
+                                <Tooltip
+                                  title={
+                                    dataObj.childRecord > 0
+                                      ? "Cannot Delete. Child Record Exists"
+                                      : "Delete"
+                                  }
+                                  arrow
                                 >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
+                                  <button
+                                    className={`flex items-center gap-1 px-1 rounded transition
+  ${
+    dataObj.childRecord > 0
+      ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
+      : "bg-red-50 text-red-800 hover:bg-red-100"
+  }`}
+                                    onClick={() => onDelete(dataObj.id)}
+                                    disabled={dataObj.childRecord > 0}
                                   >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                  {/* <span className="text-xs">delete</span> */}
-                                </button>
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-4 w-4"
+                                      viewBox="0 0 20 20"
+                                      fill="currentColor"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                    {/* <span className="text-xs">delete</span> */}
+                                  </button>
+                                </Tooltip>
                               )}
                             </div>
                           </td>

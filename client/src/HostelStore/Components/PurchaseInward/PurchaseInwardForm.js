@@ -48,6 +48,12 @@ const PurchaseInwardForm = ({
   hsnList,
   sizeList,
   colorList,
+  fromPoId,
+  fromPoSupplierId,
+  fromPoType,
+  setFromPoId,
+  setFromPoSupplierId,
+  setFromPoType,
 }) => {
   const today = new Date();
 
@@ -100,6 +106,13 @@ const PurchaseInwardForm = ({
   };
 
   useEffect(() => {
+    if (fromPoSupplierId && fromPoType && !id) {
+      setSupplierId(fromPoSupplierId);
+      setInwardType(fromPoType);
+    }
+  }, [fromPoSupplierId, fromPoType]);
+
+  useEffect(() => {
     setCurrentPageNumber(1);
   }, [searchDocId, searchDocDate]);
 
@@ -140,11 +153,13 @@ const PurchaseInwardForm = ({
           ? moment.utc(data.docDate).format("YYYY-MM-DD")
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
-      setInwardType(data?.inwardType || "General Purchase Inward");
+      setInwardType(
+        data?.inwardType || fromPoType || "General Purchase Inward",
+      );
       setLocationId(data?.Store ? data.Store.locationId : branchId);
       setStoreId(data?.storeId ? data.storeId : "");
       setInwardItems(data?.inwardItems ? data?.inwardItems : []);
-      setSupplierId(data?.supplierId || "");
+      setSupplierId(data?.supplierId || fromPoSupplierId || "");
       setDcDate(
         data?.dcDate ? moment.utc(data.dcDate).format("YYYY-MM-DD") : "",
       );
@@ -153,7 +168,7 @@ const PurchaseInwardForm = ({
       setVehicleNo(data?.vehicleNo ? data.vehicleNo : "");
       setInvNo(data?.invNo ? data?.invNo : "");
     },
-    [id],
+    [id, fromPoSupplierId, fromPoType],
   );
 
   useEffect(() => {
@@ -208,7 +223,9 @@ const PurchaseInwardForm = ({
                 setId(0);
                 setDocId("New");
                 syncFormWithDb(undefined);
-
+                setFromPoId("");
+                setFromPoSupplierId("");
+                setFromPoType("");
                 // ✅ Focus the Bill Type dropdown after all state updates
                 setTimeout(() => {
                   supplierRef.current?.focus();
@@ -344,7 +361,8 @@ const PurchaseInwardForm = ({
   };
 
   useEffect(() => {
-    if (!id) {
+    if (!id && !fromPoId) {
+      // ⬅️ guard
       setInwardItems([]);
     }
   }, [supplierId]);
@@ -462,7 +480,7 @@ const PurchaseInwardForm = ({
                 }}
                 required={true}
                 readOnly={readOnly}
-                disabled={id}
+                disabled={id || fromPoType}
                 beforeChange={() => {
                   setInwardItems([]);
                 }}
@@ -519,7 +537,7 @@ const PurchaseInwardForm = ({
                   addNewLabel="+ Add New Supplier"
                   childComponent={PartyMaster}
                   addNewModalWidth="w-[90%] h-[95%]"
-                  disabled={id}
+                  disabled={id || !!fromPoSupplierId}
                 />
               </div>
               <TextInput
@@ -563,6 +581,7 @@ const PurchaseInwardForm = ({
             setSearchDocDate={setSearchDocDate}
             searchDocDate={searchDocDate}
             vehicleRef={vehicleRef}
+            fromPoId={fromPoId}
           />
         </fieldset>
 

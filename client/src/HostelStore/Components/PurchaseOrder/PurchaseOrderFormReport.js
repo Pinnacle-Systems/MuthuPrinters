@@ -18,6 +18,8 @@ import ReactPaginate from "react-paginate";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Inbox, XCircle } from "lucide-react";
 import Tooltip from "@mui/material/Tooltip";
+import { useDispatch } from "react-redux";
+import { push } from "../../../redux/features/opentabs";
 const PurchaseOrderFormReport = ({
   onClick,
   onView,
@@ -44,6 +46,8 @@ const PurchaseOrderFormReport = ({
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
   const [searchProjectValue, setSearchProjectValue] = useState("");
   const [searchFollowedBy, setSearchFollowedBy] = useState("");
+
+  const dispatch = useDispatch();
 
   const handleOnclick = (e) => {
     setCurrentPageNumber(reactPaginateIndexToPageNumber(e.selected));
@@ -423,8 +427,77 @@ const PurchaseOrderFormReport = ({
                         {rowActions && (
                           <td className="px-2 py-1">
                             <div className="flex items-center justify-center">
-                              {/* LEFT GROUP */}
                               <div className="flex items-center gap-1 pr-2 border-r border-gray-300">
+                                {/* INWARD */}
+                                {onCreateInward && (
+                                  <Tooltip title="Create Inward" arrow>
+                                    <button
+                                      disabled={[
+                                        "Fully Received",
+                                        "Cancelled",
+                                      ].includes(dataObj.status)}
+                                      onClick={() => {
+                                        dispatch(
+                                          push({
+                                            name: "PURCHASE INWARD", // ⬅️ must match your tabs key exactly
+                                            params: {
+                                              supplierId: dataObj.supplierId,
+                                              poId: dataObj.id,
+                                              poDocId: dataObj.docId,
+                                              poType: dataObj.poType,
+                                              timestamp: Date.now(),
+                                            },
+                                          }),
+                                        );
+                                      }}
+                                      className={`p-1.5 rounded-md transition
+            ${
+              ["Fully Received", "Cancelled"].includes(dataObj.status)
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+            }`}
+                                    >
+                                      <Inbox size={16} />
+                                    </button>
+                                  </Tooltip>
+                                )}
+
+                                {/* CANCEL */}
+                                {onCreateCancel && (
+                                  <Tooltip title="Cancel PO" arrow>
+                                    <button
+                                      disabled={[
+                                        "Fully Received",
+                                        "Cancelled",
+                                      ].includes(dataObj.status)}
+                                      onClick={() => {
+                                        dispatch(
+                                          push({
+                                            name: "PURCHASE CANCEL", // ⬅️ must match your tabs key exactly
+                                            params: {
+                                              supplierId: dataObj.supplierId,
+                                              poId: dataObj.id,
+                                              poDocId: dataObj.docId,
+                                              poType: dataObj.poType,
+                                              timestamp: Date.now(),
+                                            },
+                                          }),
+                                        );
+                                      }}
+                                      className={`p-1.5 rounded-md transition
+            ${
+              ["Fully Received", "Cancelled"].includes(dataObj.status)
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-orange-50 text-orange-600 hover:bg-orange-100"
+            }`}
+                                    >
+                                      <XCircle size={16} />
+                                    </button>
+                                  </Tooltip>
+                                )}
+                              </div>
+                              {/* LEFT GROUP */}
+                              <div className="flex items-center gap-1 pl-2">
                                 {onView && (
                                   <Tooltip title="View" arrow>
                                     <button
@@ -465,10 +538,23 @@ const PurchaseOrderFormReport = ({
                                   </Tooltip>
                                 )}
                                 {onDelete && (
-                                  <Tooltip title="Delete" arrow>
+                                  <Tooltip
+                                    title={
+                                      dataObj.childRecord > 0
+                                        ? "Cannot Delete. Child Record Exists"
+                                        : "Delete"
+                                    }
+                                    arrow
+                                  >
                                     <button
-                                      className=" text-red-800 flex items-center gap-1 px-1  bg-red-50 rounded"
+                                      className={`flex items-center gap-1 px-1 rounded transition
+  ${
+    dataObj.childRecord > 0
+      ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
+      : "bg-red-50 text-red-800 hover:bg-red-100"
+  }`}
                                       onClick={() => onDelete(dataObj.id)}
+                                      disabled={dataObj.childRecord > 0}
                                     >
                                       <svg
                                         xmlns="http://www.w3.org/2000/svg"
@@ -489,51 +575,6 @@ const PurchaseOrderFormReport = ({
                               </div>
 
                               {/* RIGHT GROUP */}
-                              <div className="flex items-center gap-1 pl-2">
-                                {/* INWARD */}
-                                {onCreateInward && (
-                                  <Tooltip title="Create Inward" arrow>
-                                    <button
-                                      title="Create Inward"
-                                      disabled={[
-                                        "Fully Received",
-                                        "Cancelled",
-                                      ].includes(dataObj.status)}
-                                      onClick={() => onCreateInward(dataObj.id)}
-                                      className={`p-1.5 rounded-md transition
-            ${
-              ["Fully Received", "Cancelled"].includes(dataObj.status)
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
-            }`}
-                                    >
-                                      <Inbox size={16} />
-                                    </button>
-                                  </Tooltip>
-                                )}
-
-                                {/* CANCEL */}
-                                {onCreateCancel && (
-                                  <Tooltip title="Cancel PO" arrow>
-                                    <button
-                                      title="Cancel PO"
-                                      disabled={[
-                                        "Fully Received",
-                                        "Cancelled",
-                                      ].includes(dataObj.status)}
-                                      onClick={() => onCreateCancel(dataObj.id)}
-                                      className={`p-1.5 rounded-md transition
-            ${
-              ["Fully Received", "Cancelled"].includes(dataObj.status)
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-orange-50 text-orange-600 hover:bg-orange-100"
-            }`}
-                                    >
-                                      <XCircle size={16} />
-                                    </button>
-                                  </Tooltip>
-                                )}
-                              </div>
                             </div>
                           </td>
                         )}

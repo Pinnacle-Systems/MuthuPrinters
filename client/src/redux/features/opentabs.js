@@ -10,7 +10,7 @@ export const openTabs = createSlice({
   reducers: {
     push: (state, action) => {
       const existingIndex = state.tabs.findIndex(
-        (item) => item.name === action.payload.name
+        (item) => item.name === action.payload.name,
       );
       state.tabs = state.tabs.map((tab) => {
         return { ...tab, active: false };
@@ -20,16 +20,33 @@ export const openTabs = createSlice({
           ...state.tabs[existingIndex],
           active: true,
           previewId: action.payload.previewId,
-          date : action.payload.date
+          date: action.payload.date,
+          params: action.payload.params ?? null,
         };
       } else {
-        state.tabs.push({ name: action.payload.name, active: true, previewId: action.payload.previewId ,date : action.payload.date });
+        state.tabs.push({
+          name: action.payload.name,
+          active: true,
+          previewId: action.payload.previewId,
+          date: action.payload.date,
+          params: action.payload.params ?? null,
+        });
+      }
+      localStorage.setItem("openTabs", JSON.stringify(state.tabs));
+    },
+    clearTabParams: (state, action) => {
+      // ⬅️ add this
+      const index = state.tabs.findIndex(
+        (item) => item.name === action.payload,
+      );
+      if (index >= 0) {
+        state.tabs[index].params = null;
       }
       localStorage.setItem("openTabs", JSON.stringify(state.tabs));
     },
     remove: (state, action) => {
       const existingIndex = state.tabs.findIndex(
-        (item) => item.name === action.payload.name
+        (item) => item.name === action.payload.name,
       );
       if (state.tabs[existingIndex]?.active) {
         if (state.tabs.length > 1) {
@@ -49,12 +66,12 @@ export const openTabs = createSlice({
           }
         }
       }
-      state.tabs = state.tabs.filter(tab => tab.name !== action.payload.name);
+      state.tabs = state.tabs.filter((tab) => tab.name !== action.payload.name);
       localStorage.setItem("openTabs", JSON.stringify(state.tabs));
     },
   },
 });
 
-export const { push, remove } = openTabs.actions;
+export const { push, remove, clearTabParams } = openTabs.actions;
 
 export default openTabs.reducer;

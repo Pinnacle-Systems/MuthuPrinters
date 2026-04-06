@@ -183,6 +183,11 @@ async function get(req) {
           name: true,
         },
       },
+      _count: {
+        select: {
+          purchaseReturnItems: true,
+        },
+      },
     },
     orderBy: {
       docId: "desc",
@@ -202,7 +207,10 @@ async function get(req) {
   }
   return {
     statusCode: 0,
-    data,
+    data: data.map((item) => ({
+      ...item,
+      childRecord: item._count?.purchaseReturnItems || 0,
+    })),
     nextDocId: newDocId,
     totalCount,
   };

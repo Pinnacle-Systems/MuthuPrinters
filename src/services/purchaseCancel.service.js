@@ -308,6 +308,7 @@ async function create(body) {
     finYearId,
     draftSave,
     locationId,
+    termsId,
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
@@ -337,6 +338,7 @@ async function create(body) {
         remarks,
         termsAndCondition,
         locationId: parseInt(locationId),
+        termsId: termsId ? parseInt(termsId) : null,
       },
     });
     await createCancelItems(
@@ -415,6 +417,7 @@ async function update(id, body) {
     remarks,
     termsAndCondition,
     cancelItems,
+    termsId,
   } = await body;
   let data;
   const dataFound = await prisma.purchaseCancel.findUnique({
@@ -454,6 +457,7 @@ async function update(id, body) {
         poType,
         remarks,
         termsAndCondition,
+        termsId: termsId ? parseInt(termsId) : null,
       },
     });
 

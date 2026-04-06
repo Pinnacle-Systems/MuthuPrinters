@@ -30,7 +30,7 @@ import {
 } from "../../../redux/uniformService/PurchaseCancelService";
 import { useGetPoItemsQuery } from "../../../redux/uniformService/PoServices";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
-import { LocationMaster } from "../../../Basic/components";
+import { LocationMaster, TermsAndCondition } from "../../../Basic/components";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import { PartyMaster } from "..";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
@@ -49,6 +49,13 @@ const PurchaseCancelForm = ({
   onNew,
   sizeList,
   colorList,
+  fromPoId,
+  fromPoSupplierId,
+  fromPoType,
+  setFromPoId,
+  setFromPoSupplierId,
+  setFromPoType,
+  termsData,
 }) => {
   const today = new Date();
 
@@ -65,6 +72,8 @@ const PurchaseCancelForm = ({
   const [tempItems, setTempItems] = useState([]);
   const [searchDocId, setSearchDocId] = useState("");
   const [searchDocDate, setSearchDocDate] = useState("");
+  const [termsId, setTermsId] = useState("");
+  const termsRef = useRef(null);
   const supplierRef = useRef(null);
   const [dispatchInvalidate] = useInvalidateTags();
 
@@ -104,21 +113,29 @@ const PurchaseCancelForm = ({
           ? moment.utc(data.docDate).format("YYYY-MM-DD")
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
-      setPoType(data?.poType ? data?.poType : "GENERAL");
+      setPoType(data?.poType || fromPoType || "GENERAL");
       setLocationId(data?.Store ? data.Store.locationId : branchId);
       setStoreId(data?.storeId ? data.storeId : "");
       setCancelItems(
         data?.purchaseCancelItems ? data?.purchaseCancelItems : [],
       );
-      setSupplierId(data?.supplierId || "");
+      setSupplierId(data?.supplierId || fromPoSupplierId || "");
 
       setRemarks(data?.remarks || "");
       setTermsAndCondition(
         data?.termsAndCondition ? data.termsAndCondition : "",
       );
+      setTermsId(data?.termsId ? data?.termsId : "");
     },
-    [id],
+    [id, fromPoSupplierId, fromPoType],
   );
+
+  useEffect(() => {
+    if (fromPoSupplierId && fromPoType && !id) {
+      setSupplierId(fromPoSupplierId);
+      setPoType(fromPoType);
+    }
+  }, [fromPoSupplierId, fromPoType]);
 
   useEffect(() => {
     if (id && singleData?.data) {
@@ -179,6 +196,7 @@ const PurchaseCancelForm = ({
     cancelItems: cancelItems?.filter((po) => po.styleItemId),
     finYearId,
     poType,
+    termsId,
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -207,7 +225,9 @@ const PurchaseCancelForm = ({
                 setId(0);
                 setDocId("New");
                 syncFormWithDb(undefined);
-
+                setFromPoId("");
+                setFromPoSupplierId("");
+                setFromPoType("");
                 // ✅ Focus after state reset
                 setTimeout(() => {
                   supplierRef.current?.focus();
@@ -342,10 +362,19 @@ const PurchaseCancelForm = ({
   };
 
   useEffect(() => {
-    if (!id) {
+    if (!id && !fromPoId) {
       setCancelItems([]);
     }
   }, [supplierId]);
+
+  useEffect(() => {
+    if (!id) {
+      const selectedTerm = termsData?.data?.find(
+        (item) => String(item.id) === String(termsId),
+      );
+      setTermsAndCondition(selectedTerm?.description || "");
+    }
+  }, [termsId]);
 
   useEffect(() => {
     supplierRef.current?.focus();
@@ -460,7 +489,7 @@ const PurchaseCancelForm = ({
                 }}
                 required={true}
                 readOnly={readOnly}
-                disabled={id}
+                disabled={id || fromPoType}
                 beforeChange={() => {
                   setCancelItems([]);
                 }}
@@ -509,7 +538,7 @@ const PurchaseCancelForm = ({
                   addNewLabel="+ Add New Supplier"
                   childComponent={PartyMaster}
                   addNewModalWidth="w-[90%] h-[95%]"
-                  disabled={id}
+                  disabled={id || !!fromPoSupplierId}
                 />
               </div>
               <TextInput
@@ -556,12 +585,14 @@ const PurchaseCancelForm = ({
             setSearchDocId={setSearchDocId}
             setSearchDocDate={setSearchDocDate}
             searchDocDate={searchDocDate}
+            fromPoId={fromPoId}
+            termsRef={termsRef}
           />
         </fieldset>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
-            <h2 className="font-medium text-slate-700 mb-2 text-base">
+            {/* <h2 className="font-medium text-slate-700 mb-2 text-base">
               Terms & Conditions
             </h2>
             <textarea
@@ -573,13 +604,73 @@ const PurchaseCancelForm = ({
               className="w-full overflow-auto h-14 px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
               placeholder="Terms Details..."
               disabled={readOnly}
-            />
+            /> */}
+            <div className="flex flex-col gap-2">
+              <DropdownWithModal
+                ref={termsRef}
+                name="Terms & Conditions"
+                options={dropDownListObject(
+                  id
+                    ? termsData?.data
+                    : termsData?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={termsId}
+                setValue={setTermsId}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Terms and Condition"
+                childComponent={TermsAndCondition}
+                addNewModalWidth="w-[40%] h-[70%]"
+                disabled={id}
+              />
+            </div>
           </div>
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm flex items-center">
+            <textarea
+              // ref={termsRef}
+              disabled={readOnly}
+              readOnly={readOnly}
+              className="w-full h-20 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
+              value={termsAndCondition}
+              onChange={(e) => setTermsAndCondition(e.target.value)}
+              placeholder="Type Terms & Conditions..."
+              onKeyDown={(e) => {
+                if (e.ctrlKey && e.key === "Enter") {
+                  e.preventDefault();
 
+                  const textarea = e.target;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+
+                  const newValue =
+                    termsAndCondition.substring(0, start) +
+                    "\n" +
+                    termsAndCondition.substring(end);
+
+                  setTermsAndCondition(newValue);
+
+                  // ✅ Restore focus + cursor properly
+                  requestAnimationFrame(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + 1, start + 1);
+                  });
+                }
+              }}
+            />
+            {/* <textarea
+                className="w-full h-32 focus:outline-none border border-gray-300 rounded p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                value={termsAndCondtion}
+              disabled={readOnly}
+                onChange={(e) => setTermsAndCondtion(e.target.value)}
+              placeholder="Type Terms & Conditions..."
+                
+              /> */}
+          </div>
           <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-            <h2 className="font-medium text-slate-700 mb-2 text-base">
-              Remarks
-            </h2>
+            <h2 className="font-medium text-slate-700 mb-2 text-xs">Remarks</h2>
             <textarea
               readOnly={readOnly}
               value={remarks}

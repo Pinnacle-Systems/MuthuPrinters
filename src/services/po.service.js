@@ -76,10 +76,10 @@ function getPOStatus(po) {
   if (totalInwardQty === 0 && totalCancelQty === 0) return "Pending";
   if (totalCancelQty >= totalPoQty) return "Cancelled";
   if (totalInwardQty >= totalPoQty) return "Fully Received";
-  if (totalInwardQty > 0) return "Partially Received";
-  if (totalCancelQty > 0) return "Partially Cancelled";
   if (totalInwardQty > 0 && totalCancelQty > 0)
     return "Partially Received & Cancelled";
+  if (totalInwardQty > 0) return "Partially Received";
+  if (totalCancelQty > 0) return "Partially Cancelled";
   return "Pending";
 }
 
@@ -196,6 +196,12 @@ async function get(req) {
           qty: true,
         },
       },
+      _count: {
+        select: {
+          inwardItems: true,
+          purchaseCancelItems: true,
+        },
+      },
       inwardItems: { select: { inwardQty: true } },
       purchaseCancelItems: { select: { cancelQty: true } },
     },
@@ -221,7 +227,11 @@ async function get(req) {
   // console.log(data, "data")
   return {
     statusCode: 0,
-    data: data.map((po) => ({ ...po, status: getPOStatus(po) })),
+    data: data.map((po) => ({
+      ...po,
+      status: getPOStatus(po),
+      childRecord: po._count.inwardItems + po._count.purchaseCancelItems,
+    })),
     nextDocId: docId,
     totalCount,
   };

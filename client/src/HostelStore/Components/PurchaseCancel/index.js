@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PurchaseCancelForm from "./PurchaseCancelForm.js";
 import PurchaseCancelFormReport from "./PurchaseCancelFormReport.js";
 import { getCommonParams } from "../../../Utils/helper.js";
@@ -14,12 +14,17 @@ import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService
 import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
+import { useSelector } from "react-redux";
+import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
   const [id, setId] = useState("");
   const [readOnly, setReadOnly] = useState(false);
-  // const dispatch = useDispatch();
+  const [fromPoSupplierId, setFromPoSupplierId] = useState(""); // ⬅️
+  const [fromPoId, setFromPoId] = useState("");
+  const [fromPoType, setFromPoType] = useState("");
+
   const { branchId, companyId, finYearId, userId } = getCommonParams();
   const params = {
     branchId,
@@ -91,6 +96,35 @@ export default function Form() {
   const { data: hsnList } = useGetHsnMasterQuery({ params });
   const { data: sizeList } = useGetSizeMasterQuery({ params });
   const { data: colorList } = useGetColorMasterQuery({ params });
+  const {
+    data: termsData,
+    isLoading,
+    isFetching,
+  } = useGetTermsandCondtionsQuery({ params });
+
+  const tabParams = useSelector(
+    (state) =>
+      state.openTabs.tabs.find((t) => t.name === "PURCHASE CANCEL")?.params,
+  );
+  const lastProcessedTimestamp = useRef(null);
+
+  useEffect(() => {
+    // Skip if no params or already processed this exact timestamp
+    if (!tabParams?.supplierId || !tabParams?.timestamp) return;
+    if (tabParams.timestamp === lastProcessedTimestamp.current) return;
+
+    // ⬅️ Mark as processed BEFORE setting state
+    lastProcessedTimestamp.current = tabParams.timestamp;
+
+    setFromPoSupplierId(tabParams.supplierId);
+    setFromPoId(tabParams.poId);
+    setFromPoType(tabParams.poType === "ORDER" ? "ORDER" : "GENERAL");
+    setId("");
+    setReadOnly(false);
+    setShowForm(true);
+
+    // ❌ NO clearTabParams here — that's what's breaking it
+  }, [tabParams]);
 
   return (
     <>
@@ -138,6 +172,9 @@ export default function Form() {
           onClose={() => {
             setShowForm(false);
             setReadOnly((prev) => !prev);
+            setFromPoSupplierId(""); // ⬅️ clear on close
+            setFromPoId("");
+            setFromPoType("");
           }}
           setShowForm={setShowForm}
           supplierList={supplierList}
@@ -147,7 +184,14 @@ export default function Form() {
           hsnList={hsnList}
           onNew={onNew}
           sizeList={sizeList}
+          fromPoId={fromPoId}
+          fromPoSupplierId={fromPoSupplierId}
+          fromPoType={fromPoType}
+          setFromPoId={setFromPoId}
+          setFromPoSupplierId={setFromPoSupplierId}
+          setFromPoType={setFromPoType}
           colorList={colorList}
+          termsData={termsData}
         />
       )}
     </>
