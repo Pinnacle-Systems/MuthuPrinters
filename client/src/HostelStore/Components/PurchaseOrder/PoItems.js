@@ -265,48 +265,48 @@ const PoItems = ({
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
               <tr>
                 <th
-                  className={`w-12 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-12 px-4 py-2 text-center font-medium text-[12px]`}
                 >
                   S.No
                 </th>
                 <th
-                  className={`w-96 px-2 py-2 text-center font-medium text-[13px]`}
+                  className={`w-96 px-2 py-2 text-center font-medium text-[12px]`}
                 >
                   Description of Goods<span className="text-red-500">*</span>
                 </th>
                 <th
-                  className={`w-36 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-36 px-4 py-2   text-center font-medium text-[12px]`}
                 >
                   Item Group
                 </th>
                 <th
-                  className={`w-20 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-20 px-4 py-2 text-center font-medium text-[12px]`}
                 >
                   Size
                 </th>
                 <th
-                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
+                  className={`w-32 px-4 py-2   text-center font-medium text-[12px]`}
                 >
                   Color
                 </th>
                 <th
-                  className={`w-20 px-4 py-2 text-center font-medium text-[13px] `}
+                  className={`w-20 px-4 py-2 text-center font-medium text-[12px] `}
                 >
                   UOM<span className="text-red-500">*</span>
                 </th>
                 <th
-                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
+                  className={`w-24 px-4 py-2 text-center font-medium text-[12px] `}
                 >
                   Quantity<span className="text-red-500">*</span>
                 </th>
 
                 <th
-                  className={`w-24 px-1 py-2 text-center font-medium text-[13px] `}
+                  className={`w-24 px-1 py-2 text-center font-medium text-[12px] `}
                 >
                   Price<span className="text-red-500">*</span>
                 </th>
                 <th
-                  className={`w-28 px-1 py-2 text-center font-medium text-[13px] `}
+                  className={`w-28 px-1 py-2 text-center font-medium text-[12px] `}
                 >
                   Gross Amount
                 </th>
@@ -316,12 +316,12 @@ const PoItems = ({
                   Net Amount
                 </th> */}
                 <th
-                  className={`w-20 px-1 py-2 text-center font-medium text-[13px] `}
+                  className={`w-20 px-1 py-2 text-center font-medium text-[12px] `}
                 >
                   Tax Details
                 </th>
                 <th
-                  className={`w-20 px-1 py-2 text-center font-medium text-[13px] `}
+                  className={`w-20 px-1 py-2 text-center font-medium text-[12px] `}
                 >
                   Actions
                 </th>
@@ -337,7 +337,7 @@ const PoItems = ({
                     : true
                 ) ? (
                   <tr
-                    className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
+                    className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer h-6`}
                     key={index}
                     onContextMenu={(e) => {
                       if (!readOnly) {
@@ -345,7 +345,7 @@ const PoItems = ({
                       }
                     }}
                   >
-                    <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
+                    <td className="w-12 border border-gray-300 text-[11px]  text-center">
                       {count++}
                     </td>
                     <td className=" text-[11px] border border-gray-300 text-left">
@@ -410,7 +410,7 @@ const PoItems = ({
                       />
                       {/* {row.itemGroupId} */}
                     </td>
-                    <td className="py-0.5 border border-gray-300 text-[11px] ">
+                    <td className=" border border-gray-300 text-[11px] ">
                       <FxSelectWithAdd
                         value={row.sizeId}
                         onChange={(val) =>
@@ -442,7 +442,7 @@ const PoItems = ({
                         addNewModalWidth="w-[30%] h-[45%]"
                       />
                     </td>
-                    <td className="py-0.5 border border-gray-300 text-[11px] ">
+                    <td className=" border border-gray-300 text-[11px] ">
                       <FxSelectWithAdd
                         value={row.colorId}
                         onChange={(val) =>
@@ -469,7 +469,7 @@ const PoItems = ({
                         addNewModalWidth="w-[30%] h-[45%]"
                       />
                     </td>
-                    <td className="py-0.5 border border-gray-300 text-[11px] ">
+                    <td className=" border border-gray-300 text-[11px] ">
                       <FxSelect
                         value={row.uomId}
                         onChange={(val) =>
@@ -497,7 +497,7 @@ const PoItems = ({
                       <input
                         type="number"
                         min="0"
-                        className="text-right py-1 px-1 w-full table-data-input"
+                        className="text-right px-1 w-full table-data-input"
                         onFocus={(e) => {
                           e.target.select();
                           setFocusedField(`${index}-qty`);
@@ -528,11 +528,11 @@ const PoItems = ({
                         }
                       />
                     </td>
-                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300  text-right">
                       <input
                         type="number"
                         min="0"
-                        className="text-right py-1 px-1 w-full table-data-input"
+                        className="text-right  px-1 w-full table-data-input"
                         onFocus={(e) => {
                           e.target.select();
                           setFocusedField(`${index}-price`);
@@ -559,11 +559,11 @@ const PoItems = ({
                         disabled={id ? !isNewVersion : readOnly}
                       />
                     </td>
-                    <td className="py-0.5 border border-gray-300 text-[11px]">
+                    <td className=" border border-gray-300 text-[11px]">
                       <input
                         type="number"
                         onFocus={(e) => e.target.select()}
-                        className="text-right rounded py-1 px-1 w-full "
+                        className="text-right rounded  px-1 w-full "
                         value={
                           !row.qty || !row.price
                             ? 0.0
@@ -588,10 +588,10 @@ const PoItems = ({
                       />
                     </td> */}
 
-                    <td className=" py-0.5 border border-gray-300 text-[11px] text-right w-20">
+                    <td className=" border border-gray-300 text-[11px] text-right w-20">
                       <button
                         disabled={!row?.styleItemId}
-                        className="text-center rounded py-1 w-20 table-data-input"
+                        className="text-center rounded  w-20 table-data-input"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
@@ -631,14 +631,14 @@ const PoItems = ({
               )}
             </tbody>
             <tfoot>
-              <tr className="bg-gray-50 h-7 font-medium text-gray-800">
+              <tr className="bg-gray-50 h-6 font-medium text-gray-800 text-[12px]">
                 <td
-                  className="text-right px-4 border border-gray-300 font-medium text-[13px] py-0.5"
+                  className="text-right px-4 border border-gray-300 font-medium "
                   colSpan={6}
                 >
                   Total
                 </td>
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                <td className="text-right border border-gray-300 px-1 font-medium ">
                   {poItems
                     ?.filter((item) =>
                       id
@@ -651,7 +651,7 @@ const PoItems = ({
                     ?.reduce((sum, row) => sum + (Number(row.qty) || 0), 0)
                     .toFixed(2)}
                 </td>
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                <td className="text-right border border-gray-300 px-1 font-medium  ">
                   {poItems
                     ?.filter((item) =>
                       id
@@ -664,7 +664,7 @@ const PoItems = ({
                     ?.reduce((sum, row) => sum + (Number(row.price) || 0), 0)
                     .toFixed(2)}
                 </td>
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                <td className="text-right border border-gray-300 px-1 font-medium  ">
                   {poItems
                     ?.filter((item) =>
                       id

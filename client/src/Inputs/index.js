@@ -3212,7 +3212,7 @@ export const customStyles = {
     boxShadow: "none",
     backgroundColor: "transparent",
     minHeight: "unset",
-    height: "20px",
+    height: "18px",
     fontSize: "12px",
     cursor: "pointer",
   }),
@@ -3231,8 +3231,8 @@ export const customStyles = {
 
   valueContainer: (base) => ({
     ...base,
-    padding: "0 4px",
-    height: "20px",
+    padding: "0 2px",
+    height: "18px",
   }),
 
   dropdownIndicator: (base) => ({

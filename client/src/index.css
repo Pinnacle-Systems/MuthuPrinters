@@ -175,6 +175,10 @@ label {
 .table-data-input {
   border: 1px solid transparent; /* ✅ important */
   transition: all 0.15s ease-in-out;
+   height: 22px;        /* ⬅️ add this */
+  line-height: 1;      /* ⬅️ add this */
+  padding-top: 0;      /* ⬅️ add this */
+  padding-bottom: 0;
 }
 
 .table-data-input:focus {

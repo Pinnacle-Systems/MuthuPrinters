@@ -94,7 +94,7 @@ const ReturnItems = ({
   };
 
   const handleDeleteAllRows = () => {
-    setReturnItems(Array.from({ length: 3 }, () => ({ ...EMPTY_ROW })));
+    setReturnItems(Array.from({ length: 4 }, () => ({ ...EMPTY_ROW })));
   };
 
   const handleRightClick = (event, rowIndex, type) => {
@@ -121,7 +121,7 @@ const ReturnItems = ({
   useEffect(() => {
     // If edit mode (id exists)
     if (id && returnItems?.length > 0) {
-      const requiredRows = 3;
+      const requiredRows = 4;
       const missingRows = requiredRows - returnItems.length;
 
       if (missingRows > 0) {
@@ -134,7 +134,7 @@ const ReturnItems = ({
 
     // If create mode (no id)
     if (!id && (!returnItems || returnItems.length === 0)) {
-      setReturnItems(Array.from({ length: 3 }, () => ({ ...EMPTY_ROW })));
+      setReturnItems(Array.from({ length: 4 }, () => ({ ...EMPTY_ROW })));
     }
   }, [id, returnItems]);
 
@@ -210,64 +210,42 @@ const ReturnItems = ({
           className={`w-full min-h-[200px] max-h-[200px] overflow-y-auto  my-2`}
         >
           <table className="w-full border-collapse table-fixed">
-            <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
+            <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10 text-[12px]">
               <tr>
-                <th
-                  className={`w-12 px-4 py-2 text-center font-medium text-[13px]`}
-                >
+                <th className={`w-12 px-4 py-2 text-center font-medium `}>
                   S.No
                 </th>
-                <th
-                  className={`w-96 px-2 py-2 text-center font-medium text-[13px]`}
-                >
+                <th className={`w-96 px-2 py-2 text-center font-medium `}>
                   Description of Goods
                 </th>
-                <th
-                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
-                >
+                <th className={`w-32 px-4 py-2 text-center font-medium `}>
                   Size
                 </th>
-                <th
-                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
-                >
+                <th className={`w-32 px-4 py-2 text-center font-medium `}>
                   Color
                 </th>
-                <th
-                  className={`w-20 px-4 py-2 text-center font-medium text-[13px] `}
-                >
+                <th className={`w-20 px-4 py-2 text-center font-medium `}>
                   UOM
                 </th>
                 {returnType !== "General Return" && (
-                  <th
-                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                  >
+                  <th className={`w-24 px-4 py-2 text-center font-medium  `}>
                     Order Qty
                   </th>
                 )}
 
-                <th
-                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                >
+                <th className={`w-24 px-4 py-2 text-center font-medium  `}>
                   Inward Qty
                 </th>
-                <th
-                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                >
+                <th className={`w-24 px-4 py-2 text-center font-medium  `}>
                   Already Return Qty
                 </th>
-                <th
-                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                >
+                <th className={`w-24 px-4 py-2 text-center font-medium  `}>
                   Balance Qty
                 </th>
-                <th
-                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                >
+                <th className={`w-24 px-4 py-2 text-center font-medium  `}>
                   Return Qty<span className="text-red-500">*</span>
                 </th>
-                <th
-                  className={`w-20 px-1 py-2 text-center font-medium text-[13px] `}
-                >
+                <th className={`w-20 px-1 py-2 text-center font-medium  `}>
                   Actions
                 </th>
               </tr>
@@ -275,7 +253,7 @@ const ReturnItems = ({
             <tbody>
               {(returnItems ? returnItems : [])?.map((row, index) => (
                 <tr
-                  className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
+                  className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer h-6`}
                   key={index}
                   onContextMenu={(e) => {
                     if (!readOnly) {
@@ -283,7 +261,7 @@ const ReturnItems = ({
                     }
                   }}
                 >
-                  <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
+                  <td className="w-12 border border-gray-300 text-[11px]  text-center ">
                     {index + 1}
                   </td>
                   <td className=" text-[11px] border border-gray-300 text-left">
@@ -311,7 +289,7 @@ const ReturnItems = ({
                       }}
                     />
                   </td>
-                  <td className="py-0.5 border border-gray-300 text-[11px] ">
+                  <td className=" border border-gray-300 text-[11px] ">
                     <FxSelect
                       value={row.sizeId}
                       onChange={(val) =>
@@ -335,7 +313,7 @@ const ReturnItems = ({
                       }}
                     />
                   </td>
-                  <td className="py-0.5 border border-gray-300 text-[11px] ">
+                  <td className=" border border-gray-300 text-[11px] ">
                     <FxSelect
                       value={row.colorId}
                       onChange={(val) =>
@@ -359,7 +337,7 @@ const ReturnItems = ({
                       }}
                     />
                   </td>
-                  <td className="py-0.5 border border-gray-300 text-[11px] ">
+                  <td className=" border border-gray-300 text-[11px] ">
                     <FxSelect
                       value={row.uomId}
                       onChange={(val) => handleInputChange(val, index, "uomId")}
@@ -382,7 +360,7 @@ const ReturnItems = ({
                     />
                   </td>
                   {returnType !== "General Return" && (
-                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300  text-right">
                       <input
                         onKeyDown={(e) => {
                           if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -393,7 +371,7 @@ const ReturnItems = ({
                         }}
                         min={"0"}
                         type="number"
-                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        className="text-right rounded  px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
                         value={row?.poQty ? Number(row.poQty).toFixed(2) : ""}
                         onChange={(e) =>
@@ -407,7 +385,7 @@ const ReturnItems = ({
                     </td>
                   )}
 
-                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                  <td className="border-blue-gray-200 text-[11px] border border-gray-300  text-right">
                     <input
                       onKeyDown={(e) => {
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -418,7 +396,7 @@ const ReturnItems = ({
                       }}
                       min={"0"}
                       type="number"
-                      className="text-right rounded py-1 px-1 w-full table-data-input"
+                      className="text-right rounded  px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
                       value={
                         row?.inwardQty ? Number(row.inwardQty).toFixed(2) : ""
@@ -432,7 +410,7 @@ const ReturnItems = ({
                       disabled={true}
                     />
                   </td>
-                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                  <td className="border-blue-gray-200 text-[11px] border border-gray-300  text-right">
                     <input
                       onKeyDown={(e) => {
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -443,7 +421,7 @@ const ReturnItems = ({
                       }}
                       min={"0"}
                       type="number"
-                      className="text-right rounded py-1 px-1 w-full table-data-input"
+                      className="text-right rounded  px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
                       value={
                         row?.alreadyReturnQty
@@ -467,7 +445,7 @@ const ReturnItems = ({
                       disabled={true}
                     />
                   </td>
-                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                  <td className="border-blue-gray-200 text-[11px] border border-gray-300  text-right">
                     <input
                       onKeyDown={(e) => {
                         if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -478,7 +456,7 @@ const ReturnItems = ({
                       }}
                       min={"0"}
                       type="number"
-                      className="text-right rounded py-1 px-1 w-full table-data-input"
+                      className="text-right rounded  px-1 w-full table-data-input"
                       onFocus={(e) => e.target.select()}
                       value={row?.balQty ? Number(row.balQty).toFixed(2) : ""}
                       onChange={(e) =>
@@ -490,7 +468,7 @@ const ReturnItems = ({
                       disabled={true}
                     />
                   </td>
-                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                  <td className="border-blue-gray-200 text-[11px] border border-gray-300  text-right">
                     <input
                       id={`returnQty-input-${index}`}
                       onKeyDown={(e) => {
@@ -513,7 +491,7 @@ const ReturnItems = ({
                       }}
                       min={"0"}
                       type="number"
-                      className="text-right py-1 px-1 w-full table-data-input"
+                      className="text-right  px-1 w-full table-data-input"
                       onFocus={(e) => {
                         e.target.select();
                         setFocusedField(`${index}`);
@@ -583,21 +561,21 @@ const ReturnItems = ({
               ))}
             </tbody>
             <tfoot>
-              <tr className="bg-gray-50 h-7 font-medium text-gray-800">
+              <tr className="bg-gray-50 h-6 font-medium text-gray-800 text-[12px]">
                 <td
-                  className="text-right px-4 border border-gray-300 font-medium text-[13px] py-0.5"
+                  className="text-right px-4 border border-gray-300 font-medium  "
                   colSpan={5}
                 >
                   Total
                 </td>
                 {returnType !== "General Return" && (
-                  <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                  <td className="text-right border border-gray-300 px-1 font-medium ">
                     {returnItems
                       ?.reduce((sum, row) => sum + (Number(row.poQty) || 0), 0)
                       .toFixed(2)}
                   </td>
                 )}
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                <td className="text-right border border-gray-300 px-1 font-medium  ">
                   {returnItems
                     ?.reduce(
                       (sum, row) => sum + (Number(row.inwardQty) || 0),
@@ -605,7 +583,7 @@ const ReturnItems = ({
                     )
                     .toFixed(2)}
                 </td>
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                <td className="text-right border border-gray-300 px-1 font-medium ">
                   {returnItems
                     ?.reduce(
                       (sum, row) => sum + (Number(row.alreadyReturnQty) || 0),
@@ -613,12 +591,12 @@ const ReturnItems = ({
                     )
                     .toFixed(2)}
                 </td>
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                <td className="text-right border border-gray-300 px-1 font-medium ">
                   {returnItems
                     ?.reduce((sum, row) => sum + (Number(row.balQty) || 0), 0)
                     .toFixed(2)}
                 </td>
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                <td className="text-right border border-gray-300 px-1 font-medium ">
                   {returnItems
                     ?.reduce(
                       (sum, row) => sum + (Number(row.returnQty) || 0),

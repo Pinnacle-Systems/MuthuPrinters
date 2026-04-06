@@ -247,10 +247,10 @@ const PurchaseOrderPrintFormat = ({
   const term = singleData?.termsAndCondtion || "";
   const poItems = singleData?.poItems || [];
 
-  const filledPoItems = poItems.filter((i) => i.styleItemId && i.quoteVersion === quoteVersion) ;
+  const filledPoItems = poItems.filter((i) => i.styleItemId && i.quoteVersion === quoteVersion);
 
   if (!singleData) return null;
-  
+
   return (
     <Document>
       <Page size="A4" style={styles.borderBox}>
@@ -300,7 +300,7 @@ const PurchaseOrderPrintFormat = ({
             {
               quoteVersion > 1 && (
                 <View style={{ flexDirection: "row", marginBottom: 3 }}>
-                  <Text style={[styles.companyText, { width: 50, color:"red"}]}>Revised PO</Text>
+                  <Text style={[styles.companyText, { width: 50, color: "red" }]}>Revised PO</Text>
                   <Text style={[styles.companyText, { width: 70 }]}>: {quoteVersion}</Text>
                 </View>
               )
@@ -366,7 +366,7 @@ const PurchaseOrderPrintFormat = ({
           </View>
 
           {/* ── TABLE ROWS ── */}
-          {filledPoItems.map((val, index) => {
+          {/* {filledPoItems.map((val, index) => {
             const gross = !isNaN(val.qty * val.price) ? (val.qty * val.price).toFixed(2) : "";
             return (
               <View key={index} style={{ flexDirection: "row", borderBottom: "1 solid #d1d5db" }}>
@@ -397,7 +397,58 @@ const PurchaseOrderPrintFormat = ({
                 </Text>
               </View>
             );
-          })}
+          })} */}
+          {/* ── TABLE ROWS ── */}
+          {(() => {
+            const minRows = 14;
+            const filledRows = filledPoItems.map((val, index) => {
+              const gross = !isNaN(val.qty * val.price) ? (val.qty * val.price).toFixed(2) : "";
+              return (
+                <View key={index} style={{ flexDirection: "row", borderBottom: "1 solid #d1d5db" }}>
+                  <Text style={[styles.td, { flex: 0.5 }]}>{index + 1}</Text>
+                  <Text style={[styles.td, { flex: 4 }]}>
+                    {findFromList(val.styleItemId, styleItemList?.data, "name")}
+                  </Text>
+                  <Text style={[styles.td, { flex: 1.5 }]}>
+                    {val.Size?.name || findFromList(val.sizeId, sizeList?.data, "name")}
+                  </Text>
+                  <Text style={[styles.td, { flex: 1.5 }]}>
+                    {val.Color?.name || findFromList(val.colorId, colorList?.data, "name")}
+                  </Text>
+                  <Text style={[styles.td, { flex: 1 }]}>
+                    {val.Uom?.name || findFromList(val.uomId, uomList?.data, "name")}
+                  </Text>
+                  <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
+                    {isNaN(val.qty) ? "" : parseFloat(val.qty).toFixed(3)}
+                  </Text>
+                  <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
+                    {isNaN(val.price) ? "" : parseFloat(val.price).toFixed(2)}
+                  </Text>
+                  <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
+                    {isNaN(val.taxPercent) ? "" : parseFloat(val.taxPercent).toFixed(2)}
+                  </Text>
+                  <Text style={[styles.td, { flex: 1.2, textAlign: "right" }]}>{gross}</Text>
+                </View>
+              );
+            });
+
+            const emptyRowsCount = Math.max(0, minRows - filledPoItems.length);
+            const emptyRows = Array.from({ length: emptyRowsCount }).map((_, i) => (
+              <View key={`empty-${i}`} style={{ flexDirection: "row", borderBottom: "1 solid #d1d5db" }}>
+                <Text style={[styles.td, { flex: 0.5 }]}> </Text>
+                <Text style={[styles.td, { flex: 4 }]}> </Text>
+                <Text style={[styles.td, { flex: 1.5 }]}> </Text>
+                <Text style={[styles.td, { flex: 1.5 }]}> </Text>
+                <Text style={[styles.td, { flex: 1 }]}> </Text>
+                <Text style={[styles.td, { flex: 1 }]}> </Text>
+                <Text style={[styles.td, { flex: 1 }]}> </Text>
+                <Text style={[styles.td, { flex: 1 }]}> </Text>
+                <Text style={[styles.td, { flex: 1.2 }]}> </Text>
+              </View>
+            ));
+
+            return [...filledRows, ...emptyRows];
+          })()}
 
           {/* ── TOTAL ROW ── */}
           <View style={{ flexDirection: "row", borderBottom: "1 solid #9ca3af" }}>
@@ -446,7 +497,9 @@ const PurchaseOrderPrintFormat = ({
 
                 {numberToWords
                   .toWords(taxDetails?.net || 0)
-                  .replace(/\b\w/g, (c) => c.toUpperCase()) + " Only"}
+                  .replace(/[-,]/g, "") // ❌ remove hyphen + comma
+                  .replace(/\b\w/g, (c) => c.toUpperCase()) +
+                  " Only"}
 
               </Text>
             </View>

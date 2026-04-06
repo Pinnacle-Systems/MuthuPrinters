@@ -233,83 +233,57 @@ const InwardItems = ({
         >
           <table className="w-full border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
-              <tr>
-                <th
-                  className={`w-12 px-4 py-2 text-center font-medium text-[13px]`}
-                >
+              <tr className="text-[12px]">
+                <th className={`w-12 px-4 py-2 text-center font-medium `}>
                   S.No
                 </th>
-                <th
-                  className={`w-96 px-2 py-2 text-center font-medium text-[13px]`}
-                >
+                <th className={`w-96 px-2 py-2 text-center font-medium`}>
                   Description of Goods<span className="text-red-500">*</span>
                 </th>
-                <th
-                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
-                >
+                <th className={`w-32 px-4 py-2 text-center font-medium`}>
                   Size
                 </th>
-                <th
-                  className={`w-32 px-4 py-2 text-center font-medium text-[13px]`}
-                >
+                <th className={`w-32 px-4 py-2 text-center font-medium`}>
                   Color
                 </th>
-                <th
-                  className={`w-20 px-4 py-2 text-center font-medium text-[13px] `}
-                >
+                <th className={`w-20 px-4 py-2 text-center font-medium`}>
                   UOM<span className="text-red-500">*</span>
                 </th>
                 {inwardType !== "Direct Inward" && (
-                  <th
-                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                  >
+                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
                     Order Qty
                   </th>
                 )}
                 {inwardType !== "Direct Inward" && (
-                  <th
-                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                  >
+                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
                     Cancel Qty
                   </th>
                 )}
                 {inwardType !== "Direct Inward" && (
-                  <th
-                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                  >
+                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
                     Already Inward Qty
                   </th>
                 )}
                 {inwardType !== "Direct Inward" && (
-                  <th
-                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                  >
+                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
                     Already Return Qty
                   </th>
                 )}
                 {inwardType !== "Direct Inward" && (
-                  <th
-                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                  >
+                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
                     Balance Qty
                   </th>
                 )}
                 {inwardType === "Direct Inward" && (
-                  <th
-                    className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                  >
+                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
                     Price<span className="text-red-500">*</span>
                   </th>
                 )}
-                <th
-                  className={`w-24 px-4 py-2 text-center font-medium text-[13px] `}
-                >
+                <th className={`w-24 px-4 py-2 text-center font-medium `}>
                   Inward Qty<span className="text-red-500">*</span>
                 </th>
 
-                <th
-                  className={`w-20 px-1 py-2 text-center font-medium text-[13px] `}
-                >
+                <th className={`w-20 px-1 py-2 text-center font-medium `}>
                   Actions
                 </th>
               </tr>
@@ -317,7 +291,7 @@ const InwardItems = ({
             <tbody>
               {(inwardItems ? inwardItems : [])?.map((row, index) => (
                 <tr
-                  className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer`}
+                  className={`${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer h-6`}
                   key={index}
                   onContextMenu={(e) => {
                     if (!readOnly) {
@@ -325,7 +299,7 @@ const InwardItems = ({
                     }
                   }}
                 >
-                  <td className="w-12 border border-gray-300 text-[11px]  text-center p-0.5">
+                  <td className="w-12 border border-gray-300 text-[11px]  text-center">
                     {index + 1}
                   </td>
                   <td className=" text-[11px] border border-gray-300 text-left">
@@ -357,7 +331,7 @@ const InwardItems = ({
                       nextRef={vehicleRef}
                     />
                   </td>
-                  <td className="py-0.5 border border-gray-300 text-[11px] ">
+                  <td className=" border border-gray-300 text-[11px] ">
                     <FxSelectWithAdd
                       value={row.sizeId}
                       onChange={(val) =>
@@ -389,7 +363,7 @@ const InwardItems = ({
                       addNewModalWidth="w-[30%] h-[45%]"
                     />
                   </td>
-                  <td className="py-0.5 border border-gray-300 text-[11px] ">
+                  <td className=" border border-gray-300 text-[11px] ">
                     <FxSelectWithAdd
                       value={row.colorId}
                       onChange={(val) =>
@@ -416,7 +390,7 @@ const InwardItems = ({
                       addNewModalWidth="w-[30%] h-[45%]"
                     />
                   </td>
-                  <td className="py-0.5 border border-gray-300 text-[11px] ">
+                  <td className=" border border-gray-300 text-[11px] ">
                     <FxSelect
                       value={row.uomId}
                       onChange={(val) => handleInputChange(val, index, "uomId")}
@@ -439,7 +413,7 @@ const InwardItems = ({
                     />
                   </td>
                   {inwardType !== "Direct Inward" && (
-                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
                       <input
                         onKeyDown={(e) => {
                           if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -450,7 +424,7 @@ const InwardItems = ({
                         }}
                         min={"0"}
                         type="number"
-                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        className="text-right rounded px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
                         value={row?.poQty ? Number(row.poQty).toFixed(2) : ""}
                         onChange={(e) =>
@@ -468,7 +442,7 @@ const InwardItems = ({
                     </td>
                   )}
                   {inwardType !== "Direct Inward" && (
-                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300  text-right">
                       <input
                         onKeyDown={(e) => {
                           if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -479,7 +453,7 @@ const InwardItems = ({
                         }}
                         min={"0"}
                         type="number"
-                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        className="text-right rounded px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
                         value={
                           row?.alreadyCancelQty
@@ -509,7 +483,7 @@ const InwardItems = ({
                     </td>
                   )}
                   {inwardType !== "Direct Inward" && (
-                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
                       <input
                         onKeyDown={(e) => {
                           if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -520,7 +494,7 @@ const InwardItems = ({
                         }}
                         min={"0"}
                         type="number"
-                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        className="text-right rounded px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
                         value={
                           row?.alreadyInwardQty
@@ -550,7 +524,7 @@ const InwardItems = ({
                     </td>
                   )}
                   {inwardType !== "Direct Inward" && (
-                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
                       <input
                         onKeyDown={(e) => {
                           if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -561,7 +535,7 @@ const InwardItems = ({
                         }}
                         min={"0"}
                         type="number"
-                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        className="text-right rounded px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
                         value={
                           row?.alreadyReturnQty
@@ -591,7 +565,7 @@ const InwardItems = ({
                     </td>
                   )}
                   {inwardType !== "Direct Inward" && (
-                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
                       <input
                         onKeyDown={(e) => {
                           if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -602,7 +576,7 @@ const InwardItems = ({
                         }}
                         min={"0"}
                         type="number"
-                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        className="text-right rounded px-1 w-full table-data-input"
                         onFocus={(e) => e.target.select()}
                         value={row?.balQty ? Number(row.balQty).toFixed(2) : ""}
                         onChange={(e) =>
@@ -620,7 +594,7 @@ const InwardItems = ({
                     </td>
                   )}
                   {inwardType === "Direct Inward" && (
-                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
                       <input
                         onKeyDown={(e) => {
                           if (e.code === "Minus" || e.code === "NumpadSubtract")
@@ -631,7 +605,7 @@ const InwardItems = ({
                         }}
                         min={"0"}
                         type="number"
-                        className="text-right rounded py-1 px-1 w-full table-data-input"
+                        className="text-right rounded px-1 w-full table-data-input"
                         onFocus={(e) => {
                           e.target.select();
                           setFocusedField(`${index}-price`);
@@ -664,7 +638,7 @@ const InwardItems = ({
                     </td>
                   )}
 
-                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 py-0.5 text-right">
+                  <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
                     <input
                       id={`inwardQty-input-${index}`}
                       onKeyDown={(e) => {
@@ -700,7 +674,7 @@ const InwardItems = ({
                       }}
                       min={"0"}
                       type="number"
-                      className="text-right py-1 px-1 w-full table-data-input"
+                      className="text-right px-1 w-full table-data-input"
                       onFocus={(e) => {
                         e.target.select();
                         setFocusedField(`${index}-inwardQty`);
@@ -804,16 +778,16 @@ const InwardItems = ({
               ))}
             </tbody>
             <tfoot>
-              <tr className="bg-gray-50 h-7 font-medium text-gray-800">
+              <tr className="bg-gray-50 h-6 font-medium text-gray-800 text-[12px]">
                 <td
-                  className="text-right px-4 border border-gray-300 font-medium text-[13px] py-0.5"
+                  className="text-right px-4 border border-gray-300 font-medium "
                   colSpan={5}
                 >
                   Total
                 </td>
                 {inwardType !== "Direct Inward" && (
                   <>
-                    <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                    <td className="text-right border border-gray-300 px-1 font-medium ">
                       {inwardItems
                         ?.reduce(
                           (sum, row) => sum + (Number(row.poQty) || 0),
@@ -821,7 +795,7 @@ const InwardItems = ({
                         )
                         .toFixed(2)}
                     </td>
-                    <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                    <td className="text-right border border-gray-300 px-1 font-medium  ">
                       {inwardItems
                         ?.reduce(
                           (sum, row) =>
@@ -830,7 +804,7 @@ const InwardItems = ({
                         )
                         .toFixed(2)}
                     </td>
-                    <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                    <td className="text-right border border-gray-300 px-1 font-medium ">
                       {inwardItems
                         ?.reduce(
                           (sum, row) =>
@@ -839,7 +813,7 @@ const InwardItems = ({
                         )
                         .toFixed(2)}
                     </td>
-                    <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                    <td className="text-right border border-gray-300 px-1 font-medium ">
                       {inwardItems
                         ?.reduce(
                           (sum, row) =>
@@ -848,7 +822,7 @@ const InwardItems = ({
                         )
                         .toFixed(2)}
                     </td>
-                    <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                    <td className="text-right border border-gray-300 px-1 font-medium ">
                       {inwardItems
                         ?.reduce(
                           (sum, row) => sum + (Number(row.balQty) || 0),
@@ -859,14 +833,14 @@ const InwardItems = ({
                   </>
                 )}
                 {inwardType === "Direct Inward" && (
-                  <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                  <td className="text-right border border-gray-300 px-1 font-medium ">
                     {inwardItems
                       ?.reduce((sum, row) => sum + (Number(row.price) || 0), 0)
                       .toFixed(2)}
                   </td>
                 )}
 
-                <td className="text-right border border-gray-300 px-1 font-medium text-[13px] py-0.5">
+                <td className="text-right border border-gray-300 px-1 font-medium ">
                   {inwardItems
                     ?.reduce(
                       (sum, row) => sum + (Number(row.inwardQty) || 0),

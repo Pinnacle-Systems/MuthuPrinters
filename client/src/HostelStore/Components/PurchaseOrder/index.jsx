@@ -28,6 +28,10 @@ export default function Form() {
   const [showForm, setShowForm] = useState(false);
   const [id, setId] = useState("");
   const [readOnly, setReadOnly] = useState(false);
+  const [showInwardForm, setShowInwardForm] = useState(false);
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [selectedPoId, setSelectedPoId] = useState("");
+
   const dispatch = useDispatch();
   const { branchId, companyId, finYearId, userId } = getCommonParams()
   const params = {
@@ -110,6 +114,15 @@ export default function Form() {
       }
     }
   };
+  const handleCreateInward = (poId) => {
+    setSelectedPoId(poId);
+    setShowInwardForm(true);
+  };
+
+  const handleCreateCancel = (poId) => {
+    setSelectedPoId(poId);
+    setShowCancelForm(true);
+  };
 
   const onNew = () => {
     setId("");
@@ -161,6 +174,8 @@ export default function Form() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             itemsPerPage={10}
+            onCreateInward={handleCreateInward}   // ⬅️
+            onCreateCancel={handleCreateCancel}
           // searchStyleId={searchStyleId}
           />
         </div>

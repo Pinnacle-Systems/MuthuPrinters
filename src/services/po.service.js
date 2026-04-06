@@ -62,6 +62,27 @@ function manualFilterSearchData(
   );
 }
 
+function getPOStatus(po) {
+  const poItems = po.poItems || [];
+  const totalPoQty = poItems.reduce((sum, item) => sum + (item.qty || 0), 0);
+  const totalInwardQty =
+    po.inwardItems?.reduce((sum, item) => sum + (item.inwardQty || 0), 0) || 0;
+  const totalCancelQty =
+    po.purchaseCancelItems?.reduce(
+      (sum, item) => sum + (item.cancelQty || 0),
+      0,
+    ) || 0;
+
+  if (totalInwardQty === 0 && totalCancelQty === 0) return "Pending";
+  if (totalCancelQty >= totalPoQty) return "Cancelled";
+  if (totalInwardQty >= totalPoQty) return "Fully Received";
+  if (totalInwardQty > 0) return "Partially Received";
+  if (totalCancelQty > 0) return "Partially Cancelled";
+  if (totalInwardQty > 0 && totalCancelQty > 0)
+    return "Partially Received & Cancelled";
+  return "Pending";
+}
+
 async function get(req) {
   const {
     branchId,
@@ -175,6 +196,8 @@ async function get(req) {
           qty: true,
         },
       },
+      inwardItems: { select: { inwardQty: true } },
+      purchaseCancelItems: { select: { cancelQty: true } },
     },
     orderBy: {
       docId: "desc",
@@ -196,7 +219,12 @@ async function get(req) {
       )
     : "";
   // console.log(data, "data")
-  return { statusCode: 0, data, nextDocId: docId, totalCount };
+  return {
+    statusCode: 0,
+    data: data.map((po) => ({ ...po, status: getPOStatus(po) })),
+    nextDocId: docId,
+    totalCount,
+  };
 }
 
 async function getOne(id) {
