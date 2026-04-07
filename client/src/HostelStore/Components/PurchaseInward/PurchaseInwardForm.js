@@ -305,6 +305,7 @@ const PurchaseInwardForm = ({
       { condition: !data.supplierId, title: "Supplier is required!" },
       { condition: !data.dcNo, title: "DC No is required!" },
       { condition: !data.dcDate, title: "DC Date is required!" },
+      { condition: !data.netBillValue, title: "Bill Value is required!" },
       {
         condition: filledItems.length === 0,
         title: "Please add at least one item!",
@@ -550,7 +551,7 @@ const PurchaseInwardForm = ({
                 name={"Bill Value"}
                 value={netBillValue}
                 setValue={setNetBillValue}
-                readOnly={id}
+                readOnly={readOnly}
                 required={receiptType === "Against Invoice"}
                 type={"number"}
                 onFocus={(e) => {
