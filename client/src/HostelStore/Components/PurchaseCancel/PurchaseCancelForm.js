@@ -284,7 +284,7 @@ const PurchaseCancelForm = ({
     const checks = [
       { condition: !data.poType, title: "PO Type is required!" },
       { condition: !data.locationId, title: "Location is required!" },
-      { condition: !data.storeId, title: "Location is required!" },
+      // { condition: !data.storeId, title: "Location is required!" },
       { condition: !data.supplierId, title: "Supplier is required!" },
       {
         condition: filledItems.length === 0,
@@ -460,7 +460,7 @@ const PurchaseCancelForm = ({
                 required={true}
                 readOnly={id}
               /> */}
-              <DropdownWithModal
+              {/* <DropdownWithModal
                 name="Location"
                 options={dropDownListObject(
                   id
@@ -479,7 +479,7 @@ const PurchaseCancelForm = ({
                 childComponent={LocationMaster}
                 addNewModalWidth="w-[40%] h-[48%]"
                 disabled={id}
-              />
+              /> */}
               <DropdownInput
                 name="Po Type"
                 options={poTypes}

@@ -332,7 +332,7 @@ async function create(body) {
         docDate: docDate ? new Date(docDate) : null,
         createdById: parseInt(userId),
         branchId: parseInt(branchId),
-        storeId: parseInt(storeId),
+        // storeId: parseInt(storeId),
         supplierId: parseInt(supplierId),
         poType,
         remarks,
@@ -450,7 +450,7 @@ async function update(id, body) {
       data: {
         docDate: docDate ? new Date(docDate) : null,
         updatedById: parseInt(userId),
-        storeId: parseInt(storeId),
+        // storeId: parseInt(storeId),
         branchId: parseInt(branchId),
         locationId: parseInt(locationId),
         supplierId: parseInt(supplierId),

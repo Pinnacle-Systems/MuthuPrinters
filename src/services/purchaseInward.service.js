@@ -839,6 +839,11 @@ async function create(req) {
     draftSave,
     locationId,
     invNo,
+    receiptType,
+    taxTemplateId,
+    discountType,
+    discountValue,
+    netBillValue,
   } = await req.body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
@@ -871,6 +876,11 @@ async function create(req) {
         vehicleNo,
         locationId: parseInt(locationId),
         invNo,
+        receiptType,
+        taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
+        discountType,
+        discountValue: discountValue ? parseFloat(discountValue) : null,
+        netBillValue: netBillValue ? parseFloat(netBillValue) : null,
       },
     });
     await createInwardItems(
@@ -922,6 +932,13 @@ async function createInwardItems(
         sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
         colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
         dcNo: dcNo ? dcNo : null,
+        discountType: stockDetail?.discountType ?? undefined,
+        discountValue: stockDetail?.discountValue
+          ? parseInt(stockDetail.discountValue)
+          : null,
+        taxPercent: stockDetail?.taxPercent
+          ? parseInt(stockDetail.taxPercent)
+          : null,
       },
     });
     await tx.stock.create({
@@ -991,6 +1008,11 @@ async function update(id, body) {
     inwardItems,
     finYearId,
     invNo,
+    receiptType,
+    taxTemplateId,
+    discountType,
+    discountValue,
+    netBillValue,
   } = await body;
   let data;
   const dataFound = await prisma.purchaseInward.findUnique({
@@ -1032,6 +1054,11 @@ async function update(id, body) {
         vehicleNo,
         locationId: parseInt(locationId),
         invNo,
+        receiptType,
+        taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
+        discountType,
+        discountValue: discountValue ? parseFloat(discountValue) : null,
+        netBillValue: netBillValue ? parseFloat(netBillValue) : null,
       },
     });
     await updateinwardItems(
@@ -1086,6 +1113,13 @@ async function updateinwardItems(
           sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
           colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
           dcNo: dcNo ? dcNo : null,
+          discountType: stockDetail?.discountType ?? undefined,
+          discountValue: stockDetail?.discountValue
+            ? parseInt(stockDetail.discountValue)
+            : null,
+          taxPercent: stockDetail?.taxPercent
+            ? parseInt(stockDetail.taxPercent)
+            : null,
         },
       });
 
@@ -1175,6 +1209,13 @@ async function updateinwardItems(
           sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
           colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
           dcNo: dcNo ? dcNo : null,
+          discountType: stockDetail?.discountType ?? undefined,
+          discountValue: stockDetail?.discountValue
+            ? parseInt(stockDetail.discountValue)
+            : null,
+          taxPercent: stockDetail?.taxPercent
+            ? parseInt(stockDetail.taxPercent)
+            : null,
         },
       });
 

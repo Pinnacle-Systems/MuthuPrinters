@@ -136,6 +136,7 @@ export const TextInput = forwardRef(
       width = "full",
       autoFocus,
       onKeyDown,
+      onFocus,
     },
     ref,
   ) => {
@@ -172,6 +173,7 @@ export const TextInput = forwardRef(
           onBlur={handleBlur}
           placeholder={name}
           readOnly={readOnly}
+          onFocus={onFocus}
           disabled={disabled}
           tabIndex={tabIndex ?? undefined}
           className={`w-full px-3 py-1 text-xs border border-gray-300 rounded-lg
@@ -3515,7 +3517,7 @@ export function FxSelectWithAdd({
             const val = selected?.value || "";
 
             onChange(val);
-
+            setSearchValue("");
             // ✅ Move focus immediately after selection
             focusNextField();
           }
@@ -3547,6 +3549,9 @@ export function FxSelectWithAdd({
         menuPortalTarget={document.body}
         inputId={inputId}
         noOptionsMessage={() => "No options"}
+        onFocus={() => {
+          setSearchValue(""); // ✅ reset when user comes back
+        }}
       />
       {showAddNewModal && childComponent && (
         <Modal

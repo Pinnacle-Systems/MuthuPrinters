@@ -333,7 +333,7 @@ const InwardItems = ({
                 <th className={`w-28 px-1 py-2 text-center font-medium `}>
                   Gross Amount
                 </th>
-                <th className={`w-24 px-1 py-2 text-center font-medium `}>
+                <th className={`w-20 px-1 py-2 text-center font-medium `}>
                   Tax Details
                 </th>
                 <th className={`w-20 px-1 py-2 text-center font-medium `}>
@@ -407,7 +407,7 @@ const InwardItems = ({
                   <td className=" py-0.5 border border-gray-300 text-[11px] text-right">
                     <button
                       disabled={!row?.StyleItem?.name}
-                      className="text-center rounded py-1 w-20"
+                      className="text-center rounded py-1 w-full"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();

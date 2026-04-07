@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import FxSelect, { FxSelectWithAdd } from "../../../Inputs";
 import Swal from "sweetalert2";
 import Modal from "../../../UiComponents/Modal";
-import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
 import PoItemsSelection from "./PoItemsSelection";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
 import { getUniqueArrayBySize } from "../../../Utils/helper";
 import { ColorMaster, Size, StyleItemMaster } from "..";
 import { useGetPoItemsQuery } from "../../../redux/uniformService/PoServices";
+import { VIEW } from "../../../icons";
+import { toast } from "react-toastify";
+import TaxDetailsFullTemplate from "./TaxDetailsFullTemplate";
 const InwardItems = ({
   id,
   inwardItems,
@@ -31,6 +33,7 @@ const InwardItems = ({
   searchDocDate,
   vehicleRef,
   fromPoId,
+  receiptType,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -51,6 +54,7 @@ const InwardItems = ({
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
   const [fillGrid, setFillGrid] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
+  const actionRefs = useRef([]);
 
   const skipFocusRef = useRef(false);
 
@@ -212,6 +216,12 @@ const InwardItems = ({
 
   const showFillButton = inwardType !== "Direct Inward" && !id && !fromPoId;
 
+  const focusActionCell = (index) => {
+    setTimeout(() => {
+      actionRefs.current[index]?.focus();
+    }, 200); // wait for modal close render
+  };
+
   return (
     <>
       <Modal
@@ -225,6 +235,8 @@ const InwardItems = ({
           setCurrentSelectedIndex={setCurrentSelectedIndex}
           inwardItems={inwardItems}
           handleInputChange={handleInputChange}
+          id={id}
+          onCloseFocus={focusActionCell}
         />
       </Modal>
       <Modal
@@ -301,10 +313,10 @@ const InwardItems = ({
                 <th className={`w-12 px-4 py-2 text-center font-medium `}>
                   S.No
                 </th>
-                <th className={`w-96 px-2 py-2 text-center font-medium`}>
+                <th className={`w-80 px-2 py-2 text-center font-medium`}>
                   Description of Goods<span className="text-red-500">*</span>
                 </th>
-                <th className={`w-32 px-4 py-2 text-center font-medium`}>
+                <th className={`w-20 px-4 py-2 text-center font-medium`}>
                   Size
                 </th>
                 <th className={`w-32 px-4 py-2 text-center font-medium`}>
@@ -314,40 +326,51 @@ const InwardItems = ({
                   UOM<span className="text-red-500">*</span>
                 </th>
                 {inwardType !== "Direct Inward" && (
-                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
-                    Order Qty
+                  <th className={`w-16 px-4 py-2 text-center font-medium `}>
+                    PO Qty
                   </th>
                 )}
                 {inwardType !== "Direct Inward" && (
-                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
+                  <th className={`w-16 px-4 py-2 text-center font-medium `}>
                     Cancel Qty
                   </th>
                 )}
                 {inwardType !== "Direct Inward" && (
-                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
+                  <th className={`w-20 px-4 py-2 text-center font-medium `}>
                     Already Inward Qty
                   </th>
                 )}
                 {inwardType !== "Direct Inward" && (
-                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
+                  <th className={`w-20 px-4 py-2 text-center font-medium `}>
                     Already Return Qty
                   </th>
                 )}
                 {inwardType !== "Direct Inward" && (
-                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
+                  <th className={`w-16 px-4 py-2 text-center font-medium `}>
                     Balance Qty
                   </th>
                 )}
-                {inwardType === "Direct Inward" && (
-                  <th className={`w-24 px-4 py-2 text-center font-medium `}>
+
+                <th className={`w-16 px-4 py-2 text-center font-medium `}>
+                  Inward Qty<span className="text-red-500">*</span>
+                </th>
+                {(inwardType === "Direct Inward" ||
+                  receiptType === "Against Invoice") && (
+                  <th className={`w-16 px-4 py-2 text-center font-medium `}>
                     Price<span className="text-red-500">*</span>
                   </th>
                 )}
-                <th className={`w-24 px-4 py-2 text-center font-medium `}>
-                  Inward Qty<span className="text-red-500">*</span>
-                </th>
-
-                <th className={`w-20 px-1 py-2 text-center font-medium `}>
+                {receiptType === "Against Invoice" && (
+                  <th className={`w-16 px-1 py-2 text-center font-medium `}>
+                    Gross Amount
+                  </th>
+                )}
+                {receiptType === "Against Invoice" && (
+                  <th className={`w-20 px-1 py-2 text-center font-medium `}>
+                    Tax Details
+                  </th>
+                )}
+                <th className={`w-16 px-1 py-2 text-center font-medium `}>
                   Actions
                 </th>
               </tr>
@@ -657,51 +680,6 @@ const InwardItems = ({
                       />
                     </td>
                   )}
-                  {inwardType === "Direct Inward" && (
-                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
-                      <input
-                        onKeyDown={(e) => {
-                          if (e.code === "Minus" || e.code === "NumpadSubtract")
-                            e.preventDefault();
-                          if (e.key === "Delete") {
-                            handleInputChange("", index, "price");
-                          }
-                        }}
-                        min={"0"}
-                        type="number"
-                        className="text-right rounded px-1 w-full table-data-input"
-                        onFocus={(e) => {
-                          e.target.select();
-                          setFocusedField(`${index}-price`);
-                        }}
-                        value={
-                          focusedField === `${index}-price`
-                            ? (row?.price ?? "")
-                            : row?.price
-                              ? Number(row.price).toFixed(2)
-                              : ""
-                        }
-                        onChange={(e) =>
-                          handleInputChange(e.target.value, index, "price")
-                        }
-                        onBlur={(e) => {
-                          const val = e.target.value;
-                          handleInputChange(
-                            val ? Number(val).toFixed(2) : "",
-                            index,
-                            "price",
-                          );
-                          setFocusedField(null);
-                        }}
-                        disabled={
-                          readOnly ||
-                          (row.stockQty ?? 0) > 0 ||
-                          inwardType !== "Direct Inward"
-                        }
-                      />
-                    </td>
-                  )}
-
                   <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
                     <input
                       id={`inwardQty-input-${index}`}
@@ -712,28 +690,30 @@ const InwardItems = ({
                         if (e.key === "Delete") {
                           handleInputChange("", index, "inwardQty");
                         }
-                        if (inwardType !== "Direct Inward") {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            skipFocusRef.current = false; // reset flag before blur fires
-
-                            setTimeout(() => {
-                              if (!skipFocusRef.current) {
-                                if (inwardType !== "Direct Inward") {
-                                  const next = document.querySelector(
-                                    `#inwardQty-input-${index + 1}`,
-                                  );
-                                  if (next) next.focus();
-                                } else {
-                                  const next = document.querySelector(
-                                    `#styleItemId-input-${index + 1}`,
-                                  );
-                                  if (next) next.focus();
-                                }
-                              }
-                            }, 100);
-                          }
+                        if (
+                          inwardType !== "Direct Inward" ||
+                          receiptType !== "Against Invoice"
+                        ) {
+                          // if (e.key === "Enter") {
+                          //   e.preventDefault();
+                          //   e.stopPropagation();
+                          //   skipFocusRef.current = false; // reset flag before blur fires
+                          //   setTimeout(() => {
+                          //     if (!skipFocusRef.current) {
+                          //       if (inwardType !== "Direct Inward") {
+                          //         const next = document.querySelector(
+                          //           `#inwardQty-input-${index + 1}`,
+                          //         );
+                          //         if (next) next.focus();
+                          //       } else {
+                          //         const next = document.querySelector(
+                          //           `#styleItemId-input-${index + 1}`,
+                          //         );
+                          //         if (next) next.focus();
+                          //       }
+                          //     }
+                          //   }, 100);
+                          // }
                         }
                       }}
                       min={"0"}
@@ -819,9 +799,97 @@ const InwardItems = ({
                       disabled={readOnly || (row.stockQty ?? 0) > 0}
                     />
                   </td>
+                  {(inwardType === "Direct Inward" ||
+                    receiptType === "Against Invoice") && (
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
+                      <input
+                        onKeyDown={(e) => {
+                          if (e.code === "Minus" || e.code === "NumpadSubtract")
+                            e.preventDefault();
+                          if (e.key === "Delete") {
+                            handleInputChange("", index, "price");
+                          }
+                        }}
+                        min={"0"}
+                        type="number"
+                        className="text-right rounded px-1 w-full table-data-input"
+                        onFocus={(e) => {
+                          e.target.select();
+                          setFocusedField(`${index}-price`);
+                        }}
+                        value={
+                          focusedField === `${index}-price`
+                            ? (row?.price ?? "")
+                            : row?.price
+                              ? Number(row.price).toFixed(2)
+                              : ""
+                        }
+                        onChange={(e) =>
+                          handleInputChange(e.target.value, index, "price")
+                        }
+                        onBlur={(e) => {
+                          const val = e.target.value;
+                          handleInputChange(
+                            val ? Number(val).toFixed(2) : "",
+                            index,
+                            "price",
+                          );
+                          setFocusedField(null);
+                        }}
+                        disabled={
+                          readOnly ||
+                          (row.stockQty ?? 0) > 0 ||
+                          inwardType !== "Direct Inward"
+                        }
+                      />
+                    </td>
+                  )}
+                  {receiptType === "Against Invoice" && (
+                    <td className=" border border-gray-300 text-[11px]">
+                      <input
+                        type="number"
+                        onFocus={(e) => e.target.select()}
+                        className="text-right rounded px-1 w-full"
+                        value={
+                          !row.inwardQty || !row.price
+                            ? 0.0
+                            : (
+                                parseFloat(row.inwardQty) *
+                                parseFloat(row.price)
+                              ).toFixed(2)
+                        }
+                        disabled={true}
+                      />
+                    </td>
+                  )}
+                  {receiptType === "Against Invoice" && (
+                    <td className=" py-0.5 border border-gray-300 text-[11px] text-right">
+                      <button
+                        disabled={!row?.styleItemId}
+                        className="text-center rounded py-1 w-full"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setCurrentSelectedIndex(index);
+                          }
+                        }}
+                        onClick={() => {
+                          if (!taxTemplateId)
+                            return toast.info("Please select Tax Type", {
+                              position: "top-center",
+                            });
+                          setCurrentSelectedIndex(index);
+                        }}
+                      >
+                        {VIEW}
+                      </button>
+                    </td>
+                  )}
 
                   <td className="w-2 border border-gray-300">
                     <input
+                      ref={(el) => (actionRefs.current[index] = el)}
                       className="w-full table-data-input"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -896,14 +964,6 @@ const InwardItems = ({
                     </td>
                   </>
                 )}
-                {inwardType === "Direct Inward" && (
-                  <td className="text-right border border-gray-300 px-1 font-medium ">
-                    {inwardItems
-                      ?.reduce((sum, row) => sum + (Number(row.price) || 0), 0)
-                      .toFixed(2)}
-                  </td>
-                )}
-
                 <td className="text-right border border-gray-300 px-1 font-medium ">
                   {inwardItems
                     ?.reduce(
@@ -912,6 +972,31 @@ const InwardItems = ({
                     )
                     .toFixed(2)}
                 </td>
+                {(inwardType === "Direct Inward" ||
+                  receiptType === "Against Invoice") && (
+                  <td className="text-right border border-gray-300 px-1 font-medium ">
+                    {inwardItems
+                      ?.reduce((sum, row) => sum + (Number(row.price) || 0), 0)
+                      .toFixed(2)}
+                  </td>
+                )}
+                {receiptType === "Against Invoice" && (
+                  <td className="text-right border border-gray-300 px-1 font-medium ">
+                    {inwardItems
+                      ?.reduce((sum, row) => {
+                        const qty = parseFloat(row.inwardQty) || 0;
+                        const price = parseFloat(row.price) || 0;
+                        return sum + qty * price;
+                      }, 0)
+                      .toFixed(2)}
+                  </td>
+                )}
+                {receiptType === "Against Invoice" && (
+                  <td
+                    className="text-right border border-gray-300"
+                    colSpan={1}
+                  ></td>
+                )}
 
                 <td className="border border-gray-300"></td>
               </tr>

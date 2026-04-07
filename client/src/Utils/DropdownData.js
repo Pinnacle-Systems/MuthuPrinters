@@ -88,6 +88,11 @@ export const inwardTypes = [
   { show: "Direct Inward", value: "Direct Inward" },
 ];
 
+export const receiptTypes = [
+  { show: "Against Invoice", value: "Against Invoice" },
+  { show: "Without Invoice", value: "Without Invoice" },
+];
+
 export const billTypes = [
   { show: "General Purchase Bill", value: "General Purchase Inward" },
   { show: "Order Purchase Bill", value: "Order Purchase Inward" },

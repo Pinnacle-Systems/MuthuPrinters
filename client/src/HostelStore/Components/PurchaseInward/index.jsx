@@ -15,6 +15,7 @@ import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterServi
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { useSelector } from "react-redux";
+import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -109,6 +110,8 @@ export default function Form() {
     useGetHsnMasterQuery({ params });
   const { data: sizeList } = useGetSizeMasterQuery({ params });
   const { data: colorList } = useGetColorMasterQuery({ params });
+  const { data: taxTypeList, isLoading: isTaxLoading, isFetching: isTaxfetching } =
+    useGetTaxTemplateQuery({ params: { ...params } });
 
   const tabParams = useSelector((state) =>
     state.openTabs.tabs.find((t) => t.name === "PURCHASE INWARD")?.params
@@ -206,6 +209,7 @@ export default function Form() {
           setFromPoSupplierId={setFromPoSupplierId}
           setFromPoType={setFromPoType}
           handleClose={handleClose}
+          taxTypeList={taxTypeList}
         />
       )}
     </>

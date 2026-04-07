@@ -7,8 +7,8 @@ import {
   ReusableSearchableInput,
   TextInput,
 } from "../../../Inputs";
-import { inwardTypes } from "../../../Utils/DropdownData";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { inwardTypes, receiptTypes } from "../../../Utils/DropdownData";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
 import {
   findFromList,
@@ -31,9 +31,12 @@ import { useGetLocationMasterQuery } from "../../../redux/services/LocationMaste
 import { useGetPoItemsQuery } from "../../../redux/uniformService/PoServices";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
-import { PartyMaster } from "../index.js";
+import { PartyMaster, TaxTemplate } from "../index.js";
 import { LocationMaster } from "../../../Basic/components/index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
+import { calculateTaxWithHSNBreakupAndInsertIntoInwardItems } from "../PurchaseBillEntry/taxSummary.js";
+import PoSummary from "../PurchaseOrder/PoSummary.js";
+import Modal from "../../../UiComponents/Modal/index.js";
 
 const PurchaseInwardForm = ({
   onClose,
@@ -54,6 +57,7 @@ const PurchaseInwardForm = ({
   setFromPoId,
   setFromPoSupplierId,
   setFromPoType,
+  taxTypeList,
 }) => {
   const today = new Date();
 
@@ -76,6 +80,13 @@ const PurchaseInwardForm = ({
   const [searchDocDate, setSearchDocDate] = useState("");
   const [dataPerPage, setDataPerPage] = useState("10");
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
+  const [receiptType, setReceiptType] = useState("");
+  const [taxTemplateId, setTaxTemplateId] = useState("");
+  const [discountType, setDiscountType] = useState("Percentage");
+  const [discountValue, setDiscountValue] = useState();
+  const [summary, setSummary] = useState(false);
+  const [netBillValue, setNetBillValue] = useState("");
+
   const supplierRef = useRef(null);
   const [dispatchInvalidate] = useInvalidateTags();
   const vehicleRef = useRef(null);
@@ -167,6 +178,11 @@ const PurchaseInwardForm = ({
       setDcNo(data?.dcNo ? data.dcNo : "");
       setVehicleNo(data?.vehicleNo ? data.vehicleNo : "");
       setInvNo(data?.invNo ? data?.invNo : "");
+      setReceiptType(data?.receiptType || "");
+      setTaxTemplateId(data?.taxTemplateId || "");
+      setDiscountType(data?.discountType || "");
+      setDiscountValue(data?.discountValue || "");
+      setNetBillValue(data?.netBillValue || "");
     },
     [id, fromPoSupplierId, fromPoType],
   );
@@ -195,6 +211,11 @@ const PurchaseInwardForm = ({
     inwardItems: inwardItems?.filter((po) => po.styleItemId),
     finYearId,
     invNo,
+    receiptType,
+    taxTemplateId,
+    discountType,
+    discountValue,
+    netBillValue,
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -322,6 +343,21 @@ const PurchaseInwardForm = ({
     return true;
   };
 
+  const enrichedItems = useMemo(() => {
+    if (!inwardItems?.length) return inwardItems;
+    const { items, ...totals } =
+      calculateTaxWithHSNBreakupAndInsertIntoInwardItems(
+        structuredClone(inwardItems), // clone to avoid mutating state
+        false,
+        discountType,
+        discountValue,
+      );
+    return { items, totals };
+  }, [inwardItems, discountType, discountValue]);
+
+  const enrichedItemsList = enrichedItems?.items || [];
+  const totals = enrichedItems?.totals || {};
+
   const saveData = (nextProcess) => {
     if (!validateData(data)) {
       return;
@@ -373,6 +409,23 @@ const PurchaseInwardForm = ({
 
   return (
     <>
+      <Modal
+        isOpen={summary}
+        onClose={() => setSummary(false)}
+        widthClass={"p-10"}
+      >
+        <PoSummary
+          discountType={discountType}
+          setDiscountType={setDiscountType}
+          discountValue={discountValue}
+          setDiscountValue={setDiscountValue}
+          poItems={inwardItems}
+          taxTypeId={taxTemplateId}
+          readOnly={readOnly}
+          totals={totals}
+          setSummary={setSummary}
+        />
+      </Modal>
       <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
         <div className="flex justify-between items-center">
           <h1 className="text-lg font-bold flex items-center gap-2">
@@ -408,12 +461,6 @@ const PurchaseInwardForm = ({
                 readOnly={true}
                 disabled
               />
-            </div>
-          </div>
-
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-            <h2 className="font-medium text-slate-700 mb-2">Inward Details</h2>
-            <div className="grid grid-cols-2 gap-1 ">
               <DropdownInput
                 name="Branch"
                 options={
@@ -437,20 +484,6 @@ const PurchaseInwardForm = ({
                 // autoFocus={true}
                 ref={supplierRef}
               />
-              {/* <DropdownInput
-                name="Location"
-                options={dropDownListObject(
-                  id
-                    ? storeOptions
-                    : storeOptions?.filter((item) => item.active),
-                  "storeName",
-                  "id",
-                )}
-                value={storeId}
-                setValue={setStoreId}
-                required={true}
-                readOnly={id}
-              /> */}
               <DropdownWithModal
                 name="Location"
                 options={dropDownListObject(
@@ -471,6 +504,12 @@ const PurchaseInwardForm = ({
                 addNewModalWidth="w-[40%] h-[48%]"
                 disabled={id}
               />
+            </div>
+          </div>
+
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
+            <h2 className="font-medium text-slate-700 mb-2">Inward Details</h2>
+            <div className="grid grid-cols-2 gap-1 ">
               <DropdownInput
                 name="Inward Type"
                 options={inwardTypes}
@@ -485,15 +524,40 @@ const PurchaseInwardForm = ({
                   setInwardItems([]);
                 }}
               />
+              <DropdownInput
+                name="Receipt Basis"
+                options={receiptTypes}
+                value={receiptType}
+                setValue={(value) => {
+                  setReceiptType(value);
+                }}
+                required={true}
+                readOnly={readOnly}
+                disabled={id || fromPoType}
+                beforeChange={() => {
+                  setInwardItems([]);
+                }}
+              />
               <TextInput
                 name={"Inv No"}
                 value={invNo}
                 setValue={setInvNo}
                 readOnly={id}
-                required
+                required={receiptType === "Against Invoice"}
+                disabled={receiptType !== "Against Invoice"}
               />
-
-              <div></div>
+              <TextInput
+                name={"Bill Value"}
+                value={netBillValue}
+                setValue={setNetBillValue}
+                readOnly={id}
+                required={receiptType === "Against Invoice"}
+                type={"number"}
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+                disabled={receiptType !== "Against Invoice"}
+              />
             </div>
           </div>
 
@@ -502,44 +566,47 @@ const PurchaseInwardForm = ({
               Supplier Details
             </h2>
             <div className="grid grid-cols-2 gap-1">
-              <div className="col-span-2">
-                {/* <ReusableSearchableInput
-                  label="Supplier"
-                  component="PartyMaster"
-                  placeholder="Search Supplier"
-                  optionList={supplierList?.data}
-                  setSearchTerm={(value) => {
-                    setSupplierId(value);
-                  }}
-                  searchTerm={supplierId}
-                  show={"isSupplier"}
-                  required={true}
-                  disabled={id}
-                  isSupplier={true}
-                /> */}
-                <DropdownWithModal
-                  name="Supplier"
-                  options={dropDownListObject(
-                    id
-                      ? supplierList?.data?.filter((item) => item?.isSupplier)
-                      : supplierList?.data?.filter(
-                          (item) => item?.active && item?.isSupplier,
-                        ),
-                    "name",
-                    "id",
-                  )}
-                  value={supplierId}
-                  setValue={setSupplierId}
-                  required={true}
-                  readOnly={readOnly}
-                  className={`w-[150px]`}
-                  // disabled={childRecord.current > 0}
-                  addNewLabel="+ Add New Supplier"
-                  childComponent={PartyMaster}
-                  addNewModalWidth="w-[90%] h-[95%]"
-                  disabled={id || !!fromPoSupplierId}
-                />
-              </div>
+              <DropdownWithModal
+                name="Supplier"
+                options={dropDownListObject(
+                  id
+                    ? supplierList?.data?.filter((item) => item?.isSupplier)
+                    : supplierList?.data?.filter(
+                        (item) => item?.active && item?.isSupplier,
+                      ),
+                  "name",
+                  "id",
+                )}
+                value={supplierId}
+                setValue={setSupplierId}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Supplier"
+                childComponent={PartyMaster}
+                addNewModalWidth="w-[90%] h-[95%]"
+                disabled={id || !!fromPoSupplierId}
+              />
+              <DropdownWithModal
+                name="Tax Type"
+                options={dropDownListObject(
+                  id
+                    ? taxTypeList?.data
+                    : taxTypeList?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={taxTemplateId}
+                setValue={setTaxTemplateId}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Tax Template"
+                childComponent={TaxTemplate}
+                addNewModalWidth="w-[82%] h-[85%]"
+              />
               <TextInput
                 name={"Dc No."}
                 value={dcNo}
@@ -563,7 +630,7 @@ const PurchaseInwardForm = ({
         <fieldset className="">
           <InwardItems
             id={id}
-            inwardItems={inwardItems}
+            inwardItems={enrichedItemsList}
             setInwardItems={setInwardItems}
             readOnly={readOnly}
             uomList={uomList}
@@ -582,6 +649,8 @@ const PurchaseInwardForm = ({
             searchDocDate={searchDocDate}
             vehicleRef={vehicleRef}
             fromPoId={fromPoId}
+            receiptType={receiptType}
+            taxTemplateId={taxTemplateId}
           />
         </fieldset>
 
@@ -735,6 +804,23 @@ const PurchaseInwardForm = ({
                   Edit
                 </button>
               ))}
+            {receiptType === "Against Invoice" && (
+              <button
+                className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1  rounded"
+                onClick={() => {
+                  console.log(taxTemplateId);
+                  if (!taxTemplateId) {
+                    toast.info("Please Select Tax Template !", {
+                      position: "top-center",
+                    });
+                    return;
+                  }
+                  setSummary(true);
+                }}
+              >
+                View Bill Summary
+              </button>
+            )}
           </div>
         </div>
       </div>

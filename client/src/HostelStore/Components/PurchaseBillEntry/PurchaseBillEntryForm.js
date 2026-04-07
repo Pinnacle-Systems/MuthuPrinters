@@ -785,7 +785,7 @@ const PurchaseBillEntryForm = ({
                 setSummary(true);
               }}
             >
-              View Po Summary
+              View Bill Summary
             </button>
           </div>
         </div>

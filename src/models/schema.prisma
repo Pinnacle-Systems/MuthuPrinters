@@ -1091,6 +1091,7 @@ model TaxTemplate {
   TaxTemplateDetails  TaxTemplateDetails[]
   pos                 Po[]
   purchaseBillEntries PurchaseBillEntry[]
+  purchaseInwards     PurchaseInward[]
 }
 
 model TaxTemplateDetails {
@@ -1271,6 +1272,12 @@ model PurchaseInward {
   storeId                Int?
   locationId             Int?
   invNo                  String?
+  netBillValue           Float?
+  TaxTemplate            TaxTemplate?             @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
+  taxTemplateId          Int?
+  discountType           String?
+  discountValue          Float?
+  receiptType            String?
   purchaseReturnItems    PurchaseReturnItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
 }
@@ -1301,6 +1308,9 @@ model InwardItems {
   sizeId           Int?
   Color            Color?          @relation(fields: [colorId], references: [id])
   colorId          Int?
+  discountType     String?
+  discountValue    Float?
+  taxPercent       Float?
 }
 
 model Location {
