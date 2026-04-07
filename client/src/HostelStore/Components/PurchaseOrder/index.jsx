@@ -182,29 +182,33 @@ export default function Form() {
       </div>
 
       {showForm && (
-        <PurchaseOrderForm
-          readOnly={readOnly}
-          setReadOnly={setReadOnly}
-          id={id}
-          setId={setId}
-          onClose={() => {
-            setShowForm(false);
-            setReadOnly((prev) => !prev);
-          }}
-          setShowForm={setShowForm}
-          taxTypeList={taxTypeList}
-          supplierList={supplierList}
-          branchList={branchList}
-          uomList={uomList}
-          styleItemList={styleItemList}
-          hsnList={hsnList}
-          termsData={termsData}
-          payTermList={payTermList}
-          itemGroupList={itemGroupList}
-          sizeList={sizeList}
-          colorList={colorList}
-          branchData={branchData}
-        />
+        <div className="h-[93vh] overflow-hidden">
+
+
+          <PurchaseOrderForm
+            readOnly={readOnly}
+            setReadOnly={setReadOnly}
+            id={id}
+            setId={setId}
+            onClose={() => {
+              setShowForm(false);
+              setReadOnly((prev) => !prev);
+            }}
+            setShowForm={setShowForm}
+            taxTypeList={taxTypeList}
+            supplierList={supplierList}
+            branchList={branchList}
+            uomList={uomList}
+            styleItemList={styleItemList}
+            hsnList={hsnList}
+            termsData={termsData}
+            payTermList={payTermList}
+            itemGroupList={itemGroupList}
+            sizeList={sizeList}
+            colorList={colorList}
+            branchData={branchData}
+          />
+        </div>
       )}
     </>
   );
