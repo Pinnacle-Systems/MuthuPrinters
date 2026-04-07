@@ -17,6 +17,9 @@ import ReactPaginate from "react-paginate";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { useGetPurchaseInwardEntryQuery } from "../../../redux/uniformService/PurchaseInwardEntry";
 import { Tooltip } from "@mui/material";
+import { Receipt, RotateCcw } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { push } from "../../../redux/features/opentabs";
 
 const PurchaseInwardFormReport = ({
   onClick,
@@ -42,6 +45,7 @@ const PurchaseInwardFormReport = ({
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
   const [searchProjectValue, setSearchProjectValue] = useState("");
   const [searchFollowedBy, setSearchFollowedBy] = useState("");
+  const dispatch = useDispatch();
 
   const handleOnclick = (e) => {
     setCurrentPageNumber(reactPaginateIndexToPageNumber(e.selected));
@@ -187,6 +191,60 @@ const PurchaseInwardFormReport = ({
     );
   };
 
+  const StatusBadge = ({ status }) => {
+    const config = {
+      Pending: {
+        bg: "bg-yellow-100",
+        text: "text-yellow-800",
+        border: "border-yellow-300",
+      },
+      "Not Billed": {
+        bg: "bg-indigo-100",
+        text: "text-indigo-800",
+        border: "border-indigo-300",
+      },
+      "Partially Billed": {
+        bg: "bg-blue-100",
+        text: "text-blue-800",
+        border: "border-blue-300",
+      },
+      "Fully Billed": {
+        bg: "bg-green-200",
+        text: "text-green-900",
+        border: "border-green-400",
+      },
+      "Partially Returned": {
+        bg: "bg-orange-100",
+        text: "text-orange-800",
+        border: "border-orange-300",
+      },
+      "Fully Returned": {
+        bg: "bg-red-100",
+        text: "text-red-800",
+        border: "border-red-300",
+      },
+      "Partially Billed & Returned": {
+        bg: "bg-purple-100",
+        text: "text-purple-800",
+        border: "border-purple-300",
+      },
+    };
+
+    const c = config[status] || {
+      bg: "bg-gray-100",
+      text: "text-gray-700",
+      border: "border-gray-300",
+    };
+
+    return (
+      <span
+        className={`px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${c.bg} ${c.text} ${c.border}`}
+      >
+        {status || "Unknown"}
+      </span>
+    );
+  };
+
   return (
     <div
       //   id="registrationFormReport"
@@ -251,7 +309,16 @@ const PurchaseInwardFormReport = ({
                                             }}
                                         /> */}
                   </th>
-                  <th className="w-14   px-3  font-medium text-[13px]  text-gray-900  text-center ">
+                  <th
+                    className=" px-3 w-64  font-medium text-[13px]  text-gray-900  text-center "
+                    rowSpan={2}
+                  >
+                    <div>Status</div>
+                  </th>
+                  <th
+                    className="w-14   px-3  font-medium text-[13px]  text-gray-900  text-center "
+                    rowSpan={2}
+                  >
                     <div>Actions</div>
                   </th>
                 </tr>
@@ -304,8 +371,6 @@ const PurchaseInwardFormReport = ({
                       }}
                     />
                   </th>
-
-                  <th className="w-14  px-1  font-medium text-[13px]  text-gray-900  text-center "></th>
                 </tr>
               </thead>
               {isLoadingIndicator ? (
@@ -350,79 +415,154 @@ const PurchaseInwardFormReport = ({
                           {" "}
                           {dataObj?.supplier?.name}
                         </td>
+                        <td className="py-1.5 text-center">
+                          <StatusBadge status={dataObj?.status} />
+                        </td>
                         {rowActions && (
-                          <td className=" w-[30px] border-gray-200 gap-1 px-2   h-8 justify-end">
-                            <div className="flex">
-                              {onView && (
-                                <button
-                                  className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
-                                  onClick={() => onView(dataObj.id)}
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                  >
-                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                </button>
-                              )}
-                              {onEdit && (
-                                <button
-                                  className="text-green-600 gap-1 px-1   bg-green-50 rounded"
-                                  onClick={() => onEdit(dataObj.id)}
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                  >
-                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                                  </svg>
-                                </button>
-                              )}
-                              {onDelete && (
-                                <Tooltip
-                                  title={
-                                    dataObj.childRecord > 0
-                                      ? "Cannot Delete. Child Record Exists"
-                                      : "Delete"
-                                  }
-                                  arrow
-                                >
+                          <td className="px-2 py-1">
+                            <div className="flex items-center justify-center">
+                              <div className="flex items-center gap-1 pr-2 border-r border-gray-300">
+                                {/* BILL ENTRY */}
+
+                                <Tooltip title="Create Bill Entry" arrow>
                                   <button
-                                    className={`flex items-center gap-1 px-1 rounded transition
-  ${
-    dataObj.childRecord > 0
-      ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
-      : "bg-red-50 text-red-800 hover:bg-red-100"
-  }`}
-                                    onClick={() => onDelete(dataObj.id)}
-                                    disabled={dataObj.childRecord > 0}
+                                    disabled={[
+                                      "Fully Billed",
+                                      "Fully Returned",
+                                    ].includes(dataObj.status)}
+                                    onClick={() => {
+                                      dispatch(
+                                        push({
+                                          name: "PURCHASE BILL ENTRY",
+                                          params: {
+                                            supplierId: dataObj.supplierId,
+                                            purchaseInwardId: dataObj.id,
+                                            inwardDocId: dataObj.docId,
+                                            inwardType: dataObj.inwardType,
+                                            timestamp: Date.now(),
+                                          },
+                                        }),
+                                      );
+                                    }}
+                                    className={`p-1.5 rounded-md transition
+                ${
+                  ["Fully Billed", "Fully Returned"].includes(dataObj.status)
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                }`}
                                   >
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      className="h-4 w-4"
-                                      viewBox="0 0 20 20"
-                                      fill="currentColor"
-                                    >
-                                      <path
-                                        fillRule="evenodd"
-                                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                        clipRule="evenodd"
-                                      />
-                                    </svg>
-                                    {/* <span className="text-xs">delete</span> */}
+                                    <Receipt size={16} />
                                   </button>
                                 </Tooltip>
-                              )}
+
+                                <Tooltip title="Create Return" arrow>
+                                  <button
+                                    disabled={["Fully Returned"].includes(
+                                      dataObj.status,
+                                    )}
+                                    onClick={() => {
+                                      dispatch(
+                                        push({
+                                          name: "PURCHASE RETURN",
+                                          params: {
+                                            supplierId: dataObj.supplierId,
+                                            purchaseInwardId: dataObj.id,
+                                            inwardDocId: dataObj.docId,
+                                            inwardType: dataObj.inwardType,
+                                            timestamp: Date.now(),
+                                          },
+                                        }),
+                                      );
+                                    }}
+                                    className={`p-1.5 rounded-md transition
+                ${
+                  ["Fully Returned"].includes(dataObj.status)
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-orange-50 text-orange-600 hover:bg-orange-100"
+                }`}
+                                  >
+                                    <RotateCcw size={16} />
+                                  </button>
+                                </Tooltip>
+                              </div>
+
+                              {/* VIEW / EDIT / DELETE */}
+                              <div className="flex items-center gap-1 pl-2">
+                                {onView && (
+                                  <Tooltip title="View" arrow>
+                                    <button
+                                      className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
+                                      onClick={() => onView(dataObj.id)}
+                                    >
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-4 w-4"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                      >
+                                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                        <path
+                                          fillRule="evenodd"
+                                          d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                                          clipRule="evenodd"
+                                        />
+                                      </svg>
+                                    </button>
+                                  </Tooltip>
+                                )}
+                                {onEdit && (
+                                  <Tooltip title="Edit" arrow>
+                                    <button
+                                      className="text-green-600 gap-1 px-1   bg-green-50 rounded"
+                                      onClick={() => onEdit(dataObj.id)}
+                                    >
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-4 w-4"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                      >
+                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                      </svg>
+                                    </button>
+                                  </Tooltip>
+                                )}
+                                {onDelete && (
+                                  <Tooltip
+                                    title={
+                                      dataObj.childRecord > 0
+                                        ? "Cannot Delete. Child Record Exists"
+                                        : "Delete"
+                                    }
+                                    arrow
+                                  >
+                                    <button
+                                      className={`flex items-center gap-1 px-1 rounded transition
+       ${
+         dataObj.childRecord > 0
+           ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
+           : "bg-red-50 text-red-800 hover:bg-red-100"
+       }`}
+                                      onClick={() => onDelete(dataObj.id)}
+                                      disabled={dataObj.childRecord > 0}
+                                    >
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-4 w-4"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                      >
+                                        <path
+                                          fillRule="evenodd"
+                                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                          clipRule="evenodd"
+                                        />
+                                      </svg>
+                                      {/* <span className="text-xs">delete</span> */}
+                                    </button>
+                                  </Tooltip>
+                                )}
+                              </div>
                             </div>
                           </td>
                         )}

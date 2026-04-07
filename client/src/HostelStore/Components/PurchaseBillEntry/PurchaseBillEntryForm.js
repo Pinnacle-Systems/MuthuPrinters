@@ -39,6 +39,7 @@ import PoSummary from "../PurchaseOrder/PoSummary";
 import Modal from "../../../UiComponents/Modal";
 import { PartyMaster, TaxTemplate } from "..";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
+import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 
 const PurchaseBillEntryForm = ({
   onClose,
@@ -51,6 +52,12 @@ const PurchaseBillEntryForm = ({
   styleItemList,
   hsnList,
   taxTypeList,
+  fromInwardSupplierId,
+  setFromInwardSupplierId,
+  fromInwardId,
+  setFromInwardId,
+  fromInwardType,
+  setFromInwardType,
 }) => {
   const today = new Date();
 
@@ -136,15 +143,24 @@ const PurchaseBillEntryForm = ({
           sizeId: item.sizeId || item.Size?.id,
         })),
       );
-      setSupplierId(data?.supplierId || "");
+      setSupplierId(data?.supplierId || fromInwardSupplierId || "");
       setTaxTemplateId(data?.taxTemplateId || "");
       setRemarks(data?.remarks || "");
-      setBillType(data?.billType || "General Purchase Inward");
+      setBillType(
+        data?.billType || fromInwardType || "General Purchase Inward",
+      );
       setDiscountValue(data?.discountValue || "0");
       setDiscountType(data?.discountType || "Percentage");
     },
-    [id],
+    [id, fromInwardSupplierId, fromInwardType],
   );
+
+  useEffect(() => {
+    if (fromInwardSupplierId && fromInwardType && !id) {
+      setSupplierId(fromInwardSupplierId);
+      setBillType(fromInwardType);
+    }
+  }, [fromInwardSupplierId, fromInwardType]);
 
   useEffect(() => {
     if (id && singleData?.data) {
@@ -170,7 +186,7 @@ const PurchaseBillEntryForm = ({
   }, [searchDocId, searchPIDate, searchDcNo, searchInvNo]);
 
   useEffect(() => {
-    if (!id) {
+    if (!id && !fromInwardId) {
       setInwardItems([]);
     }
   }, [supplierId]);
@@ -210,13 +226,16 @@ const PurchaseBillEntryForm = ({
           showConfirmButton: false,
           timer: 2000,
           didClose: () => {
+            invalidatePurchaseModule();
             // ✅ This runs after Swal completely closes
             if (returnData.statusCode === 0) {
               if (nextProcess == "new") {
                 setId(0);
                 setDocId("New");
                 syncFormWithDb(undefined);
-
+                setFromInwardId(undefined);
+                setFromInwardSupplierId(undefined);
+                setFromInwardType(undefined);
                 setTimeout(() => {
                   supplierRef.current?.focus();
                 }, 50);
@@ -469,7 +488,7 @@ const PurchaseBillEntryForm = ({
                 }}
                 required={true}
                 readOnly={readOnly}
-                disabled={id}
+                disabled={id || fromInwardType}
                 beforeChange={() => {
                   setInwardItems([]);
                 }}
@@ -550,7 +569,7 @@ const PurchaseBillEntryForm = ({
                   addNewLabel="+ Add New Supplier"
                   childComponent={PartyMaster}
                   addNewModalWidth="w-[90%] h-[95%]"
-                  disabled={id}
+                  disabled={id || fromInwardType}
                 />
               </div>
               <div className="w-[150px]">
@@ -640,6 +659,7 @@ const PurchaseBillEntryForm = ({
             setSearchInvNo={setSearchInvNo}
             setSearchDcNo={setSearchDcNo}
             taxTemplateId={taxTemplateId}
+            fromInwardId={fromInwardId}
           />
         </fieldset>
 

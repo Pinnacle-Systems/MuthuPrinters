@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PurchaseReturnForm from "./PurchaseReturnForm.js";
 import PurchaseReturnFormReport from "./PurchaseReturnFormReport.js";
 import { getCommonParams } from "../../../Utils/helper.js";
@@ -17,11 +17,16 @@ import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService
 import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
+import { useSelector } from "react-redux";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
   const [id, setId] = useState("");
   const [readOnly, setReadOnly] = useState(false);
+  const [fromInwardSupplierId, setFromInwardSupplierId] = useState(""); // ⬅️
+  const [fromInwardId, setFromInwardId] = useState("");
+  const [fromInwardType, setFromInwardType] = useState("");
+
   // const dispatch = useDispatch();
   const { branchId, companyId, finYearId, userId } = getCommonParams();
   const params = {
@@ -100,6 +105,36 @@ export default function Form() {
     isLoading,
     isFetching,
   } = useGetTermsandCondtionsQuery({ params });
+
+  const tabParams = useSelector(
+    (state) =>
+      state.openTabs.tabs.find((t) => t.name === "PURCHASE RETURN")?.params,
+  );
+  const lastProcessedTimestamp = useRef(null);
+
+  useEffect(() => {
+    console.log(tabParams, "tabParams");
+    // Skip if no params or already processed this exact timestamp
+    if (!tabParams?.supplierId || !tabParams?.timestamp) return;
+    if (tabParams.timestamp === lastProcessedTimestamp.current) return;
+
+    // ⬅️ Mark as processed BEFORE setting state
+    lastProcessedTimestamp.current = tabParams.timestamp;
+
+    setFromInwardSupplierId(tabParams.supplierId);
+    setFromInwardId(tabParams.purchaseInwardId);
+    setFromInwardType(
+      tabParams.inwardType === "Direct Inward"
+        ? "General Return"
+        : "Purchase Return",
+    );
+    setId("");
+    setReadOnly(false);
+    setShowForm(true);
+
+    // ❌ NO clearTabParams here — that's what's breaking it
+  }, [tabParams]);
+
   return (
     <>
       <div
@@ -146,6 +181,9 @@ export default function Form() {
           onClose={() => {
             setShowForm(false);
             setReadOnly((prev) => !prev);
+            setFromInwardSupplierId(""); // ⬅️ clear on close
+            setFromInwardId("");
+            setFromInwardType("");
           }}
           setShowForm={setShowForm}
           supplierList={supplierList}
@@ -158,6 +196,12 @@ export default function Form() {
           colorList={colorList}
           branchData={branchData}
           termsData={termsData}
+          fromInwardId={fromInwardId}
+          fromInwardSupplierId={fromInwardSupplierId}
+          fromInwardType={fromInwardType}
+          setFromInwardId={setFromInwardId}
+          setFromInwardSupplierId={setFromInwardSupplierId}
+          setFromInwardType={setFromInwardType}
         />
       )}
     </>

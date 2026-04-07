@@ -53,6 +53,12 @@ const PurchaseReturnForm = ({
   colorList,
   branchData,
   termsData,
+  fromInwardSupplierId,
+  setFromInwardSupplierId,
+  fromInwardId,
+  setFromInwardId,
+  fromInwardType,
+  setFromInwardType,
 }) => {
   const today = new Date();
   const [pendingAction, setPendingAction] = useState(null);
@@ -155,13 +161,13 @@ const PurchaseReturnForm = ({
           ? moment.utc(data.docDate).format("YYYY-MM-DD")
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
-      setReturnType(data?.returnType || "Purchase Return");
+      setReturnType(data?.returnType || fromInwardType || "Purchase Return");
       setLocationId(data?.Store ? data.Store.locationId : branchId);
       setStoreId(data?.storeId ? data.storeId : "");
       setReturnItems(
         data?.purchaseReturnItems ? data?.purchaseReturnItems : [],
       );
-      setSupplierId(data?.supplierId || "");
+      setSupplierId(data?.supplierId || fromInwardSupplierId || "");
       setDcDate(
         data?.dcDate ? moment.utc(data.dcDate).format("YYYY-MM-DD") : "",
       );
@@ -173,8 +179,15 @@ const PurchaseReturnForm = ({
       setInvNo(data?.invNo ? data?.invNo : "");
       setTermsId(data?.termsId ? data?.termsId : "");
     },
-    [id],
+    [id, fromInwardSupplierId, fromInwardType],
   );
+
+  useEffect(() => {
+    if (fromInwardSupplierId && fromInwardType && !id) {
+      setSupplierId(fromInwardSupplierId);
+      setReturnType(fromInwardType);
+    }
+  }, [fromInwardSupplierId, fromInwardType]);
 
   useEffect(() => {
     if (id && singleData?.data) {
@@ -294,7 +307,9 @@ const PurchaseReturnForm = ({
                   setId("");
                   setDocId("New");
                   syncFormWithDb(undefined);
-
+                  setFromInwardId(undefined);
+                  setFromInwardSupplierId(undefined);
+                  setFromInwardType(undefined);
                   setTimeout(() => {
                     supplierRef.current?.focus();
                   }, 100);
@@ -434,7 +449,7 @@ const PurchaseReturnForm = ({
   };
 
   useEffect(() => {
-    if (!id) {
+    if (!id && !fromInwardId) {
       setReturnItems([]);
     }
   }, [supplierId]);
@@ -594,7 +609,7 @@ const PurchaseReturnForm = ({
                 }}
                 required={true}
                 readOnly={readOnly}
-                disabled={id}
+                disabled={id || fromInwardType}
                 beforeChange={() => {
                   setReturnItems([]);
                 }}
@@ -651,7 +666,7 @@ const PurchaseReturnForm = ({
                   addNewLabel="+ Add New Supplier"
                   childComponent={PartyMaster}
                   addNewModalWidth="w-[90%] h-[95%]"
-                  disabled={id}
+                  disabled={id || fromInwardType}
                 />
               </div>
               <TextInput
@@ -694,6 +709,7 @@ const PurchaseReturnForm = ({
             setSearchDocId={setSearchDocId}
             setSearchDocDate={setSearchDocDate}
             searchDocDate={searchDocDate}
+            fromInwardId={fromInwardId}
           />
         </fieldset>
 

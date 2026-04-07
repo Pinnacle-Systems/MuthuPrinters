@@ -111,6 +111,43 @@ async function getNextDocId(
   }
 }
 
+function getPurchaseInwardStatus(inward) {
+  const inwardItems = inward.inwardItems || [];
+  const returnItems = inward.purchaseReturnItems || [];
+  const billItems = inward.purchaseBillEntryItems || [];
+
+  const totalInwardQty = inwardItems.reduce(
+    (sum, item) => sum + (item.inwardQty || 0),
+    0,
+  );
+
+  const totalReturnQty = returnItems.reduce(
+    (sum, item) => sum + (item.returnQty || 0),
+    0,
+  );
+
+  const totalBilledQty = billItems.reduce(
+    (sum, item) => sum + (item.inwardQty || 0),
+    0,
+  );
+
+  // 🔥 Status Logic
+  if (totalInwardQty === 0) return "Pending";
+
+  if (totalReturnQty >= totalInwardQty) return "Fully Returned";
+
+  if (totalBilledQty >= totalInwardQty) return "Fully Billed";
+
+  if (totalBilledQty > 0 && totalReturnQty > 0)
+    return "Partially Billed & Returned";
+
+  if (totalBilledQty > 0) return "Partially Billed";
+
+  if (totalReturnQty > 0) return "Partially Returned";
+
+  return "Not Billed";
+}
+
 async function get(req) {
   const {
     branchId,
@@ -177,6 +214,16 @@ async function get(req) {
         },
       },
       inwardItems: true,
+      purchaseReturnItems: {
+        select: {
+          returnQty: true,
+        },
+      },
+      purchaseBillEntryItems: {
+        select: {
+          inwardQty: true,
+        },
+      },
       supplier: {
         select: {
           id: true,
@@ -210,6 +257,7 @@ async function get(req) {
     statusCode: 0,
     data: data.map((item) => ({
       ...item,
+      status: getPurchaseInwardStatus(item),
       childRecord:
         item._count?.purchaseReturnItems + item._count?.purchaseBillEntryItems,
     })),

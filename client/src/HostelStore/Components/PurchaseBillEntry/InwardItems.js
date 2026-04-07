@@ -7,6 +7,7 @@ import { getDateFromDateTimeToDisplay } from "../../../Utils/helper";
 import { VIEW } from "../../../icons";
 import { toast } from "react-toastify";
 import TaxDetailsFullTemplate from "./TaxDetailsFullTemplate";
+import { useGetPurchaseInwardEntryForBillByIdQuery } from "../../../redux/uniformService/PurchaseInwardEntry";
 
 const InwardItems = ({
   id,
@@ -29,6 +30,7 @@ const InwardItems = ({
   setSearchInvNo,
   searchDcNo,
   setSearchDcNo,
+  fromInwardId,
 }) => {
   const EMPTY_ROW = {
     purchaseBillEntryId: "",
@@ -46,6 +48,9 @@ const InwardItems = ({
     discountType: "",
     discountValue: "",
     taxPercent: "",
+    itemGroupId: "",
+    sizeId: "",
+    colorId: "",
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -148,6 +153,52 @@ const InwardItems = ({
     }
   }, [id, inwardItems]);
 
+  const {
+    data: purchaseInwarddata,
+    isFetching: isSingleInwardFetching,
+    isLoading: isSingleInwardLoading,
+  } = useGetPurchaseInwardEntryForBillByIdQuery(
+    {
+      params: {
+        branchId,
+        supplierId,
+        pagination: true,
+        dataPerPage: "100",
+        pageNumber: 1,
+        billType,
+      },
+    },
+    { skip: !supplierId || !fromInwardId },
+  );
+
+  useEffect(() => {
+    if (!fromInwardId || !purchaseInwarddata?.data) return;
+
+    // Filter only items belonging to this specific PO
+    const filtered = purchaseInwarddata.data.filter(
+      (item) => parseInt(item.purchaseInwardId) === parseInt(fromInwardId),
+    );
+
+    if (filtered.length === 0) return;
+
+    const mapped = filtered.map((item) => ({
+      ...item,
+      taxPercent: item?.Hsn?.tax || 0,
+    }));
+
+    // Pad to minimum 4 rows
+    const padded = [
+      ...mapped,
+      ...Array.from({ length: Math.max(0, 4 - mapped.length) }, () => ({
+        ...EMPTY_ROW,
+      })),
+    ];
+
+    setInwardItems(padded);
+  }, [fromInwardId, purchaseInwarddata]);
+
+  const showFillButton = !id && !fromInwardId;
+
   return (
     <>
       <Modal
@@ -194,7 +245,7 @@ const InwardItems = ({
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm min-h-[260px] overflow-auto  w-full">
         <div className="flex items-center justify-between my-2">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
-          {!id && (
+          {showFillButton && (
             <button
               className={`font-bold  bord text-sm bg-blue-500 rounded-md text-white px-2
               `}
@@ -220,6 +271,11 @@ const InwardItems = ({
             >
               Fill Inward Items
             </button>
+          )}
+          {fromInwardId && !id && (
+            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+              Auto-filled from Inward
+            </span>
           )}
         </div>
         <div

@@ -4,6 +4,7 @@ import Swal from "sweetalert2";
 import Modal from "../../../UiComponents/Modal";
 import PurchaseInwardItemsSelection from "./PurchaseInwardItemsSelection";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
+import { useGetPurInwardItemsQuery } from "../../../redux/uniformService/PurchaseInwardEntry";
 
 const ReturnItems = ({
   id,
@@ -23,6 +24,7 @@ const ReturnItems = ({
   setSearchDocId,
   setSearchDocDate,
   searchDocDate,
+  fromInwardId,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -138,6 +140,61 @@ const ReturnItems = ({
     }
   }, [id, returnItems]);
 
+  const {
+    data: purInwardItemsData,
+    isLoading: isPurInwardItemsLoading,
+    isFetching: isPurInwardItemsFetching,
+  } = useGetPurInwardItemsQuery(
+    {
+      params: {
+        branchId,
+        supplierId,
+        pagination: true,
+        dataPerPage: "100",
+        pageNumber: 1,
+        returnType,
+      },
+    },
+    { skip: !supplierId || !fromInwardId },
+  );
+
+  useEffect(() => {
+    if (!fromInwardId || !purInwardItemsData?.data) return;
+
+    // Filter only items belonging to this specific PO
+    const filtered = purInwardItemsData.data.filter(
+      (item) => parseInt(item.purchaseInwardId) === parseInt(fromInwardId),
+    );
+
+    if (filtered.length === 0) return;
+
+    const mapped = filtered.map((item) => ({
+      ...item,
+      styleItemId: item.styleItemId ?? "",
+      uomId: item.uomId ?? "",
+      hsnId: item.hsnId ?? "",
+      poQty: item.poQty ?? "",
+      balQty: item.balQty ?? "",
+      purchaseInwardId: item.purchaseInwardId ?? "",
+      returnQty: item.returnQty ?? "",
+      sizeId: item.sizeId ?? "",
+      colorId: item.colorId ?? "",
+      itemGroupId: item.itemGroupId ?? "",
+    }));
+
+    // Pad to minimum 4 rows
+    const padded = [
+      ...mapped,
+      ...Array.from({ length: Math.max(0, 4 - mapped.length) }, () => ({
+        ...EMPTY_ROW,
+      })),
+    ];
+
+    setReturnItems(padded);
+  }, [fromInwardId, purInwardItemsData]);
+
+  const showFillButton = !id && !fromInwardId;
+
   return (
     <>
       <Modal
@@ -173,7 +230,7 @@ const ReturnItems = ({
       <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[250px] overflow-auto  w-full">
         <div className="flex items-center my-2 justify-between">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
-          {!id && (
+          {showFillButton && (
             <button
               className="font-bold  bord text-sm bg-blue-500 rounded-md text-white px-2"
               onKeyDown={(e) => {
@@ -204,6 +261,11 @@ const ReturnItems = ({
             >
               Fill Inward Items
             </button>
+          )}
+          {fromInwardId && !id && (
+            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+              Auto-filled from Inward
+            </span>
           )}
         </div>
         <div

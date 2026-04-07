@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PurchaseBillEntryForm from "./PurchaseBillEntryForm.js";
 import PurchaseBillEntryFormReport from "./PurchaseBillEntryFormReport.js"
 import { getCommonParams } from "../../../Utils/helper.js";
@@ -11,11 +11,17 @@ import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformServic
 import Swal from "sweetalert2";
 import { useDeletePurchaseBillEntryMutation, } from "../../../redux/uniformService/PurchaseBillEntryService.js";
 import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
+import { useSelector } from "react-redux";
+import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
   const [id, setId] = useState("");
   const [readOnly, setReadOnly] = useState(false);
+  const [fromInwardSupplierId, setFromInwardSupplierId] = useState(""); // ⬅️
+  const [fromInwardId, setFromInwardId] = useState("");
+  const [fromInwardType, setFromInwardType] = useState("");
+
   // const dispatch = useDispatch();
   const { branchId, companyId, finYearId, userId } = getCommonParams()
   const params = {
@@ -58,6 +64,8 @@ export default function Form() {
           timer: 1000,
         });
         setShowForm(false);
+        invalidatePurchaseModule();
+
       } catch (error) {
         Swal.fire({
           icon: "error",
@@ -83,6 +91,31 @@ export default function Form() {
     useGetHsnMasterQuery({ params });
   const { data: taxTypeList, isLoading: isTaxLoading, isFetching: isTaxfetching } =
     useGetTaxTemplateQuery({ params: { ...params } });
+
+  const tabParams = useSelector(
+    (state) =>
+      state.openTabs.tabs.find((t) => t.name === "PURCHASE BILL ENTRY")?.params,
+  );
+  const lastProcessedTimestamp = useRef(null);
+
+  useEffect(() => {
+    // Skip if no params or already processed this exact timestamp
+    if (!tabParams?.supplierId || !tabParams?.timestamp) return;
+    if (tabParams.timestamp === lastProcessedTimestamp.current) return;
+
+    // ⬅️ Mark as processed BEFORE setting state
+    lastProcessedTimestamp.current = tabParams.timestamp;
+
+    setFromInwardSupplierId(tabParams.supplierId);
+    setFromInwardId(tabParams.purchaseInwardId);
+    setFromInwardType(tabParams.inwardType);
+    setId("");
+    setReadOnly(false);
+    setShowForm(true);
+
+    // ❌ NO clearTabParams here — that's what's breaking it
+  }, [tabParams]);
+
   return (
     <>
       <div
@@ -129,6 +162,9 @@ export default function Form() {
           onClose={() => {
             setShowForm(false);
             setReadOnly((prev) => !prev);
+            setFromInwardSupplierId(""); // ⬅️ clear on close
+            setFromInwardId("");
+            setFromInwardType("");
           }}
           setShowForm={setShowForm}
           supplierList={supplierList}
@@ -138,6 +174,12 @@ export default function Form() {
           hsnList={hsnList}
           onNew={onNew}
           taxTypeList={taxTypeList}
+          fromInwardId={fromInwardId}
+          fromInwardSupplierId={fromInwardSupplierId}
+          fromInwardType={fromInwardType}
+          setFromInwardId={setFromInwardId}
+          setFromInwardSupplierId={setFromInwardSupplierId}
+          setFromInwardType={setFromInwardType}
         />
       )}
     </>

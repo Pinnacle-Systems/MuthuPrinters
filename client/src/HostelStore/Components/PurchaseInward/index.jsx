@@ -141,7 +141,6 @@ export default function Form() {
     setReadOnly(false);
   };
 
-
   return (
     <>
       <div
@@ -174,7 +173,6 @@ export default function Form() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             itemsPerPage={10}
-          // searchStyleId={searchStyleId}
           />
         </div>
       </div>
