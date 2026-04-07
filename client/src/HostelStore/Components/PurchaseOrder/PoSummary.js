@@ -159,16 +159,17 @@ const PoSummary = ({
                 type="text"
                 name="value"
                 className="h-7 w-full text-right"
-                value={
-                  amount === 0
-                    ? "Rupees Zero Only"
-                    : "Rupees " +
-                      numberToWords
-                        .toWords(amount)
-                        .replace(/[-,]/g, "") // ❌ remove hyphen + comma
-                        .replace(/\b\w/g, (c) => c.toUpperCase()) +
-                      " Only"
-                }
+               value={
+  amount === 0
+    ? "Rupees Zero Only"
+    : "Rupees " +
+      numberToWords
+        .toWords(amount)
+        .replace(/,/g, "")        // remove commas only
+        .replace(/-/g, " ")       // ✅ hyphen → space ("Fifty Five")
+        .replace(/\b\w/g, (c) => c.toUpperCase()) +
+      " Only"
+}
               />
             </td>
           </tr>

@@ -120,11 +120,10 @@ const PurchaseOrderFormReport = ({
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className={`px-3 py-1 rounded-md ${
-              currentPage === 1
+            className={`px-3 py-1 rounded-md ${currentPage === 1
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "bg-white text-gray-600 hover:bg-gray-100"
-            }`}
+              }`}
           >
             <FaChevronLeft className="inline" />
           </button>
@@ -145,11 +144,10 @@ const PurchaseOrderFormReport = ({
               <button
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
-                className={`px-3 py-1 rounded-md ${
-                  currentPage === pageNum
+                className={`px-3 py-1 rounded-md ${currentPage === pageNum
                     ? "bg-indigo-800 text-white"
                     : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
+                  }`}
               >
                 {pageNum}
               </button>
@@ -163,11 +161,10 @@ const PurchaseOrderFormReport = ({
           {totalPages > 5 && currentPage < totalPages - 2 && (
             <button
               onClick={() => handlePageChange(totalPages)}
-              className={`px-3 py-1 rounded-md ${
-                currentPage === totalPages
+              className={`px-3 py-1 rounded-md ${currentPage === totalPages
                   ? "bg-indigo-800 text-white"
                   : "bg-white text-gray-600 hover:bg-gray-100"
-              }`}
+                }`}
             >
               {totalPages}
             </button>
@@ -176,11 +173,10 @@ const PurchaseOrderFormReport = ({
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className={`px-3 py-1 rounded-md ${
-              currentPage === totalPages
+            className={`px-3 py-1 rounded-md ${currentPage === totalPages
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "bg-white text-gray-600 hover:bg-gray-100"
-            }`}
+              }`}
           >
             <FaChevronRight className="inline" />
           </button>
@@ -208,6 +204,11 @@ const PurchaseOrderFormReport = ({
         border: "border-orange-300",
       },
       "Fully Received": {
+        bg: "bg-green-100",
+        text: "text-green-800",
+        border: "border-green-300",
+      },
+      "Closed": {
         bg: "bg-green-100",
         text: "text-green-800",
         border: "border-green-300",
@@ -398,9 +399,8 @@ const PurchaseOrderFormReport = ({
                         }}
                         tabIndex={0}
                         key={dataObj.id}
-                        className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${
-                          index % 2 === 0 ? "bg-white" : "bg-gray-100"
-                        }`}
+                        className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${index % 2 === 0 ? "bg-white" : "bg-gray-100"
+                          }`}
                         onClick={() => dataObj.id}
                       >
                         <td className="text-center ">{index + 1}</td>
@@ -435,6 +435,7 @@ const PurchaseOrderFormReport = ({
                                       disabled={[
                                         "Fully Received",
                                         "Cancelled",
+                                        "Closed"
                                       ].includes(dataObj.status)}
                                       onClick={() => {
                                         dispatch(
@@ -451,11 +452,10 @@ const PurchaseOrderFormReport = ({
                                         );
                                       }}
                                       className={`p-1.5 rounded-md transition
-            ${
-              ["Fully Received", "Cancelled"].includes(dataObj.status)
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
-            }`}
+            ${["Fully Received", "Cancelled","Closed"].includes(dataObj.status)
+                                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                          : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                                        }`}
                                     >
                                       <Inbox size={16} />
                                     </button>
@@ -469,6 +469,7 @@ const PurchaseOrderFormReport = ({
                                       disabled={[
                                         "Fully Received",
                                         "Cancelled",
+                                        "Closed"
                                       ].includes(dataObj.status)}
                                       onClick={() => {
                                         dispatch(
@@ -485,11 +486,10 @@ const PurchaseOrderFormReport = ({
                                         );
                                       }}
                                       className={`p-1.5 rounded-md transition
-            ${
-              ["Fully Received", "Cancelled"].includes(dataObj.status)
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-orange-50 text-orange-600 hover:bg-orange-100"
-            }`}
+            ${["Fully Received", "Cancelled","Closed"].includes(dataObj.status)
+                                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                          : "bg-orange-50 text-orange-600 hover:bg-orange-100"
+                                        }`}
                                     >
                                       <XCircle size={16} />
                                     </button>
@@ -548,11 +548,10 @@ const PurchaseOrderFormReport = ({
                                   >
                                     <button
                                       className={`flex items-center gap-1 px-1 rounded transition
-  ${
-    dataObj.childRecord > 0
-      ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
-      : "bg-red-50 text-red-800 hover:bg-red-100"
-  }`}
+  ${dataObj.childRecord > 0
+                                          ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
+                                          : "bg-red-50 text-red-800 hover:bg-red-100"
+                                        }`}
                                       onClick={() => onDelete(dataObj.id)}
                                       disabled={dataObj.childRecord > 0}
                                     >

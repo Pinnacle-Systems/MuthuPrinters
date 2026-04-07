@@ -40,9 +40,8 @@ async function getNextDocId(
     )}/PI/1`;
 
     if (lastObject) {
-      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${
-        parseInt(lastObject.docId.split("/").at(-1)) + 1
-      }`;
+      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${parseInt(lastObject.docId.split("/").at(-1)) + 1
+        }`;
     }
 
     return newDocId;
@@ -98,13 +97,11 @@ async function getNextDocId(
 
           return currentNo > maxNo ? current.docId : max;
         }, null);
-        newDocId = `${branchObj.branchCode}/${shortCode}/PI/${
-          parseInt(maxDocId.split("/").at(-1)) + 1
-        }`;
+        newDocId = `${branchObj.branchCode}/${shortCode}/PI/${parseInt(maxDocId.split("/").at(-1)) + 1
+          }`;
       } else {
-        newDocId = `${branchObj.branchCode}/${shortCode}/PI/${
-          parseInt(lastObject.docId.split("/").at(-1)) + 1
-        }`;
+        newDocId = `${branchObj.branchCode}/${shortCode}/PI/${parseInt(lastObject.docId.split("/").at(-1)) + 1
+          }`;
       }
     }
     return newDocId;
@@ -112,6 +109,9 @@ async function getNextDocId(
 }
 
 function getPurchaseInwardStatus(inward) {
+   if (inward.receiptType === "Against Invoice") {
+    return "Fully Billed";
+  }
   const inwardItems = inward.inwardItems || [];
   const returnItems = inward.purchaseReturnItems || [];
   const billItems = inward.purchaseBillEntryItems || [];
@@ -179,22 +179,22 @@ async function get(req) {
       branchId: branchId ? parseInt(branchId) : undefined,
       AND: finYearDate
         ? [
-            {
-              createdAt: {
-                gte: finYearDate.startTime,
-              },
+          {
+            createdAt: {
+              gte: finYearDate.startTime,
             },
-            {
-              createdAt: {
-                lte: finYearDate.endTime,
-              },
+          },
+          {
+            createdAt: {
+              lte: finYearDate.endTime,
             },
-          ]
+          },
+        ]
         : undefined,
       docId: Boolean(serachDocNo)
         ? {
-            contains: serachDocNo,
-          }
+          contains: serachDocNo,
+        }
         : undefined,
       inwardType: Boolean(searchInwardType)
         ? { contains: searchInwardType }
@@ -742,20 +742,29 @@ async function getPurchaseInwardBillEntryItems(req) {
         PurchaseInward: {
           docId: Boolean(searchDocId)
             ? {
-                contains: searchDocId,
-              }
+              contains: searchDocId,
+            }
             : undefined,
           invNo: searchInvNo
             ? {
-                contains: searchInvNo,
-              }
+              contains: searchInvNo,
+            }
             : undefined,
           dcNo: Boolean(searchDcNo)
             ? {
-                contains: searchDcNo,
-              }
+              contains: searchDcNo,
+            }
             : undefined,
           docDate: docDateFilter,
+         AND: [
+    {
+      OR: [
+        { receiptType: { not: "Against Invoice" } },
+        { receiptType: null },
+        { receiptType: "" }
+      ]
+    }
+  ],
 
           supplierId: supplierId ? parseInt(supplierId) : undefined,
           inwardType: billType ? { contains: billType } : undefined,
@@ -848,9 +857,9 @@ async function create(req) {
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-        finYearDate?.startDateStartTime,
-        finYearDate?.endDateEndTime,
-      )
+      finYearDate?.startDateStartTime,
+      finYearDate?.endDateEndTime,
+    )
     : "";
   let newDocId = await getNextDocId(
     branchId,
@@ -1388,31 +1397,31 @@ async function getPurchaseDetailStock(req) {
     statusCode: 0,
     data: isMaterial
       ? data.map((d) => ({
-          invNo: d.invNo,
-          styleItemId: d.styleItemId,
-          fabricId: d.fabricId,
-          hsnId: d.hsnId,
-          uomId: d.uomId,
-          fabWidth: d.fabWidth,
-          fabMeter: d._sum.fabMeter,
-          accessoryId: d.accessoryId,
-          accessoryGroupId: d.accessoryGroupId,
-          uomId: d.uomId,
-          uomId: d.uomId,
-          qty: d._sum.qty,
-          styleId: d.styleId,
-          portionId: d.portionId,
-        }))
+        invNo: d.invNo,
+        styleItemId: d.styleItemId,
+        fabricId: d.fabricId,
+        hsnId: d.hsnId,
+        uomId: d.uomId,
+        fabWidth: d.fabWidth,
+        fabMeter: d._sum.fabMeter,
+        accessoryId: d.accessoryId,
+        accessoryGroupId: d.accessoryGroupId,
+        uomId: d.uomId,
+        uomId: d.uomId,
+        qty: d._sum.qty,
+        styleId: d.styleId,
+        portionId: d.portionId,
+      }))
       : data.map((d) => ({
-          invNo: purchaseData.invNo,
-          styleItemId: d.styleItemId,
-          fabricId: d.fabricId,
-          hsnId: d.hsnId,
-          uomId: d.uomId,
-          stkQty: d._sum.qty,
-          styleId: d.styleId,
-          styleNo: d.styleNo,
-        })),
+        invNo: purchaseData.invNo,
+        styleItemId: d.styleItemId,
+        fabricId: d.fabricId,
+        hsnId: d.hsnId,
+        uomId: d.uomId,
+        stkQty: d._sum.qty,
+        styleId: d.styleId,
+        styleNo: d.styleNo,
+      })),
     returnType: purchaseData.inwardType,
     supplierId: purchaseData.supplierId,
   };
@@ -1433,13 +1442,13 @@ function manualFilterSearchDataPurchaseInwardItems(
     (item) =>
       (searchDocDate
         ? String(getDateFromDateTime(item.PurchaseInward.docDate)).includes(
-            searchDocDate,
-          )
+          searchDocDate,
+        )
         : true) &&
       (searchDcDate
         ? String(getDateFromDateTime(item.PurchaseInward.dcDate)).includes(
-            searchDcDate,
-          )
+          searchDcDate,
+        )
         : true) &&
       (returnTypeToSearch
         ? returnTypeToSearch.includes(item.PurchaseInward.inwardType) // ✅ Check against array
@@ -1578,8 +1587,8 @@ async function getPurchaseInwardItems(req) {
         PurchaseInward: {
           docId: Boolean(searchDocId)
             ? {
-                contains: searchDocId,
-              }
+              contains: searchDocId,
+            }
             : undefined,
           supplierId: supplierId ? parseInt(supplierId) : undefined,
         },

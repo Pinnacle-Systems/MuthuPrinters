@@ -98,8 +98,8 @@ const PurchaseInwardForm = ({
 
   const storeOptions = locationData
     ? locationData.data.filter(
-        (item) => parseInt(item.locationId) === parseInt(locationId),
-      )
+      (item) => parseInt(item.locationId) === parseInt(locationId),
+    )
     : [];
 
   const {
@@ -293,19 +293,43 @@ const PurchaseInwardForm = ({
     return duplicates; // empty array = no duplicates
   };
 
+
   const validateData = (data) => {
     const items = data?.inwardItems || [];
     const filledItems = items.filter((item) => item.styleItemId);
-
+    const isAgainstInvoice = data.receiptType === "Against Invoice";
+     const isAmountMatched =
+      Number(data?.netBillValue).toFixed(2) ===
+      parseFloat(totals?.net || 0).toFixed(2);
     const checks = [
       { condition: !data.inwardType, title: "Inward Type is required!" },
       { condition: !data.locationId, title: "Location is required!" },
       { condition: !data.storeId, title: "Location is required!" },
-      { condition: !data.invNo, title: "Invoice No is required!" },
       { condition: !data.supplierId, title: "Supplier is required!" },
-      { condition: !data.dcNo, title: "DC No is required!" },
-      { condition: !data.dcDate, title: "DC Date is required!" },
-      { condition: !data.netBillValue, title: "Bill Value is required!" },
+      { condition: !data.receiptType, title: "Receipt Basis is required!" },
+
+      {
+        condition: isAgainstInvoice && !data.invNo,
+        title: "Invoice No is required!",
+      },
+      {
+        condition: isAgainstInvoice && !data.netBillValue,
+        title: "Bill Value is required!",
+      },
+      {
+        condition: isAgainstInvoice && !data.taxTemplateId,
+        title: "Tax Template is required!",
+      },
+
+      // ✅ Conditional: NOT Against Invoice
+      {
+        condition: !isAgainstInvoice && !data.dcNo,
+        title: "DC No is required!",
+      },
+      {
+        condition: !isAgainstInvoice && !data.dcDate,
+        title: "DC Date is required!",
+      },
       {
         condition: filledItems.length === 0,
         title: "Please add at least one item!",
@@ -317,6 +341,10 @@ const PurchaseInwardForm = ({
           "inwardQty",
         ]),
         title: "Please fill all required item fields!",
+      },
+      {
+        condition: isAgainstInvoice && !isAmountMatched,
+        title:"Total Bill Value and Total Net Amount must be Equal."
       },
       {
         condition: findDuplicates(filledItems).length > 0,
@@ -467,12 +495,12 @@ const PurchaseInwardForm = ({
                 options={
                   branchList
                     ? dropDownListObject(
-                        id
-                          ? branchList?.data
-                          : branchList?.data?.filter((item) => item.active),
-                        "branchName",
-                        "id",
-                      )
+                      id
+                        ? branchList?.data
+                        : branchList?.data?.filter((item) => item.active),
+                      "branchName",
+                      "id",
+                    )
                     : []
                 }
                 value={locationId}
@@ -534,9 +562,12 @@ const PurchaseInwardForm = ({
                 }}
                 required={true}
                 readOnly={readOnly}
-                disabled={id || fromPoType}
+                disabled={id}
                 beforeChange={() => {
-                  setInwardItems([]);
+                  if (!fromPoId) {
+
+                    setInwardItems([]);
+                  }
                 }}
               />
               <TextInput
@@ -548,7 +579,7 @@ const PurchaseInwardForm = ({
                 disabled={receiptType !== "Against Invoice"}
               />
               <TextInput
-                name={"Bill Value"}
+                name={"Net Bill Value"}
                 value={netBillValue}
                 setValue={setNetBillValue}
                 readOnly={readOnly}
@@ -573,8 +604,8 @@ const PurchaseInwardForm = ({
                   id
                     ? supplierList?.data?.filter((item) => item?.isSupplier)
                     : supplierList?.data?.filter(
-                        (item) => item?.active && item?.isSupplier,
-                      ),
+                      (item) => item?.active && item?.isSupplier,
+                    ),
                   "name",
                   "id",
                 )}
@@ -587,7 +618,7 @@ const PurchaseInwardForm = ({
                 addNewLabel="+ Add New Supplier"
                 childComponent={PartyMaster}
                 addNewModalWidth="w-[90%] h-[95%]"
-                disabled={id || !!fromPoSupplierId}
+                disabled={id || !!fromPoSupplierId }
               />
               <DropdownWithModal
                 name="Tax Type"
@@ -600,27 +631,28 @@ const PurchaseInwardForm = ({
                 )}
                 value={taxTemplateId}
                 setValue={setTaxTemplateId}
-                required={true}
+                required={receiptType === "Against Invoice"}
                 readOnly={readOnly}
                 className={`w-[150px]`}
                 // disabled={childRecord.current > 0}
                 addNewLabel="+ Add New Tax Template"
                 childComponent={TaxTemplate}
                 addNewModalWidth="w-[82%] h-[85%]"
+                disabled={receiptType !== "Against Invoice"}
               />
               <TextInput
                 name={"Dc No."}
                 value={dcNo}
                 setValue={setDcNo}
                 readOnly={readOnly}
-                required
+                required={receiptType !== "Against Invoice"}
               />
               <div className="w-44">
                 <DateInputNew
                   name="Dc Date"
                   value={dcDate}
                   setValue={setDcDate}
-                  required={true}
+                required={receiptType !== "Against Invoice"}
                   readOnly={readOnly}
                   type={"date"}
                 />
@@ -729,34 +761,62 @@ const PurchaseInwardForm = ({
               }}
             />
           </div>
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
-            <h2 className="font-semibold text-slate-800 mb-2 text-base">
-              Qty Summary
-            </h2>
-
-            {inwardType !== "Direct Inward" && (
-              <div className="space-y-1.5">
-                <div className="flex justify-between  text-sm">
-                  <span className="text-slate-600">Total Order Qty</span>
+          {
+            receiptType === "Against Invoice" ? (
+              <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
+                <div className="flex justify-between py-1 text-sm">
+                  <span className="text-slate-600">Total Qty</span>
                   <span className="font-medium">
                     {inwardItems
-                      .reduce((sum, row) => sum + (Number(row.poQty) || 0), 0)
+                      .reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
                       .toFixed(2)}
                   </span>
                 </div>
+                <div className="flex justify-between py-1 text-sm">
+                  <span className="text-slate-600">Taxable Amount</span>
+                  <span className="font-medium">
+                    Rs.{parseFloat(totals?.taxable || 0).toFixed(2)}{" "}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 text-sm">
+                  <span className="text-slate-600">Net Amount</span>
+                  <span className="font-medium">
+                    Rs.{parseFloat(totals?.net || 0).toFixed(2)}
+                  </span>
+                </div>
               </div>
-            )}
-            <div className="space-y-1.5">
-              <div className="flex justify-between  text-sm">
-                <span className="text-slate-600">Total Inward Qty</span>
-                <span className="font-medium">
-                  {inwardItems
-                    .reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
-                    .toFixed(2)}
-                </span>
+            ) : (
+              <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
+                <h2 className="font-semibold text-slate-800 mb-2 text-base">
+                  Qty Summary
+                </h2>
+
+                {inwardType !== "Direct Inward" && (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between  text-sm">
+                      <span className="text-slate-600">Total Order Qty</span>
+                      <span className="font-medium">
+                        {inwardItems
+                          .reduce((sum, row) => sum + (Number(row.poQty) || 0), 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between  text-sm">
+                    <span className="text-slate-600">Total Inward Qty</span>
+                    <span className="font-medium">
+                      {inwardItems
+                        .reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
+                        .toFixed(2)}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            )
+          }
+
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">

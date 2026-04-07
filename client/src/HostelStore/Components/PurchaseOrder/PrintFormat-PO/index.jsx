@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     borderBottom: "1 solid #000",
     marginTop: 6,
     backgroundColor: "#1D3A76",
-    padding: 3,
+    // padding: 3,
     color: "#FFFF"
   },
   th: {
@@ -123,15 +123,16 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: "bold",
     textAlign: "center",
-    borderRight: "1 solid #000",
-    padding: 3,
+    borderRight: "1 solid #fff",
+    padding: 4,
+    color: "#FFFF",
   },
   td: {
     flex: 1,
     fontSize: 8,
     textAlign: "center",
-    borderRight: "1 solid #000",
-    borderBottom: "1 solid #000",
+    borderRight: "1 solid #e5e7eb",      // was "1 solid #000"
+    // borderBottom: "1 solid #e5e7eb", 
     padding: 3,
   },
   totalRow: {
@@ -404,18 +405,18 @@ const PurchaseOrderPrintFormat = ({
             const filledRows = filledPoItems.map((val, index) => {
               const gross = !isNaN(val.qty * val.price) ? (val.qty * val.price).toFixed(2) : "";
               return (
-                <View key={index} style={{ flexDirection: "row", borderBottom: "1 solid #d1d5db" }}>
+                <View key={index} style={{ flexDirection: "row", borderBottom: "1 solid #e5e7eb" }}>
                   <Text style={[styles.td, { flex: 0.5 }]}>{index + 1}</Text>
-                  <Text style={[styles.td, { flex: 4 }]}>
+                  <Text style={[styles.td, { flex: 4, textAlign: "left" },]}>
                     {findFromList(val.styleItemId, styleItemList?.data, "name")}
                   </Text>
-                  <Text style={[styles.td, { flex: 1.5 }]}>
+                  <Text style={[styles.td, { flex: 1.5, textAlign: "left" }]}>
                     {val.Size?.name || findFromList(val.sizeId, sizeList?.data, "name")}
                   </Text>
-                  <Text style={[styles.td, { flex: 1.5 }]}>
+                  <Text style={[styles.td, { flex: 1.5, textAlign: "left" }]}>
                     {val.Color?.name || findFromList(val.colorId, colorList?.data, "name")}
                   </Text>
-                  <Text style={[styles.td, { flex: 1 }]}>
+                  <Text style={[styles.td, { flex: 1, textAlign: "left" }]}>
                     {val.Uom?.name || findFromList(val.uomId, uomList?.data, "name")}
                   </Text>
                   <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
@@ -434,7 +435,7 @@ const PurchaseOrderPrintFormat = ({
 
             const emptyRowsCount = Math.max(0, minRows - filledPoItems.length);
             const emptyRows = Array.from({ length: emptyRowsCount }).map((_, i) => (
-              <View key={`empty-${i}`} style={{ flexDirection: "row", borderBottom: "1 solid #d1d5db" }}>
+              <View key={`empty-${i}`} style={{ flexDirection: "row", borderBottom: "1 solid #e5e7eb" }}>
                 <Text style={[styles.td, { flex: 0.5 }]}> </Text>
                 <Text style={[styles.td, { flex: 4 }]}> </Text>
                 <Text style={[styles.td, { flex: 1.5 }]}> </Text>
@@ -451,17 +452,17 @@ const PurchaseOrderPrintFormat = ({
           })()}
 
           {/* ── TOTAL ROW ── */}
-          <View style={{ flexDirection: "row", borderBottom: "1 solid #9ca3af" }}>
+          <View style={{ flexDirection: "row", borderBottom: "1 solid #e5e7eb" }}>
             <Text style={{ flex: 10, textAlign: "center", fontSize: 8, fontWeight: "bold", padding: 3 }}>
               TOTAL
             </Text>
-            <Text style={{ flex: 1, textAlign: "right", fontSize: 8, padding: 3, borderLeft: "1 solid #9ca3af" }}>
+            <Text style={{ flex: 1, textAlign: "right", fontSize: 8, padding: 3, borderLeft: "1 solid #e5e7eb" }}>
               {parseFloat(taxDetails?.taxable || 0).toFixed(2)}
             </Text>
           </View>
 
           {/* ── TAX BOX ── */}
-          <View style={{ alignSelf: "flex-end", border: "1 solid #9ca3af", width: 120 }}>
+          <View style={{ alignSelf: "flex-end", border: "1 solid #e5e7eb", width: 120 }}>
             <Text style={{ fontSize: 8, fontWeight: "bold", textAlign: "center", padding: 2, backgroundColor: "#1D3A76", color: "#FFFF" }}>
               TAX DETAILS
             </Text>
@@ -473,7 +474,7 @@ const PurchaseOrderPrintFormat = ({
             </View>
             {
               taxDetails?.slabBreakup?.filter((item) => item.amount > 0)?.map((i) => (
-                <View key={i.tax} style={{ flexDirection: "row", borderTop: "1 solid #9ca3af" }}>
+                <View key={i.tax} style={{ flexDirection: "row", borderTop: "1 solid #e5e7eb" }}>
                   <Text style={{ flex: 1, fontSize: 8, padding: 3 }}>{i.tax}</Text>
                   <Text style={{ flex: 1, textAlign: "right", fontSize: 8, padding: 3 }}>
                     {parseFloat(i.amount || 0).toFixed(2)}
@@ -490,21 +491,22 @@ const PurchaseOrderPrintFormat = ({
           </View>
 
           {/* ── REMARKS & TERMS ── */}
-          <View style={{ marginTop: 6, border: "1 solid #9ca3af", borderRadius: 4 }}>
+          <View style={{ marginTop: 6, border: "1 solid #e5e7eb", borderRadius: 4 }}>
             <View style={{ backgroundColor: "#1D3A76", paddingVertical: 5, paddingHorizontal: 6, marginBottom: 4 }}>
-              <Text style={{ fontSize: 9, fontWeight: "bold", color: "#FFFFFF" }}>
-                Amount in Words :
+              <Text style={{ fontSize: 9, fontWeight: "bold", color: "#FFFFFF"}}>
+                Amount in Words :  
 
                 {numberToWords
                   .toWords(taxDetails?.net || 0)
-                  .replace(/[-,]/g, "") // ❌ remove hyphen + comma
+                  .replace(/,/g, "")           // remove commas only
+                  .replace(/-/g, " ")          // ✅ hyphen → space (gives "Fifty Five")
                   .replace(/\b\w/g, (c) => c.toUpperCase()) +
                   " Only"}
 
               </Text>
             </View>
-            <View style={{ flexDirection: "row", borderTop: "1 solid #9ca3af", minHeight: 60 }}>
-              <View style={{ flex: 0.4, borderRight: "1 solid #9ca3af", padding: 6, backgroundColor: "#f0f4ff", }}>
+            <View style={{ flexDirection: "row", borderTop: "1 solid #e5e7eb", minHeight: 60 }}>
+              <View style={{ flex: 0.4, borderRight: "1 solid #e5e7eb", padding: 6, backgroundColor: "#f0f4ff", }}>
                 <Text style={{ fontSize: 8, fontWeight: "bold", color: "#1D3A76" }}>Remarks:</Text>
                 <Text style={{ fontSize: 8 }}>{remarks || ""}</Text>
               </View>

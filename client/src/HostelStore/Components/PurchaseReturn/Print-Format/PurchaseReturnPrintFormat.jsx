@@ -36,8 +36,7 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 8,
         textAlign: "center",
-        borderRight: "1 solid #000",
-        borderBottom: "1 solid #000",
+        borderRight: "1 solid #e5e7eb",    
         padding: 3,
     },
 });
@@ -217,17 +216,17 @@ const PurchaseReturnPrintFormat = ({
                                         findFromList(row.styleItemId, styleItemList?.data, "name")}
                                 </Text>
 
-                                <Text style={[styles.td, { flex: 1.2 }]}>
+                                <Text style={[styles.td, { flex: 1.2 ,textAlign: "left"}]}>
                                     {row?.Size?.name ||
                                         findFromList(row.sizeId, sizeList?.data, "name")}
                                 </Text>
 
-                                <Text style={[styles.td, { flex: 1.2 }]}>
+                                <Text style={[styles.td, { flex: 1.2 ,textAlign: "left"}]}>
                                     {row?.Color?.name ||
                                         findFromList(row.colorId, colorList?.data, "name")}
                                 </Text>
 
-                                <Text style={[styles.td, { flex: 1 }]}>
+                                <Text style={[styles.td, { flex: 1 ,textAlign: "left"}]}>
                                     {row?.Uom?.name ||
                                         findFromList(row.uomId, uomList?.data, "name")}
                                 </Text>
