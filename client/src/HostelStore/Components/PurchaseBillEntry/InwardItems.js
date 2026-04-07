@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import Modal from "../../../UiComponents/Modal";
 import PoItemsSelection from "./PoItemsSelection";
@@ -55,6 +55,8 @@ const InwardItems = ({
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
   const [fillGrid, setFillGrid] = useState(false);
+  const actionRefs = useRef([]);
+
   const addRow = () => {
     const newRow = {
       purchaseBillEntryId: "",
@@ -199,6 +201,12 @@ const InwardItems = ({
 
   const showFillButton = !id && !fromInwardId;
 
+  const focusActionCell = (index) => {
+    setTimeout(() => {
+      actionRefs.current[index]?.focus();
+    }, 200); // wait for modal close render
+  };
+
   return (
     <>
       <Modal
@@ -213,6 +221,7 @@ const InwardItems = ({
           inwardItems={inwardItems}
           handleInputChange={handleInputChange}
           id={id}
+          onCloseFocus={focusActionCell}
         />
       </Modal>
       <Modal
@@ -397,6 +406,8 @@ const InwardItems = ({
                       className="text-center rounded py-1 w-20"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
+                          e.preventDefault();
+                          e.stopPropagation();
                           setCurrentSelectedIndex(index);
                         }
                       }}
@@ -413,13 +424,16 @@ const InwardItems = ({
                   </td>
                   <td className="w-2 border border-gray-300 bg-transparent">
                     <input
+                      ref={(el) => (actionRefs.current[index] = el)}
                       className="w-full bg-transparent table-data-input"
-                      // onKeyDown={(e) => {
-                      //   if (e.key === "Enter") {
-                      //     e.preventDefault();
-                      //     addRow();
-                      //   }
-                      // }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (index === inwardItems.length - 1) {
+                            addRow();
+                          }
+                        }
+                      }}
                       disabled={readOnly}
                     />
                   </td>
