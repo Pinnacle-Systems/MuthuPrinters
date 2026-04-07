@@ -211,7 +211,11 @@ const InwardItems = ({
     <>
       <Modal
         isOpen={Number.isInteger(currentSelectedIndex)}
-        onClose={() => setCurrentSelectedIndex("")}
+        onClose={() => {
+          const index = currentSelectedIndex;
+          setCurrentSelectedIndex("");
+          focusActionCell(index); // 🔥 restore focus
+        }}
       >
         <TaxDetailsFullTemplate
           readOnly={readOnly}

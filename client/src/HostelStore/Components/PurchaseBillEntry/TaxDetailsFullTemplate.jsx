@@ -1,8 +1,11 @@
 import { discountTypes } from '../../../Utils/DropdownData';
 
 
-const TaxDetailsFullTemplate = ({ inwardItems, currentIndex: index, setCurrentSelectedIndex, readOnly, handleInputChange,id }) => {
- 
+const TaxDetailsFullTemplate = ({ inwardItems, currentIndex: index, setCurrentSelectedIndex, readOnly, handleInputChange, id,
+    onCloseFocus,
+
+}) => {
+
     const row = inwardItems[index];
 
     if (!row) return null
@@ -51,7 +54,7 @@ const TaxDetailsFullTemplate = ({ inwardItems, currentIndex: index, setCurrentSe
                         <td className="border border-gray-500">Discount Type</td>
                         <td className="border border-gray-500" colSpan={2}
                         >
-                            <select autoFocus   disabled={ readOnly} className='text-left w-full rounded h-8'
+                            <select autoFocus disabled={readOnly} className='text-left w-full rounded h-8'
                                 value={discountType}
                                 onChange={(e) => handleInputChange(e.target.value, index, "discountType")}
                             >
@@ -68,7 +71,7 @@ const TaxDetailsFullTemplate = ({ inwardItems, currentIndex: index, setCurrentSe
                         <td className="border border-gray-500">Discount</td>
                         <td className="border border-gray-500" colSpan={2}
                         >
-                            <input type="text"  disabled={ readOnly || !discountType} className='h-7 w-full text-right' value={discountValue}
+                            <input type="text" disabled={readOnly || !discountType} className='h-7 w-full text-right' value={discountValue}
                                 onFocus={(e) => e.target.select()}
                                 onChange={(e) => handleInputChange(e.target.value, index, "discountValue")} />
                         </td>
@@ -86,11 +89,11 @@ const TaxDetailsFullTemplate = ({ inwardItems, currentIndex: index, setCurrentSe
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                     setCurrentSelectedIndex("");
+                                    onCloseFocus(index); // 🔥 focus back
                                 }
-                            }
-                            }
+                            }}
                         >
-                            <input type="text" disabled={ readOnly} className='h-7 w-full text-right'
+                            <input type="text" disabled={readOnly} className='h-7 w-full text-right'
                                 value={taxPercent} onChange={(e) => { handleInputChange(e.target.value, index, "taxPercent") }}
                                 onFocus={(e) => e.target.select()}
                             />
