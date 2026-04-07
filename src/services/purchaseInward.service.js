@@ -186,6 +186,7 @@ async function get(req) {
       _count: {
         select: {
           purchaseReturnItems: true,
+          purchaseBillEntryItems: true,
         },
       },
     },
@@ -209,7 +210,8 @@ async function get(req) {
     statusCode: 0,
     data: data.map((item) => ({
       ...item,
-      childRecord: item._count?.purchaseReturnItems || 0,
+      childRecord:
+        item._count?.purchaseReturnItems + item._count?.purchaseBillEntryItems,
     })),
     nextDocId: newDocId,
     totalCount,

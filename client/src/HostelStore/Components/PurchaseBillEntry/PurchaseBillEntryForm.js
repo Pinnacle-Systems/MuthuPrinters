@@ -580,6 +580,7 @@ const PurchaseBillEntryForm = ({
                       e.target.value ? Number(e.target.value).toFixed(2) : "",
                     )
                   }
+                  onFocus={(e) => e.target.select()}
                 />
               </div>
 

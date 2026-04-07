@@ -42,7 +42,6 @@ import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import { PayTermMaster, TermsAndCondition } from "../../../Basic/components";
 import { PartyMaster, TaxTemplate } from "..";
-import TransactionLayout from "../../../Basic/components/Reuseable/TransactionLayout";
 
 const PurchaseOrderForm = ({
   onClose,
@@ -577,556 +576,20 @@ const PurchaseOrderForm = ({
     return { label: "", className: "" };
   };
 
-  const header = (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-      <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-        <h2 className="font-medium text-slate-700 mb-2">Basic Details</h2>
-        <div className="grid grid-cols-2 gap-1">
-          <ReusableInput label="Purchase Order No" readOnly value={docId} />
-          <ReusableInput
-            label="Purchase Order Date"
-            value={docDate}
-            type={"date"}
-            required={true}
-            readOnly={true}
-            disabled
-          />
-          {/* <DropdownInput
-                name="Pay Term"
-                options={dropDownListObject(
-                  payTermList ? payTermList?.data : [],
-                  "name",
-                  "id",
-                )}
-                value={payTermId}
-                setValue={(val) => {
-                  setPayTermId(val);
-                }}
-                required={false}
-                readOnly={readOnly}
-                // autoFocus={true}
-                ref={supplierRef}
-              /> */}
-          {!readOnly && id && (
-            <div className="col-span-1 mt-3">
-              <CheckBox
-                name="New Version"
-                value={isNewVersion}
-                setValue={setIsNewVersion}
-                readOnly={readOnly}
-                className="w-full"
-                disabled={childRecordCount > 0}
-              />
-            </div>
-          )}
-          {Boolean(id) && quoteVersionOptions.length > 0 && (
-            <DropdownInput
-              readOnly={readOnly}
-              name="Current Version"
-              value={quoteVersion}
-              setValue={(value) => setQuoteVersion(value)}
-              options={quoteVersionOptions.map((i) => ({
-                show: i,
-                value: i,
-              }))}
-              className="w-full"
-            />
-          )}
-        </div>
-      </div>
+  const getModeChip = () => {
+    if (id && readOnly) {
+      return { label: "Read", className: "bg-red-600 text-white" };
+    }
+    if (id && !readOnly) {
+      return { label: "Edit", className: "bg-yellow-600 text-white" };
+    }
+    if (!id && !readOnly) {
+      return;
+    }
+    return null;
+  };
 
-      <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-        <h2 className="font-medium text-slate-700 mb-2">Po Details</h2>
-        <div className="grid grid-cols-2 gap-1 ">
-          <DropdownInput
-            name="Po Type"
-            options={poTypes}
-            value={poType}
-            setValue={(value) => {
-              setPoType(value);
-            }}
-            required={true}
-            readOnly={readOnly}
-            disabled={orderId || id}
-            ref={supplierRef}
-          />
-
-          {/* <DropdownInput
-                name="Tax Type"
-                options={dropDownListObject(
-                  taxTypeList ? taxTypeList?.data : [],
-                  "name",
-                  "id",
-                )}
-                value={taxTemplateId}
-                setValue={setTaxTemplateId}
-                required={true}
-                readOnly={readOnly}
-              /> */}
-          <DropdownWithModal
-            name="Tax Type"
-            options={dropDownListObject(
-              id
-                ? taxTypeList?.data
-                : taxTypeList?.data?.filter((item) => item?.active),
-              "name",
-              "id",
-            )}
-            value={taxTemplateId}
-            setValue={setTaxTemplateId}
-            required={true}
-            readOnly={readOnly}
-            className={`w-[150px]`}
-            // disabled={childRecord.current > 0}
-            addNewLabel="+ Add New Tax Template"
-            childComponent={TaxTemplate}
-            addNewModalWidth="w-[82%] h-[85%]"
-          />
-          <DropdownWithModal
-            name="Pay Term"
-            options={dropDownListObject(
-              id
-                ? payTermList?.data
-                : payTermList?.data?.filter((item) => item?.active),
-              "name",
-              "id",
-            )}
-            value={payTermId}
-            setValue={setPayTermId}
-            required={true}
-            readOnly={readOnly}
-            className={`w-[150px]`}
-            // disabled={childRecord.current > 0}
-            addNewLabel="+ Add New Pay Term"
-            childComponent={PayTermMaster}
-            addNewModalWidth="w-[40%] h-[66%]"
-          />
-        </div>
-      </div>
-
-      <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-        <h2 className="font-medium text-slate-700 mb-2">Supplier Details</h2>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="col-span-2">
-            {/* <ReusableSearchableInput
-                  label="Supplier"
-                  component="PartyMaster"
-                  placeholder="Search Supplier ..."
-                  optionList={supplierList?.data?.filter(
-                    (item) => item.isSupplier,
-                  )}
-                  setSearchTerm={(value) => {
-                    setSupplierId(value);
-                  }}
-                  searchTerm={supplierId}
-                  show={"isSupplier"}
-                  required={true}
-                  disabled={id}
-                  isSupplier={true}
-                /> */}
-            <DropdownWithModal
-              name="Supplier"
-              options={dropDownListObject(
-                id
-                  ? supplierList?.data?.filter((item) => item?.isSupplier)
-                  : supplierList?.data?.filter(
-                      (item) => item?.active && item?.isSupplier,
-                    ),
-                "name",
-                "id",
-              )}
-              value={supplierId}
-              setValue={setSupplierId}
-              required={true}
-              readOnly={readOnly}
-              className={`w-[150px]`}
-              // disabled={childRecord.current > 0}
-              addNewLabel="+ Add New Supplier"
-              childComponent={PartyMaster}
-              addNewModalWidth="w-[90%] h-[95%]"
-              disabled={id}
-            />
-          </div>
-
-          <TextInput
-            name="Contact Person"
-            placeholder="Contact name"
-            value={findFromList(
-              supplierId,
-              supplierList?.data,
-              "contactPersonName",
-            )}
-            disabled={true}
-          />
-
-          <TextInput
-            name="Phone"
-            placeholder="Contact name"
-            value={findFromList(
-              supplierId,
-              supplierList?.data,
-              "contactNumber",
-            )}
-            disabled={true}
-          />
-        </div>
-      </div>
-
-      <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-        <h2 className="font-medium text-slate-700 mb-2">Delivery Details</h2>
-        <div className="grid grid-cols-3 gap-2">
-          <DropdownInput
-            name="Delivery Type"
-            options={deliveryTypes}
-            // option={delivery}
-            value={deliveryType}
-            setValue={setDeliveryType}
-            required={true}
-            readOnly={readOnly}
-          />
-          <div className="col-span-2">
-            {deliveryType == "ToSelf" ? (
-              <DropdownInput
-                name="Delivery To"
-                options={
-                  deliveryType === "ToSelf"
-                    ? dropDownListObject(
-                        branchList ? branchList.data : [],
-                        "branchName",
-                        "id",
-                      )
-                    : dropDownListObject(
-                        supplierListBasedOnSupply,
-                        "name",
-                        "id",
-                      )
-                }
-                value={deliveryToId}
-                setValue={setDeliveryToId}
-                required={true}
-                readOnly={readOnly}
-              />
-            ) : (
-              // <DropdownInput
-              //   name="Delivery To"
-              //   options={dropDownListObject(
-              //     supplierList?.data,
-              //     "name",
-              //     "id",
-              //   )}
-              //   value={deliveryToId}
-              //   setValue={setDeliveryToId}
-              //   required={true}
-              //   readOnly={readOnly}
-              // />
-              <DropdownWithModal
-                name="Delivery To"
-                options={dropDownListObject(
-                  id
-                    ? supplierList?.data
-                    : supplierList?.data?.filter((item) => item?.active),
-                  "name",
-                  "id",
-                )}
-                value={deliveryToId}
-                setValue={setDeliveryToId}
-                required={true}
-                readOnly={readOnly}
-                className={`w-[150px]`}
-                // disabled={childRecord.current > 0}
-                addNewLabel="+ Add New Customer"
-                childComponent={PartyMaster}
-                addNewModalWidth="w-[90%] h-[95%]"
-              />
-            )}
-          </div>
-          <DateInputNew
-            name="Delivery Date"
-            value={dueDate}
-            setValue={setDueDate}
-            type={"date"}
-            required={true}
-            readOnly={readOnly}
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  const gridItems = (
-    <PoItems
-      id={id}
-      poItems={poItems}
-      enrichedPoItems={enrichedPoItems}
-      setPoItems={setPoItems}
-      readOnly={readOnly}
-      uomList={uomList}
-      hsnList={hsnList}
-      styleItemList={styleItemList}
-      taxTemplateId={taxTemplateId}
-      isNewVersion={isNewVersion}
-      quoteVersion={quoteVersion}
-      itemGroupList={itemGroupList}
-      sizeList={sizeList}
-      colorList={colorList}
-      termsRef={termsRef}
-    />
-  );
-
-  const footer = (
-    <>
-      <div className="grid grid-cols-4 gap-3 ">
-        <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-          <div className="flex flex-col gap-2">
-            {/* <h2 className="font-bold text-slate-700 mb-2 text-base">
-                Terms & Conditions
-              </h2> */}
-
-            {/* <select
-                value={termsId}
-                onChange={(e) => {
-                  const selectedId = e.target.value;
-
-                  setTermsId(selectedId);
-
-                  const selectedTerm = termsData?.data?.find(
-                    (item) => String(item.id) === String(selectedId),
-                  );
-
-                  setTermsAndCondtion(selectedTerm?.description || "");
-                }}
-                readOnly={readOnly}
-                className="text-left h-15  w-full rounded py-1 border-2 border-gray-200 text-[13px]"
-              >
-                <option></option>
-                {(id
-                  ? termsData?.data
-                  : termsData?.data?.filter((item) => item?.active)
-                )?.map((blend) => (
-                  <option value={blend.id} key={blend.id}>
-                    {blend?.name.substring(0, 50)}
-                  </option>
-                ))}
-              </select> */}
-            <DropdownWithModal
-              ref={termsRef}
-              name="Terms & Conditions"
-              options={dropDownListObject(
-                id
-                  ? termsData?.data
-                  : termsData?.data?.filter((item) => item?.active),
-                "name",
-                "id",
-              )}
-              value={termsId}
-              setValue={setTermsId}
-              readOnly={readOnly}
-              className={`w-[150px]`}
-              // disabled={childRecord.current > 0}
-              addNewLabel="+ Add New Terms and Condition"
-              childComponent={TermsAndCondition}
-              addNewModalWidth="w-[40%] h-[70%]"
-              disabled={id}
-            />
-          </div>
-        </div>
-
-        <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm flex items-center">
-          <textarea
-            // ref={termsRef}
-            disabled={readOnly}
-            readOnly={readOnly}
-            className="w-full h-20 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
-            value={termsAndCondtion}
-            onChange={(e) => setTermsAndCondtion(e.target.value)}
-            placeholder="Type Terms & Conditions..."
-            onKeyDown={(e) => {
-              if (e.ctrlKey && e.key === "Enter") {
-                e.preventDefault();
-
-                const textarea = e.target;
-                const start = textarea.selectionStart;
-                const end = textarea.selectionEnd;
-
-                const newValue =
-                  termsAndCondtion.substring(0, start) +
-                  "\n" +
-                  termsAndCondtion.substring(end);
-
-                setTermsAndCondtion(newValue);
-
-                // ✅ Restore focus + cursor properly
-                requestAnimationFrame(() => {
-                  textarea.focus();
-                  textarea.setSelectionRange(start + 1, start + 1);
-                });
-              }
-            }}
-          />
-          {/* <textarea
-                className="w-full h-32 focus:outline-none border border-gray-300 rounded p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                value={termsAndCondtion}
-              disabled={readOnly}
-                onChange={(e) => setTermsAndCondtion(e.target.value)}
-              placeholder="Type Terms & Conditions..."
-                
-              /> */}
-        </div>
-
-        <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-          <h2 className="font-semibold text-slate-700 mb-2 text-xs">Remarks</h2>
-          <textarea
-            readOnly={readOnly}
-            value={remarks}
-            onChange={(e) => {
-              setRemarks(e.target.value);
-            }}
-            className="w-full h-14 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
-            placeholder="Additional notes..."
-          />
-        </div>
-        <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-          <div className="flex justify-between py-1 text-sm">
-            <span className="text-slate-600">Total Qty</span>
-            <span className="font-medium">
-              {parseFloat(getTotalQty()).toFixed(3)}
-            </span>
-          </div>
-          <div className="flex justify-between py-1 text-sm">
-            <span className="text-slate-600">Taxable Amount</span>
-            <span className="font-medium">
-              Rs.{parseFloat(totals?.taxable || 0).toFixed(2)}{" "}
-            </span>
-          </div>
-          {/* <div className="flex justify-between py-1 text-sm">
-                  <span className="text-slate-600">Tax Amount</span>
-                  <span className="font-medium">Rs.{taxDetails?.grossAmount}</span>
-                </div> */}
-          <div className="flex justify-between py-1 text-sm">
-            <span className="text-slate-600">Net Amount</span>
-            <span className="font-medium">
-              Rs.{parseFloat(totals?.net || 0).toFixed(2)}
-            </span>
-          </div>
-        </div>
-
-        {/* <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
-            <h2 className="font-bold text-slate-800 mb-2 text-base">
-              Po Summary
-            </h2>
-
-            <button
-              className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1 ml-5 rounded"
-              onClick={() => {
-                if (!taxTemplateId) {
-                  toast.info("Please Select Tax Template !", {
-                    position: "top-center",
-                  });
-                  return;
-                }
-                setSummary(true);
-              }}
-            >
-              View Po Summary
-            </button>
-          </div> */}
-      </div>
-
-      <div className="flex justify-between mt-2">
-        {/* Left Buttons */}
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => saveData("close")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                saveData("close");
-                e.stopPropagation();
-              }
-            }}
-            disabled={readOnly}
-            className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
-          >
-            <HiOutlineRefresh className="w-4 h-4 mr-2" />
-            Save & Close
-          </button>
-          <button
-            onClick={() => saveData("new")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                saveData("new");
-              }
-            }}
-            disabled={readOnly}
-            className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
-          >
-            <FiSave className="w-4 h-4 mr-2" />
-            Save & New
-          </button>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {!id ||
-            (readOnly && (
-              <button
-                className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-sm"
-                onClick={() => setReadOnly(false)}
-              >
-                <FiEdit2 className="w-4 h-4 mr-2" />
-                Edit
-              </button>
-            ))}
-          <button
-            className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1  rounded"
-            onClick={() => {
-              if (!taxTemplateId) {
-                toast.info("Please Select Tax Template !", {
-                  position: "top-center",
-                });
-                return;
-              }
-              setSummary(true);
-            }}
-            onKeyDown={(e) => {
-              if (!taxTemplateId) {
-                e.preventDefault();
-                e.stopPropagation();
-                toast.info("Please Select Tax Template !", {
-                  position: "top-center",
-                });
-                return;
-              }
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                setSummary(true);
-              }
-            }}
-          >
-            View Po Summary
-          </button>
-          <button
-            className="bg-slate-600 text-white px-4 py-1 rounded-md hover:bg-slate-700 flex items-center text-sm"
-            onClick={() => {
-              // handlePrint()
-              setPrintModalOpen(true);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                setPrintModalOpen(true);
-              }
-            }}
-          >
-            <FiPrinter className="w-4 h-4 mr-2" />
-            Print
-          </button>
-        </div>
-      </div>
-    </>
-  );
+  const chip = getModeChip();
 
   return (
     <>
@@ -1192,7 +655,7 @@ const PurchaseOrderForm = ({
           />
         </PDFViewer>
       </Modal>
-      {/* <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
+      <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
         <div className="flex justify-between items-center">
           <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
             Purchase Order
@@ -1210,18 +673,556 @@ const PurchaseOrderForm = ({
         </div>
       </div>
       <div className="space-y-2 py-2" onKeyDown={handleKeyDown}>
-        <fieldset className=""></fieldset>
-      </div> */}
-      <TransactionLayout
-        title="Purchase Order"
-        badge={<ModeChip id={id} readOnly={readOnly} />}
-        onClose={onClose}
-        onKeyDown={handleKeyDown}
-        closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
-        header={header}
-        gridItems={gridItems}
-        footer={footer}
-      />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
+            <h2 className="font-medium text-slate-700 mb-2">Basic Details</h2>
+            <div className="grid grid-cols-2 gap-1">
+              <ReusableInput label="Purchase Order No" readOnly value={docId} />
+              <ReusableInput
+                label="Purchase Order Date"
+                value={docDate}
+                type={"date"}
+                required={true}
+                readOnly={true}
+                disabled
+              />
+              {/* <DropdownInput
+                name="Pay Term"
+                options={dropDownListObject(
+                  payTermList ? payTermList?.data : [],
+                  "name",
+                  "id",
+                )}
+                value={payTermId}
+                setValue={(val) => {
+                  setPayTermId(val);
+                }}
+                required={false}
+                readOnly={readOnly}
+                // autoFocus={true}
+                ref={supplierRef}
+              /> */}
+              {!readOnly && id && (
+                <div className="col-span-1 mt-3">
+                  <CheckBox
+                    name="New Version"
+                    value={isNewVersion}
+                    setValue={setIsNewVersion}
+                    readOnly={readOnly}
+                    className="w-full"
+                    disabled={childRecordCount > 0}
+                  />
+                </div>
+              )}
+              {Boolean(id) && quoteVersionOptions.length > 0 && (
+                <DropdownInput
+                  readOnly={readOnly}
+                  name="Current Version"
+                  value={quoteVersion}
+                  setValue={(value) => setQuoteVersion(value)}
+                  options={quoteVersionOptions.map((i) => ({
+                    show: i,
+                    value: i,
+                  }))}
+                  className="w-full"
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
+            <h2 className="font-medium text-slate-700 mb-2">Po Details</h2>
+            <div className="grid grid-cols-2 gap-1 ">
+              <DropdownInput
+                name="Po Type"
+                options={poTypes}
+                value={poType}
+                setValue={(value) => {
+                  setPoType(value);
+                }}
+                required={true}
+                readOnly={readOnly}
+                disabled={orderId || id}
+                ref={supplierRef}
+              />
+
+              {/* <DropdownInput
+                name="Tax Type"
+                options={dropDownListObject(
+                  taxTypeList ? taxTypeList?.data : [],
+                  "name",
+                  "id",
+                )}
+                value={taxTemplateId}
+                setValue={setTaxTemplateId}
+                required={true}
+                readOnly={readOnly}
+              /> */}
+              <DropdownWithModal
+                name="Tax Type"
+                options={dropDownListObject(
+                  id
+                    ? taxTypeList?.data
+                    : taxTypeList?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={taxTemplateId}
+                setValue={setTaxTemplateId}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Tax Template"
+                childComponent={TaxTemplate}
+                addNewModalWidth="w-[82%] h-[85%]"
+              />
+              <DropdownWithModal
+                name="Pay Term"
+                options={dropDownListObject(
+                  id
+                    ? payTermList?.data
+                    : payTermList?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={payTermId}
+                setValue={setPayTermId}
+                required={true}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Pay Term"
+                childComponent={PayTermMaster}
+                addNewModalWidth="w-[40%] h-[66%]"
+              />
+            </div>
+          </div>
+
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
+            <h2 className="font-medium text-slate-700 mb-2">
+              Supplier Details
+            </h2>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2">
+                {/* <ReusableSearchableInput
+                  label="Supplier"
+                  component="PartyMaster"
+                  placeholder="Search Supplier ..."
+                  optionList={supplierList?.data?.filter(
+                    (item) => item.isSupplier,
+                  )}
+                  setSearchTerm={(value) => {
+                    setSupplierId(value);
+                  }}
+                  searchTerm={supplierId}
+                  show={"isSupplier"}
+                  required={true}
+                  disabled={id}
+                  isSupplier={true}
+                /> */}
+                <DropdownWithModal
+                  name="Supplier"
+                  options={dropDownListObject(
+                    id
+                      ? supplierList?.data?.filter((item) => item?.isSupplier)
+                      : supplierList?.data?.filter(
+                          (item) => item?.active && item?.isSupplier,
+                        ),
+                    "name",
+                    "id",
+                  )}
+                  value={supplierId}
+                  setValue={setSupplierId}
+                  required={true}
+                  readOnly={readOnly}
+                  className={`w-[150px]`}
+                  // disabled={childRecord.current > 0}
+                  addNewLabel="+ Add New Supplier"
+                  childComponent={PartyMaster}
+                  addNewModalWidth="w-[90%] h-[95%]"
+                  disabled={id}
+                />
+              </div>
+
+              <TextInput
+                name="Contact Person"
+                placeholder="Contact name"
+                value={findFromList(
+                  supplierId,
+                  supplierList?.data,
+                  "contactPersonName",
+                )}
+                disabled={true}
+              />
+
+              <TextInput
+                name="Phone"
+                placeholder="Contact name"
+                value={findFromList(
+                  supplierId,
+                  supplierList?.data,
+                  "contactNumber",
+                )}
+                disabled={true}
+              />
+            </div>
+          </div>
+
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
+            <h2 className="font-medium text-slate-700 mb-2">
+              Delivery Details
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              <DropdownInput
+                name="Delivery Type"
+                options={deliveryTypes}
+                // option={delivery}
+                value={deliveryType}
+                setValue={setDeliveryType}
+                required={true}
+                readOnly={readOnly}
+              />
+              <div className="col-span-2">
+                {deliveryType == "ToSelf" ? (
+                  <DropdownInput
+                    name="Delivery To"
+                    options={
+                      deliveryType === "ToSelf"
+                        ? dropDownListObject(
+                            branchList ? branchList.data : [],
+                            "branchName",
+                            "id",
+                          )
+                        : dropDownListObject(
+                            supplierListBasedOnSupply,
+                            "name",
+                            "id",
+                          )
+                    }
+                    value={deliveryToId}
+                    setValue={setDeliveryToId}
+                    required={true}
+                    readOnly={readOnly}
+                  />
+                ) : (
+                  // <DropdownInput
+                  //   name="Delivery To"
+                  //   options={dropDownListObject(
+                  //     supplierList?.data,
+                  //     "name",
+                  //     "id",
+                  //   )}
+                  //   value={deliveryToId}
+                  //   setValue={setDeliveryToId}
+                  //   required={true}
+                  //   readOnly={readOnly}
+                  // />
+                  <DropdownWithModal
+                    name="Delivery To"
+                    options={dropDownListObject(
+                      id
+                        ? supplierList?.data
+                        : supplierList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={deliveryToId}
+                    setValue={setDeliveryToId}
+                    required={true}
+                    readOnly={readOnly}
+                    className={`w-[150px]`}
+                    // disabled={childRecord.current > 0}
+                    addNewLabel="+ Add New Customer"
+                    childComponent={PartyMaster}
+                    addNewModalWidth="w-[90%] h-[95%]"
+                  />
+                )}
+              </div>
+              <DateInputNew
+                name="Delivery Date"
+                value={dueDate}
+                setValue={setDueDate}
+                type={"date"}
+                required={true}
+                readOnly={readOnly}
+              />
+            </div>
+          </div>
+        </div>
+        <fieldset className="">
+          <PoItems
+            id={id}
+            poItems={poItems}
+            enrichedPoItems={enrichedPoItems}
+            setPoItems={setPoItems}
+            readOnly={readOnly}
+            uomList={uomList}
+            hsnList={hsnList}
+            styleItemList={styleItemList}
+            taxTemplateId={taxTemplateId}
+            isNewVersion={isNewVersion}
+            quoteVersion={quoteVersion}
+            itemGroupList={itemGroupList}
+            sizeList={sizeList}
+            colorList={colorList}
+            termsRef={termsRef}
+          />
+        </fieldset>
+
+        <div className="grid grid-cols-4 gap-3">
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
+            <div className="flex flex-col gap-2">
+              {/* <h2 className="font-bold text-slate-700 mb-2 text-base">
+                Terms & Conditions
+              </h2> */}
+
+              {/* <select
+                value={termsId}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+
+                  setTermsId(selectedId);
+
+                  const selectedTerm = termsData?.data?.find(
+                    (item) => String(item.id) === String(selectedId),
+                  );
+
+                  setTermsAndCondtion(selectedTerm?.description || "");
+                }}
+                readOnly={readOnly}
+                className="text-left h-15  w-full rounded py-1 border-2 border-gray-200 text-[13px]"
+              >
+                <option></option>
+                {(id
+                  ? termsData?.data
+                  : termsData?.data?.filter((item) => item?.active)
+                )?.map((blend) => (
+                  <option value={blend.id} key={blend.id}>
+                    {blend?.name.substring(0, 50)}
+                  </option>
+                ))}
+              </select> */}
+              <DropdownWithModal
+                ref={termsRef}
+                name="Terms & Conditions"
+                options={dropDownListObject(
+                  id
+                    ? termsData?.data
+                    : termsData?.data?.filter((item) => item?.active),
+                  "name",
+                  "id",
+                )}
+                value={termsId}
+                setValue={setTermsId}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                // disabled={childRecord.current > 0}
+                addNewLabel="+ Add New Terms and Condition"
+                childComponent={TermsAndCondition}
+                addNewModalWidth="w-[40%] h-[70%]"
+                disabled={id}
+              />
+            </div>
+          </div>
+
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm flex items-center">
+            <textarea
+              // ref={termsRef}
+              disabled={readOnly}
+              readOnly={readOnly}
+              className="w-full h-20 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
+              value={termsAndCondtion}
+              onChange={(e) => setTermsAndCondtion(e.target.value)}
+              placeholder="Type Terms & Conditions..."
+              onKeyDown={(e) => {
+                if (e.ctrlKey && e.key === "Enter") {
+                  e.preventDefault();
+
+                  const textarea = e.target;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+
+                  const newValue =
+                    termsAndCondtion.substring(0, start) +
+                    "\n" +
+                    termsAndCondtion.substring(end);
+
+                  setTermsAndCondtion(newValue);
+
+                  // ✅ Restore focus + cursor properly
+                  requestAnimationFrame(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + 1, start + 1);
+                  });
+                }
+              }}
+            />
+            {/* <textarea
+                className="w-full h-32 focus:outline-none border border-gray-300 rounded p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                value={termsAndCondtion}
+              disabled={readOnly}
+                onChange={(e) => setTermsAndCondtion(e.target.value)}
+              placeholder="Type Terms & Conditions..."
+                
+              /> */}
+          </div>
+
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
+            <h2 className="font-semibold text-slate-700 mb-2 text-xs">
+              Remarks
+            </h2>
+            <textarea
+              readOnly={readOnly}
+              value={remarks}
+              onChange={(e) => {
+                setRemarks(e.target.value);
+              }}
+              className="w-full h-14 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
+              placeholder="Additional notes..."
+            />
+          </div>
+          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
+            <div className="flex justify-between py-1 text-sm">
+              <span className="text-slate-600">Total Qty</span>
+              <span className="font-medium">
+                {parseFloat(getTotalQty()).toFixed(3)}
+              </span>
+            </div>
+            <div className="flex justify-between py-1 text-sm">
+              <span className="text-slate-600">Taxable Amount</span>
+              <span className="font-medium">
+                Rs.{parseFloat(totals?.taxable || 0).toFixed(2)}{" "}
+              </span>
+            </div>
+            {/* <div className="flex justify-between py-1 text-sm">
+                  <span className="text-slate-600">Tax Amount</span>
+                  <span className="font-medium">Rs.{taxDetails?.grossAmount}</span>
+                </div> */}
+            <div className="flex justify-between py-1 text-sm">
+              <span className="text-slate-600">Net Amount</span>
+              <span className="font-medium">
+                Rs.{parseFloat(totals?.net || 0).toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          {/* <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
+            <h2 className="font-bold text-slate-800 mb-2 text-base">
+              Po Summary
+            </h2>
+
+            <button
+              className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1 ml-5 rounded"
+              onClick={() => {
+                if (!taxTemplateId) {
+                  toast.info("Please Select Tax Template !", {
+                    position: "top-center",
+                  });
+                  return;
+                }
+                setSummary(true);
+              }}
+            >
+              View Po Summary
+            </button>
+          </div> */}
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
+          {/* Left Buttons */}
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => saveData("close")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  saveData("close");
+                  e.stopPropagation();
+                }
+              }}
+              disabled={readOnly}
+              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
+            >
+              <HiOutlineRefresh className="w-4 h-4 mr-2" />
+              Save & Close
+            </button>
+            <button
+              onClick={() => saveData("new")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  saveData("new");
+                }
+              }}
+              disabled={readOnly}
+              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
+            >
+              <FiSave className="w-4 h-4 mr-2" />
+              Save & New
+            </button>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {!id ||
+              (readOnly && (
+                <button
+                  className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-sm"
+                  onClick={() => setReadOnly(false)}
+                >
+                  <FiEdit2 className="w-4 h-4 mr-2" />
+                  Edit
+                </button>
+              ))}
+            <button
+              className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1  rounded"
+              onClick={() => {
+                if (!taxTemplateId) {
+                  toast.info("Please Select Tax Template !", {
+                    position: "top-center",
+                  });
+                  return;
+                }
+                setSummary(true);
+              }}
+              onKeyDown={(e) => {
+                if (!taxTemplateId) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toast.info("Please Select Tax Template !", {
+                    position: "top-center",
+                  });
+                  return;
+                }
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSummary(true);
+                }
+              }}
+            >
+              View Po Summary
+            </button>
+            <button
+              className="bg-slate-600 text-white px-4 py-1 rounded-md hover:bg-slate-700 flex items-center text-sm"
+              onClick={() => {
+                // handlePrint()
+                setPrintModalOpen(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setPrintModalOpen(true);
+                }
+              }}
+            >
+              <FiPrinter className="w-4 h-4 mr-2" />
+              Print
+            </button>
+          </div>
+        </div>
+      </div>
     </>
   );
 };

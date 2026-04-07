@@ -254,11 +254,13 @@ const PoItems = ({
           onCloseFocus={focusActionCell}
         />
       </Modal>
-      <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm h-full overflow-auto  w-full">
+      <div className="border border-slate-200 px-2 bg-white rounded-md shadow-sm max-h-[250px] overflow-auto  w-full">
         <div className="flex justify-between items-center my-2">
           <h2 className="font-medium text-slate-700">List Of Items</h2>
         </div>
-        <div className={`w-full overflow-y-auto  my-1`}>
+        <div
+          className={`w-full min-h-[200px] max-h-[200px] overflow-y-auto  my-1`}
+        >
           <table className="w-full border-collapse table-fixed">
             <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
               <tr>
