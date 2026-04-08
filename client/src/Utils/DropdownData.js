@@ -89,7 +89,7 @@ export const inwardTypes = [
 ];
 
 export const receiptTypes = [
-  { show: "Delivery come Invoice", value: "Against Invoice" },
+  { show: "Delivery cum Invoice", value: "Against Invoice" },
   { show: "Delivery only", value: "Without Invoice" },
 ];
 
