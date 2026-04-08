@@ -40,8 +40,9 @@ async function getNextDocId(
     )}/PI/1`;
 
     if (lastObject) {
-      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${parseInt(lastObject.docId.split("/").at(-1)) + 1
-        }`;
+      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PI/${
+        parseInt(lastObject.docId.split("/").at(-1)) + 1
+      }`;
     }
 
     return newDocId;
@@ -97,11 +98,13 @@ async function getNextDocId(
 
           return currentNo > maxNo ? current.docId : max;
         }, null);
-        newDocId = `${branchObj.branchCode}/${shortCode}/PI/${parseInt(maxDocId.split("/").at(-1)) + 1
-          }`;
+        newDocId = `${branchObj.branchCode}/${shortCode}/PI/${
+          parseInt(maxDocId.split("/").at(-1)) + 1
+        }`;
       } else {
-        newDocId = `${branchObj.branchCode}/${shortCode}/PI/${parseInt(lastObject.docId.split("/").at(-1)) + 1
-          }`;
+        newDocId = `${branchObj.branchCode}/${shortCode}/PI/${
+          parseInt(lastObject.docId.split("/").at(-1)) + 1
+        }`;
       }
     }
     return newDocId;
@@ -109,43 +112,69 @@ async function getNextDocId(
 }
 
 function getPurchaseInwardStatus(inward) {
-   if (inward.receiptType === "Against Invoice") {
-    return "Fully Billed";
+  if (inward.receiptType === "Against Invoice") {
+    if (inward.inwardType !== "Direct Inward") {
+      let isFullyReceived = true;
+      let isPartiallyReceived = false;
+
+      (inward.inwardItems || []).forEach((item) => {
+        const poQty = item.poQty || 0;
+        const inwardQty = item.inwardQty || 0;
+
+        if (inwardQty < poQty) {
+          isFullyReceived = false;
+        }
+
+        if (inwardQty > 0 && inwardQty < poQty) {
+          isPartiallyReceived = true;
+        }
+      });
+
+      if (isFullyReceived) return "Fully Billed"; // or Fully Received
+      if (isPartiallyReceived) return "Partially Billed";
+
+      return "Not Billed";
+    }
+
+    if (inward.inwardType === "Direct Inward") {
+      return "Fully Billed";
+    }
+  } else {
+    // 🔥 NORMAL LOGIC
+    const inwardItems = inward.inwardItems || [];
+    const returnItems = inward.purchaseReturnItems || [];
+    const billItems = inward.purchaseBillEntryItems || [];
+
+    const totalInwardQty = inwardItems.reduce(
+      (sum, item) => sum + (item.inwardQty || 0),
+      0,
+    );
+
+    const totalReturnQty = returnItems.reduce(
+      (sum, item) => sum + (item.returnQty || 0),
+      0,
+    );
+
+    const totalBilledQty = billItems.reduce(
+      (sum, item) => sum + (item.inwardQty || 0),
+      0,
+    );
+
+    if (totalInwardQty === 0) return "Pending";
+
+    if (totalReturnQty >= totalInwardQty) return "Fully Returned";
+
+    if (totalBilledQty >= totalInwardQty) return "Fully Billed";
+
+    if (totalBilledQty > 0 && totalReturnQty > 0)
+      return "Partially Billed & Returned";
+
+    if (totalBilledQty > 0) return "Partially Billed";
+
+    if (totalReturnQty > 0) return "Partially Returned";
+
+    return "Not Billed";
   }
-  const inwardItems = inward.inwardItems || [];
-  const returnItems = inward.purchaseReturnItems || [];
-  const billItems = inward.purchaseBillEntryItems || [];
-
-  const totalInwardQty = inwardItems.reduce(
-    (sum, item) => sum + (item.inwardQty || 0),
-    0,
-  );
-
-  const totalReturnQty = returnItems.reduce(
-    (sum, item) => sum + (item.returnQty || 0),
-    0,
-  );
-
-  const totalBilledQty = billItems.reduce(
-    (sum, item) => sum + (item.inwardQty || 0),
-    0,
-  );
-
-  // 🔥 Status Logic
-  if (totalInwardQty === 0) return "Pending";
-
-  if (totalReturnQty >= totalInwardQty) return "Fully Returned";
-
-  if (totalBilledQty >= totalInwardQty) return "Fully Billed";
-
-  if (totalBilledQty > 0 && totalReturnQty > 0)
-    return "Partially Billed & Returned";
-
-  if (totalBilledQty > 0) return "Partially Billed";
-
-  if (totalReturnQty > 0) return "Partially Returned";
-
-  return "Not Billed";
 }
 
 async function get(req) {
@@ -179,22 +208,22 @@ async function get(req) {
       branchId: branchId ? parseInt(branchId) : undefined,
       AND: finYearDate
         ? [
-          {
-            createdAt: {
-              gte: finYearDate.startTime,
+            {
+              createdAt: {
+                gte: finYearDate.startTime,
+              },
             },
-          },
-          {
-            createdAt: {
-              lte: finYearDate.endTime,
+            {
+              createdAt: {
+                lte: finYearDate.endTime,
+              },
             },
-          },
-        ]
+          ]
         : undefined,
       docId: Boolean(serachDocNo)
         ? {
-          contains: serachDocNo,
-        }
+            contains: serachDocNo,
+          }
         : undefined,
       inwardType: Boolean(searchInwardType)
         ? { contains: searchInwardType }
@@ -213,7 +242,16 @@ async function get(req) {
           storeName: true,
         },
       },
-      inwardItems: true,
+      inwardItems: {
+        include: {
+          Po: {
+            include: {
+              poItems: true,
+              quoteVersions: true,
+            },
+          },
+        },
+      },
       purchaseReturnItems: {
         select: {
           returnQty: true,
@@ -311,202 +349,6 @@ async function getOne(id) {
     },
   });
   if (!data) return NoRecordFound("Purchase Inward");
-  // const itemWithStkQty = await Promise.all(
-  //   data.fabricInwardItems.map(async (item) => {
-  //     const childRecordPlan = await prisma.cuttingOrderItems.count({
-  //       where: {
-  //         styleId: item.styleId,
-  //         uomId: item.uomId,
-  //         hsnId: item.hsnId,
-  //         fabricId: item.fabricId,
-  //         portionId: item.portionId,
-  //       },
-  //     });
-  //     const childRecordDelivery = await prisma.cuttingDeliveryItems.count({
-  //       where: {
-  //         styleId: item.styleId,
-  //         uomId: item.uomId,
-  //         hsnId: item.hsnId,
-  //         fabricId: item.fabricId,
-  //         portionId: item.portionId,
-  //       },
-  //     });
-  //     const childRecordReturn = await prisma.purchaseReturnItems.count({
-  //       where: {
-  //         styleId: item.styleId,
-  //         uomId: item.uomId,
-  //         hsnId: item.hsnId,
-  //         styleItemId: item.styleItemId,
-  //         fabricId: item.fabricId,
-  //         portionId: item.portionId,
-  //         accessoryGroupId: item.accessoryGroupId,
-  //         accessoryId: item.accessoryId,
-  //       },
-  //     });
-  //     const minDelivery = await prisma.cuttingDeliveryItems.aggregate({
-  //       where: {
-  //         styleId: item.styleId,
-  //         fabricId: item.fabricId,
-  //         portionId: item.portionId,
-  //       },
-  //       _sum: {
-  //         usedMeter: true,
-  //       },
-  //     });
-  //     const minReturn = await prisma.purchaseReturnItems.aggregate({
-  //       where: {
-  //         styleId: item.styleId,
-  //         fabricId: item.fabricId,
-  //         portionId: item.portionId,
-  //       },
-  //       _sum: {
-  //         returnFabMeter: true,
-  //       },
-  //     });
-  //     return {
-  //       ...item,
-  //       stockQty:
-  //         childRecordPlan + childRecordDelivery + childRecordReturn || 0,
-  //       minQty:
-  //         (minDelivery._sum.usedMeter || 0) +
-  //         (minReturn._sum.returnFabMeter || 0),
-  //     };
-  //   }),
-  // );
-  // const goodsWithStkQty = await Promise.all(
-  //   data.inwardItems.map(async (item) => {
-  //     const childRecordSales = await prisma.salesEntryItems.count({
-  //       where: {
-  //         styleId: item.styleId,
-  //         uomId: item.uomId,
-  //         hsnId: item.hsnId,
-  //         fabricId: item.fabricId,
-  //         styleItemId: item.styleItemId,
-  //       },
-  //     });
-  //     const childRecordAdjustment = await prisma.stockAdjustmentItems.count({
-  //       where: {
-  //         styleId: item.styleId,
-  //         uomId: item.uomId,
-  //         hsnId: item.hsnId,
-  //         fabricId: item.fabricId,
-  //         styleItemId: item.styleItemId,
-  //       },
-  //     });
-  //     const childRecordReturn = await prisma.returnGoods.count({
-  //       where: {
-  //         styleId: item.styleId,
-  //         uomId: item.uomId,
-  //         hsnId: item.hsnId,
-  //         styleItemId: item.styleItemId,
-  //         fabricId: item.fabricId,
-  //       },
-  //     });
-  //     const minDelivery = await prisma.salesEntryItems.aggregate({
-  //       where: {
-  //         styleId: item.styleId,
-  //         fabricId: item.fabricId,
-  //         hsnId: item.hsnId,
-  //         uomId: item.uomId,
-  //         styleItemId: item.styleItemId,
-  //       },
-  //       _sum: {
-  //         qty: true,
-  //       },
-  //     });
-  //     const minReturn = await prisma.returnGoods.aggregate({
-  //       where: {
-  //         styleId: item.styleId,
-  //         fabricId: item.fabricId,
-  //         hsnId: item.hsnId,
-  //         uomId: item.uomId,
-  //         styleItemId: item.styleItemId,
-  //       },
-  //       _sum: {
-  //         returnQty: true,
-  //       },
-  //     });
-  //     const minAdjust = await prisma.stockAdjustmentItems.aggregate({
-  //       where: {
-  //         styleId: item.styleId,
-  //         fabricId: item.fabricId,
-  //         hsnId: item.hsnId,
-  //         uomId: item.uomId,
-  //         styleItemId: item.styleItemId,
-  //       },
-  //       _sum: {
-  //         adjQty: true,
-  //       },
-  //     });
-  //     return {
-  //       ...item,
-  //       usedQty:
-  //         childRecordSales + childRecordAdjustment + childRecordReturn || 0,
-  //       minQty:
-  //         (minDelivery._sum.qty || 0) +
-  //         (minReturn._sum.returnQty || 0) +
-  //         (minAdjust._sum.adjQty || 0),
-  //     };
-  //   }),
-  // );
-  //   const styleIds = data.fabricInwardItems
-  //     .map((item) => item.styleId)
-  //     .filter(Boolean);
-  //   const goodsStyleIds = data.inwardItems
-  //     .map((item) => item.styleId)
-  //     .filter(Boolean);
-  //   const accessoryIds = data.fabricInwardItems
-  //     .map((item) => item.accessoryId)
-  //     .filter(Boolean);
-  //   const childRecordCutPlan = await prisma.cuttingOrderItems.count({
-  //     where: {
-  //       styleId: {
-  //         in: styleIds,
-  //       },
-  //     },
-  //   });
-  //   const childRecordCutDelivery = await prisma.cuttingDeliveryItems.count({
-  //     where: {
-  //       styleId: {
-  //         in: styleIds,
-  //       },
-  //     },
-  //   });
-  //   const childRecordReturn =
-  //     data?.inwardType === "Finished Goods"
-  //       ? await prisma.returnGoods.count({
-  //           where: {
-  //             styleId: {
-  //               in: goodsStyleIds,
-  //             },
-  //           },
-  //         })
-  //       : await prisma.purchaseReturnItems.count({
-  //           where: {
-  //             OR: [
-  //               {
-  //                 styleId: {
-  //                   in: styleIds,
-  //                 },
-  //               },
-  //               {
-  //                 accessoryId: {
-  //                   in: accessoryIds,
-  //                 },
-  //               },
-  //             ],
-  //           },
-  //         });
-  //   const childRecordSales = await prisma.salesEntryItems.count({
-  //     where: {
-  //       styleId: { in: goodsStyleIds },
-  //     },
-  //   });
-  //   const childRecordStock = await prisma.stockAdjustmentItems.count({
-  //     where: {
-  //       styleId: { in: goodsStyleIds },
-  //     },
-  //   });
   const itemsWithQty = await Promise.all(
     data.inwardItems.map(async (item) => {
       const cancelAgg = await prisma.purchaseCancelItems.aggregate({
@@ -742,29 +584,29 @@ async function getPurchaseInwardBillEntryItems(req) {
         PurchaseInward: {
           docId: Boolean(searchDocId)
             ? {
-              contains: searchDocId,
-            }
+                contains: searchDocId,
+              }
             : undefined,
           invNo: searchInvNo
             ? {
-              contains: searchInvNo,
-            }
+                contains: searchInvNo,
+              }
             : undefined,
           dcNo: Boolean(searchDcNo)
             ? {
-              contains: searchDcNo,
-            }
+                contains: searchDcNo,
+              }
             : undefined,
           docDate: docDateFilter,
-         AND: [
-    {
-      OR: [
-        { receiptType: { not: "Against Invoice" } },
-        { receiptType: null },
-        { receiptType: "" }
-      ]
-    }
-  ],
+          AND: [
+            {
+              OR: [
+                { receiptType: { not: "Against Invoice" } },
+                { receiptType: null },
+                { receiptType: "" },
+              ],
+            },
+          ],
 
           supplierId: supplierId ? parseInt(supplierId) : undefined,
           inwardType: billType ? { contains: billType } : undefined,
@@ -857,9 +699,9 @@ async function create(req) {
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-      finYearDate?.startDateStartTime,
-      finYearDate?.endDateEndTime,
-    )
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
     : "";
   let newDocId = await getNextDocId(
     branchId,
@@ -1397,31 +1239,31 @@ async function getPurchaseDetailStock(req) {
     statusCode: 0,
     data: isMaterial
       ? data.map((d) => ({
-        invNo: d.invNo,
-        styleItemId: d.styleItemId,
-        fabricId: d.fabricId,
-        hsnId: d.hsnId,
-        uomId: d.uomId,
-        fabWidth: d.fabWidth,
-        fabMeter: d._sum.fabMeter,
-        accessoryId: d.accessoryId,
-        accessoryGroupId: d.accessoryGroupId,
-        uomId: d.uomId,
-        uomId: d.uomId,
-        qty: d._sum.qty,
-        styleId: d.styleId,
-        portionId: d.portionId,
-      }))
+          invNo: d.invNo,
+          styleItemId: d.styleItemId,
+          fabricId: d.fabricId,
+          hsnId: d.hsnId,
+          uomId: d.uomId,
+          fabWidth: d.fabWidth,
+          fabMeter: d._sum.fabMeter,
+          accessoryId: d.accessoryId,
+          accessoryGroupId: d.accessoryGroupId,
+          uomId: d.uomId,
+          uomId: d.uomId,
+          qty: d._sum.qty,
+          styleId: d.styleId,
+          portionId: d.portionId,
+        }))
       : data.map((d) => ({
-        invNo: purchaseData.invNo,
-        styleItemId: d.styleItemId,
-        fabricId: d.fabricId,
-        hsnId: d.hsnId,
-        uomId: d.uomId,
-        stkQty: d._sum.qty,
-        styleId: d.styleId,
-        styleNo: d.styleNo,
-      })),
+          invNo: purchaseData.invNo,
+          styleItemId: d.styleItemId,
+          fabricId: d.fabricId,
+          hsnId: d.hsnId,
+          uomId: d.uomId,
+          stkQty: d._sum.qty,
+          styleId: d.styleId,
+          styleNo: d.styleNo,
+        })),
     returnType: purchaseData.inwardType,
     supplierId: purchaseData.supplierId,
   };
@@ -1442,13 +1284,13 @@ function manualFilterSearchDataPurchaseInwardItems(
     (item) =>
       (searchDocDate
         ? String(getDateFromDateTime(item.PurchaseInward.docDate)).includes(
-          searchDocDate,
-        )
+            searchDocDate,
+          )
         : true) &&
       (searchDcDate
         ? String(getDateFromDateTime(item.PurchaseInward.dcDate)).includes(
-          searchDcDate,
-        )
+            searchDcDate,
+          )
         : true) &&
       (returnTypeToSearch
         ? returnTypeToSearch.includes(item.PurchaseInward.inwardType) // ✅ Check against array
@@ -1587,8 +1429,8 @@ async function getPurchaseInwardItems(req) {
         PurchaseInward: {
           docId: Boolean(searchDocId)
             ? {
-              contains: searchDocId,
-            }
+                contains: searchDocId,
+              }
             : undefined,
           supplierId: supplierId ? parseInt(supplierId) : undefined,
         },

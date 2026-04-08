@@ -426,10 +426,15 @@ const PurchaseInwardFormReport = ({
 
                                 <Tooltip title="Create Bill Entry" arrow>
                                   <button
-                                    disabled={[
-                                      "Fully Billed",
-                                      "Fully Returned",
-                                    ].includes(dataObj.status)}
+                                    disabled={
+                                      dataObj.receiptType
+                                        ?.trim()
+                                        .toLowerCase() === "against invoice" ||
+                                      [
+                                        "Fully Billed",
+                                        "Fully Returned",
+                                      ].includes(dataObj.status)
+                                    }
                                     onClick={() => {
                                       dispatch(
                                         push({
@@ -444,12 +449,17 @@ const PurchaseInwardFormReport = ({
                                         }),
                                       );
                                     }}
-                                    className={`p-1.5 rounded-md transition
-                ${
-                  ["Fully Billed", "Fully Returned"].includes(dataObj.status)
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
-                }`}
+                                    className={`p-1.5 rounded-md transition ${
+                                      dataObj.receiptType
+                                        ?.trim()
+                                        .toLowerCase() === "against invoice" ||
+                                      [
+                                        "Fully Billed",
+                                        "Fully Returned",
+                                      ].includes(dataObj.status)
+                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                        : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                                    }`}
                                   >
                                     <Receipt size={16} />
                                   </button>

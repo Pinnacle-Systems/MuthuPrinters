@@ -72,12 +72,12 @@ function getPOStatus(po) {
       (sum, item) => sum + (item.cancelQty || 0),
       0,
     ) || 0;
- const totalProcessedQty = totalInwardQty + totalCancelQty;
+  const totalProcessedQty = totalInwardQty + totalCancelQty;
 
   if (totalInwardQty === 0 && totalCancelQty === 0) return "Pending";
-   if (totalProcessedQty >= totalPoQty) return "Closed";
   if (totalCancelQty >= totalPoQty) return "Cancelled";
   if (totalInwardQty >= totalPoQty) return "Fully Received";
+  if (totalProcessedQty >= totalPoQty) return "Closed (Inward + Cancelled)";
   if (totalInwardQty > 0 && totalCancelQty > 0)
     return "Partially Received & Cancelled";
   if (totalInwardQty > 0) return "Partially Received";

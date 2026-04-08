@@ -25,6 +25,7 @@ const ReturnItems = ({
   setSearchDocDate,
   searchDocDate,
   fromInwardId,
+  termsRef,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -613,7 +614,17 @@ const ReturnItems = ({
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
-                          addRow();
+                          const next = document.querySelector(
+                            `#returnQty-input-${index + 1}`,
+                          );
+                          if (index === returnItems.length - 1) {
+                            addRow();
+                          }
+                          if (next) next.focus();
+                        }
+                        if (e.key === "Tab" && e.target.value === "") {
+                          e.preventDefault();
+                          termsRef?.current?.focus();
                         }
                       }}
                       disabled={readOnly}

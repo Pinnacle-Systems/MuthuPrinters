@@ -710,6 +710,7 @@ const PurchaseReturnForm = ({
             setSearchDocDate={setSearchDocDate}
             searchDocDate={searchDocDate}
             fromInwardId={fromInwardId}
+            termsRef={termsRef}
           />
         </fieldset>
 

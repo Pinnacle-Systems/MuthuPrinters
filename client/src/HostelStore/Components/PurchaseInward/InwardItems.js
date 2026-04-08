@@ -356,10 +356,10 @@ const InwardItems = ({
                 </th>
                 {(inwardType === "Direct Inward" ||
                   receiptType === "Against Invoice") && (
-                    <th className={`w-16 px-4 py-2 text-center font-medium `}>
-                      Price<span className="text-red-500">*</span>
-                    </th>
-                  )}
+                  <th className={`w-16 px-4 py-2 text-center font-medium `}>
+                    Price<span className="text-red-500">*</span>
+                  </th>
+                )}
                 {receiptType === "Against Invoice" && (
                   <th className={`w-16 px-1 py-2 text-center font-medium `}>
                     Gross Amount
@@ -715,6 +715,10 @@ const InwardItems = ({
                           //   }, 100);
                           // }
                         }
+                        if (e.key === "Tab" && e.target.value === "") {
+                          e.preventDefault(); // ← this was missing
+                          vehicleRef.current?.focus();
+                        }
                       }}
                       min={"0"}
                       type="number"
@@ -801,49 +805,49 @@ const InwardItems = ({
                   </td>
                   {(inwardType === "Direct Inward" ||
                     receiptType === "Against Invoice") && (
-                      <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
-                        <input
-                          onKeyDown={(e) => {
-                            if (e.code === "Minus" || e.code === "NumpadSubtract")
-                              e.preventDefault();
-                            if (e.key === "Delete") {
-                              handleInputChange("", index, "price");
-                            }
-                          }}
-                          min={"0"}
-                          type="number"
-                          className="text-right rounded px-1 w-full table-data-input"
-                          onFocus={(e) => {
-                            e.target.select();
-                            setFocusedField(`${index}-price`);
-                          }}
-                          value={
-                            focusedField === `${index}-price`
-                              ? (row?.price ?? "")
-                              : row?.price
-                                ? Number(row.price).toFixed(2)
-                                : ""
+                    <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
+                      <input
+                        onKeyDown={(e) => {
+                          if (e.code === "Minus" || e.code === "NumpadSubtract")
+                            e.preventDefault();
+                          if (e.key === "Delete") {
+                            handleInputChange("", index, "price");
                           }
-                          onChange={(e) =>
-                            handleInputChange(e.target.value, index, "price")
-                          }
-                          onBlur={(e) => {
-                            const val = e.target.value;
-                            handleInputChange(
-                              val ? Number(val).toFixed(2) : "",
-                              index,
-                              "price",
-                            );
-                            setFocusedField(null);
-                          }}
-                          disabled={
-                            readOnly ||
-                            (row.stockQty ?? 0) > 0 ||
-                            inwardType !== "Direct Inward"
-                          }
-                        />
-                      </td>
-                    )}
+                        }}
+                        min={"0"}
+                        type="number"
+                        className="text-right rounded px-1 w-full table-data-input"
+                        onFocus={(e) => {
+                          e.target.select();
+                          setFocusedField(`${index}-price`);
+                        }}
+                        value={
+                          focusedField === `${index}-price`
+                            ? (row?.price ?? "")
+                            : row?.price
+                              ? Number(row.price).toFixed(2)
+                              : ""
+                        }
+                        onChange={(e) =>
+                          handleInputChange(e.target.value, index, "price")
+                        }
+                        onBlur={(e) => {
+                          const val = e.target.value;
+                          handleInputChange(
+                            val ? Number(val).toFixed(2) : "",
+                            index,
+                            "price",
+                          );
+                          setFocusedField(null);
+                        }}
+                        disabled={
+                          readOnly ||
+                          (row.stockQty ?? 0) > 0 ||
+                          inwardType !== "Direct Inward"
+                        }
+                      />
+                    </td>
+                  )}
                   {receiptType === "Against Invoice" && (
                     <td className=" border border-gray-300 text-[11px]">
                       <input
@@ -854,9 +858,9 @@ const InwardItems = ({
                           !row.inwardQty || !row.price
                             ? 0.0
                             : (
-                              parseFloat(row.inwardQty) *
-                              parseFloat(row.price)
-                            ).toFixed(2)
+                                parseFloat(row.inwardQty) *
+                                parseFloat(row.price)
+                              ).toFixed(2)
                         }
                         disabled={true}
                       />
@@ -894,22 +898,30 @@ const InwardItems = ({
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
+                          if (!receiptType) {
+                            Swal.fire({
+                              title: "Please select Receipt Basis",
+                              icon: "warning",
+                              confirmButtonText: "OK",
+                            });
+                            return;
+                          }
                           if (inwardType === "Direct Inward") {
                             if (index === inwardItems.length - 1) {
                               addRow();
-
                             }
-                          } else if (receiptType === "Against Invoice") {
+                          } else if (
+                            receiptType === "Against Invoice" ||
+                            receiptType === "Without Invoice"
+                          ) {
                             if (index === inwardItems.length - 1) {
                               addRow();
-                              
                             }
                             const next = document.querySelector(
-                                `#inwardQty-input-${index + 1}`,
-                              );
-                              if (next) next.focus();
-                          }
-                          else {
+                              `#inwardQty-input-${index + 1}`,
+                            );
+                            if (next) next.focus();
+                          } else {
                             addRow();
                           }
                         }
@@ -985,12 +997,12 @@ const InwardItems = ({
                 </td>
                 {(inwardType === "Direct Inward" ||
                   receiptType === "Against Invoice") && (
-                    <td className="text-right border border-gray-300 px-1 font-medium ">
-                      {inwardItems
-                        ?.reduce((sum, row) => sum + (Number(row.price) || 0), 0)
-                        .toFixed(2)}
-                    </td>
-                  )}
+                  <td className="text-right border border-gray-300 px-1 font-medium ">
+                    {inwardItems
+                      ?.reduce((sum, row) => sum + (Number(row.price) || 0), 0)
+                      .toFixed(2)}
+                  </td>
+                )}
                 {receiptType === "Against Invoice" && (
                   <td className="text-right border border-gray-300 px-1 font-medium ">
                     {inwardItems

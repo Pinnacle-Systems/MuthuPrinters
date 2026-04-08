@@ -98,8 +98,8 @@ const PurchaseInwardForm = ({
 
   const storeOptions = locationData
     ? locationData.data.filter(
-      (item) => parseInt(item.locationId) === parseInt(locationId),
-    )
+        (item) => parseInt(item.locationId) === parseInt(locationId),
+      )
     : [];
 
   const {
@@ -293,12 +293,11 @@ const PurchaseInwardForm = ({
     return duplicates; // empty array = no duplicates
   };
 
-
   const validateData = (data) => {
     const items = data?.inwardItems || [];
     const filledItems = items.filter((item) => item.styleItemId);
     const isAgainstInvoice = data.receiptType === "Against Invoice";
-     const isAmountMatched =
+    const isAmountMatched =
       Number(data?.netBillValue).toFixed(2) ===
       parseFloat(totals?.net || 0).toFixed(2);
     const checks = [
@@ -344,7 +343,7 @@ const PurchaseInwardForm = ({
       },
       {
         condition: isAgainstInvoice && !isAmountMatched,
-        title:"Total Bill Value and Total Net Amount must be Equal."
+        title: "Total Bill Value and Total Net Amount must be Equal.",
       },
       {
         condition: findDuplicates(filledItems).length > 0,
@@ -495,12 +494,12 @@ const PurchaseInwardForm = ({
                 options={
                   branchList
                     ? dropDownListObject(
-                      id
-                        ? branchList?.data
-                        : branchList?.data?.filter((item) => item.active),
-                      "branchName",
-                      "id",
-                    )
+                        id
+                          ? branchList?.data
+                          : branchList?.data?.filter((item) => item.active),
+                        "branchName",
+                        "id",
+                      )
                     : []
                 }
                 value={locationId}
@@ -565,7 +564,8 @@ const PurchaseInwardForm = ({
                 disabled={id}
                 beforeChange={() => {
                   if (!fromPoId) {
-
+                    setInvNo("");
+                    setNetBillValue("");
                     setInwardItems([]);
                   }
                 }}
@@ -604,8 +604,8 @@ const PurchaseInwardForm = ({
                   id
                     ? supplierList?.data?.filter((item) => item?.isSupplier)
                     : supplierList?.data?.filter(
-                      (item) => item?.active && item?.isSupplier,
-                    ),
+                        (item) => item?.active && item?.isSupplier,
+                      ),
                   "name",
                   "id",
                 )}
@@ -618,7 +618,7 @@ const PurchaseInwardForm = ({
                 addNewLabel="+ Add New Supplier"
                 childComponent={PartyMaster}
                 addNewModalWidth="w-[90%] h-[95%]"
-                disabled={id || !!fromPoSupplierId }
+                disabled={id || !!fromPoSupplierId}
               />
               <DropdownWithModal
                 name="Tax Type"
@@ -652,7 +652,7 @@ const PurchaseInwardForm = ({
                   name="Dc Date"
                   value={dcDate}
                   setValue={setDcDate}
-                required={receiptType !== "Against Invoice"}
+                  required={receiptType !== "Against Invoice"}
                   readOnly={readOnly}
                   type={"date"}
                 />
@@ -761,62 +761,62 @@ const PurchaseInwardForm = ({
               }}
             />
           </div>
-          {
-            receiptType === "Against Invoice" ? (
-              <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-                <div className="flex justify-between py-1 text-sm">
-                  <span className="text-slate-600">Total Qty</span>
-                  <span className="font-medium">
-                    {inwardItems
-                      .reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
-                      .toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 text-sm">
-                  <span className="text-slate-600">Taxable Amount</span>
-                  <span className="font-medium">
-                    Rs.{parseFloat(totals?.taxable || 0).toFixed(2)}{" "}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 text-sm">
-                  <span className="text-slate-600">Net Amount</span>
-                  <span className="font-medium">
-                    Rs.{parseFloat(totals?.net || 0).toFixed(2)}
-                  </span>
-                </div>
+          {receiptType === "Against Invoice" ? (
+            <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-slate-600">Total Qty</span>
+                <span className="font-medium">
+                  {inwardItems
+                    .reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
+                    .toFixed(2)}
+                </span>
               </div>
-            ) : (
-              <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
-                <h2 className="font-semibold text-slate-800 mb-2 text-base">
-                  Qty Summary
-                </h2>
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-slate-600">Taxable Amount</span>
+                <span className="font-medium">
+                  Rs.{parseFloat(totals?.taxable || 0).toFixed(2)}{" "}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 text-sm">
+                <span className="text-slate-600">Net Amount</span>
+                <span className="font-medium">
+                  Rs.{parseFloat(totals?.net || 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
+              <h2 className="font-semibold text-slate-800 mb-2 text-base">
+                Qty Summary
+              </h2>
 
-                {inwardType !== "Direct Inward" && (
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between  text-sm">
-                      <span className="text-slate-600">Total Order Qty</span>
-                      <span className="font-medium">
-                        {inwardItems
-                          .reduce((sum, row) => sum + (Number(row.poQty) || 0), 0)
-                          .toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                )}
+              {inwardType !== "Direct Inward" && (
                 <div className="space-y-1.5">
                   <div className="flex justify-between  text-sm">
-                    <span className="text-slate-600">Total Inward Qty</span>
+                    <span className="text-slate-600">Total Order Qty</span>
                     <span className="font-medium">
                       {inwardItems
-                        .reduce((sum, row) => sum + (Number(row.inwardQty) || 0), 0)
+                        .reduce((sum, row) => sum + (Number(row.poQty) || 0), 0)
                         .toFixed(2)}
                     </span>
                   </div>
                 </div>
+              )}
+              <div className="space-y-1.5">
+                <div className="flex justify-between  text-sm">
+                  <span className="text-slate-600">Total Inward Qty</span>
+                  <span className="font-medium">
+                    {inwardItems
+                      .reduce(
+                        (sum, row) => sum + (Number(row.inwardQty) || 0),
+                        0,
+                      )
+                      .toFixed(2)}
+                  </span>
+                </div>
               </div>
-            )
-          }
-
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">

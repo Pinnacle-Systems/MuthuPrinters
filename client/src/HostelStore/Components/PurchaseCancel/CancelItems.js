@@ -27,6 +27,7 @@ const CancelItems = ({
   setSearchDocDate,
   searchDocDate,
   fromPoId,
+  termsRef,
 }) => {
   const EMPTY_ROW = {
     poId: "",
@@ -718,7 +719,17 @@ const CancelItems = ({
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
-                          addRow();
+                          const next = document.querySelector(
+                            `#cancelQty-input-${index + 1}`,
+                          );
+                          if (index === cancelItems.length - 1) {
+                            addRow();
+                          }
+                          if (next) next.focus();
+                        }
+                        if (e.key === "Tab" && e.target.value === "") {
+                          e.preventDefault();
+                          termsRef?.current?.focus();
                         }
                       }}
                       disabled={readOnly}
