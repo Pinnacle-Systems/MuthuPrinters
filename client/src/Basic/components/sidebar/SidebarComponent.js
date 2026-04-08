@@ -54,6 +54,10 @@ import BranchType from "./images/branchtype.png";
 import ItemGroup from "./images/itemgroup.jpg";
 import Term from "./images/terms.png";
 import Item from "./images/item.png";
+import PO from "./images/po.png";
+import PurchaseCancel from "./images/purchasecancel.png";
+import PurchaseBill from "./images/purchasebillEntry.png";
+
 const SidebarComponent = ({
   logo,
   groups,
@@ -275,6 +279,27 @@ const SidebarComponent = ({
     "ITEM MASTER": (
       <img
         src={Item}
+        alt="country"
+        className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow"
+      />
+    ),
+    "PURCHASE ORDER": (
+      <img
+        src={PO}
+        alt="country"
+        className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow"
+      />
+    ),
+    "PURCHASE CANCEL": (
+      <img
+        src={PurchaseCancel}
+        alt="country"
+        className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow"
+      />
+    ),
+    "PURCHASE BILL ENTRY": (
+      <img
+        src={PurchaseBill}
         alt="country"
         className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow"
       />
