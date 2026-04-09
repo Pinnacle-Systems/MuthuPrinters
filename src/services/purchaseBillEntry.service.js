@@ -236,7 +236,7 @@ async function getOne(id) {
           price: true,
           Color: true,
           Size: true,
-          Itemgroup:true,
+          Itemgroup: true,
           taxPercent: true,
           discountType: true,
           discountValue: true,
@@ -355,6 +355,7 @@ async function createInwardItems(tx, inwardItems, data, userId) {
         itemGroupId: val?.itemGroupId ? parseInt(val.itemGroupId) : null,
         sizeId: val?.sizeId ? parseInt(val.sizeId) : null,
         colorId: val?.colorId ? parseInt(val.colorId) : null,
+        poId: val?.poId ? parseInt(val.poId) : null,
       },
     });
     // await tx.stock.create({
@@ -493,55 +494,9 @@ async function updateinwardItems(tx, inwardItems, data, userId) {
           itemGroupId: val?.itemGroupId ? parseInt(val.itemGroupId) : null,
           sizeId: val?.sizeId ? parseInt(val.sizeId) : null,
           colorId: val?.colorId ? parseInt(val.colorId) : null,
+          poId: val?.poId ? parseInt(val.poId) : null,
         },
       });
-
-      // Update or create Stock row
-      // const existingStock = await tx.stock.findFirst({
-      //     where: { inwardItemsId: updatedItem.id },
-      // });
-
-      // if (existingStock) {
-      //     await tx.stock.update({
-      //         where: { id: existingStock.id },
-      //         data: {
-      //             updatedById: parseInt(userId),
-      //             branchId: parseInt(locationId),
-      //             storeId: parseInt(storeId),
-      //             styleItemId: stockDetail?.styleItemId
-      //                 ? parseInt(stockDetail.styleItemId)
-      //                 : null,
-      //             uomId: stockDetail?.uomId ? parseInt(stockDetail.uomId) : null,
-      //             hsnId: stockDetail?.hsnId ? parseInt(stockDetail.hsnId) : null,
-      //             qty: stockDetail?.inwardQty
-      //                 ? parseInt(stockDetail.inwardQty)
-      //                 : null,
-      //             inwardType: inwardType ? inwardType : "",
-      //             invNo: invNo ? invNo : null,
-      //         },
-      //     });
-      // } else {
-      //     await tx.stock.create({
-      //         data: {
-      //             inOrOut: "In",
-      //             processName: "Purchase Inward",
-      //             createdById: parseInt(userId),
-      //             branchId: parseInt(locationId),
-      //             storeId: parseInt(storeId),
-      //             inwardItemsId: updatedItem.id,
-      //             styleItemId: stockDetail?.styleItemId
-      //                 ? parseInt(stockDetail.styleItemId)
-      //                 : null,
-      //             uomId: stockDetail?.uomId ? parseInt(stockDetail.uomId) : null,
-      //             hsnId: stockDetail?.hsnId ? parseInt(stockDetail.hsnId) : null,
-      //             qty: stockDetail?.inwardQty
-      //                 ? parseInt(stockDetail.inwardQty)
-      //                 : null,
-      //             inwardType: inwardType ? inwardType : "",
-      //             invNo: invNo ? invNo : null,
-      //         },
-      //     });
-      // }
 
       return updatedItem;
     } else {
@@ -567,28 +522,9 @@ async function updateinwardItems(tx, inwardItems, data, userId) {
           itemGroupId: val?.itemGroupId ? parseInt(val.itemGroupId) : null,
           sizeId: val?.sizeId ? parseInt(val.sizeId) : null,
           colorId: val?.colorId ? parseInt(val.colorId) : null,
+          poId: val?.poId ? parseInt(val.poId) : null,
         },
       });
-
-      // Create Stock row
-      // await tx.stock.create({
-      //     data: {
-      //         inOrOut: "In",
-      //         processName: "Purchase Inward",
-      //         createdById: parseInt(userId),
-      //         branchId: parseInt(locationId),
-      //         storeId: parseInt(storeId),
-      //         inwardItemsId: createdItem.id,
-      //         styleItemId: stockDetail?.styleItemId
-      //             ? parseInt(stockDetail.styleItemId)
-      //             : null,
-      //         uomId: stockDetail?.uomId ? parseInt(stockDetail.uomId) : null,
-      //         hsnId: stockDetail?.hsnId ? parseInt(stockDetail.hsnId) : null,
-      //         qty: stockDetail?.inwardQty ? parseInt(stockDetail.inwardQty) : null,
-      //         inwardType: inwardType ? inwardType : "",
-      //         invNo: invNo ? invNo : null,
-      //     },
-      // });
 
       return createdItem;
     }

@@ -57,6 +57,7 @@ import Item from "./images/item.png";
 import PO from "./images/po.png";
 import PurchaseCancel from "./images/purchasecancel.png";
 import PurchaseBill from "./images/purchasebillEntry.png";
+import GSM from "./images/gsm.png";
 
 const SidebarComponent = ({
   logo,
@@ -269,7 +270,7 @@ const SidebarComponent = ({
         className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow"
       />
     ),
-    "TERMS & CONDITIONS MASTER": (
+    "TERMS & CONDTIONS MASTER": (
       <img
         src={Term}
         alt="country"
@@ -300,6 +301,13 @@ const SidebarComponent = ({
     "PURCHASE BILL ENTRY": (
       <img
         src={PurchaseBill}
+        alt="country"
+        className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow"
+      />
+    ),
+    "GSM MASTER": (
+      <img
+        src={GSM}
         alt="country"
         className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow"
       />

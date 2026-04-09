@@ -28,6 +28,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   page: {
+    fontFamily: "Helvetica",
     fontSize: 8,
     padding: 0,
     backgroundColor: "#fff",
@@ -68,22 +69,29 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   companyRight: {
-    width: 130,
-    alignItems: "flex-end",
+    width: 140,
+    alignItems: "flex-start",
   },
   companyRightRow: {
     flexDirection: "row",
     marginBottom: 2,
+    width: "100%",
   },
   companyLabel: {
     fontSize: 7.5,
     color: "#888",
-    width: 42,
+    width: 38,
+  },
+  companyColon: {
+    fontSize: 7.5,
+    color: "#888",
+    width: 8,
   },
   companyValue: {
     fontSize: 7.5,
     color: "#1a1a2e",
     fontWeight: "bold",
+    flex: 1,
   },
 
   // ── TITLE BAND ──
@@ -119,7 +127,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#fff5f5",
     border: "1 solid #ddd",
-    borderLeft: "3 solid #c0392b",
+    borderLeft: "2 solid #c0392b",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 2,
@@ -292,7 +300,7 @@ const styles = StyleSheet.create({
     color: "#333",
     textAlign: "right",
     padding: 4,
-    minWidth: 55,
+    // minWidth: 55,
   },
   taxLabelNet: {
     flex: 1,
@@ -307,7 +315,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "right",
     padding: 4,
-    minWidth: 55,
+    // minWidth: 55,
   },
 
   // ── AMOUNT IN WORDS BAR ──
@@ -466,353 +474,384 @@ const PurchaseOrderPrintFormat = ({
       : "") +
     " Only";
 
+  const MAX_ROWS_PER_PAGE = 14;
+
+  // Create padded array of rows
+  const allRows = [...filledPoItems];
+
+  // Pad up to MIN_ROWS to reach minimum desired document length
+  while (allRows.length < MIN_ROWS) {
+    allRows.push({ isEmpty: true });
+  }
+
+  // Pad the rest so every page chunk is fully padded up to MAX_ROWS_PER_PAGE.
+  // This ensures consistent table heights on ALL pages, including the last one,
+  // making the footers perfectly land at the bottom without breaking.
+  while (allRows.length % MAX_ROWS_PER_PAGE !== 0) {
+    allRows.push({ isEmpty: true });
+  }
+
+  const pageChunks = [];
+  for (let i = 0; i < Math.max(allRows.length, 1); i += MAX_ROWS_PER_PAGE) {
+    pageChunks.push(allRows.slice(i, i + MAX_ROWS_PER_PAGE));
+  }
+
   return (
     <Document>
-      <Page size="A4" style={styles.borderBox}>
-        <View style={styles.page}>
+      {pageChunks.map((chunk, pageIndex) => {
+        const isLastPage = pageIndex === pageChunks.length - 1;
 
-          {/* ── TOP ACCENT BAR ── */}
-          <View style={styles.topBar} />
+        return (
+          <Page key={pageIndex} size="A4" style={styles.borderBox}>
+            <View style={styles.page}>
 
-          {/* ── HEADER ── */}
-          <View style={styles.header}>
-            <Image src={Logo} style={styles.logo} />
+              {/* ── TOP ACCENT BAR ── */}
+              <View style={styles.topBar} />
 
-            <View style={styles.companyCenter}>
-              <Text style={styles.companyName}>{branchData?.branchName || ""}</Text>
-              {/* <Text style={styles.companySub}>Garment Manufacturing &amp; Exports</Text> */}
-            </View>
+              {/* ── HEADER ── */}
+              <View style={styles.header}>
+                <Image src={Logo} style={styles.logo} />
 
-            <View style={styles.companyRight}>
-              <Text style={{ fontSize: 7.5, color: "#555", marginBottom: 2, textAlign: "right" }}>
-                {branchData?.address || ""}
-              </Text>
-              {[
-                { label: "Mobile", value: branchData?.contactMobile },
-                { label: "GST No", value: branchData?.company?.gstNo },
-                { label: "Email", value: branchData?.contactEmail },
-              ].map(({ label, value }) =>
-                value ? (
-                  <View key={label} style={styles.companyRightRow}>
-                    <Text style={styles.companyLabel}>{label}: </Text>
-                    <Text style={styles.companyValue}>{value}</Text>
-                  </View>
-                ) : null
-              )}
-            </View>
-          </View>
-
-          {/* ── TITLE BAND ── */}
-          <Text style={styles.titleBand}>PURCHASE ORDER</Text>
-
-          {/* ── PO META ── */}
-          <View style={styles.metaRow}>
-            {[
-              { label: "PO No", value: poNumber },
-              { label: "PO Date", value: getDateFromDateTimeToDisplay(poDate) },
-              { label: "Due Date", value: getDateFromDateTimeToDisplay(dueDate) },
-            ].map(({ label, value }) => (
-              <View key={label} style={styles.metaPill}>
-                <Text style={styles.metaLabel}>{label}:</Text>
-                <Text style={styles.metaValue}>{value}</Text>
-              </View>
-            ))}
-            {quoteVersion > 1 && (
-              <View style={styles.metaPillRevised}>
-                <Text style={styles.metaLabel}>Revised PO:</Text>
-                <Text style={styles.metaValueRevised}>v{quoteVersion}</Text>
-              </View>
-            )}
-          </View>
-
-          {/* ── SUPPLIER & DELIVERY ── */}
-          <View style={styles.twoCol}>
-            {/* Supplier */}
-            <View style={[styles.colHalf, { borderRight: "1 solid #ddd" }]}>
-              <Text style={styles.sectionHeader}>SUPPLIER DETAILS</Text>
-              <View style={styles.sectionBody}>
-                <Text style={styles.supplierName}>{supplierDetails?.name}</Text>
-                <Text style={styles.supplierAddr}>{supplierDetails?.address}</Text>
-                {[
-                  { label: "Mobile No", value: supplierDetails?.contactNumber },
-                  { label: "GST No", value: supplierDetails?.gstNo },
-                  { label: "Email", value: supplierDetails?.contactPersonEmail },
-                ].map(({ label, value }) =>
-                  value ? (
-                    <View key={label} style={styles.supplierRow}>
-                      <Text style={styles.supplierLabel}>{label}</Text>
-                      <Text style={styles.supplierValue}>: {value}</Text>
-                    </View>
-                  ) : null
-                )}
-              </View>
-            </View>
-
-            {/* Delivery */}
-            <View style={styles.colHalf}>
-              <Text style={styles.sectionHeader}>DELIVERY TO</Text>
-              <View style={styles.sectionBody}>
-                <Text style={styles.supplierName}>
-                  {deliveryType === "ToSelf" ? deliveryTo?.branchName : deliveryTo?.name}
-                </Text>
-                <Text style={styles.supplierAddr}>{deliveryTo?.address}</Text>
-                {[
-                  { label: "Mobile No", value: deliveryTo?.contactMobile },
-                  { label: "GST No", value: deliveryTo?.gstNo },
-                  { label: "Email", value: deliveryType === "ToSelf" ? deliveryTo?.contactEmail : deliveryTo?.email },
-                ].map(({ label, value }) =>
-                  value ? (
-                    <View key={label} style={styles.supplierRow}>
-                      <Text style={styles.supplierLabel}>{label}</Text>
-                      <Text style={styles.supplierValue}>: {value}</Text>
-                    </View>
-                  ) : null
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* ── TABLE ── */}
-          <View style={styles.tableWrap}>
-            {/* Header */}
-            <View style={styles.tableHeader}>
-              {COLUMNS.map(({ label, flex }) => (
-                <Text key={label} style={[styles.th, { flex }]}>{label}</Text>
-              ))}
-            </View>
-
-            {/* Filled rows */}
-            {(() => {
-              const filledRows = filledPoItems.map((val, index) => {
-                const gross = !isNaN(val.qty * val.price)
-                  ? (val.qty * val.price).toFixed(2)
-                  : "";
-                const rowStyle = index % 2 === 0 ? styles.trOdd : styles.trEven;
-                return (
-                  <View key={index} style={rowStyle}>
-                    <Text style={[styles.td, { flex: 0.5 }]}>{index + 1}</Text>
-                    <Text style={[styles.td, { flex: 4, textAlign: "left" }]}>
-                      {findFromList(val.styleItemId, styleItemList?.data, "name")}
-                    </Text>
-                    <Text style={[styles.td, { flex: 1.5, textAlign: "left" }]}>
-                      {val.Size?.name || findFromList(val.sizeId, sizeList?.data, "name")}
-                    </Text>
-                    <Text style={[styles.td, { flex: 1.5, textAlign: "left" }]}>
-                      {val.Color?.name || findFromList(val.colorId, colorList?.data, "name")}
-                    </Text>
-                    <Text style={[styles.td, { flex: 1, textAlign: "left" }]}>
-                      {val.Uom?.name || findFromList(val.uomId, uomList?.data, "name")}
-                    </Text>
-                    <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
-                      {isNaN(val.qty) ? "" : parseFloat(val.qty).toFixed(3)}
-                    </Text>
-                    <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
-                      {isNaN(val.price) ? "" : parseFloat(val.price).toFixed(2)}
-                    </Text>
-                    <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
-                      {isNaN(val.taxPercent) ? "" : parseFloat(val.taxPercent).toFixed(2)}
-                    </Text>
-                    <Text style={[styles.td, { flex: 1.2, textAlign: "right", borderRight: "none" }]}>
-                      {gross}
-                    </Text>
-                  </View>
-                );
-              });
-
-              // Empty rows to fill minimum height
-              const emptyCount = Math.max(0, MIN_ROWS - filledPoItems.length);
-              const emptyRows = Array.from({ length: emptyCount }).map((_, i) => {
-                const rowStyle = (filledPoItems.length + i) % 2 === 0 ? styles.trOdd : styles.trEven;
-                return (
-                  <View key={`empty-${i}`} style={rowStyle}>
-                    <Text style={[styles.td, { flex: 0.5, color: "transparent" }]}> </Text>
-                    <Text style={[styles.td, { flex: 4 }]}> </Text>
-                    <Text style={[styles.td, { flex: 1.5 }]}> </Text>
-                    <Text style={[styles.td, { flex: 1.5 }]}> </Text>
-                    <Text style={[styles.td, { flex: 1 }]}> </Text>
-                    <Text style={[styles.td, { flex: 1 }]}> </Text>
-                    <Text style={[styles.td, { flex: 1 }]}> </Text>
-                    <Text style={[styles.td, { flex: 1 }]}> </Text>
-                    <Text style={[styles.td, { flex: 1.2, borderRight: "none" }]}> </Text>
-                  </View>
-                );
-              });
-
-              return [...filledRows, ...emptyRows];
-            })()}
-          </View>
-
-          {/* ── TABLE FOOTER TOTAL ROW ── */}
-          {(() => {
-            const totalQty = filledPoItems.reduce(
-              (sum, v) => sum + (isNaN(v.qty) ? 0 : parseFloat(v.qty)),
-              0
-            );
-            const totalAmount = filledPoItems.reduce(
-              (sum, v) =>
-                sum + (!isNaN(v.qty * v.price) ? v.qty * v.price : 0),
-              0
-            );
-            return (
-              <View
-                style={{
-                  flexDirection: "row",
-                  marginHorizontal: 20,
-                  backgroundColor: "#e8e8ec",
-                  // borderTop: "1.5 solid #aaaabc",
-                  borderLeft: "1 solid #b0b0b8",
-                  borderRight: "1 solid #b0b0b8",
-                  borderBottom: "1 solid #b0b0b8",
-                }}
-              >
-                {/* S.No cell */}
-                <Text style={{ flex: 0.5, fontSize: 8, color: "transparent", paddingVertical: 5, paddingHorizontal: 3, borderRight: "1 solid #bbbbc8" }}> </Text>
-                {/* Item + Size + Color + UOM merged label */}
-                <Text
-                  style={{
-                    flex: 8,
-                    fontSize: 8,
-                    fontWeight: "bold",
-                    color: "#1a1a2e",
-                    textAlign: "right",
-                    paddingVertical: 5,
-                    paddingRight: 8,
-                    borderRight: "1 solid #bbbbc8",
-                  }}
-                >
-                  TOTAL
-                </Text>
-                {/* Total Qty */}
-                <Text
-                  style={{
-                    flex: 1,
-                    fontSize: 8,
-                    fontWeight: "bold",
-                    color: "#1a1a2e",
-                    textAlign: "right",
-                    paddingVertical: 5,
-                    paddingHorizontal: 3,
-                    borderRight: "1 solid #bbbbc8",
-                  }}
-                >
-                  {totalQty.toFixed(3)}
-                </Text>
-                {/* Rate cell — blank */}
-                <Text
-                  style={{
-                    flex: 1,
-                    fontSize: 8,
-                    color: "transparent",
-                    paddingVertical: 5,
-                    paddingHorizontal: 3,
-                    borderRight: "1 solid #bbbbc8",
-                  }}
-                >
-                  {" "}
-                </Text>
-                {/* Tax cell — blank */}
-                <Text
-                  style={{
-                    flex: 1,
-                    fontSize: 8,
-                    color: "transparent",
-                    paddingVertical: 5,
-                    paddingHorizontal: 3,
-                    borderRight: "1 solid #bbbbc8",
-                  }}
-                >
-                  {" "}
-                </Text>
-                {/* Total Amount */}
-                <Text
-                  style={{
-                    flex: 1.2,
-                    fontSize: 8,
-                    fontWeight: "bold",
-                    color: "#1a1a2e",
-                    textAlign: "right",
-                    paddingVertical: 5,
-                    paddingHorizontal: 3,
-                  }}
-                >
-                  {totalAmount.toFixed(2)}
-                </Text>
-              </View>
-            );
-          })()}
-
-          {/* ── TAX BOX ── */}
-          <View style={styles.taxBox}>
-            <Text style={styles.taxHeader}>TAX DETAILS</Text>
-            <View style={styles.taxRow}>
-              <Text style={styles.taxLabel}>Taxable Amt</Text>
-              <Text style={styles.taxValue}>
-                {parseFloat(taxDetails?.taxable || 0).toFixed(2)}
-              </Text>
-            </View>
-            {taxDetails?.slabBreakup
-              ?.filter((item) => item.amount > 0)
-              ?.map((i) => (
-                <View key={i.tax} style={styles.taxRow}>
-                  <Text style={styles.taxLabel}>{i.tax}</Text>
-                  <Text style={styles.taxValue}>
-                    {parseFloat(i.amount || 0).toFixed(2)}
-                  </Text>
+                <View style={styles.companyCenter}>
+                  <Text style={styles.companyName}>{branchData?.branchName || ""}</Text>
+                  {/* <Text style={styles.companySub}>Garment Manufacturing &amp; Exports</Text> */}
                 </View>
-              ))}
-            <View style={styles.taxRowNet}>
-              <Text style={styles.taxLabelNet}>Net Amount</Text>
-              <Text style={styles.taxValueNet}>
-                {parseFloat(taxDetails?.net || 0).toFixed(2)}
-              </Text>
+
+                <View style={styles.companyRight}>
+                  <Text style={{ fontSize: 7.5, color: "#555", marginBottom: 2, textAlign: "right" }}>
+                    {branchData?.address || ""}
+                  </Text>
+                  {[
+                    { label: "Mobile", value: branchData?.contactMobile },
+                    { label: "GST No", value: branchData?.company?.gstNo },
+                    { label: "Email", value: branchData?.contactEmail },
+                  ].map(({ label, value }) =>
+                    value ? (
+                      <View key={label} style={styles.companyRightRow}>
+                        <Text style={styles.companyLabel}>{label}</Text>
+                        <Text style={styles.companyColon}> : </Text>
+                        <Text style={styles.companyValue}>{value}</Text>
+                      </View>
+                    ) : null
+                  )}
+                </View>
+              </View>
+
+              {/* ── TITLE BAND ── */}
+              <Text style={styles.titleBand}>PURCHASE ORDER</Text>
+
+              {/* ── PO META ── */}
+              <View style={styles.metaRow}>
+                {[
+                  { label: "PO No", value: poNumber },
+                  { label: "PO Date", value: getDateFromDateTimeToDisplay(poDate) },
+                  { label: "Due Date", value: getDateFromDateTimeToDisplay(dueDate) },
+                ].map(({ label, value }) => (
+                  <View key={label} style={styles.metaPill}>
+                    <Text style={styles.metaLabel}>{label}:</Text>
+                    <Text style={styles.metaValue}>{value}</Text>
+                  </View>
+                ))}
+                {quoteVersion > 1 && (
+                  <View style={styles.metaPillRevised}>
+                    <Text style={styles.metaLabel}>Revised PO:</Text>
+                    <Text style={styles.metaValueRevised}>v{quoteVersion}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* ── SUPPLIER & DELIVERY ── */}
+              <View style={styles.twoCol}>
+                {/* Supplier */}
+                <View style={[styles.colHalf, { borderRight: "1 solid #ddd" }]}>
+                  <Text style={styles.sectionHeader}>SUPPLIER DETAILS</Text>
+                  <View style={styles.sectionBody}>
+                    <Text style={styles.supplierName}>{supplierDetails?.name}</Text>
+                    <Text style={styles.supplierAddr}>{supplierDetails?.address}</Text>
+                    {[
+                      { label: "Mobile No", value: supplierDetails?.contactNumber },
+                      { label: "GST No", value: supplierDetails?.gstNo },
+                      { label: "Email", value: supplierDetails?.contactPersonEmail },
+                    ].map(({ label, value }) =>
+                      value ? (
+                        <View key={label} style={styles.supplierRow}>
+                          <Text style={styles.supplierLabel}>{label}</Text>
+                          <Text style={styles.supplierValue}>: {value}</Text>
+                        </View>
+                      ) : null
+                    )}
+                  </View>
+                </View>
+
+                {/* Delivery */}
+                <View style={styles.colHalf}>
+                  <Text style={styles.sectionHeader}>DELIVERY TO</Text>
+                  <View style={styles.sectionBody}>
+                    <Text style={styles.supplierName}>
+                      {deliveryType === "ToSelf" ? deliveryTo?.branchName : deliveryTo?.name}
+                    </Text>
+                    <Text style={styles.supplierAddr}>{deliveryTo?.address}</Text>
+                    {[
+                      { label: "Mobile No", value: deliveryTo?.contactMobile },
+                      { label: "GST No", value: deliveryTo?.gstNo },
+                      { label: "Email", value: deliveryType === "ToSelf" ? deliveryTo?.contactEmail : deliveryTo?.email },
+                    ].map(({ label, value }) =>
+                      value ? (
+                        <View key={label} style={styles.supplierRow}>
+                          <Text style={styles.supplierLabel}>{label}</Text>
+                          <Text style={styles.supplierValue}>: {value}</Text>
+                        </View>
+                      ) : null
+                    )}
+                  </View>
+                </View>
+              </View>
+
+              {/* ── TABLE ── */}
+              <View style={styles.tableWrap}>
+                {/* Header */}
+                <View style={styles.tableHeader}>
+                  {COLUMNS.map(({ label, flex }) => (
+                    <Text key={label} style={[styles.th, { flex }]}>{label}</Text>
+                  ))}
+                </View>
+
+                {/* Filled rows */}
+                {(() => {
+                  return chunk.map((val, chunkIndex) => {
+                    const index = pageIndex * MAX_ROWS_PER_PAGE + chunkIndex;
+                    const rowStyle = index % 2 === 0 ? styles.trOdd : styles.trEven;
+
+                    if (val.isEmpty) {
+                      return (
+                        <View key={`empty-${index}`} style={rowStyle}>
+                          <Text style={[styles.td, { flex: 0.5, color: "transparent" }]}> </Text>
+                          <Text style={[styles.td, { flex: 4 }]}> </Text>
+                          <Text style={[styles.td, { flex: 1.5 }]}> </Text>
+                          <Text style={[styles.td, { flex: 1.5 }]}> </Text>
+                          <Text style={[styles.td, { flex: 1 }]}> </Text>
+                          <Text style={[styles.td, { flex: 1 }]}> </Text>
+                          <Text style={[styles.td, { flex: 1 }]}> </Text>
+                          <Text style={[styles.td, { flex: 1 }]}> </Text>
+                          <Text style={[styles.td, { flex: 1.2, borderRight: "none" }]}> </Text>
+                        </View>
+                      );
+                    }
+
+                    const gross = !isNaN(val.qty * val.price)
+                      ? (val.qty * val.price).toFixed(2)
+                      : "";
+                    return (
+                      <View key={index} style={rowStyle}>
+                        <Text style={[styles.td, { flex: 0.5 }]}>{index + 1}</Text>
+                        <Text style={[styles.td, { flex: 4, textAlign: "left" }]}>
+                          {findFromList(val.styleItemId, styleItemList?.data, "name")}
+                        </Text>
+                        <Text style={[styles.td, { flex: 1.5, textAlign: "left" }]}>
+                          {val.Size?.name || findFromList(val.sizeId, sizeList?.data, "name")}
+                        </Text>
+                        <Text style={[styles.td, { flex: 1.5, textAlign: "left" }]}>
+                          {val.Color?.name || findFromList(val.colorId, colorList?.data, "name")}
+                        </Text>
+                        <Text style={[styles.td, { flex: 1, textAlign: "left" }]}>
+                          {val.Uom?.name || findFromList(val.uomId, uomList?.data, "name")}
+                        </Text>
+                        <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
+                          {isNaN(val.qty) ? "" : parseFloat(val.qty).toFixed(3)}
+                        </Text>
+                        <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
+                          {isNaN(val.price) ? "" : parseFloat(val.price).toFixed(2)}
+                        </Text>
+                        <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
+                          {isNaN(val.taxPercent) ? "" : parseFloat(val.taxPercent).toFixed(2)}
+                        </Text>
+                        <Text style={[styles.td, { flex: 1.2, textAlign: "right", borderRight: "none" }]}>
+                          {gross}
+                        </Text>
+                      </View>
+                    );
+                  });
+                })()}
+              </View>
+
+              {/* ── TABLE FOOTER TOTAL ROW ── */}
+              {isLastPage && (
+                <>
+                  {(() => {
+                    const totalQty = filledPoItems.reduce(
+                      (sum, v) => sum + (isNaN(v.qty) ? 0 : parseFloat(v.qty)),
+                      0
+                    );
+                    const totalAmount = filledPoItems.reduce(
+                      (sum, v) =>
+                        sum + (!isNaN(v.qty * v.price) ? v.qty * v.price : 0),
+                      0
+                    );
+                    return (
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          marginHorizontal: 20,
+                          backgroundColor: "#e8e8ec",
+                          // borderTop: "1.5 solid #aaaabc",
+                          borderLeft: "1 solid #b0b0b8",
+                          borderRight: "1 solid #b0b0b8",
+                          borderBottom: "1 solid #b0b0b8",
+                        }}
+                      >
+                        {/* S.No cell */}
+                        <Text style={{ flex: 0.5, fontSize: 8, color: "transparent", paddingVertical: 5, paddingHorizontal: 3, borderRight: "1 solid #bbbbc8" }}> </Text>
+                        {/* Item + Size + Color + UOM merged label */}
+                        <Text
+                          style={{
+                            flex: 8,
+                            fontSize: 8,
+                            fontWeight: "bold",
+                            color: "#1a1a2e",
+                            textAlign: "right",
+                            paddingVertical: 5,
+                            paddingRight: 8,
+                            borderRight: "1 solid #bbbbc8",
+                          }}
+                        >
+                          TOTAL
+                        </Text>
+                        {/* Total Qty */}
+                        <Text
+                          style={{
+                            flex: 1,
+                            fontSize: 8,
+                            fontWeight: "bold",
+                            color: "#1a1a2e",
+                            textAlign: "right",
+                            paddingVertical: 5,
+                            paddingRight: 3,
+                            borderRight: "1 solid #bbbbc8",
+                          }}
+                        >
+                          {totalQty.toFixed(3)}
+                        </Text>
+                        {/* Rate cell — blank */}
+                        <Text
+                          style={{
+                            flex: 1,
+                            fontSize: 8,
+                            color: "transparent",
+                            paddingVertical: 5,
+                            paddingRight: 3,
+                            borderRight: "1 solid #bbbbc8",
+                          }}
+                        >
+                          {" "}
+                        </Text>
+                        {/* Tax cell — blank */}
+                        <Text
+                          style={{
+                            flex: 1,
+                            fontSize: 8,
+                            color: "transparent",
+                            paddingVertical: 5,
+                            paddingRight: 3,
+                            borderRight: "1 solid #bbbbc8",
+                          }}
+                        >
+                          {" "}
+                        </Text>
+                        {/* Total Amount */}
+                        <Text
+                          style={{
+                            flex: 1.2,
+                            fontSize: 8,
+                            fontWeight: "bold",
+                            color: "#1a1a2e",
+                            textAlign: "right",
+                            paddingVertical: 5,
+                            paddingRight: 3,
+                          }}
+                        >
+                          {totalAmount.toFixed(2)}
+                        </Text>
+                      </View>
+                    );
+                  })()}
+
+                  {/* ── TAX BOX ── */}
+                  <View style={styles.taxBox}>
+                    <Text style={styles.taxHeader}>TAX DETAILS</Text>
+                    <View style={styles.taxRow}>
+                      <Text style={styles.taxLabel}>Taxable Amt</Text>
+                      <Text style={styles.taxValue}>
+                        {parseFloat(taxDetails?.taxable || 0).toFixed(2)}
+                      </Text>
+                    </View>
+                    {taxDetails?.slabBreakup
+                      ?.filter((item) => item.amount > 0)
+                      ?.map((i) => (
+                        <View key={i.tax} style={styles.taxRow}>
+                          <Text style={styles.taxLabel}>{i.tax}</Text>
+                          <Text style={styles.taxValue}>
+                            {parseFloat(i.amount || 0).toFixed(2)}
+                          </Text>
+                        </View>
+                      ))}
+                    <View style={styles.taxRowNet}>
+                      <Text style={styles.taxLabelNet}>Net Amount</Text>
+                      <Text style={styles.taxValueNet}>
+                        {parseFloat(taxDetails?.net || 0).toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* ── AMOUNT IN WORDS ── */}
+                  <View style={styles.wordsBar}>
+                    <Text style={styles.wordsText}>
+                      Amount in Words:{" "}
+                      <Text style={styles.wordsValue}>{amountWords}</Text>
+                    </Text>
+                  </View>
+
+                  {/* ── REMARKS & TERMS ── */}
+                  <View style={styles.remarksRow}>
+                    <View style={styles.remarksCol}>
+                      <Text style={styles.rTitle}>REMARKS</Text>
+                      <Text style={styles.rText}>{remarks}</Text>
+                    </View>
+                    <View style={styles.termsCol}>
+                      <Text style={styles.rTitle}>TERMS &amp; CONDITIONS</Text>
+                      <Text style={styles.rText}>{term}</Text>
+                    </View>
+                  </View>
+
+                  {/* ── SIGNATURES ── */}
+                  <View style={styles.sigArea}>
+                    <Text style={styles.sigCompany}>For {branchData?.branchName}</Text>
+                    <View style={styles.sigRow}>
+                      {["Prepared By", "Verified By", "Received By", "Approved By"].map((role) => (
+                        <Text key={role} style={styles.sigItem}>{role}</Text>
+                      ))}
+                    </View>
+                  </View>
+
+                </>
+              )}
+
+              {/* ── FOOTER BAR ── */}
+              <View style={[styles.footerBar, !isLastPage && { marginTop: 20 }]}>
+                <Text style={styles.footerLeft}>
+                  This is a computer-generated document.
+                </Text>
+                <Text
+                  style={styles.footerRight}
+                  render={({ pageNumber, totalPages }) =>
+                    `Page ${pageNumber} / ${totalPages}`
+                  }
+                />
+              </View>
+
             </View>
-          </View>
-
-          {/* ── AMOUNT IN WORDS ── */}
-          <View style={styles.wordsBar}>
-            <Text style={styles.wordsText}>
-              Amount in Words:{" "}
-              <Text style={styles.wordsValue}>{amountWords}</Text>
-            </Text>
-          </View>
-
-          {/* ── REMARKS & TERMS ── */}
-          <View style={styles.remarksRow}>
-            <View style={styles.remarksCol}>
-              <Text style={styles.rTitle}>REMARKS</Text>
-              <Text style={styles.rText}>{remarks}</Text>
-            </View>
-            <View style={styles.termsCol}>
-              <Text style={styles.rTitle}>TERMS &amp; CONDITIONS</Text>
-              <Text style={styles.rText}>{term}</Text>
-            </View>
-          </View>
-
-          {/* ── SIGNATURES ── */}
-          <View style={styles.sigArea}>
-            <Text style={styles.sigCompany}>For {branchData?.branchName}</Text>
-            <View style={styles.sigRow}>
-              {["Prepared By", "Verified By", "Received By", "Approved By"].map((role) => (
-                <Text key={role} style={styles.sigItem}>{role}</Text>
-              ))}
-            </View>
-          </View>
-
-          {/* ── FOOTER BAR ── */}
-          <View style={styles.footerBar}>
-            <Text style={styles.footerLeft}>
-              This is a computer-generated document.
-            </Text>
-            <Text
-              style={styles.footerRight}
-              render={({ pageNumber, totalPages }) =>
-                `Page ${pageNumber} / ${totalPages}`
-              }
-            />
-          </View>
-
-        </View>
-      </Page>
+          </Page>
+        );
+      })}
     </Document>
   );
 };

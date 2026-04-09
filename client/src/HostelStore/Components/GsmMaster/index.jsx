@@ -8,7 +8,7 @@ import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { useAddGsmMasterMutation, useDeleteGsmMasterMutation, useGetGsmMasterByIdQuery, useGetGsmMasterQuery, useLazyGetGsmMasterByIdQuery, useUpdateGsmMasterMutation } from "../../../redux/services/GsmMasterService";
 
-export default function Form() {
+export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
   const [form, setForm] = useState(false);
 
   const [readOnly, setReadOnly] = useState(false);
