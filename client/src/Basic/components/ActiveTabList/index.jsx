@@ -2,22 +2,52 @@ import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { push, remove } from "../../../redux/features/opentabs";
 import {
-  CountryMaster, PageMaster, StateMaster, CityMaster,
-  DepartmentMaster, EmployeeCategoryMaster, FinYearMaster, UserAndRolesMaster, PageGroupMaster,
-  AccountSettings, ControlPanel, EmployeeMaster, TermsAndCondition,
+  CountryMaster,
+  PageMaster,
+  StateMaster,
+  CityMaster,
+  DepartmentMaster,
+  EmployeeCategoryMaster,
+  FinYearMaster,
+  UserAndRolesMaster,
+  PageGroupMaster,
+  AccountSettings,
+  ControlPanel,
+  EmployeeMaster,
+  TermsAndCondition,
   PayTermMaster,
-  LocationMaster
+  LocationMaster,
 } from "..";
-
-
 
 import { CLOSE_ICON, DOUBLE_NEXT_ICON } from "../../../icons";
 import CompanyMaster from "../CompanyMaster";
 import { useState } from "react";
 import useOutsideClick from "../../../CustomHooks/handleOutsideClick";
 import {
-  PartyCategoryMaster, PartyMaster, ProductBrandMaster, ProductCategoryMaster, ProductMaster, PurchaseBillEntry, PurchaseRegister, PurchaseReturn, SalesBillEntry, SalesRegister,
-  SalesReturn, UomMaster, StockRegister, MonthlySales, MonthlyPurchase, CurrentStock, MonthlyProfit, PaymentDetail, OpeningStock, PaymentLedgre, QuatationStock, Ledger, PurchaseLedger, PurchasepayLedgre,
+  PartyCategoryMaster,
+  PartyMaster,
+  ProductBrandMaster,
+  ProductCategoryMaster,
+  ProductMaster,
+  PurchaseBillEntry,
+  PurchaseRegister,
+  PurchaseReturn,
+  SalesBillEntry,
+  SalesRegister,
+  SalesReturn,
+  UomMaster,
+  StockRegister,
+  MonthlySales,
+  MonthlyPurchase,
+  CurrentStock,
+  MonthlyProfit,
+  PaymentDetail,
+  OpeningStock,
+  PaymentLedgre,
+  QuatationStock,
+  Ledger,
+  PurchaseLedger,
+  PurchasepayLedgre,
   DeliveryChallan,
   StyleMaster,
   StyleItemMaster,
@@ -34,16 +64,18 @@ import {
   ItemGroup,
   Gsm,
   Size,
-  SizeTemplate
+  SizeTemplate,
+  PurchaseReport,
 } from "../../../HostelStore/Components";
-
 
 const ActiveTabList = () => {
   const openTabs = useSelector((state) => state.openTabs);
   const dispatch = useDispatch();
   const [showHidden, setShowHidden] = useState(false);
 
-  const ref = useOutsideClick(() => { setShowHidden(false) })
+  const ref = useOutsideClick(() => {
+    setShowHidden(false);
+  });
 
   const tabs = {
     "PAGE MASTER": <PageMaster />,
@@ -74,7 +106,7 @@ const ActiveTabList = () => {
     "PURCHASE REGISTER": <PurchaseRegister />,
     "SALES REGISTER": <SalesRegister />,
     "UOM MASTER": <UomMaster />,
-    'STOCK REGISTER': <StockRegister />,
+    "STOCK REGISTER": <StockRegister />,
     "MONTHLY SALES REPORTS": <MonthlySales />,
     "MONTHLY PURCHASE REPORT": <MonthlyPurchase />,
     "CURRENT STOCK": <CurrentStock />,
@@ -89,7 +121,7 @@ const ActiveTabList = () => {
     "DELIVERY CHALLAN": <DeliveryChallan />,
     "STYLE MASTER": <StyleMaster />,
     "ITEM MASTER": <StyleItemMaster />,
-    "INVOICE": <DeliveryInvoice />,
+    INVOICE: <DeliveryInvoice />,
     "COLOR MASTER": <ColorMaster />,
     "TAX TERM MASTER": <TaxTermMaster />,
     "TAX TEMPLATE": <TaxTemplate />,
@@ -102,7 +134,8 @@ const ActiveTabList = () => {
     "ITEM GROUP MASTER": <ItemGroup />,
     "GSM MASTER": <Gsm />,
     "SIZE MASTER": <Size />,
-    "SIZE TEMPLATE MASTER": <SizeTemplate />
+    "SIZE TEMPLATE MASTER": <SizeTemplate />,
+    "PURCHASE REPORT": <PurchaseReport />,
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;
@@ -118,10 +151,11 @@ const ActiveTabList = () => {
           {currentShowingTabs.map((tab, index) => (
             <div
               key={index}
-              className={`px-2 rounded-lg text-[11px] d-flex content-center items-center gap-1 hover:bg-gray-500 hover:text-white transition my-1 ${tab.active
-                ? "bg-gray-500 text-white border border-gray-500"
-                : "text-gray-500 border border-gray-500"
-                }`}
+              className={`px-2 rounded-lg text-[11px] d-flex content-center items-center gap-1 hover:bg-gray-500 hover:text-white transition my-1 ${
+                tab.active
+                  ? "bg-gray-500 text-white border border-gray-500"
+                  : "text-gray-500 border border-gray-500"
+              }`}
             >
               <button
                 onClick={() => {
@@ -130,7 +164,8 @@ const ActiveTabList = () => {
               >
                 {tab.name}
               </button>
-              <button className="px-1 rounded-xs transition"
+              <button
+                className="px-1 rounded-xs transition"
                 onClick={() => {
                   dispatch(remove({ name: tab.name }));
                 }}
@@ -141,17 +176,24 @@ const ActiveTabList = () => {
           ))}
         </div>
         <div>
-          {(hiddenTabs.length !== 0) &&
+          {hiddenTabs.length !== 0 && (
             <button onClick={() => setShowHidden(true)}>
               {DOUBLE_NEXT_ICON}
             </button>
-          }
+          )}
         </div>
-        {showHidden &&
-          <ul ref={ref} className="absolute right-0 top-5 bg-gray-200 z-50 text-xs p-1">
-            {hiddenTabs.map(tab =>
-              <li key={tab.name} className={`flex justify-between  ${tab.active ? "bg-[#009688]" : "bg-gray-300"
-                } `}>
+        {showHidden && (
+          <ul
+            ref={ref}
+            className="absolute right-0 top-5 bg-gray-200 z-50 text-xs p-1"
+          >
+            {hiddenTabs.map((tab) => (
+              <li
+                key={tab.name}
+                className={`flex justify-between  ${
+                  tab.active ? "bg-[#009688]" : "bg-gray-300"
+                } `}
+              >
                 <button
                   onClick={() => {
                     dispatch(push({ name: tab.name }));
@@ -159,7 +201,8 @@ const ActiveTabList = () => {
                 >
                   {tab.name}
                 </button>
-                <button className="hover:bg-red-400 px-1 rounded-xs transition"
+                <button
+                  className="hover:bg-red-400 px-1 rounded-xs transition"
                   onClick={() => {
                     dispatch(remove({ name: tab.name }));
                   }}
@@ -167,9 +210,9 @@ const ActiveTabList = () => {
                   {CLOSE_ICON}
                 </button>
               </li>
-            )}
+            ))}
           </ul>
-        }
+        )}
       </div>
       {openTabs.tabs.map((tab, index) => (
         <div key={index} className={`${tab.active ? "block" : "hidden"} `}>

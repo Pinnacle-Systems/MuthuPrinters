@@ -1,16 +1,22 @@
 import { useState } from "react";
 import PurchaseOrderForm from "./PurchaseOrderForm.js";
-import PurchaseOrderFormReport from "./PurchaseOrderFormReport.js"
+import PurchaseOrderFormReport from "./PurchaseOrderFormReport.js";
 import { getCommonParams } from "../../../Utils/helper.js";
 import { FaPlus } from "react-icons/fa";
 import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
-import { useGetBranchByIdQuery, useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
+import {
+  useGetBranchByIdQuery,
+  useGetBranchQuery,
+} from "../../../redux/services/BranchMasterService.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
 import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices";
 import Swal from "sweetalert2";
-import { useDeletePoMutation, useLazyGetPoByIdQuery } from "../../../redux/uniformService/PoServices.js";
+import {
+  useDeletePoMutation,
+  useLazyGetPoByIdQuery,
+} from "../../../redux/uniformService/PoServices.js";
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
 import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterService.js";
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
@@ -34,22 +40,28 @@ export default function Form() {
   const [selectedPoId, setSelectedPoId] = useState("");
 
   const dispatch = useDispatch();
-  const { branchId, companyId, finYearId, userId } = getCommonParams()
+  const { branchId, companyId, finYearId, userId } = getCommonParams();
   const params = {
-    branchId, companyId, finYearId
+    branchId,
+    companyId,
+    finYearId,
   };
   const {
     data: termsData,
     isLoading,
     isFetching,
   } = useGetTermsandCondtionsQuery({ params });
-  const {
-    data: branchData,
-  } = useGetBranchByIdQuery(branchId, { skip: !branchId });
-  const [trigger, { data: singleData,
-    isFetching: isSingleFetching,
-    isLoading: isSingleLoading, }] =
-    useLazyGetPoByIdQuery();
+  const { data: branchData } = useGetBranchByIdQuery(branchId, {
+    skip: !branchId,
+  });
+  const [
+    trigger,
+    {
+      data: singleData,
+      isFetching: isSingleFetching,
+      isLoading: isSingleLoading,
+    },
+  ] = useLazyGetPoByIdQuery();
   const handleView = (orderId) => {
     setId(orderId);
     setShowForm(true);
@@ -76,15 +88,13 @@ export default function Form() {
           title: "This Transaction Items used in Purchase Inward",
           text: "Data cannot be deleted!",
         });
-      }
-      else if (data?.data?.childRecordCancel > 0) {
+      } else if (data?.data?.childRecordCancel > 0) {
         Swal.fire({
           icon: "error",
           title: "This Transaction Items used in Purchase Cancel",
           text: "Data cannot be deleted!",
         });
-      }
-      else {
+      } else {
         try {
           let deldata = await removeData(id).unwrap();
           if (deldata?.statusCode == 1) {
@@ -130,14 +140,18 @@ export default function Form() {
     setReadOnly(false);
   };
 
-  const { data: taxTypeList, isLoading: isTaxLoading, isFetching: isTaxfetching } =
-    useGetTaxTemplateQuery({ params: { ...params } });
+  const {
+    data: taxTypeList,
+    isLoading: isTaxLoading,
+    isFetching: isTaxfetching,
+  } = useGetTaxTemplateQuery({ params: { ...params } });
   const { data: supplierList } = useGetPartyQuery({ params: { ...params } });
   const { data: branchList } = useGetBranchQuery({ params: { ...params } });
-  const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { ...params } });
+  const { data: styleItemList } = useGetStyleItemMasterQuery({
+    params: { ...params },
+  });
   const { data: uomList } = useGetUnitOfMeasurementMasterQuery({ params });
-  const { data: hsnList } =
-    useGetHsnMasterQuery({ params });
+  const { data: hsnList } = useGetHsnMasterQuery({ params });
   const { data: payTermList } = useGetPaytermMasterQuery({ params });
   const { data: itemGroupList } = useGetItemGroupMasterQuery({ params });
   const { data: sizeList } = useGetSizeMasterQuery({ params });
@@ -176,17 +190,15 @@ export default function Form() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             itemsPerPage={10}
-            onCreateInward={handleCreateInward}   // ⬅️
+            onCreateInward={handleCreateInward} // ⬅️
             onCreateCancel={handleCreateCancel}
-          // searchStyleId={searchStyleId}
+            // searchStyleId={searchStyleId}
           />
         </div>
       </div>
 
       {showForm && (
         <div className="h-[93vh] overflow-hidden">
-
-
           <PurchaseOrderForm
             readOnly={readOnly}
             setReadOnly={setReadOnly}
@@ -215,5 +227,4 @@ export default function Form() {
       )}
     </>
   );
-
 }

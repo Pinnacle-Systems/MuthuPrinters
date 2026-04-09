@@ -51,4 +51,5 @@ export { default as purchaseBillEntry } from "./purchaseBillEntry.route.js";
 export { default as itemGroup } from "./itemGroup.route.js";
 export { default as gsm } from "./gsm.route.js";
 export { default as size } from "./size.route.js";
-export {default as Sizetemplate} from "./sizeTemplate.route.js"
+export { default as Sizetemplate } from "./sizeTemplate.route.js";
+export { default as purchaseReport } from "./purchaseReport.routes.js";
