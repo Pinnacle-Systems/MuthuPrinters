@@ -1916,9 +1916,9 @@ export default function Form({
                   className="focus:ring-2 focus:ring-blue-100 w-10"
                 />
                 <div className="col-span-2">
-                  <TextInputNew
+                  <TextInput
                     name="Email"
-                    type="text"
+                    type="normal"
                     value={contactPersonEmail}
                     setValue={setContactPersonEmail}
                     readOnly={readOnly}

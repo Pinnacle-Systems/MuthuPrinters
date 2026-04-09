@@ -1220,6 +1220,8 @@ model PoItems {
   sizeId        Int?
   Color         Color?     @relation(fields: [colorId], references: [id])
   colorId       Int?
+  Gsm           Gsm?       @relation(fields: [gsmId], references: [id])
+  gsmId         Int?
 }
 
 model TermsAndConditions {
@@ -1311,6 +1313,8 @@ model InwardItems {
   discountType     String?
   discountValue    Float?
   taxPercent       Float?
+  Gsm              Gsm?            @relation(fields: [gsmId], references: [id])
+  gsmId            Int?
 }
 
 model Location {
@@ -1383,6 +1387,8 @@ model PurchaseReturnItems {
   sizeId                 Int?
   Color                  Color?                @relation(fields: [colorId], references: [id])
   colorId                Int?
+  Gsm                    Gsm?                  @relation(fields: [gsmId], references: [id])
+  gsmId                  Int?
   stocks                 Stock[]
 }
 
@@ -1436,6 +1442,8 @@ model PurchaseCancelItems {
   sizeId           Int?
   Color            Color?          @relation(fields: [colorId], references: [id])
   colorId          Int?
+  Gsm              Gsm?            @relation(fields: [gsmId], references: [id])
+  gsmId            Int?
 }
 
 model PurchaseBillEntry {
@@ -1496,6 +1504,8 @@ model PurchaseBillEntryItems {
   discountType        String?
   discountValue       Float?
   taxPercent          Float?
+  Gsm                 Gsm?               @relation(fields: [gsmId], references: [id])
+  gsmId               Int?
 }
 
 model PurchaseLedger {
@@ -1526,13 +1536,18 @@ model Size {
 }
 
 model Gsm {
-  id         Int         @id @default(autoincrement())
-  name       String
-  active     Boolean     @default(true)
-  Company    Company?    @relation(fields: [companyId], references: [id])
-  companyId  Int?
-  styles     Style[]
-  styleItems StyleItem[]
+  id                     Int                      @id @default(autoincrement())
+  name                   String
+  active                 Boolean                  @default(true)
+  Company                Company?                 @relation(fields: [companyId], references: [id])
+  companyId              Int?
+  styles                 Style[]
+  styleItems             StyleItem[]
+  poItems                PoItems[]
+  inwardItems            InwardItems[]
+  purchaseReturnItems    PurchaseReturnItems[]
+  purchaseCancelItems    PurchaseCancelItems[]
+  purchaseBillEntryItems PurchaseBillEntryItems[]
 }
 
 model ItemGroup {
