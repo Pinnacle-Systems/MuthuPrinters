@@ -39,6 +39,7 @@ import {
   ItemGroupMasterApi,
   GsmMasterApi,
   SizetemplateMasterApi,
+  purchaseReportApi,
 } from "./services";
 import paymentApi from "./services/PaymentService";
 import StyleMasterApi from "./services/StyleMasterService";
@@ -104,7 +105,8 @@ const commonReducers = {
   locationMaster: LocationMasterApi.reducer,
   [purchaseInwardEntryApi.reducerPath]: purchaseInwardEntryApi.reducer,
   [purchaseBillEntryApi.reducerPath]: purchaseBillEntryApi.reducer,
-  SizeTemplate: SizetemplateMasterApi.reducer
+  SizeTemplate: SizetemplateMasterApi.reducer,
+  purchaseReport: purchaseReportApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -155,7 +157,8 @@ const commonMiddleware = [
   ItemGroupMasterApi.middleware,
   GsmMasterApi.middleware,
   sizeMasterApi.middleware,
-  SizetemplateMasterApi.middleware
+  SizetemplateMasterApi.middleware,
+  purchaseReportApi.middleware,
 ];
 
 const store = configureStore({

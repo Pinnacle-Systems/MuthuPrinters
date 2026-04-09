@@ -37,4 +37,5 @@ export { default as openingBalanceApi } from "./OpeningBalanceService";
 export { default as sizeMasterApi } from "./SizemasterService";
 export { default as ItemGroupMasterApi } from "./ItemGroupMasterService";
 export { default as GsmMasterApi } from "./GsmMasterService";
-export {default as SizetemplateMasterApi } from "./SizeTemplateMaster"
+export { default as SizetemplateMasterApi } from "./SizeTemplateMaster";
+export { default as purchaseReportApi } from "./purchaseReportApi";

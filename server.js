@@ -1,14 +1,25 @@
-import express from 'express';
-import cors from 'cors';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import express from "express";
+import cors from "cors";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 
 import {
-  employees, states, countries, cities,
-  departments, companies, branches, users, pages, roles, subscriptions, finYear,
-  employeeCategories, pageGroup,
+  employees,
+  states,
+  countries,
+  cities,
+  departments,
+  companies,
+  branches,
+  users,
+  pages,
+  roles,
+  subscriptions,
+  finYear,
+  employeeCategories,
+  pageGroup,
   party,
   partyCategories,
   productBrand,
@@ -43,47 +54,45 @@ import {
   size,
   gsm,
   itemGroup,
-  Sizetemplate
-} from './src/routes/index.js';
+  Sizetemplate,
+  purchaseReport,
+} from "./src/routes/index.js";
 
-import { socketMain } from './src/sockets/socket.js';
+import { socketMain } from "./src/sockets/socket.js";
 
-const app = express()
-app.use(express.json())
-
+const app = express();
+app.use(express.json());
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content, Accept, Content-Type, Authorization"
+    "Origin, X-Requested-With, Content, Accept, Content-Type, Authorization",
   );
   res.setHeader(
     "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+    "GET, POST, PUT, DELETE, PATCH, OPTIONS",
   );
   next();
 });
-app.use(cors())
+app.use(cors());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-app.use(express.json())
+app.use(express.json());
 
-const path = __dirname + '/client/build/';
+const path = __dirname + "/client/build/";
 
 app.use(express.static(path));
 
-
-app.get('/', function (req, res) {
+app.get("/", function (req, res) {
   res.sendFile(path + "index.html");
 });
 
-BigInt.prototype['toJSON'] = function () {
+BigInt.prototype["toJSON"] = function () {
   return parseInt(this.toString());
 };
-
 
 app.use("/employees", employees);
 app.use("/countries", countries);
@@ -107,38 +116,39 @@ app.use("/product", product);
 app.use("/purchaseBill", purchaseBill);
 app.use("/OpeningStock", OpeningStock);
 app.use("/color", color);
-app.use("/size",size);
-app.use("/gsm",gsm);
-app.use("/itemGroup",itemGroup)
+app.use("/size", size);
+app.use("/gsm", gsm);
+app.use("/itemGroup", itemGroup);
 app.use("/purchaseInwardEntry", purchaseInwardEntry);
 app.use("/stock", stock);
 app.use("/salesBill", salesBill);
-app.use("/purchaseReturn", purchaseReturn)
-app.use("/purchaseCancel", purchaseCancel)
-app.use("/salesReturn", salesReturn)
-app.use('/uom', uom)
-app.use('/payments', payments)
-app.use('/style', style)
-app.use('/styleItem', styleItem)
-app.use('/deliveryChallan', deliveryChallan)
-app.use('/deliveryInvoice', deliveryInvoice)
+app.use("/purchaseReturn", purchaseReturn);
+app.use("/purchaseCancel", purchaseCancel);
+app.use("/salesReturn", salesReturn);
+app.use("/uom", uom);
+app.use("/payments", payments);
+app.use("/style", style);
+app.use("/styleItem", styleItem);
+app.use("/deliveryChallan", deliveryChallan);
+app.use("/deliveryInvoice", deliveryInvoice);
 app.use("/taxTerm", taxTerm);
 app.use("/taxTemplate", taxTemplate);
 app.use("/hsn", hsn);
-app.use("/partyBranch", partyBranch)
-app.use("/branchType", branchType)
-app.use('/openingBalance',openingBalance)
-app.use("/po",po)
-app.use("/termsconditions", termsAndCondition)
+app.use("/partyBranch", partyBranch);
+app.use("/branchType", branchType);
+app.use("/openingBalance", openingBalance);
+app.use("/po", po);
+app.use("/termsconditions", termsAndCondition);
 app.use("/payTerm", payTerm);
 app.use("/location", location);
-app.use("/purchaseBillEntry",purchaseBillEntry)
-app.use("/sizeTemplate",Sizetemplate)
+app.use("/purchaseBillEntry", purchaseBillEntry);
+app.use("/sizeTemplate", Sizetemplate);
+app.use("/purchaseReport", purchaseReport);
+
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;
   res.sendFile(__dirname + "/uploads/" + fileName);
 });
-
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -154,4 +164,3 @@ const PORT = process.env.PORT || 8080;
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}.`);
 });
-
