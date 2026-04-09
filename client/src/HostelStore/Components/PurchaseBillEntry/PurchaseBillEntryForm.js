@@ -416,6 +416,14 @@ const PurchaseBillEntryForm = ({
     supplierRef.current?.focus();
   }, []);
 
+  useEffect(() => {
+    if (!id) {
+      setTaxTemplateId(
+        taxTypeList?.data?.filter((item) => item.name === "DEFAULT")[0]?.id,
+      );
+    }
+  }, []);
+
   return (
     <>
       <Modal
@@ -495,7 +503,7 @@ const PurchaseBillEntryForm = ({
                 // autoFocus={true}
                 ref={supplierRef}
               />
-              {/* <DropdownInput
+              <DropdownInput
                 name="Tax Type"
                 options={dropDownListObject(
                   taxTypeList ? taxTypeList?.data : [],
@@ -506,8 +514,8 @@ const PurchaseBillEntryForm = ({
                 setValue={setTaxTemplateId}
                 required={true}
                 readOnly={readOnly}
-              /> */}
-              <DropdownWithModal
+              />
+              {/* <DropdownWithModal
                 name="Tax Type"
                 options={dropDownListObject(
                   id
@@ -525,7 +533,7 @@ const PurchaseBillEntryForm = ({
                 addNewLabel="+ Add New Tax Template"
                 childComponent={TaxTemplate}
                 addNewModalWidth="w-[82%] h-[85%]"
-              />
+              /> */}
             </div>
           </div>
 

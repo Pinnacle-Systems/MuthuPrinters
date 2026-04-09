@@ -25,9 +25,11 @@ import { useGetUomQuery } from "../../../redux/services/UomMasterService";
 import { useGetSizeTemplateQuery } from "../../../redux/services/SizeTemplateMaster";
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
-import { ItemGroup, UomMaster, SizeTemplate, HsnMaster } from "..";
+import { ItemGroup, UomMaster, SizeTemplate, HsnMaster, Gsm } from "..";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
+import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService";
+
 const MODEL = "Item Master";
 export default function Form({ onSuccess, defaultName = "" }) {
   const [form, setForm] = useState(false);
@@ -44,6 +46,8 @@ export default function Form({ onSuccess, defaultName = "" }) {
   const [itemGroupId, setItemGroupId] = useState("");
   const [sizeTemplateId, setSizeTemplateId] = useState("");
   const [uomId, setUomId] = useState("");
+  const [gsmId, setGsmId] = useState("");
+
   const [dispatchInvalidate] = useInvalidateTags();
   const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
@@ -56,6 +60,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
   const { data: uomList } = useGetUomQuery({ params });
   const { data: sizeTemplateList } = useGetSizeTemplateQuery({ params });
   const { data: itemGroupList } = useGetItemGroupMasterQuery({ params });
+  const { data: gsmList } = useGetGsmMasterQuery({ params });
 
   const {
     data: allData,
@@ -83,6 +88,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
       setItemGroupId(data?.itemGroupId ? data?.itemGroupId : "");
       setUomId(data?.uomId ? data?.uomId : "");
       setSizeTemplateId(data?.sizeTemplateId ? data?.sizeTemplateId : "");
+      setGsmId(data?.gsmId ? data?.gsmId : "");
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
     [id],
@@ -104,6 +110,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
     itemGroupId,
     sizeTemplateId,
     uomId,
+    gsmId,
   };
 
   const validateData = (data) => {
@@ -502,19 +509,39 @@ export default function Form({ onSuccess, defaultName = "" }) {
                     addNewModalWidth="w-[40%] h-[50%]"
                   />
                 </div>
-              </div>
-              <div className="mb-5">
-                <ToggleButton
-                  name="Status"
-                  options={statusDropdown}
-                  value={active}
-                  setActive={setActive}
-                  required={true}
-                  readOnly={readOnly}
-                  ref={toggleButtonRef}
-                  onKeyDown={handlers.handleToggleKeyDown}
-                  tabIndex={0}
-                />
+                <div className="mb-3">
+                  <DropdownWithModal
+                    name="GSM"
+                    options={dropDownListObject(
+                      id
+                        ? gsmList?.data
+                        : gsmList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={gsmId}
+                    setValue={setGsmId}
+                    readOnly={readOnly}
+                    className={`w-[150px]`}
+                    // disabled={childRecord.current > 0}
+                    addNewLabel="+ Add New Gsm"
+                    childComponent={Gsm}
+                    addNewModalWidth="w-[40%] h-[50%]"
+                  />
+                </div>
+                <div className="mb-5">
+                  <ToggleButton
+                    name="Status"
+                    options={statusDropdown}
+                    value={active}
+                    setActive={setActive}
+                    required={true}
+                    readOnly={readOnly}
+                    ref={toggleButtonRef}
+                    onKeyDown={handlers.handleToggleKeyDown}
+                    tabIndex={0}
+                  />
+                </div>
               </div>
             </fieldset>
           </div>

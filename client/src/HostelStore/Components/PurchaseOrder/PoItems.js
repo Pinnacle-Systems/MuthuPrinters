@@ -29,6 +29,7 @@ const PoItems = ({
   sizeList,
   colorList,
   termsRef,
+  gsmList,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -41,6 +42,7 @@ const PoItems = ({
     itemGroupId: "",
     sizeId: "",
     colorId: "",
+    gsmId: "",
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -58,6 +60,7 @@ const PoItems = ({
       itemGroupId: "",
       sizeId: "",
       colorId: "",
+      gsmId: "",
     };
     setPoItems([...poItems, newRow]);
   };
@@ -82,6 +85,7 @@ const PoItems = ({
         newRows[index].sizeId = response?.data?.sizeId;
         newRows[index].colorId = response?.data?.colorId;
         newRows[index].uomId = response?.data?.uomId;
+        newRows[index].gsmId = response?.data?.gsmId;
         // 4️⃣ update again after API fetch
         setPoItems([...newRows]);
       } catch (e) {
@@ -270,7 +274,7 @@ const PoItems = ({
                   S.No
                 </th>
                 <th
-                  className={`w-96 px-2 py-2 text-center font-medium text-[12px]`}
+                  className={`w-80 px-2 py-2 text-center font-medium text-[12px]`}
                 >
                   Description of Goods<span className="text-red-500">*</span>
                 </th>
@@ -292,6 +296,11 @@ const PoItems = ({
                 <th
                   className={`w-20 px-4 py-2 text-center font-medium text-[12px] `}
                 >
+                  GSM
+                </th>
+                <th
+                  className={`w-20 px-4 py-2 text-center font-medium text-[12px] `}
+                >
                   UOM<span className="text-red-500">*</span>
                 </th>
                 <th
@@ -308,7 +317,7 @@ const PoItems = ({
                 <th
                   className={`w-28 px-1 py-2 text-center font-medium text-[12px] `}
                 >
-                  Gross Amount
+                  Gross
                 </th>
                 {/* <th
                   className={`w-28 px-1 py-2 text-center font-medium text-[13px] `}
@@ -318,7 +327,7 @@ const PoItems = ({
                 <th
                   className={`w-20 px-1 py-2 text-center font-medium text-[12px] `}
                 >
-                  Tax Details
+                  Tax
                 </th>
                 <th
                   className={`w-20 px-1 py-2 text-center font-medium text-[12px] `}
@@ -467,6 +476,30 @@ const PoItems = ({
                         addNew={true}
                         childComponent={ColorMaster}
                         addNewModalWidth="w-[30%] h-[45%]"
+                      />
+                    </td>
+                    <td className=" border border-gray-300 text-[11px] ">
+                      <FxSelect
+                        value={row.gsmId}
+                        onChange={(val) =>
+                          handleInputChange(val, index, "gsmId")
+                        }
+                        options={(gsmList?.data || [])
+                          .filter((item) => item.active)
+                          .map((item) => ({
+                            label: item.name,
+                            value: item.id,
+                          }))}
+                        readOnly={readOnly}
+                        placeholder=""
+                        onBlur={() =>
+                          handleInputChange(row.gsmId, index, "gsmId")
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Delete") {
+                            handleInputChange("", index, "gsmId");
+                          }
+                        }}
                       />
                     </td>
                     <td className=" border border-gray-300 text-[11px] ">
@@ -634,7 +667,7 @@ const PoItems = ({
               <tr className="bg-gray-50 h-6 font-medium text-gray-800 text-[12px]">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium "
-                  colSpan={6}
+                  colSpan={7}
                 >
                   Total
                 </td>

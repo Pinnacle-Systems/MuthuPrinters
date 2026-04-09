@@ -356,26 +356,9 @@ async function createInwardItems(tx, inwardItems, data, userId) {
         sizeId: val?.sizeId ? parseInt(val.sizeId) : null,
         colorId: val?.colorId ? parseInt(val.colorId) : null,
         poId: val?.poId ? parseInt(val.poId) : null,
+        gsmId: val?.gsmId ? parseInt(val.gsmId) : null,
       },
     });
-    // await tx.stock.create({
-    //     data: {
-    //         inOrOut: "In",
-    //         processName: "Purchase Inward",
-    //         createdById: parseInt(userId),
-    //         branchId: parseInt(locationId),
-    //         storeId: parseInt(storeId),
-    //         inwardItemsId: createdItem.id,
-    //         styleItemId: stockDetail?.styleItemId
-    //             ? parseInt(stockDetail.styleItemId)
-    //             : null,
-    //         uomId: stockDetail?.uomId ? parseInt(stockDetail.uomId) : null,
-    //         hsnId: stockDetail?.hsnId ? parseInt(stockDetail.hsnId) : null,
-    //         qty: stockDetail?.inwardQty ? parseInt(stockDetail.inwardQty) : null,
-    //         inwardType: inwardType ? inwardType : "",
-    //         invNo: invNo ? invNo : null,
-    //     },
-    // });
     return createdItem;
   });
 
@@ -495,6 +478,7 @@ async function updateinwardItems(tx, inwardItems, data, userId) {
           sizeId: val?.sizeId ? parseInt(val.sizeId) : null,
           colorId: val?.colorId ? parseInt(val.colorId) : null,
           poId: val?.poId ? parseInt(val.poId) : null,
+          gsmId: val?.gsmId ? parseInt(val.gsmId) : null,
         },
       });
 
@@ -523,6 +507,7 @@ async function updateinwardItems(tx, inwardItems, data, userId) {
           sizeId: val?.sizeId ? parseInt(val.sizeId) : null,
           colorId: val?.colorId ? parseInt(val.colorId) : null,
           poId: val?.poId ? parseInt(val.poId) : null,
+          gsmId: val?.gsmId ? parseInt(val.gsmId) : null,
         },
       });
 

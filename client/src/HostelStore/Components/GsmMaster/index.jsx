@@ -7,6 +7,7 @@ import { ReusableTable, TextInputNew, ToggleButton } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { useAddGsmMasterMutation, useDeleteGsmMasterMutation, useGetGsmMasterByIdQuery, useGetGsmMasterQuery, useLazyGetGsmMasterByIdQuery, useUpdateGsmMasterMutation } from "../../../redux/services/GsmMasterService";
+import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 
 export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
   const [form, setForm] = useState(false);
@@ -16,6 +17,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
   const [name, setName] = useState("");
   const [isPoWise, setIsPowise] = useState(false);
   const [active, setActive] = useState(true);
+  const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
@@ -43,10 +45,10 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
 
   const syncFormWithDb = useCallback(
     (data) => {
-      if (id) setReadOnly(true);
       setName(data?.name ? data.name : "");
       setIsPowise(id ? (data?.isPoWise ? data.isPoWise : false) : false);
       setActive(id ? (data?.active ? data.active : false) : true);
+      childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
     [id],
   );
@@ -74,6 +76,25 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
       let returnData = await callback(data).unwrap();
+      if (onSuccess) {
+        await Swal.fire({
+          title: text + "  " + "Successfully",
+          icon: "success",
+        });
+        onSuccess(returnData.data.id);
+        return;
+      }
+
+      if (nextProcess == "new") {
+        syncFormWithDb(undefined);
+        onNew();
+        countryNameRef?.current?.focus()
+
+      } else {
+        setForm(false);
+        syncFormWithDb(undefined);
+
+      }
       Swal.fire({
         title: text + "  " + "Successfully",
         icon: "success",
@@ -84,12 +105,6 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         //     Swal.showLoading();
         // }
       });
-      if (nextProcess == "new") {
-        syncFormWithDb(undefined);
-        onNew();
-      } else {
-        setForm(false);
-      }
     } catch (error) {
       console.log("handle");
     }
@@ -97,12 +112,13 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
 
   const saveData = (nextProcess) => {
     if (!validateData(data)) {
-      toast.info("Please fill all required fields...!", {
-        position: "top-center",
-      });
+
       Swal.fire({
         title: "Please fill all required fields...!",
         icon: "success",
+        didClose: () => {
+          countryNameRef?.current?.focus();
+        }
         // draggable: true,
         // timer: 1000,
         // showConfirmButton: false,
@@ -111,6 +127,26 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         // }
       });
       return;
+    }
+    let foundItem;
+    if (id) {
+      foundItem = allData?.data
+        ?.filter((i) => i.id != id)
+        ?.some((item) => item.name === name);
+    } else {
+      foundItem = allData?.data?.some((item) => item.name === name);
+    }
+
+    if (foundItem) {
+      Swal.fire({
+        text: "The GSM Name already exists.",
+        icon: "warning",
+        didClose: () => {
+
+          countryNameRef?.current?.focus();
+        }
+      });
+      return false;
     }
     if (!window.confirm("Are you sure save the details ...?")) {
       return;
@@ -149,6 +185,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             //     Swal.showLoading();
             // }
           });
+          syncFormWithDb(undefined);
+
         } catch (error) {
           toast.error("something went wrong");
         }
@@ -218,24 +256,155 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     console.log("Edit");
   };
 
-  const countryNameRef = useRef(null);
+  const {
+    firstInputRef: countryNameRef,
+    toggleButtonRef,
+    saveCloseButtonRef,
+    saveNewButtonRef,
+  } = refs;
+
+  const formBody = (
+    <div className="flex-1 p-3">
+      <div className="grid grid-cols-1  gap-3  h-full">
+        <div className="lg:col-span- space-y-3">
+          <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+            <div className="space-y-4 ">
+              <fieldset className=" rounded mt-2">
+                <div className="grid grid-cols-2 my-2">
+                  <div className="w-[50%">
+                    <TextInputNew
+                      name="Gsm"
+                      type="number"
+                      value={name}
+                      setValue={setName}
+                      required={true}
+                      readOnly={readOnly}
+                      disabled={childRecord.current > 0}
+                      ref={countryNameRef}
+                    />
+                  </div>
+                  {/* <CheckBox name="Po wise" readOnly={readOnly} value={isPoWise} setValue={setIsPowise} /> */}
+                </div>
+                <ToggleButton
+                  name="Status"
+                  options={statusDropdown}
+                  value={active}
+                  setActive={setActive}
+                  required={true}
+                  readOnly={readOnly}
+                  ref={toggleButtonRef}
+                  onKeyDown={handlers.handleToggleKeyDown}
+                />
+              </fieldset>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
   useEffect(() => {
-    if (form && countryNameRef.current) {
+    if ((form || onSuccess) && countryNameRef.current) {
       countryNameRef.current.focus();
     }
-  }, [form]);
+  }, [form, onSuccess]);
+
+  if (deleteId) {
+    const childCount = singleData?.data?.childRecord ?? 0;
+    const isLoadingRecord = isSingleFetching || isSingleLoading;
+
+    const handleConfirmDelete = async () => {
+      try {
+        const res = await removeData(deleteId).unwrap();
+        if (res?.statusCode === 1) {
+          toast.error(res?.data?.message || "Cannot delete: child records exist");
+          return;
+        }
+        toast.success("Deleted successfully");
+        onSuccess?.();
+      } catch (err) {
+        toast.error(err?.data?.message || "Failed to delete");
+      }
+    };
+
+    return (
+      <div className="min-h-[250px] flex flex-col bg-gray-200">
+        <div className="border-b py-2 px-4 mx-3 mt-4 bg-white">
+          <h2 className="text-lg font-semibold">Delete GSM</h2>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
+          {isLoadingRecord ? (
+            <p>Checking...</p>
+          ) : childCount > 0 ? (
+            <>
+              <p className="text-red-600 font-semibold">Cannot Delete</p>
+              <p>"{deleteLabel}" has {childCount} linked records.</p>
+              <button type="button" onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                Close
+              </button>
+            </>
+          ) : (
+            <>
+              <>
+                <p className="text-sm text-gray-700 text-center">
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold">"{deleteLabel}"</span>?
+                </p>
+                <div className="flex gap-3">
+                  <button type="button" onClick={onClose}
+                    className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                    Cancel
+                  </button>
+                  <button type="button" onClick={handleConfirmDelete}
+                    className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded">
+                    Delete
+                  </button>
+                </div>
+              </>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (onSuccess) {
+    return (
+      <div onKeyDown={handleKeyDown} className="h-full flex flex-col bg-gray-200">
+        <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+          <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+            {editId ? "Edit GSM" : "Add New GSM"}
+          </h2>
+          <button
+            type="button"
+            onClick={() => saveData("close")}
+            ref={saveCloseButtonRef}
+            onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
+            className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+          >
+            <Check size={14} />
+            {editId ? "Update" : "Save"}
+          </button>
+        </div>
+
+        {formBody}
+      </div>
+    );
+  }
+
   return (
-    <div onKeyDown={handleKeyDown} className="p-1 h-[90%]">
+    <div onKeyDown={handleKeyDown} className="p-1 h-[87%]">
       <div className="w-full flex bg-white p-1 justify-between  items-center">
-        <h5 className="text-2xl font-bold text-gray-800">Gsm Master</h5>
+        <h5 className="text-lg font-bold text-gray-800">Gsm Master</h5>
         <div className="flex items-center">
           <button
             onClick={() => {
               setForm(true);
               onNew();
             }}
-            className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-sm px-4 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
+            className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             + Add New Gsm
           </button>
@@ -261,6 +430,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             widthClass={"w-[600px] h-[350px]"}
             onClose={() => {
               setForm(false);
+              syncFormWithDb(undefined);
+              setId("");
               // setErrors({});
             }}
           >
@@ -300,6 +471,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                         }}
                         className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 
                   border border-blue-600 flex items-center gap-1 text-xs"
+                        ref={saveCloseButtonRef} // ✅ Add ref
+                        tabIndex={0}
+                        onKeyDown={handlers.handleSaveCloseKeyDown(saveData)}
                       >
                         <Check size={14} />
                         {id ? "Update" : "Save & close"}
@@ -315,6 +489,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                         }}
                         className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600 
                   border border-green-600 flex items-center gap-1 text-xs"
+                        onKeyDown={handlers.handleSaveNewKeyDown(saveData)}
+                        ref={saveNewButtonRef} // ✅ Add ref
+                        tabIndex={0}
                       >
                         <Check size={14} />
                         {"Save & New"}
@@ -324,41 +501,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                 </div>
               </div>
 
-              <div className="flex-1 overflow-auto p-3">
-                <div className="grid grid-cols-1  gap-3  h-full">
-                  <div className="lg:col-span- space-y-3">
-                    <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                      <div className="space-y-4 ">
-                        <fieldset className=" rounded mt-2">
-                          <div className="grid grid-cols-2 my-2">
-                            <div className="w-[50%">
-                              <TextInputNew
-                                name="Gsm"
-                                type="number"
-                                value={name}
-                                setValue={setName}
-                                required={true}
-                                readOnly={readOnly}
-                                disabled={childRecord.current > 0}
-                                ref={countryNameRef}
-                              />
-                            </div>
-                            {/* <CheckBox name="Po wise" readOnly={readOnly} value={isPoWise} setValue={setIsPowise} /> */}
-                          </div>
-                          <ToggleButton
-                            name="Status"
-                            options={statusDropdown}
-                            value={active}
-                            setActive={setActive}
-                            required={true}
-                            readOnly={readOnly}
-                          />
-                        </fieldset>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {formBody}
             </div>
           </Modal>
         )}

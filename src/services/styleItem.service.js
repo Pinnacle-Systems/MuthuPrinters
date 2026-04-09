@@ -12,7 +12,7 @@ async function get(req) {
       _count: {
         select: {
           poItems: true,
-          inwardItems:true
+          inwardItems: true,
         },
       },
       SizeTemplate: {
@@ -86,6 +86,7 @@ async function create(body) {
     uomId,
     sizeTemplateId,
     itemGroupId,
+    gsmId,
   } = await body;
   const data = await prisma.styleItem.create({
     data: {
@@ -97,6 +98,7 @@ async function create(body) {
       uomId: parseInt(uomId) || null,
       itemGroupId: parseInt(itemGroupId) || null,
       sizeTemplateId: parseInt(sizeTemplateId) || null,
+      gsmId: parseInt(gsmId) || null,
     },
   });
   return { statusCode: 0, data };
@@ -112,6 +114,7 @@ async function update(id, body) {
     uomId,
     sizeTemplateId,
     itemGroupId,
+    gsmId,
   } = await body;
 
   const dataFound = await prisma.styleItem.findUnique({
@@ -133,6 +136,7 @@ async function update(id, body) {
       uomId: parseInt(uomId) || null,
       itemGroupId: parseInt(itemGroupId) || null,
       sizeTemplateId: parseInt(sizeTemplateId) || null,
+      gsmId: parseInt(gsmId) || null,
     },
   });
   return { statusCode: 0, data };

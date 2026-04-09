@@ -345,7 +345,15 @@ async function getOne(id) {
           name: true,
         },
       },
-      inwardItems: true,
+      inwardItems: {
+        include: {
+          Po: {
+            select: {
+              docId: true,
+            },
+          },
+        },
+      },
     },
   });
   if (!data) return NoRecordFound("Purchase Inward");
@@ -360,6 +368,7 @@ async function getOne(id) {
           itemGroupId: item.itemGroupId,
           sizeId: item.sizeId,
           colorId: item.colorId,
+          gsmId: item.gsmId,
         },
         _sum: {
           cancelQty: true,
@@ -377,6 +386,7 @@ async function getOne(id) {
           sizeId: item.sizeId,
           colorId: item.colorId,
           purchaseInwardId: { not: data.id },
+          gsmId: item.gsmId,
         },
         _sum: { inwardQty: true },
       });
@@ -392,6 +402,7 @@ async function getOne(id) {
           sizeId: item.sizeId,
           colorId: item.colorId,
           purchaseInwardId: data.id,
+          gsmId: item.gsmId,
         },
         _sum: { returnQty: true },
       });
@@ -657,6 +668,11 @@ async function getPurchaseInwardBillEntryItems(req) {
             name: true,
           },
         },
+        Gsm: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
@@ -745,6 +761,18 @@ async function create(req) {
       invNo,
       dcNo,
     );
+    if (receiptType === "Against Invoice") {
+      await tx.purchaseLedger.create({
+        data: {
+          docId: newDocId ?? "",
+          docDate: docDate ? new Date(docDate) : null,
+          supplierId: parseInt(supplierId) ?? undefined,
+          remarks: remarks ?? "",
+          netBillValue: parseFloat(netBillValue) ?? null,
+          purchaseInwardId: parseInt(data.id) ?? undefined,
+        },
+      });
+    }
   });
   return { statusCode: 0, data };
 }
@@ -790,6 +818,7 @@ async function createInwardItems(
         taxPercent: stockDetail?.taxPercent
           ? parseInt(stockDetail.taxPercent)
           : null,
+        gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
       },
     });
     await tx.stock.create({
@@ -813,6 +842,7 @@ async function createInwardItems(
           : null,
         sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
         colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
+        gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
       },
     });
     return createdItem;
@@ -923,6 +953,25 @@ async function update(id, body) {
       invNo,
       dcNo,
     );
+    if (receiptType === "Against Invoice") {
+      const ledger = await tx.purchaseLedger.findFirst({
+        where: {
+          purchaseInwardId: parseInt(data.id),
+        },
+      });
+
+      if (ledger) {
+        await tx.purchaseLedger.update({
+          where: { id: ledger.id },
+          data: {
+            docDate: docDate ? new Date(docDate) : null,
+            supplierId: parseInt(supplierId) ?? undefined,
+            remarks: remarks ?? "",
+            netBillValue: parseFloat(netBillValue) ?? null,
+          },
+        });
+      }
+    }
   });
   return { statusCode: 0, data };
 }
@@ -971,6 +1020,7 @@ async function updateinwardItems(
           taxPercent: stockDetail?.taxPercent
             ? parseInt(stockDetail.taxPercent)
             : null,
+          gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
 
@@ -1003,6 +1053,7 @@ async function updateinwardItems(
             colorId: stockDetail?.colorId
               ? parseInt(stockDetail.colorId)
               : null,
+            gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
           },
         });
       } else {
@@ -1031,6 +1082,7 @@ async function updateinwardItems(
             colorId: stockDetail?.colorId
               ? parseInt(stockDetail.colorId)
               : null,
+            gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
           },
         });
       }
@@ -1067,6 +1119,7 @@ async function updateinwardItems(
           taxPercent: stockDetail?.taxPercent
             ? parseInt(stockDetail.taxPercent)
             : null,
+          gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
 
@@ -1092,6 +1145,7 @@ async function updateinwardItems(
             : null,
           sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
           colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
+          gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
 
@@ -1358,6 +1412,11 @@ async function getPurInwardItemById(id) {
           name: true,
         },
       },
+      Gsm: {
+        select: {
+          name: true,
+        },
+      },
     },
   });
   if (!data) return NoRecordFound("Purchase Inward");
@@ -1367,6 +1426,7 @@ async function getPurInwardItemById(id) {
       poId: data.poId,
       uomId: data.uomId,
       hsnId: data.hsnId,
+      gsmId: data.gsmId,
     },
   });
   const returnItems = await prisma.purchaseReturnItems.findMany({
@@ -1375,6 +1435,7 @@ async function getPurInwardItemById(id) {
       purchaseInwardId: data.purchaseInwardId,
       uomId: data.uomId,
       hsnId: data.hsnId,
+      gsmId: data.gsmId,
     },
     select: {
       returnQty: true,
@@ -1463,58 +1524,6 @@ async function getPurchaseInwardItems(req) {
     data = data?.filter((i) => i.PurchaseInward.supplierId == supplierId);
 
     data = await getAllDataPurInwardItems(data);
-    // if (isPurchaseInwardFilter) {
-    //   data = data.filter(
-    //     (item) =>
-    //       parseFloat(
-    //         balanceQtyCalculation(
-    //           item?.qty,
-    //           item?.alreadyCancelData?._sum?.qty,
-    //           item?.alreadyInwardedData?._sum?.qty,
-    //           item?.alreadyReturnedData?._sum?.qty,
-    //         ),
-    //       ) > 0,
-    //   );
-
-    //   data = data?.filter((j) => parseFloat(j.balanceQty) > 0);
-    // }
-
-    // if (isPurchaseCancelFilter) {
-    //   data = data.filter(
-    //     (item) =>
-    //       parseFloat(
-    //         balanceCancelQtyCalculation(
-    //           item?.qty,
-    //           item?.alreadyCancelData?._sum?.qty,
-    //           item?.alreadyInwardedData?._sum?.qty,
-    //           item?.alreadyReturnedData?._sum?.qty,
-    //         ),
-    //       ) > 0,
-    //   );
-    // }
-    // if (isPurchaseReturnFilter) {
-    //   // data = data.filter(item => substract(item.alreadyInwardedData?._sum?.qty ? item.alreadyInwardedData._sum.qty : 0, item.alreadyReturnedData?._sum?.qty ? item.alreadyReturnedData?._sum?.qty : 0) > 0)
-
-    //   data = data.filter((item) => {
-    //     const poQty = item?.qty || 0;
-    //     const inwardQty = item?.alreadyInwardedData?._sum?.qty || 0;
-    //     const returnQty = item?.alreadyReturnedData?._sum?.qty || 0;
-    //     const cancelQty = item?.alreadyCancelData?._sum?.qty || 0;
-
-    //     const balance = parseFloat(substract(inwardQty, returnQty));
-
-    //     // log for debugging
-    //     console.log({
-    //       itemId: item?.id,
-    //       poQty,
-    //       inwardQty,
-    //       returnQty,
-    //     });
-
-    //     // keep only if positive balance
-    //     return balance > 0;
-    //   });
-    // }
   } else {
     data = await prisma.inwardItems.findMany({
       where: {

@@ -16,6 +16,7 @@ import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvali
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { useSelector } from "react-redux";
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
+import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -101,6 +102,7 @@ export default function Form() {
     isLoading,
     isFetching,
   } = useGetTermsandCondtionsQuery({ params });
+  const { data: gsmList } = useGetGsmMasterQuery({ params });
 
   const tabParams = useSelector(
     (state) =>
@@ -192,6 +194,7 @@ export default function Form() {
           setFromPoType={setFromPoType}
           colorList={colorList}
           termsData={termsData}
+          gsmList={gsmList}
         />
       )}
     </>

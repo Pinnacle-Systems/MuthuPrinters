@@ -700,7 +700,7 @@ const PurchaseOrderPrintFormat = ({
                         }}
                       >
                         {/* S.No cell */}
-                        <Text style={{ flex: 0.5, fontSize: 8, color: "transparent", paddingVertical: 5, paddingHorizontal: 3, borderRight: "1 solid #bbbbc8" }}> </Text>
+                        <Text style={{ flex: 0.5, fontSize: 8, color: "transparent", paddingVertical: 5, paddingHorizontal: 2, borderRight: "1 solid #bbbbc8" }}> </Text>
                         {/* Item + Size + Color + UOM merged label */}
                         <Text
                           style={{

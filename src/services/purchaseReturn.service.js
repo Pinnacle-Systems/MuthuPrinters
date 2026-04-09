@@ -394,6 +394,7 @@ async function createReturnItems(
         poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
         sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
         colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
+        gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
       },
     });
     await tx.stock.create({
@@ -421,6 +422,7 @@ async function createReturnItems(
           : null,
         sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
         colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
+        gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
       },
     });
     return createdItem;
@@ -554,6 +556,7 @@ async function updateReturnGoods(
           sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
           colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
           poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
+          gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
 
@@ -589,6 +592,7 @@ async function updateReturnGoods(
             colorId: stockDetail?.colorId
               ? parseInt(stockDetail.colorId)
               : null,
+            gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
           },
         });
       } else {
@@ -620,6 +624,7 @@ async function updateReturnGoods(
             colorId: stockDetail?.colorId
               ? parseInt(stockDetail.colorId)
               : null,
+            gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
           },
         });
       }
@@ -650,6 +655,7 @@ async function updateReturnGoods(
           sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
           colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
           poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
+          gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
 
@@ -679,6 +685,7 @@ async function updateReturnGoods(
             : null,
           sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
           colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
+          gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
 

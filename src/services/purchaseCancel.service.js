@@ -194,6 +194,7 @@ async function getOne(id) {
           itemGroupId: item.itemGroupId,
           sizeId: item.sizeId,
           colorId: item.colorId,
+          gsmId: item.gsmId,
         },
         select: {
           qty: true,
@@ -207,6 +208,7 @@ async function getOne(id) {
           hsnId: item.hsnId,
           itemGroupId: item.itemGroupId,
           sizeId: item.sizeId,
+          gsmId: item.gsmId,
           colorId: item.colorId,
         },
         select: {
@@ -233,6 +235,7 @@ async function getOne(id) {
             itemGroupId: item.itemGroupId,
             sizeId: item.sizeId,
             colorId: item.colorId,
+            gsmId: item.gsmId,
           },
           _sum: { returnQty: true },
         });
@@ -249,6 +252,7 @@ async function getOne(id) {
           itemGroupId: item.itemGroupId,
           sizeId: item.sizeId,
           colorId: item.colorId,
+          gsmId: item.gsmId,
           purchaseCancelId: { not: data.id },
         },
         _sum: { cancelQty: true },
@@ -384,6 +388,7 @@ async function createCancelItems(
           : null,
         sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
         colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
+        gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
       },
     });
     return createdItem;
@@ -508,6 +513,7 @@ async function updateCancelGoods(
             : null,
           sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
           colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
+          gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
 
@@ -534,6 +540,7 @@ async function updateCancelGoods(
             : null,
           sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
           colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
+          gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
 

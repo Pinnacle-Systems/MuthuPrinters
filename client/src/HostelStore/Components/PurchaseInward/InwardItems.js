@@ -34,6 +34,7 @@ const InwardItems = ({
   vehicleRef,
   fromPoId,
   receiptType,
+  gsmList,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -201,6 +202,7 @@ const InwardItems = ({
       balQty: item.balQty ?? item.qty,
       inwardQty: "", // ⬅️ user fills this
       price: item.price || "",
+      gsmId: item.gsmId || "",
     }));
 
     // Pad to minimum 4 rows
@@ -252,7 +254,7 @@ const InwardItems = ({
             }
           }, 100); // small delay important
         }}
-        widthClass={"w-[90%] h-[90%]"}
+        widthClass={"w-[98%] h-[90%]"}
       >
         <PoItemsSelection
           supplierId={supplierId}
@@ -313,7 +315,12 @@ const InwardItems = ({
                 <th className={`w-12 px-4 py-2 text-center font-medium `}>
                   S.No
                 </th>
-                <th className={`w-80 px-2 py-2 text-center font-medium`}>
+                {inwardType !== "Direct Inward" && (
+                  <th className={`w-24 px-4 py-2 text-center font-medium`}>
+                    PO No
+                  </th>
+                )}
+                <th className={`w-56 px-2 py-2 text-center font-medium`}>
                   Description of Goods<span className="text-red-500">*</span>
                 </th>
                 <th className={`w-20 px-4 py-2 text-center font-medium`}>
@@ -322,8 +329,11 @@ const InwardItems = ({
                 <th className={`w-32 px-4 py-2 text-center font-medium`}>
                   Color
                 </th>
-                <th className={`w-20 px-4 py-2 text-center font-medium`}>
-                  UOM<span className="text-red-500">*</span>
+                <th className={`w-16 px-4 py-2 text-center font-medium`}>
+                  GSM<span className="text-red-500">*</span>
+                </th>
+                <th className={`w-16 px-4 py-2 text-center font-medium`}>
+                  UOM
                 </th>
                 {inwardType !== "Direct Inward" && (
                   <th className={`w-16 px-4 py-2 text-center font-medium `}>
@@ -362,15 +372,15 @@ const InwardItems = ({
                 )}
                 {receiptType === "Against Invoice" && (
                   <th className={`w-16 px-1 py-2 text-center font-medium `}>
-                    Gross Amount
+                    Gross
                   </th>
                 )}
                 {receiptType === "Against Invoice" && (
-                  <th className={`w-20 px-1 py-2 text-center font-medium `}>
-                    Tax Details
+                  <th className={`w-10 px-1 py-2 text-center font-medium `}>
+                    Tax
                   </th>
                 )}
-                <th className={`w-16 px-1 py-2 text-center font-medium `}>
+                <th className={`w-12 px-1 py-2 text-center font-medium `}>
                   Actions
                 </th>
               </tr>
@@ -389,6 +399,11 @@ const InwardItems = ({
                   <td className="w-12 border border-gray-300 text-[11px]  text-center">
                     {index + 1}
                   </td>
+                  {inwardType !== "Direct Inward" && (
+                    <td className="w-16 border border-gray-300 text-[11px] text-left px-1">
+                      {row.Po?.docId}
+                    </td>
+                  )}
                   <td className=" text-[11px] border border-gray-300 text-left">
                     <FxSelectWithAdd
                       inputId={`styleItemId-input-${index}`}
@@ -475,6 +490,28 @@ const InwardItems = ({
                       addNew={true}
                       childComponent={ColorMaster}
                       addNewModalWidth="w-[30%] h-[45%]"
+                    />
+                  </td>
+                  <td className=" border border-gray-300 text-[11px] ">
+                    <FxSelect
+                      value={row.gsmId}
+                      onChange={(val) => handleInputChange(val, index, "gsmId")}
+                      options={(gsmList?.data || [])
+                        .filter((item) => (id ? true : item.active))
+                        .map((item) => ({
+                          label: item.name,
+                          value: item.id,
+                        }))}
+                      readOnly={readOnly || inwardType !== "Direct Inward"}
+                      placeholder=""
+                      onBlur={() =>
+                        handleInputChange(row.gsmId, index, "gsmId")
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Delete") {
+                          handleInputChange("", index, "gsmId");
+                        }
+                      }}
                     />
                   </td>
                   <td className=" border border-gray-300 text-[11px] ">
@@ -936,7 +973,7 @@ const InwardItems = ({
               <tr className="bg-gray-50 h-6 font-medium text-gray-800 text-[12px]">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium "
-                  colSpan={5}
+                  colSpan={inwardType !== "Direct Inward" ? 7 : 6}
                 >
                   Total
                 </td>

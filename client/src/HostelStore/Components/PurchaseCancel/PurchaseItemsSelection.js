@@ -179,7 +179,7 @@ const PurchaseItemsSelection = ({
                     </th>
 
                     {/* PO Date with search */}
-                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-24">
+                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-20">
                       <label>PO Date</label>
                       <input
                         type="text"
@@ -191,7 +191,7 @@ const PurchaseItemsSelection = ({
                       />
                     </th>
 
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-56">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-52">
                       Description of Goods
                     </th>
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
@@ -200,7 +200,10 @@ const PurchaseItemsSelection = ({
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-28">
                       Color
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16">
+                      GSM
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16">
                       UOM
                     </th>
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 ">
@@ -272,7 +275,9 @@ const PurchaseItemsSelection = ({
                         <td className="border border-gray-300 text-[11px] py-1.5 px-2">
                           {item?.Color?.name}
                         </td>
-
+                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">
+                          {item?.Gsm?.name}
+                        </td>
                         <td className="border border-gray-300 text-[11px] py-1.5 px-2">
                           {item?.Uom?.name}
                         </td>

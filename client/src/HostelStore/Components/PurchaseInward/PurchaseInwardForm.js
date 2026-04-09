@@ -58,6 +58,7 @@ const PurchaseInwardForm = ({
   setFromPoSupplierId,
   setFromPoType,
   taxTypeList,
+  gsmList,
 }) => {
   const today = new Date();
 
@@ -275,6 +276,7 @@ const PurchaseInwardForm = ({
         row.styleItemId || "",
         row.sizeId || "",
         row.colorId || "",
+        row.gsmId || "",
       ].join("-");
 
       if (seen.has(key)) {
@@ -284,6 +286,7 @@ const PurchaseInwardForm = ({
           styleItemId: row.styleItemId,
           sizeId: row.sizeId,
           colorId: row.colorId,
+          gsmId: row.gsmId,
         });
       } else {
         seen.set(key, index);
@@ -350,7 +353,7 @@ const PurchaseInwardForm = ({
         title: "Duplicate Item Found!",
         html: (() => {
           const dup = findDuplicates(filledItems)[0];
-          return `Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")}, Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")}, Color - ${findFromList(dup?.colorId, colorList?.data, "name")}`;
+          return `Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")}, Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")}, Color - ${findFromList(dup?.colorId, colorList?.data, "name")}, GSM - ${findFromList(dup?.gsmId, gsmList?.data, "name")}`;
         })(),
       },
     ];
@@ -433,6 +436,14 @@ const PurchaseInwardForm = ({
 
   useEffect(() => {
     supplierRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!id) {
+      setTaxTemplateId(
+        taxTypeList?.data?.filter((item) => item.name === "DEFAULT")[0]?.id,
+      );
+    }
   }, []);
 
   return (
@@ -620,7 +631,20 @@ const PurchaseInwardForm = ({
                 addNewModalWidth="w-[90%] h-[95%]"
                 disabled={id || !!fromPoSupplierId}
               />
-              <DropdownWithModal
+              <DropdownInput
+                name="Tax Type"
+                options={dropDownListObject(
+                  taxTypeList ? taxTypeList?.data : [],
+                  "name",
+                  "id",
+                )}
+                value={taxTemplateId}
+                setValue={setTaxTemplateId}
+                required={receiptType === "Against Invoice"}
+                readOnly={readOnly}
+                disabled={receiptType !== "Against Invoice"}
+              />
+              {/* <DropdownWithModal
                 name="Tax Type"
                 options={dropDownListObject(
                   id
@@ -639,7 +663,7 @@ const PurchaseInwardForm = ({
                 childComponent={TaxTemplate}
                 addNewModalWidth="w-[82%] h-[85%]"
                 disabled={receiptType !== "Against Invoice"}
-              />
+              /> */}
               <TextInput
                 name={"Dc No."}
                 value={dcNo}
@@ -684,6 +708,7 @@ const PurchaseInwardForm = ({
             fromPoId={fromPoId}
             receiptType={receiptType}
             taxTemplateId={taxTemplateId}
+            gsmList={gsmList}
           />
         </fieldset>
 

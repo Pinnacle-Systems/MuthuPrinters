@@ -23,6 +23,7 @@ import StyleItemMasterApi from "../../../redux/services/StyleItemMasterService.j
 import { useDispatch } from "react-redux";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
+import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -141,6 +142,7 @@ export default function Form() {
   const { data: itemGroupList } = useGetItemGroupMasterQuery({ params });
   const { data: sizeList } = useGetSizeMasterQuery({ params });
   const { data: colorList } = useGetColorMasterQuery({ params });
+  const { data: gsmList } = useGetGsmMasterQuery({ params });
 
   return (
     <>
@@ -207,6 +209,7 @@ export default function Form() {
             sizeList={sizeList}
             colorList={colorList}
             branchData={branchData}
+            gsmList={gsmList}
           />
         </div>
       )}

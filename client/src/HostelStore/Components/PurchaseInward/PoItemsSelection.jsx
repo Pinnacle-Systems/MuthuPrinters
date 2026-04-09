@@ -139,7 +139,7 @@ const PurchaseInwardItemsSelection = ({
               <table className="w-full text-xs border border-gray-200">
                 <thead className="bg-gray-200 text-gray-800">
                   <tr>
-                    <th className="px-2 py-1 w-10 border border-gray-300">
+                    <th className="px-1 py-1 w-6 border border-gray-300">
                       <div className="flex flex-col items-center">
                         <span className="text-[10px] font-medium mb-[2px]">Select</span>
                         <input
@@ -170,7 +170,7 @@ const PurchaseInwardItemsSelection = ({
                         }}
                       />
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-20">
+                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-16">
                       <label>Po Date</label>
                       <input
                         type="text"
@@ -195,15 +195,19 @@ const PurchaseInwardItemsSelection = ({
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-24">
                       Color
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-14">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-10">
+                      GSM
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-10">
                       UOM
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
+
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16">
                       PO Qty
 
 
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16">
                       Cancel Qty
 
                     </th>
@@ -214,7 +218,7 @@ const PurchaseInwardItemsSelection = ({
                     </th>
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
                       <label>Already Return Qty</label></th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16">
                       <label>Balance Qty</label></th>
 
 
@@ -263,6 +267,9 @@ const PurchaseInwardItemsSelection = ({
 
                       <td className="border border-gray-300 text-[11px] py-1.5 px-2">
                         {item?.Color?.name}
+                      </td>
+                      <td className="border border-gray-300 text-[11px] py-1.5 px-2">
+                        {item?.Gsm?.name}
                       </td>
                       <td className="border border-gray-300 text-[11px] py-1.5 px-2">
                         {item?.Uom?.name}

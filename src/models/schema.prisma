@@ -732,6 +732,8 @@ model Stock {
   sizeId                Int?
   Color                 Color?               @relation(fields: [colorId], references: [id])
   colorId               Int?
+  Gsm                   Gsm?                 @relation(fields: [gsmId], references: [id])
+  gsmId                 Int?
 }
 
 model SalesBill {
@@ -1284,6 +1286,7 @@ model PurchaseInward {
   receiptType            String?
   purchaseReturnItems    PurchaseReturnItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
+  purchaseLedgers        PurchaseLedger[]
 }
 
 model InwardItems {
@@ -1518,6 +1521,8 @@ model PurchaseLedger {
   id                  Int                @id @default(autoincrement())
   PurchaseBillEntry   PurchaseBillEntry? @relation(fields: [purchaseBillEntryId], references: [id], onDelete: Cascade)
   purchaseBillEntryId Int?
+  PurchaseInward      PurchaseInward?    @relation(fields: [purchaseInwardId], references: [id], onDelete: Cascade)
+  purchaseInwardId    Int?
   netBillValue        Float?
   supplier            Party?             @relation(fields: [supplierId], references: [id])
   supplierId          Int?
@@ -1554,6 +1559,7 @@ model Gsm {
   purchaseReturnItems    PurchaseReturnItems[]
   purchaseCancelItems    PurchaseCancelItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
+  stocks                 Stock[]
 }
 
 model ItemGroup {

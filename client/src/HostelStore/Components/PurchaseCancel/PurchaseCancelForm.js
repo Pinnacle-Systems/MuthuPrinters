@@ -56,6 +56,7 @@ const PurchaseCancelForm = ({
   setFromPoSupplierId,
   setFromPoType,
   termsData,
+  gsmList,
 }) => {
   const today = new Date();
 
@@ -587,6 +588,7 @@ const PurchaseCancelForm = ({
             searchDocDate={searchDocDate}
             fromPoId={fromPoId}
             termsRef={termsRef}
+            gsmList={gsmList}
           />
         </fieldset>
 

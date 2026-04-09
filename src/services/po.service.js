@@ -611,6 +611,7 @@ async function createPoItems(tx, poItems, po) {
           : null,
         sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
         colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
+        gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
       },
     });
 
@@ -790,6 +791,7 @@ async function updatePoItems(tx, poItems, po, userId, branchId, quoteVersion) {
           taxPercent: itemDetails?.taxPercent
             ? parseInt(itemDetails.taxPercent)
             : null,
+          gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
           quoteVersion,
         },
       });
@@ -815,6 +817,7 @@ async function updatePoItems(tx, poItems, po, userId, branchId, quoteVersion) {
             ? parseInt(itemDetails.taxPercent)
             : null,
           quoteVersion,
+          gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
         },
       });
 
@@ -890,6 +893,7 @@ async function getPoItemById(id) {
       Hsn: { select: { name: true } },
       Size: { select: { name: true } },
       Color: { select: { name: true } },
+      Gsm: { select: { name: true } },
     },
   });
 
@@ -904,6 +908,7 @@ async function getPoItemById(id) {
       itemGroupId: data.itemGroupId,
       sizeId: data.sizeId,
       colorId: data.colorId,
+      gsmId: data.gsmId,
     },
     select: {
       purchaseInwardId: true,
@@ -925,6 +930,7 @@ async function getPoItemById(id) {
       itemGroupId: data.itemGroupId,
       sizeId: data.sizeId,
       colorId: data.colorId,
+      gsmId: data.gsmId,
     },
     select: {
       cancelQty: true,
@@ -951,6 +957,7 @@ async function getPoItemById(id) {
         itemGroupId: data.itemGroupId,
         sizeId: data.sizeId,
         colorId: data.colorId,
+        gsmId: data.gsmId,
       },
       _sum: { returnQty: true },
     });
@@ -1028,58 +1035,6 @@ async function getPoItems(req) {
     data = data?.filter((i) => i.Po.supplierId == supplierId);
 
     data = await getAllDataPoItems(data);
-    // if (isPurchaseInwardFilter) {
-    //   data = data.filter(
-    //     (item) =>
-    //       parseFloat(
-    //         balanceQtyCalculation(
-    //           item?.qty,
-    //           item?.alreadyCancelData?._sum?.qty,
-    //           item?.alreadyInwardedData?._sum?.qty,
-    //           item?.alreadyReturnedData?._sum?.qty,
-    //         ),
-    //       ) > 0,
-    //   );
-
-    //   data = data?.filter((j) => parseFloat(j.balanceQty) > 0);
-    // }
-
-    // if (isPurchaseCancelFilter) {
-    //   data = data.filter(
-    //     (item) =>
-    //       parseFloat(
-    //         balanceCancelQtyCalculation(
-    //           item?.qty,
-    //           item?.alreadyCancelData?._sum?.qty,
-    //           item?.alreadyInwardedData?._sum?.qty,
-    //           item?.alreadyReturnedData?._sum?.qty,
-    //         ),
-    //       ) > 0,
-    //   );
-    // }
-    // if (isPurchaseReturnFilter) {
-    //   // data = data.filter(item => substract(item.alreadyInwardedData?._sum?.qty ? item.alreadyInwardedData._sum.qty : 0, item.alreadyReturnedData?._sum?.qty ? item.alreadyReturnedData?._sum?.qty : 0) > 0)
-
-    //   data = data.filter((item) => {
-    //     const poQty = item?.qty || 0;
-    //     const inwardQty = item?.alreadyInwardedData?._sum?.qty || 0;
-    //     const returnQty = item?.alreadyReturnedData?._sum?.qty || 0;
-    //     const cancelQty = item?.alreadyCancelData?._sum?.qty || 0;
-
-    //     const balance = parseFloat(substract(inwardQty, returnQty));
-
-    //     // log for debugging
-    //     console.log({
-    //       itemId: item?.id,
-    //       poQty,
-    //       inwardQty,
-    //       returnQty,
-    //     });
-
-    //     // keep only if positive balance
-    //     return balance > 0;
-    //   });
-    // }
   } else {
     data = await prisma.poItems.findMany({
       where: {

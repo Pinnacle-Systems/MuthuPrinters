@@ -85,6 +85,10 @@ const useInvalidateTags = () => {
       payload: ["HsnMaster"],
     },
     {
+      type: `GsmMaster/invalidateTags`,
+      payload: ["GsmMaster"],
+    },
+    {
       type: `ItemCategoryMaster/invalidateTags`,
       payload: ["ItemCategoryMaster"],
     },

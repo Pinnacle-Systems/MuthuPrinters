@@ -20,6 +20,7 @@ const CancelItems = ({
   branchId,
   sizeList,
   colorList,
+  gsmList,
   setTempItems,
   tempItems,
   searchDocId,
@@ -69,6 +70,7 @@ const CancelItems = ({
       alreadyCancelQty: "",
       alreadyInwardQty: "",
       alreadyReturnQty: "",
+      gsmId: "",
     };
     setCancelItems([...cancelItems, newRow]);
   };
@@ -206,6 +208,7 @@ const CancelItems = ({
       alreadyCancelQty: item.alreadyCancelQty || 0,
       alreadyReturnQty: item.alreadyReturnQty || 0,
       balQty: item.balQty ?? item.qty,
+      gsmId: item.gsmId || "",
       returnQty: "", // ⬅️ user fills this
     }));
 
@@ -323,6 +326,11 @@ const CancelItems = ({
                   Color
                 </th>
                 <th
+                  className={`w-20 px-4 py-2 text-center font-medium text-[12px]`}
+                >
+                  GSM
+                </th>
+                <th
                   className={`w-20 px-4 py-2 text-center font-medium text-[12px] `}
                 >
                   UOM
@@ -348,12 +356,12 @@ const CancelItems = ({
                   Already Return Qty
                 </th>
                 <th
-                  className={`w-24 px-4 py-2 text-center font-medium text-[12px] `}
+                  className={`w-20 px-4 py-2 text-center font-medium text-[12px] `}
                 >
                   Balance Qty
                 </th>
                 <th
-                  className={`w-24 px-4 py-2 text-center font-medium text-[12px] `}
+                  className={`w-20 px-4 py-2 text-center font-medium text-[12px] `}
                 >
                   Cancel Qty<span className="text-red-500">*</span>
                 </th>
@@ -456,6 +464,28 @@ const CancelItems = ({
                       onKeyDown={(e) => {
                         if (e.key === "Delete") {
                           handleInputChange("", index, "colorId");
+                        }
+                      }}
+                    />
+                  </td>
+                  <td className=" border border-gray-300 text-[11px] ">
+                    <FxSelect
+                      value={row.gsmId}
+                      onChange={(val) => handleInputChange(val, index, "gsmId")}
+                      options={(gsmList?.data || [])
+                        .filter((item) => item.active)
+                        .map((item) => ({
+                          label: item.name,
+                          value: item.id,
+                        }))}
+                      readOnly={true}
+                      placeholder=""
+                      onBlur={() =>
+                        handleInputChange(row.gsmId, index, "gsmId")
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Delete") {
+                          handleInputChange("", index, "gsmId");
                         }
                       }}
                     />
@@ -742,7 +772,7 @@ const CancelItems = ({
               <tr className="bg-gray-50 h-6 font-medium text-gray-800 text-[12px]">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium "
-                  colSpan={6}
+                  colSpan={7}
                 >
                   Total
                 </td>

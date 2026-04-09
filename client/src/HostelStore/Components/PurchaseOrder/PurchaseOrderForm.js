@@ -62,6 +62,7 @@ const PurchaseOrderForm = ({
   sizeList,
   colorList,
   branchData,
+  gsmList,
 }) => {
   const today = new Date();
   const [pendingAction, setPendingAction] = useState(null);
@@ -139,6 +140,7 @@ const PurchaseOrderForm = ({
               itemGroupId: "",
               sizeId: "",
               colorId: "",
+              gsmId: "",
             })),
       );
       setDocId(data?.docId ? data?.docId : "New");
@@ -327,6 +329,7 @@ const PurchaseOrderForm = ({
         row.styleItemId || "",
         row.sizeId || "",
         row.colorId || "",
+        row.gsmId || "",
       ].join("-");
 
       if (seen.has(key)) {
@@ -336,6 +339,7 @@ const PurchaseOrderForm = ({
           styleItemId: row.styleItemId,
           sizeId: row.sizeId,
           colorId: row.colorId,
+          gsmId: row.gsmId,
         });
       } else {
         seen.set(key, index);
@@ -376,7 +380,7 @@ const PurchaseOrderForm = ({
         condition: duplicates.length > 0,
         title: "Duplicate Item Found!",
         html: dup
-          ? `Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")}, Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")}, Color - ${findFromList(dup?.colorId, colorList?.data, "name")}`
+          ? `Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")}, Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")}, Color - ${findFromList(dup?.colorId, colorList?.data, "name")}, GSM - ${findFromList(dup?.gsmId, gsmList?.data, "name")}`
           : "",
       },
     ];
@@ -543,6 +547,14 @@ const PurchaseOrderForm = ({
 
   useEffect(() => {
     supplierRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!id) {
+      setTaxTemplateId(
+        taxTypeList?.data?.filter((item) => item.name === "DEFAULT")[0]?.id,
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -746,7 +758,7 @@ const PurchaseOrderForm = ({
                 ref={supplierRef}
               />
 
-              {/* <DropdownInput
+              <DropdownInput
                 name="Tax Type"
                 options={dropDownListObject(
                   taxTypeList ? taxTypeList?.data : [],
@@ -757,8 +769,8 @@ const PurchaseOrderForm = ({
                 setValue={setTaxTemplateId}
                 required={true}
                 readOnly={readOnly}
-              /> */}
-              <DropdownWithModal
+              />
+              {/* <DropdownWithModal
                 name="Tax Type"
                 options={dropDownListObject(
                   id
@@ -776,7 +788,7 @@ const PurchaseOrderForm = ({
                 addNewLabel="+ Add New Tax Template"
                 childComponent={TaxTemplate}
                 addNewModalWidth="w-[82%] h-[85%]"
-              />
+              /> */}
               <DropdownWithModal
                 name="Pay Term"
                 options={dropDownListObject(
@@ -967,6 +979,7 @@ const PurchaseOrderForm = ({
             sizeList={sizeList}
             colorList={colorList}
             termsRef={termsRef}
+            gsmList={gsmList}
           />
         </fieldset>
 
