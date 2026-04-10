@@ -1,11 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  ExpandedRowDetail.jsx
-//  Fixed: cancel / return / inward qty now matched per item using
-//         styleItemId + sizeId + colorId + uomId composite key
-//         instead of item name string match (which caused qty bleed across items)
+//  Fix: each tab now renders ONE shared table for all documents.
+//       This ensures all rows share the same column widths.
+//       Doc info (docId, date, type) is shown as a spanning group header row
+//       inside the same table — not as separate tables per doc.
 // ─────────────────────────────────────────────────────────────────────────────
 import React, { useState } from "react";
-import { fmtDate, dueBadgeCls } from "../purchaseReportUtils";
+import { fmtDate, dueBadgeCls, formatQtyByUOM } from "../purchaseReportUtils";
 
 const TABS = [
   { key: "po", label: (r) => `PO Items (${r.poItems?.length ?? 0})` },
@@ -15,16 +16,29 @@ const TABS = [
   { key: "bill", label: (r) => `Bill Entry (${r.billDocs?.length ?? 0})` },
 ];
 
+// Qty / price columns — right-aligned in tbody
+const RIGHT_ALIGN = new Set([
+  "PO Qty",
+  "Inward Qty",
+  "Cancel Qty",
+  "Return Qty",
+  "Balance Qty",
+  "Pending to Inward",
+  "Billed Qty",
+  "Price",
+  "Tax %",
+  "Discount",
+  "Item Discount",
+  "Bill Discount", // new discount columns
+]);
+
 export default function ExpandedRowDetail({ row }) {
   const [tab, setTab] = useState("po");
 
   return (
     <div className="bg-gray-50 px-4 py-3 border-t border-gray-100 text-xs">
-      {/* meta row */}
+      {/* meta */}
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-500 mb-3">
-        {/* <span>
-          Branch: <strong className="text-gray-700">{row.branch}</strong>
-        </span> */}
         <span>
           Remarks:{" "}
           <strong className="text-gray-700">{row.remarks || "—"}</strong>
@@ -32,11 +46,7 @@ export default function ExpandedRowDetail({ row }) {
         <span>
           Balance Qty:{" "}
           <strong
-            className={
-              row.balanceQty > 0
-                ? "text-red-700 text-xs"
-                : "text-green-700 text-xs"
-            }
+            className={row.balanceQty > 0 ? "text-red-700" : "text-green-700"}
           >
             {row.balanceQty}
           </strong>
@@ -44,14 +54,14 @@ export default function ExpandedRowDetail({ row }) {
         <span>
           Due:{" "}
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full  text-xs ${dueBadgeCls(row.dueAlert)}`}
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${dueBadgeCls(row.dueAlert)}`}
           >
             {row.dueStatus}
           </span>
         </span>
       </div>
 
-      {/* tab bar */}
+      {/* tabs */}
       <div className="flex gap-2 mb-3 flex-wrap">
         {TABS.map((t) => (
           <button
@@ -68,7 +78,6 @@ export default function ExpandedRowDetail({ row }) {
         ))}
       </div>
 
-      {/* tab content */}
       <div>
         {tab === "po" && <POItemsTab row={row} />}
         {tab === "inward" && <InwardTab row={row} />}
@@ -82,8 +91,6 @@ export default function ExpandedRowDetail({ row }) {
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-// Build a composite match key from an item using IDs (most accurate)
-// Falls back to name strings if IDs are not present
 function itemKey(item) {
   const styleId = item.styleItemId ?? item.StyleItem?.id ?? "";
   const sizeId = item.sizeId ?? item.Size?.id ?? "";
@@ -92,61 +99,17 @@ function itemKey(item) {
   return `${styleId}|${sizeId}|${colorId}|${uomId}`;
 }
 
-// Sum a qty field from child items that match the given PO item key
 function sumMatchingQty(childItems, poItem, qtyField) {
   const key = itemKey(poItem);
-  return childItems.reduce((sum, child) => {
-    if (itemKey(child) === key) {
-      return sum + (child[qtyField] || 0);
-    }
-    return sum;
-  }, 0);
+  return childItems.reduce(
+    (sum, child) =>
+      itemKey(child) === key ? sum + (child[qtyField] || 0) : sum,
+    0,
+  );
 }
 
-// Flatten all items from all docs into a single array
 function flatItems(docs) {
   return (docs || []).flatMap((d) => d.items || []);
-}
-
-// ─── sub-table wrapper ────────────────────────────────────────────────────────
-function SubTable({ headers, rows, empty }) {
-  if (!rows || rows.length === 0) {
-    return (
-      <p className="text-xs text-gray-400 py-2">{empty || "No records"}</p>
-    );
-  }
-  return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full text-xs border-collapse">
-        <thead className="bg-gray-100">
-          <tr>
-            {headers.map((h) => (
-              <th
-                key={h}
-                className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap border-b border-gray-200"
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((cells, i) => (
-            <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-              {cells.map((cell, j) => (
-                <td
-                  key={j}
-                  className="px-3 py-2 border-b border-gray-100 whitespace-nowrap"
-                >
-                  {cell ?? "—"}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
 }
 
 function LinkedBadge({ poDocId, color = "green" }) {
@@ -165,80 +128,157 @@ function LinkedBadge({ poDocId, color = "green" }) {
   );
 }
 
+// ─── SharedTable ──────────────────────────────────────────────────────────────
+// One table for ALL documents in a tab — consistent column widths guaranteed.
+// docs: array of { meta: ReactNode, rows: any[][] }
+// headers: string[]
+function SharedTable({ headers, docs, empty }) {
+  const hasData = docs.some((d) => d.rows.length > 0);
+  if (!hasData)
+    return (
+      <p className="text-xs text-gray-400 py-2">{empty || "No records"}</p>
+    );
+
+  let globalRowIndex = 0;
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
+      <table
+        className="w-full text-xs border-collapse"
+        style={{ tableLayout: "fixed" }}
+      >
+        <thead className="bg-gray-100">
+          <tr>
+            {headers.map((h) => (
+              <th
+                key={h}
+                className="px-3 py-2 font-medium text-gray-500 whitespace-nowrap border-b border-r border-gray-200 last:border-r-0 text-center"
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {docs.map((doc, di) => (
+            <React.Fragment key={di}>
+              {/* doc group header row — only shown when meta exists (skipped for PO Items tab) */}
+              {doc.meta && (
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <td
+                    colSpan={headers.length}
+                    className="px-3 py-1.5 text-xs text-gray-500"
+                  >
+                    {doc.meta}
+                  </td>
+                </tr>
+              )}
+              {/* data rows */}
+              {doc.rows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={headers.length}
+                    className="px-3 py-2 text-gray-400 text-center"
+                  >
+                    No items
+                  </td>
+                </tr>
+              ) : (
+                doc.rows.map((cells, ri) => {
+                  const stripe =
+                    globalRowIndex++ % 2 === 0 ? "bg-white" : "bg-gray-50";
+                  return (
+                    <tr key={ri} className={stripe}>
+                      {cells.map((cell, ci) => (
+                        <td
+                          key={ci}
+                          className={`px-3 py-2 border-b border-r border-gray-100 last:border-r-0 whitespace-nowrap ${
+                            RIGHT_ALIGN.has(headers[ci])
+                              ? "text-right"
+                              : "text-left"
+                          }`}
+                        >
+                          {cell ?? "—"}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })
+              )}
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ─── tab: PO Items ────────────────────────────────────────────────────────────
-// KEY FIX: uses itemKey() composite match — not item name string comparison
-// This ensures cancel/return/inward qty is shown only for the matching item
 function POItemsTab({ row }) {
   const isDone = [
     "Fully Received",
     "Cancelled",
     "Closed (Inward + Cancelled)",
   ].includes(row.status);
-
-  // flatten all child items once
   const allInwardItems = flatItems(row.inwardDocs);
   const allCancelItems = flatItems(row.cancelDocs);
   const allReturnItems = flatItems(row.returnDocs);
 
-  const tableRows = (row.poItems || []).map((item) => {
+  const rows = (row.poItems || []).map((item) => {
+    const uomName = item.Uom?.name || "—";
     const qty = item.qty || 0;
-
-    // ── match by composite key (styleItemId + sizeId + colorId + uomId) ──────
     const iq = sumMatchingQty(allInwardItems, item, "inwardQty");
     const cq = sumMatchingQty(allCancelItems, item, "cancelQty");
     const rq = sumMatchingQty(allReturnItems, item, "returnQty");
     const bal = Math.max(0, qty - iq - cq + rq);
     const pend = Math.max(0, qty - iq - cq);
 
-    const itemName = item.StyleItem?.name || "—";
-    const uomName = item.Uom?.name || "—";
-    const colorName = item.Color?.name || "—";
-    const sizeName = item.Size?.name || "—";
-    const gsmName = item.Gsm?.name || "—";
-    // const hsnName = item.Hsn?.name || "—";
-
     return [
-      itemName,
+      item.StyleItem?.name || "—",
+      item.Size?.name || "—",
+      item.Color?.name || "—",
+      item.Gsm?.name || "—",
       uomName,
-      qty,
-      iq,
-      // cancel qty — only shown if > 0 for this specific item
+      formatQtyByUOM(qty, uomName),
+      formatQtyByUOM(iq, uomName),
       cq > 0 ? (
-        <span className="font-semibold text-red-600">{cq}</span>
-      ) : (
-        <span className="text-gray-400">0</span>
-      ),
-      rq > 0 ? (
-        <span className="font-semibold text-amber-600">{rq}</span>
-      ) : (
-        <span className="text-gray-400">0</span>
-      ),
-      // balance qty coloured by due alert
-      <span
-        className={`font-semibold ${bal > 0 ? (row.dueAlert === "overdue" ? "text-red-700" : "text-green-700") : "text-gray-400"}`}
-      >
-        {bal}
-      </span>,
-      // pending to inward — only show if not fully done
-      !isDone && pend > 0 ? (
-        <span className="px-2 py-0.5 bg-blue-50 text-blue-800 rounded-full text-[10px] font-medium">
-          {pend} pending
+        <span className="font-semibold text-red-600">
+          {formatQtyByUOM(cq, uomName)}
         </span>
       ) : (
         <span className="text-gray-400">0</span>
       ),
+      rq > 0 ? (
+        <span className="font-semibold text-amber-600">
+          {formatQtyByUOM(rq, uomName)}
+        </span>
+      ) : (
+        <span className="text-gray-400">0</span>
+      ),
+      <span
+        className={`font-semibold ${bal > 0 ? (row.dueAlert === "overdue" ? "text-red-700" : "text-green-700") : "text-gray-400"}`}
+      >
+        {formatQtyByUOM(bal, uomName)}
+      </span>,
+      !isDone && pend > 0 ? (
+        <span className="px-2 py-0.5 bg-blue-50 text-blue-800 rounded-full text-[10px] font-medium">
+          {formatQtyByUOM(pend, uomName)} pending
+        </span>
+      ) : (
+        <span className="text-gray-400">—</span>
+      ),
       `₹${item.price ?? 0}`,
-      colorName,
-      sizeName,
-      gsmName,
-      // hsnName,
     ];
   });
 
+  // PO Items has no "per-doc" grouping — wrap in single doc entry with no meta
   return (
-    <SubTable
+    <SharedTable
       headers={[
         "Item",
+        "Size",
+        "Color",
+        "GSM",
         "UOM",
         "PO Qty",
         "Inward Qty",
@@ -247,12 +287,8 @@ function POItemsTab({ row }) {
         "Balance Qty",
         "Pending to Inward",
         "Price",
-        "Color",
-        "Size",
-        "GSM",
-        // "HSN",
       ]}
-      rows={tableRows}
+      docs={[{ meta: null, rows }]}
       empty="No PO items"
     />
   );
@@ -260,260 +296,324 @@ function POItemsTab({ row }) {
 
 // ─── tab: Inward ──────────────────────────────────────────────────────────────
 function InwardTab({ row }) {
-  if (!row.inwardDocs?.length) {
-    return (
-      <p className="text-xs text-gray-400 py-2">
-        No inward records for this PO
-      </p>
-    );
-  }
+  // Against Invoice inwards show discount + tax (they act as a bill)
+  // Delivery inwards show basic item info only
+  const headers = [
+    "Item",
+    "Size",
+    "Color",
+    "GSM",
+    "UOM",
+    "PO Qty",
+    "Inward Qty",
+    "Price", // item-level price
+    "Discount Type", // Percentage or Flat
+    "Item Discount", // item-level discount value (% or ₹)
+    "Tax %", // item-level tax
+  ];
+
+  const docs = (row.inwardDocs || []).map((doc) => ({
+    meta: (
+      <div className="flex flex-wrap gap-3 items-center">
+        <span>
+          Po Inward No: <strong className="text-gray-700">{doc.docId}</strong>
+        </span>
+        <span>
+          Date:{" "}
+          <strong className="text-gray-700">{fmtDate(doc.docDate)}</strong>
+        </span>
+        <span>
+          Type: <strong className="text-gray-700">{doc.inwardType}</strong>
+        </span>
+        {/* Show receipt type badge — important for Against Invoice */}
+        {doc.receiptType && (
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+              doc.receiptType?.toLowerCase() === "against invoice"
+                ? "bg-purple-50 text-purple-700 border-purple-200"
+                : "bg-gray-100 text-gray-500 border-gray-200"
+            }`}
+          >
+            {doc.receiptType}
+          </span>
+        )}
+        {doc.store && (
+          <span>
+            Location: <strong className="text-gray-700">{doc.store}</strong>
+          </span>
+        )}
+        {doc.dcNo && (
+          <span>
+            DC No: <strong className="text-gray-700">{doc.dcNo}</strong>
+          </span>
+        )}
+        {doc.invNo && (
+          <span>
+            Inv No: <strong className="text-gray-700">{doc.invNo}</strong>
+          </span>
+        )}
+        {/* Header-level discount on PurchaseInward (Against Invoice) */}
+        {doc.discountValue > 0 && (
+          <span>
+            Bill Discount:{" "}
+            <strong className="text-red-600">
+              {fmtDiscount(doc.discountValue, doc.discountType)}
+            </strong>
+          </span>
+        )}
+        {/* Net bill value for Against Invoice */}
+        {doc.netBillValue > 0 && (
+          <span>
+            Net Bill:{" "}
+            <strong className="text-gray-700">
+              {fmtAmount(doc.netBillValue)}
+            </strong>
+          </span>
+        )}
+        <LinkedBadge poDocId={row.docId} color="green" />
+      </div>
+    ),
+    rows: (doc.items || []).map((item) => {
+      const uomName = item.Uom?.name || "—";
+      return [
+        item.StyleItem?.name || "—", // 1  Item
+        item.Size?.name || "—", // 2  Size
+        item.Color?.name || "—", // 3  Color
+        item.Gsm?.name || "—", // 4  GSM
+        uomName, // 5  UOM
+        formatQtyByUOM(item.poQty, uomName), // 6  PO Qty
+        formatQtyByUOM(item.inwardQty, uomName), // 7  Inward Qty
+        fmtAmount(item.price), // 8  Price (₹ + 2dp)
+        item.discountType || "—", // 9  Discount Type
+        fmtDiscount(item.discountValue, item.discountType), // 10 Item Discount
+        item.taxPercent != null
+          ? `${Number(item.taxPercent).toFixed(2)}%`
+          : "—", // 11 Tax %
+      ];
+    }),
+  }));
+
   return (
-    <div className="space-y-4">
-      {row.inwardDocs.map((doc, di) => (
-        <div key={di}>
-          <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-2">
-            <span>
-              Doc:{" "}
-              <strong className="text-gray-700 text-[12px]">{doc.docId}</strong>
-            </span>
-            <span>
-              Date:{" "}
-              <strong className="text-gray-700">{fmtDate(doc.docDate)}</strong>
-            </span>
-            <span>
-              Type: <strong className="text-gray-700">{doc.inwardType}</strong>
-            </span>
-            {doc.store && (
-              <span>
-                Location: <strong className="text-gray-700">{doc.store}</strong>
-              </span>
-            )}
-            {doc.dcNo && (
-              <span>
-                DC No: <strong className="text-gray-700">{doc.dcNo}</strong>
-              </span>
-            )}
-            {doc.invNo && (
-              <span>
-                Inv No: <strong className="text-gray-700">{doc.invNo}</strong>
-              </span>
-            )}
-            <LinkedBadge poDocId={row.docId} color="green" />
-          </div>
-          <SubTable
-            headers={[
-              "Item",
-              "UOM",
-              "PO Qty",
-              "Inward Qty",
-              "Price",
-              "Color",
-              "Size",
-              "Batch No",
-              "Inv No",
-            ]}
-            rows={(doc.items || []).map((item) => [
-              item.StyleItem?.name || "—",
-              item.Uom?.name || "—",
-              item.poQty,
-              item.inwardQty,
-              `₹${item.price ?? 0}`,
-              item.Color?.name || "—",
-              item.Size?.name || "—",
-              item.batchNo || "—",
-              item.invNo || "—",
-            ])}
-          />
-        </div>
-      ))}
-    </div>
+    <SharedTable
+      headers={headers}
+      docs={docs}
+      empty="No inward records for this PO"
+    />
   );
 }
 
 // ─── tab: Cancel ──────────────────────────────────────────────────────────────
 function CancelTab({ row }) {
-  if (!row.cancelDocs?.length) {
-    return (
-      <p className="text-xs text-gray-400 py-2">
-        No cancel records for this PO
-      </p>
-    );
-  }
+  const headers = [
+    "Item",
+    "Size",
+    "Color",
+    "GSM",
+    "UOM",
+    "Cancel Qty",
+    // "Ref PO",
+    // "Inv No",
+  ];
+
+  const docs = (row.cancelDocs || []).map((doc) => ({
+    meta: (
+      <div className="flex flex-wrap gap-3 items-center">
+        <span>
+          Po Cancel No: <strong className="text-gray-700">{doc.docId}</strong>
+        </span>
+        <span>
+          Date:{" "}
+          <strong className="text-gray-700">{fmtDate(doc.docDate)}</strong>
+        </span>
+        {doc.poType && (
+          <span>
+            Type: <strong className="text-gray-700">{doc.poType}</strong>
+          </span>
+        )}
+        <LinkedBadge poDocId={row.docId} color="red" />
+      </div>
+    ),
+    rows: (doc.items || []).map((item) => {
+      const uomName = item.Uom?.name || "—";
+      return [
+        item.StyleItem?.name || "—",
+        item.Size?.name || "—",
+        item.Color?.name || "—",
+        item.Gsm?.name || "—",
+        uomName,
+        <span className="font-semibold text-red-600">
+          {formatQtyByUOM(item.cancelQty, uomName)}
+        </span>,
+        // item.poDocId || row.docId,
+
+        // item.invNo || "—",
+      ];
+    }),
+  }));
+
   return (
-    <div className="space-y-4">
-      {row.cancelDocs.map((doc, di) => (
-        <div key={di}>
-          <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-2">
-            <span>
-              Doc: <strong className="text-gray-700">{doc.docId}</strong>
-            </span>
-            <span>
-              Date:{" "}
-              <strong className="text-gray-700">{fmtDate(doc.docDate)}</strong>
-            </span>
-            {doc.poType && (
-              <span>
-                Type:{" "}
-                <strong className="text-gray-600 text-xs">{doc.poType}</strong>
-              </span>
-            )}
-            <LinkedBadge poDocId={row.docId} color="red" />
-          </div>
-          <SubTable
-            headers={[
-              "Item",
-              "UOM",
-              "Cancel Qty",
-              "Color",
-              "Size",
-              "Ref PO",
-              "Batch No",
-              "Inv No",
-            ]}
-            rows={(doc.items || []).map((item) => [
-              item.StyleItem?.name || "—",
-              item.Uom?.name || "—",
-              <span className="font-semibold text-red-600">
-                {item.cancelQty}
-              </span>,
-              item.Color?.name || "—",
-              item.Size?.name || "—",
-              item.poDocId || row.docId,
-              item.batchNo || "—",
-              item.invNo || "—",
-            ])}
-          />
-        </div>
-      ))}
-    </div>
+    <SharedTable
+      headers={headers}
+      docs={docs}
+      empty="No cancel records for this PO"
+    />
   );
 }
 
 // ─── tab: Return ──────────────────────────────────────────────────────────────
 function ReturnTab({ row }) {
-  if (!row.returnDocs?.length) {
-    return (
-      <p className="text-xs text-gray-400 py-2">
-        No return records for this PO
-      </p>
-    );
-  }
+  const headers = [
+    "Po No",
+    "Item",
+    "Size",
+    "Color",
+    "GSM",
+    "UOM",
+    "Return Qty",
+
+    // "Inv No",
+  ];
+
+  const docs = (row.returnDocs || []).map((doc) => ({
+    meta: (
+      <div className="flex flex-wrap gap-3 items-center">
+        <span>
+          Po Return No: <strong className="text-gray-700">{doc.docId}</strong>
+        </span>
+        <span>
+          Date:{" "}
+          <strong className="text-gray-700">{fmtDate(doc.docDate)}</strong>
+        </span>
+        {doc.returnType && (
+          <span>
+            Type: <strong className="text-gray-700">{doc.returnType}</strong>
+          </span>
+        )}
+        <LinkedBadge poDocId={row.docId} color="amber" />
+      </div>
+    ),
+    rows: (doc.items || []).map((item) => {
+      const uomName = item.Uom?.name || "—";
+      return [
+        item.PurchaseInward?.docId || "—",
+        item.StyleItem?.name || "—",
+        item.Size?.name || "—",
+        item.Color?.name || "—",
+        item.Gsm?.name || "—",
+        uomName,
+        <span className="font-semibold text-amber-600">
+          {formatQtyByUOM(item.returnQty, uomName)}
+        </span>,
+
+        // item.invNo || "—",
+      ];
+    }),
+  }));
+
   return (
-    <div className="space-y-4">
-      {row.returnDocs.map((doc, di) => (
-        <div key={di}>
-          <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-2">
-            <span>
-              Doc: <strong className="text-gray-700">{doc.docId}</strong>
-            </span>
-            <span>
-              Date:{" "}
-              <strong className="text-gray-700">{fmtDate(doc.docDate)}</strong>
-            </span>
-            {doc.returnType && (
-              <span>
-                Type:{" "}
-                <strong className="text-gray-700">{doc.returnType}</strong>
-              </span>
-            )}
-            <LinkedBadge poDocId={row.docId} color="amber" />
-          </div>
-          <SubTable
-            headers={[
-              "Item",
-              "UOM",
-              "Return Qty",
-              "Color",
-              "Size",
-              "Inward Doc",
-              "Batch No",
-              "Inv No",
-            ]}
-            rows={(doc.items || []).map((item) => [
-              item.StyleItem?.name || "—",
-              item.Uom?.name || "—",
-              <span className="font-semibold text-amber-600">
-                {item.returnQty}
-              </span>,
-              item.Color?.name || "—",
-              item.Size?.name || "—",
-              item.PurchaseInward?.docId || "—",
-              item.batchNo || "—",
-              item.invNo || "—",
-            ])}
-          />
-        </div>
-      ))}
-    </div>
+    <SharedTable
+      headers={headers}
+      docs={docs}
+      empty="No return records for this PO"
+    />
   );
+}
+
+// ─── helpers: format discount and amount ──────────────────────────────────────
+function fmtDiscount(discountValue, discountType) {
+  if (
+    discountValue === null ||
+    discountValue === undefined ||
+    discountValue === 0
+  )
+    return "—";
+  const val = Number(discountValue).toFixed(2);
+  return discountType === "Percentage" ? `${val}%` : `₹${val}`;
+}
+
+function fmtAmount(val) {
+  if (val === null || val === undefined) return "—";
+  return `₹${Number(val).toFixed(2)}`;
 }
 
 // ─── tab: Bill Entry ──────────────────────────────────────────────────────────
 function BillTab({ row }) {
-  if (!row.billDocs?.length) {
-    return (
-      <p className="text-xs text-gray-400 py-2">
-        No bill entry records for this PO
-      </p>
-    );
-  }
+  const headers = [
+    "Inward No",
+    "Item",
+    "Size",
+    "Color",
+    "GSM",
+    "UOM",
+    "Billed Qty",
+    "Price", // item-level price
+    "Discount Type", // Percentage or Flat
+    "Item Discount", // item-level discount value (% or ₹)
+    "Tax %", // item-level tax
+    // "Inv No",
+    "DC No",
+  ];
+
+  const docs = (row.billDocs || []).map((doc) => ({
+    meta: (
+      <div className="flex flex-wrap gap-3 items-center">
+        <span>
+          Po Bill No: <strong className="text-gray-700">{doc.docId}</strong>
+        </span>
+        <span>
+          Date:{" "}
+          <strong className="text-gray-700">{fmtDate(doc.docDate)}</strong>
+        </span>
+        <span>
+          Net Bill:{" "}
+          <strong className="text-gray-700">
+            {fmtAmount(doc.netBillValue)}
+          </strong>
+        </span>
+        {doc.billType && (
+          <span>
+            Type: <strong className="text-gray-700">{doc.billType}</strong>
+          </span>
+        )}
+        {/* Header-level discount on PurchaseBillEntry */}
+        {doc.discountValue > 0 && (
+          <span>
+            Bill Discount:{" "}
+            <strong className="text-red-600">
+              {fmtDiscount(doc.discountValue, doc.discountType)}
+            </strong>
+          </span>
+        )}
+        <LinkedBadge poDocId={row.docId} color="purple" />
+      </div>
+    ),
+    rows: (doc.items || []).map((item) => {
+      const uomName = item.Uom?.name || "—";
+      return [
+        item.PurchaseInward?.docId || "—", // 13 Inward Doc
+        item.StyleItem?.name || "—", // 1  Item
+        item.Size?.name || "—", // 2  Size
+        item.Color?.name || "—", // 3  Color
+        item.Gsm?.name || "—", // 4  GSM
+        uomName, // 5  UOM
+        formatQtyByUOM(item.inwardQty, uomName), // 6  Billed Qty
+        fmtAmount(item.price), // 7  Price (₹ + 2dp)
+        item.discountType || "—", // 8  Discount Type
+        fmtDiscount(item.discountValue, item.discountType), // 9  Item Discount (% or ₹)
+        item.taxPercent != null
+          ? `${Number(item.taxPercent).toFixed(2)}%`
+          : "—", // 10 Tax %
+        // item.invNo || "—",
+        item.dcNo || "—", // 12 DC No
+      ];
+    }),
+  }));
+
   return (
-    <div className="space-y-4">
-      {row.billDocs.map((doc, di) => (
-        <div key={di}>
-          <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-2">
-            <span>
-              Doc: <strong className="text-gray-700">{doc.docId}</strong>
-            </span>
-            <span>
-              Date:{" "}
-              <strong className="text-gray-700">{fmtDate(doc.docDate)}</strong>
-            </span>
-            <span>
-              Net Bill:{" "}
-              <strong className="text-gray-700">
-                ₹{doc.netBillValue?.toLocaleString()}
-              </strong>
-            </span>
-            {doc.billType && (
-              <span>
-                Type: <strong className="text-gray-700">{doc.billType}</strong>
-              </span>
-            )}
-            <LinkedBadge poDocId={row.docId} color="purple" />
-          </div>
-          <SubTable
-            headers={[
-              "Item",
-              "UOM",
-              "Billed Qty",
-              "Price",
-              "Tax %",
-              "Discount",
-              "Color",
-              "Size",
-              "Inv No",
-              "DC No",
-              "Inward Doc",
-            ]}
-            rows={(doc.items || []).map((item) => [
-              item.StyleItem?.name || "—",
-              item.Uom?.name || "—",
-              item.inwardQty,
-              `₹${item.price ?? 0}`,
-              item.taxPercent ?? "—",
-              item.discountValue
-                ? `${item.discountValue}${item.discountType === "%" ? "%" : ""}`
-                : "—",
-              item.Color?.name || "—",
-              item.Size?.name || "—",
-              item.invNo || "—",
-              item.dcNo || "—",
-              item.PurchaseInward?.docId || "—",
-            ])}
-          />
-        </div>
-      ))}
-    </div>
+    <SharedTable
+      headers={headers}
+      docs={docs}
+      empty="No bill entry records for this PO"
+    />
   );
 }

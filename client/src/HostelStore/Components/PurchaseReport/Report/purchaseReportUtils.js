@@ -12,7 +12,7 @@ export function fmtDate(d) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-IN", {
     day: "2-digit",
-    month: "short",
+    month: "2-digit",
     year: "numeric",
   });
 }
@@ -149,20 +149,50 @@ export function buildGroups(data, keys, dirs, depth = 0) {
 }
 
 export const COLUMNS = [
-  { key: "docId", label: "PO No", w: "w-28" },
-  { key: "docDate", label: "PO Date", w: "w-24" },
-  { key: "dueDate", label: "Due Date", w: "w-24" },
-  { key: "dueStatus", label: "Due Status", w: "w-32" },
-  { key: "supplier", label: "Supplier", w: "w-36" },
-  { key: "poType", label: "PO Type", w: "w-24" },
-  { key: "inwardType", label: "Inward Type", w: "w-44" },
-  // { key: "branch", label: "Branch", w: "w-24" },
-  { key: "poQty", label: "PO Qty", w: "w-20" },
-  { key: "inwardQty", label: "Inward Qty", w: "w-32" },
-  { key: "cancelQty", label: "Cancel Qty", w: "w-24" },
-  { key: "returnQty", label: "Return Qty", w: "w-24" },
-  { key: "billedQty", label: "Billed Qty", w: "w-22" },
-  { key: "balanceQty", label: "Balance Qty", w: "w-26" },
-  { key: "pendingInward", label: "To Inward", w: "w-26" },
-  { key: "status", label: "PO Status", w: "w-52" },
+  { key: "docId", label: "PO No", w: "110px" },
+  { key: "docDate", label: "PO Date", w: "90px" },
+  { key: "dueDate", label: "Due Date", w: "90px" },
+  { key: "dueStatus", label: "Due Status", w: "110px" },
+  { key: "supplier", label: "Supplier", w: "240px" },
+  { key: "poType", label: "PO Type", w: "90px" },
+  { key: "inwardType", label: "Inward Type", w: "170px" },
+  { key: "poQty", label: "PO Qty", w: "80px" },
+  { key: "inwardQty", label: "Inward Qty", w: "140px" },
+  { key: "cancelQty", label: "Cancel Qty", w: "90px" },
+  { key: "returnQty", label: "Return Qty", w: "90px" },
+  { key: "billedQty", label: "Billed Qty", w: "90px" },
+  { key: "balanceQty", label: "Balance Qty", w: "90px" },
+  { key: "status", label: "PO Status", w: "190px" },
 ];
+const UOM_DECIMALS = {
+  NOS: 0,
+  SET: 0,
+  DOZEN: 1,
+
+  MTR: 2,
+  FEET: 3,
+  YARD: 3,
+  SQFT: 3,
+  LTRS: 3,
+  KGS: 3,
+  REEM: 0,
+  POCKET: 0,
+  ROLL: 0,
+  BOX: 0,
+  "MET.TON": 3,
+};
+export const formatQtyByUOM = (qty, uom) => {
+  if (qty === null || qty === undefined) return "-";
+
+  const decimals = UOM_DECIMALS[uom?.toUpperCase()] ?? 2;
+
+  return Number(qty).toFixed(decimals);
+};
+export const getExcelQtyFormatByUOM = (uom) => {
+  const decimals = UOM_DECIMALS[uom?.toUpperCase()] ?? 2;
+
+  // Build Excel number format dynamically
+  if (decimals === 0) return "#,##,##0";
+
+  return `#,##,##0.${"0".repeat(decimals)}`;
+};

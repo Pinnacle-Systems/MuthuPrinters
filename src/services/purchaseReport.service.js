@@ -71,9 +71,10 @@ function groupByDoc(items, docKeyFn, docDataFn) {
   items.forEach((item) => {
     const key = docKeyFn(item);
     const data = docDataFn(item);
-    if (!key) return;
-    if (!map.has(key)) map.set(key, { ...data, items: [] });
-    map.get(key).items.push(item);
+    // ✅ always use a key — null/undefined becomes "unlinked"
+    const safeKey = key ?? "unlinked";
+    if (!map.has(safeKey)) map.set(safeKey, { ...data, items: [] });
+    map.get(safeKey).items.push(item);
   });
   return [...map.values()];
 }
@@ -98,7 +99,7 @@ async function getPurchaseReport({
     };
   }
 
-  // ── STEP 1: fetch POs ──────────────────────────────────────────────────────
+  // ── STEP 1: fetch POs with all child items ─────────────────────────────────
   const pos = await prisma.po.findMany({
     where: {
       ...(branchId && { branchId: parseInt(branchId) }),
@@ -130,7 +131,6 @@ async function getPurchaseReport({
           Gsm: { select: { id: true, name: true } },
         },
       },
-      // InwardItems — we need purchaseInwardId to join PurchaseInward
       inwardItems: {
         select: {
           id: true,
@@ -148,7 +148,7 @@ async function getPurchaseReport({
           sizeId: true,
           colorId: true,
           uomId: true,
-          purchaseInwardId: true, // ✅ foreign key — used for map lookup below
+          purchaseInwardId: true, // may be null — handled below
           StyleItem: { select: { id: true, name: true } },
           Uom: { select: { id: true, name: true } },
           Hsn: { select: { id: true, name: true, tax: true } },
@@ -235,7 +235,7 @@ async function getPurchaseReport({
           sizeId: true,
           colorId: true,
           uomId: true,
-          purchaseInwardId: true, // ✅ foreign key — used for map lookup below
+          purchaseInwardId: true, // may be null — handled below
           StyleItem: { select: { id: true, name: true } },
           Uom: { select: { id: true, name: true } },
           Hsn: { select: { id: true, name: true, tax: true } },
@@ -251,7 +251,13 @@ async function getPurchaseReport({
               netBillValue: true,
               billType: true,
               remarks: true,
+              discountType: true,
+              discountValue: true, // header-level discount
             },
+          },
+          // ✅ PurchaseInward needed for docId display in Bill Entry tab
+          PurchaseInward: {
+            select: { id: true, docId: true },
           },
         },
       },
@@ -259,7 +265,7 @@ async function getPurchaseReport({
     orderBy: { docId: "desc" },
   });
 
-  // ── STEP 2: collect all unique purchaseInwardIds across all POs ────────────
+  // ── STEP 2: collect all non-null purchaseInwardIds ─────────────────────────
   const allPurchaseInwardIds = new Set();
   pos.forEach((po) => {
     po.inwardItems.forEach((i) => {
@@ -270,31 +276,28 @@ async function getPurchaseReport({
     });
   });
 
-  // ── STEP 3: fetch PurchaseInward records directly — guaranteed receiptType ─
-  // This is the ONLY reliable source for receiptType.
-  // We query PurchaseInward directly instead of relying on nested Prisma joins
-  // which can silently return null if the relation is not perfectly set up.
-  const purchaseInwardMap = new Map(); // id → PurchaseInward
+  // ── STEP 3: fetch PurchaseInward directly for reliable receiptType ─────────
+  const purchaseInwardMap = new Map();
   if (allPurchaseInwardIds.size > 0) {
     const purchaseInwards = await prisma.purchaseInward.findMany({
-      where: {
-        id: { in: [...allPurchaseInwardIds] },
-      },
+      where: { id: { in: [...allPurchaseInwardIds] } },
       select: {
         id: true,
         docId: true,
         docDate: true,
         inwardType: true,
-        receiptType: true, // ✅ the critical field
+        receiptType: true,
         vehicleNo: true,
         dcNo: true,
         invNo: true,
+        netBillValue: true, // for Against Invoice billing summary
+        discountType: true, // header-level discount on PurchaseInward
+        discountValue: true,
         Store: { select: { id: true, storeName: true } },
         supplier: { select: { id: true, name: true, aliasName: true } },
       },
     });
 
-    // Log receiptType values in dev so you can verify exact DB string
     if (process.env.NODE_ENV !== "production") {
       console.log(
         "[purchaseReport] PurchaseInward receiptTypes:",
@@ -311,6 +314,7 @@ async function getPurchaseReport({
 
   // ── STEP 4: compute derived fields per PO ─────────────────────────────────
   const result = pos.map((po) => {
+    // ✅ inwardQty sums ALL inward items via poId — null purchaseInwardId included
     const poQty = po.poItems.reduce((s, i) => s + (i.qty || 0), 0);
     const inwardQty = po.inwardItems.reduce(
       (s, i) => s + (i.inwardQty || 0),
@@ -327,63 +331,81 @@ async function getPurchaseReport({
 
     // ── billedQty ──────────────────────────────────────────────────────────
     //
-    // Flow B — Against Invoice:
-    //   PurchaseInward.receiptType = "Against Invoice"
-    //   → inwardItems.inwardQty for those inwards counts as billedQty
-    //   → no separate PurchaseBillEntry is created for these
+    // Against Invoice inward items:
+    //   - If purchaseInwardId is null → no receiptType → treated as Delivery → NOT counted here
+    //   - If purchaseInwardId exists and receiptType = "Against Invoice" → counted
     //
     const againstInvoiceQty = po.inwardItems.reduce((s, i) => {
-      const pi = purchaseInwardMap.get(i.purchaseInwardId);
-      const receiptType = pi?.receiptType;
+      if (!i.purchaseInwardId) return s; // null purchaseInwardId = treat as Delivery
+      const receiptType = purchaseInwardMap.get(
+        i.purchaseInwardId,
+      )?.receiptType;
       return isAgainstInvoice(receiptType) ? s + (i.inwardQty || 0) : s;
     }, 0);
 
-    // Flow A — Delivery (normal bill entry):
-    //   PurchaseBillEntryItems linked to a Delivery inward
-    //   (exclude any bill entries linked to Against Invoice inwards
-    //    to avoid double counting if such records exist)
+    // Delivery bill entry items:
+    //   - If purchaseInwardId is null → no receiptType → NOT Against Invoice → counted
+    //   - If purchaseInwardId exists and receiptType != "Against Invoice" → counted
     //
     const billEntryQty = po.purchaseBillEntryItems.reduce((s, i) => {
-      const pi = purchaseInwardMap.get(i.purchaseInwardId);
-      const receiptType = pi?.receiptType;
+      if (!i.purchaseInwardId) {
+        // null purchaseInwardId on bill entry → treat as normal delivery bill → count it
+        return s + (i.inwardQty || 0);
+      }
+      const receiptType = purchaseInwardMap.get(
+        i.purchaseInwardId,
+      )?.receiptType;
       return !isAgainstInvoice(receiptType) ? s + (i.inwardQty || 0) : s;
     }, 0);
 
-    // ✅ Total billedQty = Delivery bill entries + Against Invoice inwards
     const billedQty = billEntryQty + againstInvoiceQty;
-
     const balanceQty = Math.max(0, poQty - inwardQty - cancelQty + returnQty);
     const pendingInward = Math.max(0, poQty - inwardQty - cancelQty);
 
     const status = getPOStatus(po);
     const dueInfo = getDueAlert(po.dueDate, status);
 
-    // ── inwardType: from PurchaseInward via map ────────────────────────────
+    // ── inwardType: from PurchaseInward map, fall back to InwardItems.inwardType
     const inwardTypeSet = new Set(
       po.inwardItems
-        .map((i) => purchaseInwardMap.get(i.purchaseInwardId)?.inwardType)
+        .map((i) => {
+          // Try map first, fall back to InwardItems.inwardType field
+          return (
+            purchaseInwardMap.get(i.purchaseInwardId)?.inwardType ||
+            i.inwardType ||
+            null
+          );
+        })
         .filter(Boolean),
     );
     const inwardType =
       inwardTypeSet.size > 0 ? [...inwardTypeSet].join(", ") : "—";
 
     // ── group inward items by PurchaseInward document ──────────────────────
+    // Items with null purchaseInwardId are grouped under key "unlinked"
+    // and shown as a separate group in the Inward tab
     const inwardDocs = groupByDoc(
       po.inwardItems,
-      (i) => i.purchaseInwardId,
+      (i) => i.purchaseInwardId, // null → becomes "unlinked" in groupByDoc
       (i) => {
-        const pi = purchaseInwardMap.get(i.purchaseInwardId);
+        const pi = i.purchaseInwardId
+          ? purchaseInwardMap.get(i.purchaseInwardId)
+          : null;
+
         return {
-          id: pi?.id,
-          docId: pi?.docId,
-          docDate: pi?.docDate,
-          inwardType: pi?.inwardType,
-          receiptType: pi?.receiptType,
-          dcNo: pi?.dcNo,
-          invNo: pi?.invNo,
-          vehicleNo: pi?.vehicleNo,
-          store: pi?.Store?.storeName,
-          supplier: pi?.supplier?.name || pi?.supplier?.aliasName,
+          id: pi?.id ?? null,
+          docId: pi?.docId ?? "—",
+          docDate: pi?.docDate ?? null,
+          inwardType: pi?.inwardType ?? i.inwardType ?? "—",
+          receiptType: pi?.receiptType ?? "—",
+          dcNo: pi?.dcNo ?? i.dcNo ?? null,
+          invNo: pi?.invNo ?? i.invNo ?? null,
+          vehicleNo: pi?.vehicleNo ?? null,
+          netBillValue: pi?.netBillValue ?? null, // Against Invoice net bill
+          discountType: pi?.discountType ?? null, // header-level discount
+          discountValue: pi?.discountValue ?? null,
+          store: pi?.Store?.storeName ?? "—",
+          supplier: pi?.supplier?.name || pi?.supplier?.aliasName || "—",
         };
       },
     );
@@ -422,6 +444,8 @@ async function getPurchaseReport({
         netBillValue: i.PurchaseBillEntry?.netBillValue,
         billType: i.PurchaseBillEntry?.billType,
         remarks: i.PurchaseBillEntry?.remarks,
+        discountType: i.PurchaseBillEntry?.discountType, // header-level discount
+        discountValue: i.PurchaseBillEntry?.discountValue,
       }),
     );
 
