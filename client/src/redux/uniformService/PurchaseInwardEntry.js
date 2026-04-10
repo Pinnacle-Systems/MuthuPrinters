@@ -48,7 +48,6 @@ const purchaseInwardEntryApi = createApi({
     }),
     getPurchaseInwardEntryById: builder.query({
       query: (id) => {
-        console.log("Fetching the ID:", id);
         return {
           url: `${PURCHASE_INWARD_ENTRY_API}/${id}`,
           method: "GET",
@@ -60,14 +59,14 @@ const purchaseInwardEntryApi = createApi({
       providesTags: ["purchaseInwardEntry"],
     }),
     getPurchaseInwardEntryForBillById: builder.query({
-      query: ({ params,}) => {
+      query: ({ params }) => {
         return {
           url: `${PURCHASE_INWARD_ENTRY_API}/purchaseInwardEntryForBill`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
-          params
+          params,
         };
       },
       providesTags: ["purchaseInwardEntry"],
@@ -94,8 +93,7 @@ const purchaseInwardEntryApi = createApi({
       invalidatesTags: ["purchaseInwardEntry"],
     }),
     updatePurchaseInwardEntry: builder.mutation({
-      query: (payload) => {
-        const { id, ...body } = payload;
+      query: ({ id, body }) => {
         return {
           url: `${PURCHASE_INWARD_ENTRY_API}/${id}`,
           method: "PUT",
@@ -111,7 +109,6 @@ const purchaseInwardEntryApi = createApi({
       }),
       invalidatesTags: ["purchaseInwardEntry"],
     }),
-
   }),
 });
 
@@ -124,7 +121,7 @@ export const {
   useDeletePurchaseInwardEntryMutation,
   useLazyGetPurchaseDetailQuery,
   useGetPurInwardItemsQuery,
-  useGetPurchaseInwardEntryForBillByIdQuery
+  useGetPurchaseInwardEntryForBillByIdQuery,
 } = purchaseInwardEntryApi;
 
 export default purchaseInwardEntryApi;

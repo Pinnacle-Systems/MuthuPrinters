@@ -12,14 +12,15 @@ datasource db {
 }
 
 model Page {
-  id          Int          @id @default(autoincrement())
-  name        String
-  link        String?
-  type        PageType
-  RoleOnPage  RoleOnPage[]
-  active      Boolean      @default(true)
-  PageGroup   PageGroup?   @relation(fields: [pageGroupId], references: [id])
-  pageGroupId Int?
+  id              Int              @id @default(autoincrement())
+  name            String
+  link            String?
+  type            PageType
+  RoleOnPage      RoleOnPage[]
+  active          Boolean          @default(true)
+  PageGroup       PageGroup?       @relation(fields: [pageGroupId], references: [id])
+  pageGroupId     Int?
+  approvalConfigs ApprovalConfig[]
 }
 
 model Company {
@@ -114,6 +115,7 @@ model Branch {
   purchaseInwardReturns PurchaseInwardReturn[]
   purchaseCancels       PurchaseCancel[]
   purchaseBillEntries   PurchaseBillEntry[]
+  approvalConfigs       ApprovalConfig[]
 }
 
 model UserOnBranch {
@@ -125,14 +127,15 @@ model UserOnBranch {
 }
 
 model Role {
-  id          Int          @id @default(autoincrement())
-  name        String
-  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  companyId   Int
-  User        User[]
-  RoleOnPage  RoleOnPage[]
-  active      Boolean      @default(true)
-  defaultRole Boolean      @default(false)
+  id              Int              @id @default(autoincrement())
+  name            String
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId       Int
+  User            User[]
+  RoleOnPage      RoleOnPage[]
+  active          Boolean          @default(true)
+  defaultRole     Boolean          @default(false)
+  approvalConfigs ApprovalConfig[]
 
   @@unique([companyId, name])
 }
@@ -188,6 +191,9 @@ model User {
   PurchaseBillEntryCreatedBy     PurchaseBillEntry[]    @relation(name: "createdBy")
   PurchaseBillEntryUpdatedBy     PurchaseBillEntry[]    @relation(name: "updatedBy")
   purchaseBillEntries            PurchaseBillEntry[]
+  approvalConfigs                ApprovalConfig[]
+  approvalLogsApprovedBy         ApprovalLog[]          @relation(name: "approvedBy")
+  approvalLogsRejectedBy         ApprovalLog[]          @relation(name: "rejectedBy")
 }
 
 model Employee {
@@ -498,13 +504,15 @@ model PartyBranch {
 }
 
 model attachments {
-  id       Int       @id @default(autoincrement())
-  Party    Party?    @relation(fields: [partyId], references: [id], onDelete: Cascade)
-  partyId  Int?
-  date     DateTime?
-  name     String?
-  fileName String?
-  filePath String?
+  id               Int             @id @default(autoincrement())
+  Party            Party?          @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  partyId          Int?
+  date             DateTime?
+  name             String?
+  fileName         String?
+  filePath         String?
+  PurchaseInward   PurchaseInward? @relation(fields: [purchaseInwardId], references: [id], onDelete: Cascade)
+  purchaseInwardId Int?
 }
 
 model Branchattachments {
@@ -1287,6 +1295,7 @@ model PurchaseInward {
   purchaseReturnItems    PurchaseReturnItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
   purchaseLedgers        PurchaseLedger[]
+  attachments            attachments[]
 }
 
 model InwardItems {
@@ -1595,4 +1604,39 @@ model SizeTemplateList {
   sizeTemplateId Int?
   Size           Size?         @relation(fields: [sizeId], references: [id])
   sizeId         Int?
+}
+
+model ApprovalConfig {
+  id             Int           @id @default(autoincrement())
+  branchId       Int
+  pageId         Int
+  active         Boolean       @default(false)
+  approvalLogs   ApprovalLog[]
+  Branch         Branch        @relation(fields: [branchId], references: [id])
+  Page           Page          @relation(fields: [pageId], references: [id])
+  // Who can approve
+  approverType   String? // ROLE or USER
+  approverRoleId Int?
+  approverUserId Int?
+  ApproverRole   Role?         @relation(fields: [approverRoleId], references: [id])
+  ApproverUser   User?         @relation(fields: [approverUserId], references: [id])
+
+  @@unique([branchId, pageId])
+}
+
+model ApprovalLog {
+  id               Int             @id @default(autoincrement())
+  approvalConfigId Int?
+  referenceId      Int // poId / inwardId etc
+  referencePage    String // "PURCHASE ORDER"
+  status           String?
+  approvedById     Int?
+  approvedAt       DateTime?
+  rejectedById     Int?
+  rejectedAt       DateTime?
+  remarks          String?
+  createdAt        DateTime        @default(now())
+  ApprovalConfig   ApprovalConfig? @relation(fields: [approvalConfigId], references: [id])
+  ApprovedBy       User?           @relation("approvedBy", fields: [approvedById], references: [id])
+  RejectedBy       User?           @relation("rejectedBy", fields: [rejectedById], references: [id])
 }

@@ -6,7 +6,9 @@ import {
   update as _update,
   remove as _remove,
   getPurchaseDetailStock as _getPurchaseDetail,
-  getPurchaseInwardItems as _getPurInwardItems, getOneBillEntry as _getOneBillEntry,getPurchaseInwardBillEntryItems as _getPurchaseInwardBillEntryItems
+  getPurchaseInwardItems as _getPurInwardItems,
+  getOneBillEntry as _getOneBillEntry,
+  getPurchaseInwardBillEntryItems as _getPurchaseInwardBillEntryItems,
 } from "../services/purchaseInward.service.js";
 
 async function get(req, res, next) {
@@ -26,7 +28,7 @@ async function getOne(req, res, next) {
 }
 async function create(req, res, next) {
   try {
-    res.json(await _create(req));
+    res.json(await _create(req.body));
   } catch (error) {
     console.error(`Error`, error.message);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -47,7 +49,7 @@ async function create(req, res, next) {
 }
 async function update(req, res, next) {
   try {
-    res.json(await _update(req.params.id, req.body));
+    res.json(await _update(req.params.id, req.body, req.files));
   } catch (error) {
     console.error(`Error`, error.message);
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -121,5 +123,6 @@ export {
   remove,
   getPurchaseDetail,
   getPurInwardItems,
-  getOneBillEntry,getPurchaseInwardBillEntryItems
+  getOneBillEntry,
+  getPurchaseInwardBillEntryItems,
 };

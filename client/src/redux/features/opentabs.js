@@ -22,6 +22,7 @@ export const openTabs = createSlice({
           previewId: action.payload.previewId,
           date: action.payload.date,
           params: action.payload.params ?? null,
+          pageId: action.payload.id,
         };
       } else {
         state.tabs.push({
@@ -30,6 +31,7 @@ export const openTabs = createSlice({
           previewId: action.payload.previewId,
           date: action.payload.date,
           params: action.payload.params ?? null,
+          pageId: action.payload.id,
         });
       }
       localStorage.setItem("openTabs", JSON.stringify(state.tabs));

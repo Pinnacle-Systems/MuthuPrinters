@@ -9,6 +9,8 @@ import {
 } from "../utils/helper.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
+import fs from "fs";
+import path from "path";
 
 async function getNextDocId(
   branchId,
@@ -329,6 +331,7 @@ async function getOne(id) {
       id: parseInt(id),
     },
     include: {
+      attachments: true,
       Store: {
         select: {
           locationId: true,
@@ -702,7 +705,7 @@ function manualFilterSearchDataPIItems(searchPIDate, data) {
   );
 }
 
-async function create(req) {
+async function create(body) {
   const {
     userId,
     branchId,
@@ -714,7 +717,7 @@ async function create(req) {
     dcDate,
     remarks,
     vehicleNo,
-    inwardItems,
+    inwardItems: rawInwardItems,
     finYearId,
     draftSave,
     locationId,
@@ -724,7 +727,8 @@ async function create(req) {
     discountType,
     discountValue,
     netBillValue,
-  } = await req.body;
+    attachments,
+  } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
@@ -761,8 +765,24 @@ async function create(req) {
         discountType,
         discountValue: discountValue ? parseFloat(discountValue) : null,
         netBillValue: netBillValue ? parseFloat(netBillValue) : null,
+        attachments:
+          JSON.parse(attachments)?.length > 0
+            ? {
+                createMany: {
+                  data: JSON.parse(attachments).map((sub) => ({
+                    date: sub?.date ? new Date(sub?.date) : undefined,
+                    filePath: sub?.filePath ? sub?.filePath : undefined,
+                    name: sub?.name ? sub?.name : undefined,
+                  })),
+                },
+              }
+            : undefined,
       },
     });
+    const inwardItems =
+      typeof rawInwardItems === "string"
+        ? JSON.parse(rawInwardItems)
+        : rawInwardItems;
     await createInwardItems(
       tx,
       inwardItems,
@@ -886,7 +906,7 @@ function findRemovedItemsGoods(dataFound, inwardItems) {
   return removedItems;
 }
 
-async function update(id, body) {
+async function update(id, body, files) {
   const {
     userId,
     branchId,
@@ -899,7 +919,7 @@ async function update(id, body) {
     dcDate,
     remarks,
     vehicleNo,
-    inwardItems,
+    inwardItems: rawInwardItems,
     finYearId,
     invNo,
     receiptType,
@@ -907,7 +927,29 @@ async function update(id, body) {
     discountType,
     discountValue,
     netBillValue,
+    attachments,
   } = await body;
+
+  const safeNetBillValue =
+    netBillValue && !isNaN(Number(netBillValue))
+      ? parseFloat(netBillValue)
+      : null;
+
+  const safeDiscountValue =
+    discountValue && !isNaN(Number(discountValue))
+      ? parseFloat(discountValue)
+      : null;
+
+  const safeTaxTemplateId =
+    taxTemplateId && !isNaN(Number(taxTemplateId))
+      ? parseInt(taxTemplateId)
+      : null;
+
+  const parseAttachments = JSON.parse(attachments || "[]");
+  const incomingIds = parseAttachments
+    ?.filter((i) => i.id)
+    .map((i) => parseInt(i.id));
+
   let data;
   const dataFound = await prisma.purchaseInward.findUnique({
     where: {
@@ -919,9 +961,47 @@ async function update(id, body) {
           id: true,
         },
       },
+      attachments: { select: { id: true, filePath: true } },
     },
   });
   if (!dataFound) return NoRecordFound("Purchase Inward");
+  const removedAttachments = dataFound.attachments.filter(
+    (existing) => !incomingIds.includes(existing.id),
+  );
+  const updatedAttachmentsWithNewFile = dataFound.attachments.filter(
+    (existing) => {
+      const incoming = parseAttachments.find(
+        (i) => parseInt(i.id) === existing.id,
+      );
+      // If incoming filePath is empty/changed and old had a file
+      return (
+        incoming &&
+        existing.filePath &&
+        (!incoming.filePath || incoming.filePath !== existing.filePath)
+      );
+    },
+  );
+
+  // ✅ Unlink removed attachment files
+  const unlinkFile = (filePath) => {
+    if (!filePath) return;
+    const fullPath = path.join("./uploads", filePath);
+    fs.unlink(fullPath, (err) => {
+      if (err) console.warn(`Could not delete file: ${fullPath}`, err.message);
+      else console.log(`Deleted file: ${fullPath}`);
+    });
+  };
+
+  // Delete files for removed attachments
+  removedAttachments.forEach((att) => unlinkFile(att.filePath));
+
+  // Delete old files for attachments where file was replaced
+  updatedAttachmentsWithNewFile.forEach((att) => unlinkFile(att.filePath));
+
+  const inwardItems =
+    typeof rawInwardItems === "string"
+      ? JSON.parse(rawInwardItems)
+      : rawInwardItems;
   let removedItemsGoods = findRemovedItemsGoods(dataFound, inwardItems);
   let removeItemsGoodsIds = removedItemsGoods.map((item) => parseInt(item.id));
   await prisma.$transaction(async (tx) => {
@@ -949,10 +1029,48 @@ async function update(id, body) {
         locationId: parseInt(locationId),
         invNo,
         receiptType,
-        taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
+        taxTemplateId: safeTaxTemplateId,
         discountType,
-        discountValue: discountValue ? parseFloat(discountValue) : null,
-        netBillValue: netBillValue ? parseFloat(netBillValue) : null,
+        discountValue: safeDiscountValue,
+        netBillValue: safeNetBillValue,
+        attachments: {
+          deleteMany: {
+            ...(incomingIds.length > 0 && {
+              id: { notIn: incomingIds },
+            }),
+          },
+
+          update: parseAttachments
+            .filter((item) => item.id)
+            .map((sub) => ({
+              where: { id: parseInt(sub.id) },
+              data: {
+                date: sub?.date ? new Date(sub?.date) : undefined,
+                filePath: (() => {
+                  const matchedFile = files?.find(
+                    (f) => f.originalname === sub.filePath,
+                  );
+                  return matchedFile
+                    ? matchedFile.filename
+                    : sub.filePath || undefined;
+                })(),
+                name: sub?.name ? sub?.name : undefined,
+              },
+            })),
+
+          create: parseAttachments
+            .filter((item) => !item.id)
+            .map((sub) => ({
+              date: sub?.date ? new Date(sub?.date) : undefined,
+              filePath: (() => {
+                const matchedFile = files?.find(
+                  (f) => f.originalname === sub.filePath,
+                );
+                return matchedFile ? matchedFile.filename : sub.filePath;
+              })(),
+              name: sub?.name ? sub?.name : undefined,
+            })),
+        },
       },
     });
     await updateinwardItems(
@@ -1170,6 +1288,19 @@ async function updateinwardItems(
 }
 
 async function remove(id) {
+  const dataFound = await prisma.purchaseInward.findUnique({
+    where: { id: parseInt(id) },
+    include: { attachments: { select: { filePath: true } } },
+  });
+
+  // ✅ Unlink all attachment files
+  dataFound?.attachments?.forEach((att) => {
+    if (!att.filePath) return;
+    const fullPath = path.join("./uploads", att.filePath);
+    fs.unlink(fullPath, (err) => {
+      if (err) console.warn(`Could not delete: ${fullPath}`, err.message);
+    });
+  });
   const data = await prisma.purchaseInward.delete({
     where: {
       id: parseInt(id),

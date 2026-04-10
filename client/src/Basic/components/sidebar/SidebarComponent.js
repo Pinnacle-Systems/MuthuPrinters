@@ -362,6 +362,7 @@ const SidebarComponent = ({
                         key={page.id}
                         onClick={() => {
                           dispatch(push(page));
+                          console.log(page, "pusheddd");
                           secureLocalStorage.setItem(
                             sessionStorage.getItem("sessionId") + "currentPage",
                             page?.id,

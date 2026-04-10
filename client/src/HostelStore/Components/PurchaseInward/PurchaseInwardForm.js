@@ -15,6 +15,7 @@ import {
   getCommonParams,
   isGridDatasValid,
   ModeChip,
+  renameFile,
 } from "../../../Utils/helper";
 import { toast } from "react-toastify";
 import { FiEdit2, FiSave } from "react-icons/fi";
@@ -37,6 +38,9 @@ import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import { calculateTaxWithHSNBreakupAndInsertIntoInwardItems } from "../PurchaseBillEntry/taxSummary.js";
 import PoSummary from "../PurchaseOrder/PoSummary.js";
 import Modal from "../../../UiComponents/Modal/index.js";
+import { getImageUrlPath } from "../../../Constants/index.js";
+import { Plus } from "lucide-react";
+import { useSelector } from "react-redux";
 
 const PurchaseInwardForm = ({
   onClose,
@@ -87,6 +91,9 @@ const PurchaseInwardForm = ({
   const [discountValue, setDiscountValue] = useState();
   const [summary, setSummary] = useState(false);
   const [netBillValue, setNetBillValue] = useState("");
+  const [attachmentModal, setAttachmentModal] = useState(false);
+  const [selectedAttachmentIndex, setSelectedAttachmentIndex] = useState(null);
+  const [attachments, setAttachments] = useState([]);
 
   const supplierRef = useRef(null);
   const [dispatchInvalidate] = useInvalidateTags();
@@ -183,7 +190,8 @@ const PurchaseInwardForm = ({
       setTaxTemplateId(data?.taxTemplateId || "");
       setDiscountType(data?.discountType || "");
       setDiscountValue(data?.discountValue || "");
-      setNetBillValue(data?.netBillValue || "");
+      setNetBillValue(parseFloat(data?.netBillValue)?.toFixed(2) || "");
+      setAttachments(data?.attachments ? data?.attachments : []);
     },
     [id, fromPoSupplierId, fromPoType],
   );
@@ -217,15 +225,45 @@ const PurchaseInwardForm = ({
     discountType,
     discountValue,
     netBillValue,
+    attachments: attachments?.filter((i) => i.filePath),
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
+      const formData = new FormData();
+      for (let key in data) {
+        if (key == "attachments") {
+          console.log("attachments =>", data[key]);
+          formData.append(
+            key,
+            JSON.stringify(
+              data[key].map((i) => ({
+                ...i,
+                filePath:
+                  i.filePath instanceof File ? i.filePath.name : i.filePath,
+              })),
+            ),
+          );
+          data[key].forEach((option) => {
+            if (option?.filePath instanceof File) {
+              formData.append("images", option.filePath);
+            }
+          });
+        } else if (
+          key === "inwardItems" ||
+          Array.isArray(data[key]) ||
+          (typeof data[key] === "object" && data[key] !== null)
+        ) {
+          formData.append(key, JSON.stringify(data[key])); // ✅ stringify arrays and objects
+        } else {
+          formData.append(key, data[key]); // ✅ primitives appended as-is
+        }
+      }
       let returnData;
       if (text === "Updated") {
-        returnData = await callback(data).unwrap();
+        returnData = await callback({ id, body: formData }).unwrap();
       } else {
-        returnData = await callback(data).unwrap();
+        returnData = await callback(formData).unwrap();
       }
       if (returnData.statusCode === 1) {
         toast.error(returnData.message);
@@ -307,8 +345,8 @@ const PurchaseInwardForm = ({
       { condition: !data.inwardType, title: "Inward Type is required!" },
       { condition: !data.locationId, title: "Location is required!" },
       { condition: !data.storeId, title: "Location is required!" },
-      { condition: !data.supplierId, title: "Supplier is required!" },
       { condition: !data.receiptType, title: "Receipt Basis is required!" },
+      { condition: !data.supplierId, title: "Supplier is required!" },
 
       {
         condition: isAgainstInvoice && !data.invNo,
@@ -446,6 +484,39 @@ const PurchaseInwardForm = ({
     }
   }, []);
 
+  useEffect(() => {
+    if (attachments?.length >= 5) return;
+    setAttachments((prev) => {
+      let newArray = Array.from({ length: 5 - prev?.length }, () => {
+        return { date: today, filePath: "", log: "" };
+      });
+      return [...prev, ...newArray];
+    });
+  }, [setAttachments, attachments]);
+
+  function handleInputChange(value, index, field) {
+    const newBlend = structuredClone(attachments);
+    newBlend[index][field] = value;
+    setAttachments(newBlend);
+  }
+
+  function openPreview(filePath) {
+    window.open(
+      filePath instanceof File
+        ? URL.createObjectURL(filePath)
+        : getImageUrlPath(filePath),
+    );
+  }
+
+  function addNewComments() {
+    setAttachments((prev) => [...prev, { log: "", date: today, filePath: "" }]);
+    // setDueDate(moment.utc(today).format("YYYY-MM-DD"));
+  }
+
+  function deleteRow(index) {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  }
+
   return (
     <>
       <Modal
@@ -465,6 +536,252 @@ const PurchaseInwardForm = ({
           setSummary={setSummary}
         />
       </Modal>
+      {attachmentModal && (
+        <Modal
+          isOpen={attachmentModal}
+          onClose={() => {
+            setAttachmentModal(false);
+            setSelectedAttachmentIndex(null);
+          }}
+          widthClass="p-4 w-[600px] h-[420px]"
+        >
+          <div className="space-y-3">
+            <h2 className="text-base font-semibold text-slate-700">
+              Attachments
+            </h2>
+
+            {/* Drag & Drop Zone */}
+            <div
+              className="border-2 border-dashed border-indigo-300 rounded-lg p-4 text-center cursor-pointer hover:bg-indigo-50 transition"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file && selectedAttachmentIndex !== null) {
+                  handleInputChange(
+                    renameFile(file),
+                    selectedAttachmentIndex,
+                    "filePath",
+                  );
+                }
+              }}
+              onClick={() =>
+                document.getElementById("modal-file-upload")?.click()
+              }
+            >
+              <p className="text-sm text-slate-500">
+                Drag & drop here, or{" "}
+                <span className="text-indigo-600 font-medium underline">
+                  click to browse
+                </span>
+              </p>
+              {selectedAttachmentIndex !== null ? (
+                <p className="text-xs text-indigo-500 mt-1">
+                  Uploading to row:{" "}
+                  <strong>{selectedAttachmentIndex + 1}</strong>
+                </p>
+              ) : (
+                <p className="text-xs text-slate-400 mt-1">
+                  Select a row below first
+                </p>
+              )}
+            </div>
+
+            {/* Hidden file input for drag & drop zone */}
+            <input
+              type="file"
+              id="modal-file-upload"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files[0] && selectedAttachmentIndex !== null) {
+                  handleInputChange(
+                    renameFile(e.target.files[0]),
+                    selectedAttachmentIndex,
+                    "filePath",
+                  );
+                  e.target.value = "";
+                }
+              }}
+              disabled={readOnly}
+            />
+
+            {/* Attachments Table */}
+            <div className="max-h-[200px] overflow-auto">
+              <div className="border-collapse bg-[#F1F1F0] shadow-sm overflow-auto">
+                <table className="bg-gray-200 text-gray-800 text-sm table-auto w-full">
+                  <thead className="py-2 font-medium sticky top-0">
+                    <tr>
+                      <th className="py-2 text-xs w-10 text-center border-r border-white/50">
+                        S.No
+                      </th>
+                      <th className="py-2 text-xs w-60 text-center border-r border-white/50">
+                        Name
+                      </th>
+                      <th className="py-2 text-xs w-60 text-center border-r border-white/50">
+                        File
+                      </th>
+                      <th className="py-2 text-xs w-10 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attachments?.map((item, index) => (
+                      <tr
+                        key={index}
+                        onClick={() => setSelectedAttachmentIndex(index)}
+                        className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${
+                          index === selectedAttachmentIndex
+                            ? "bg-indigo-100 border-l-2 border-l-indigo-500"
+                            : index % 2 === 0
+                              ? "bg-white hover:bg-gray-50"
+                              : "bg-gray-100 hover:bg-gray-50"
+                        }`}
+                      >
+                        {/* S.No */}
+                        <td className="border-r border-white/50 h-8 text-center">
+                          {index + 1}
+                        </td>
+
+                        {/* Name */}
+                        <td className="border-r border-white/50 h-8">
+                          <input
+                            type="text"
+                            className="text-left rounded py-1 px-2 w-full focus:outline-none focus:ring focus:border-blue-300 bg-transparent"
+                            value={item?.name}
+                            onChange={(e) =>
+                              handleInputChange(e.target.value, index, "name")
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            disabled={readOnly}
+                          />
+                        </td>
+
+                        {/* File */}
+                        <td className="border-r border-white/50 h-8 px-2">
+                          <div className="flex items-center gap-2">
+                            {!readOnly && (
+                              <label
+                                htmlFor={`modal-row-upload-${index}`}
+                                className="cursor-pointer flex items-center justify-center p-1 bg-gray-100 rounded hover:bg-gray-200"
+                                title="Attach file"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                📎
+                                <input
+                                  type="file"
+                                  id={`modal-row-upload-${index}`}
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    if (e.target.files[0]) {
+                                      handleInputChange(
+                                        renameFile(e.target.files[0]),
+                                        index,
+                                        "filePath",
+                                      );
+                                      e.target.value = "";
+                                    }
+                                  }}
+                                  disabled={readOnly}
+                                />
+                              </label>
+                            )}
+
+                            {item.filePath ? (
+                              <>
+                                <span className="truncate max-w-[120px] text-green-700 font-medium">
+                                  ✅ {item.filePath?.name ?? item.filePath}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openPreview(item.filePath);
+                                  }}
+                                  className="text-blue-600 text-xs hover:underline"
+                                >
+                                  View
+                                </button>
+                                {!readOnly && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleInputChange("", index, "filePath");
+                                    }}
+                                    className="text-red-600 text-xs"
+                                    title="Remove file"
+                                    disabled={readOnly}
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-gray-400 italic text-xs">
+                                No file
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="w-[30px] border-gray-200 h-8">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addNewComments();
+                              }}
+                              disabled={readOnly}
+                              className="flex items-center px-1 bg-blue-50 rounded"
+                            >
+                              <Plus size={18} className="text-blue-800" />
+                            </button>
+                            <button
+                              className="flex items-center px-1 bg-red-50 rounded"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteRow(index);
+                                if (selectedAttachmentIndex === index) {
+                                  setSelectedAttachmentIndex(null);
+                                }
+                              }}
+                              disabled={readOnly}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 text-red-800"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={() => {
+                  setAttachmentModal(false);
+                  setSelectedAttachmentIndex(null);
+                }}
+                className="px-2 py-1 text-sm rounded bg-green-700 text-white hover:bg-green-800 border border-green-800"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
       <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
         <div className="flex justify-between items-center">
           <h1 className="text-lg font-bold flex items-center gap-2">
@@ -589,18 +906,26 @@ const PurchaseInwardForm = ({
                 required={receiptType === "Against Invoice"}
                 disabled={receiptType !== "Against Invoice"}
               />
-              <TextInput
-                name={"Net Bill Value"}
-                value={netBillValue}
-                setValue={setNetBillValue}
-                readOnly={readOnly}
-                required={receiptType === "Against Invoice"}
-                type={"number"}
-                onFocus={(e) => {
-                  e.target.select();
-                }}
-                disabled={receiptType !== "Against Invoice"}
-              />
+              <div className="w-28">
+                <TextInput
+                  name={"Net Bill Value"}
+                  value={netBillValue}
+                  setValue={setNetBillValue}
+                  readOnly={readOnly}
+                  required={receiptType === "Against Invoice"}
+                  type={"number"}
+                  onFocus={(e) => {
+                    e.target.select();
+                  }}
+                  onBlur={(e) =>
+                    setNetBillValue(
+                      e.target.value ? Number(e.target.value).toFixed(2) : "",
+                    )
+                  }
+                  disabled={receiptType !== "Against Invoice"}
+                  className={"text-right"}
+                />
+              </div>
             </div>
           </div>
 
@@ -890,6 +1215,18 @@ const PurchaseInwardForm = ({
                   Edit
                 </button>
               ))}
+            {
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedAttachmentIndex(null);
+                  setAttachmentModal(true);
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                📎 Upload
+              </button>
+            }
             {receiptType === "Against Invoice" && (
               <button
                 className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1  rounded"

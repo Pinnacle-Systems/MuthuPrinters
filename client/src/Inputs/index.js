@@ -33,10 +33,10 @@ export const handleOnChange = (event, setValue, type) => {
   const inputSelectionStart = event.target.selectionStart;
   const inputSelectionEnd = event.target.selectionEnd;
 
- const upperCaseValue =
-  type === "password" || type === "normal"
-    ? inputValue
-    : inputValue.toUpperCase();
+  const upperCaseValue =
+    type === "password" || type === "normal"
+      ? inputValue
+      : inputValue.toUpperCase();
   const valueBeforeCursor = upperCaseValue.slice(0, inputSelectionStart);
   const valueAfterCursor = upperCaseValue.slice(inputSelectionEnd);
 
