@@ -50,6 +50,7 @@ const InwardItems = ({
     itemGroupId: "",
     sizeId: "",
     colorId: "",
+    gsmId: "",
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -70,6 +71,7 @@ const InwardItems = ({
       itemGroupId: "",
       sizeId: "",
       colorId: "",
+      gsmId: "",
     };
     setInwardItems([...inwardItems, newRow]);
   };
@@ -330,7 +332,7 @@ const InwardItems = ({
                   Color
                 </th>
                 <th className={`w-16 px-4 py-2 text-center font-medium`}>
-                  GSM<span className="text-red-500">*</span>
+                  GSM
                 </th>
                 <th className={`w-16 px-4 py-2 text-center font-medium`}>
                   UOM

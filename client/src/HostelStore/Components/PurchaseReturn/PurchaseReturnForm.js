@@ -59,6 +59,7 @@ const PurchaseReturnForm = ({
   setFromInwardId,
   fromInwardType,
   setFromInwardType,
+  gsmList,
 }) => {
   const today = new Date();
   const [pendingAction, setPendingAction] = useState(null);
@@ -711,6 +712,7 @@ const PurchaseReturnForm = ({
             searchDocDate={searchDocDate}
             fromInwardId={fromInwardId}
             termsRef={termsRef}
+            gsmList={gsmList}
           />
         </fieldset>
 

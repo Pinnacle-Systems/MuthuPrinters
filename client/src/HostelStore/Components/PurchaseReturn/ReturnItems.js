@@ -26,6 +26,7 @@ const ReturnItems = ({
   searchDocDate,
   fromInwardId,
   termsRef,
+  gsmList,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -40,6 +41,7 @@ const ReturnItems = ({
     colorId: "",
     alreadyReturnQty: "",
     inwardQty: "",
+    gsmId: "",
   };
   const [focusedField, setFocusedField] = useState(null);
 
@@ -56,6 +58,7 @@ const ReturnItems = ({
       itemGroupId: "",
       sizeId: "",
       colorId: "",
+      gsmId: "",
     };
     setReturnItems([...returnItems, newRow]);
   };
@@ -181,6 +184,7 @@ const ReturnItems = ({
       sizeId: item.sizeId ?? "",
       colorId: item.colorId ?? "",
       itemGroupId: item.itemGroupId ?? "",
+      gsmId: item.gsmId ?? "",
     }));
 
     // Pad to minimum 4 rows
@@ -211,7 +215,7 @@ const ReturnItems = ({
             }
           }, 100); // small delay important
         }}
-        widthClass={"w-[90%] h-[90%]"}
+        widthClass={"w-[95%] h-[90%]"}
       >
         <PurchaseInwardItemsSelection
           supplierId={supplierId}
@@ -286,6 +290,9 @@ const ReturnItems = ({
                 </th>
                 <th className={`w-32 px-4 py-2 text-center font-medium `}>
                   Color
+                </th>
+                <th className={`w-20 px-4 py-2 text-center font-medium `}>
+                  GSM
                 </th>
                 <th className={`w-20 px-4 py-2 text-center font-medium `}>
                   UOM
@@ -396,6 +403,28 @@ const ReturnItems = ({
                       onKeyDown={(e) => {
                         if (e.key === "Delete") {
                           handleInputChange("", index, "colorId");
+                        }
+                      }}
+                    />
+                  </td>
+                  <td className=" border border-gray-300 text-[11px] ">
+                    <FxSelect
+                      value={row.gsmId}
+                      onChange={(val) => handleInputChange(val, index, "gsmId")}
+                      options={(gsmList?.data || [])
+                        .filter((item) => (id ? true : item.active))
+                        .map((item) => ({
+                          label: item.name,
+                          value: item.id,
+                        }))}
+                      readOnly={true}
+                      placeholder=""
+                      onBlur={() =>
+                        handleInputChange(row.gsmId, index, "gsmId")
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Delete") {
+                          handleInputChange("", index, "gsmId");
                         }
                       }}
                     />
@@ -637,7 +666,7 @@ const ReturnItems = ({
               <tr className="bg-gray-50 h-6 font-medium text-gray-800 text-[12px]">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium  "
-                  colSpan={5}
+                  colSpan={6}
                 >
                   Total
                 </td>

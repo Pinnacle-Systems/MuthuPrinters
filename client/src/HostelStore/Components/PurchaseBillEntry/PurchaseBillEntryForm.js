@@ -141,6 +141,7 @@ const PurchaseBillEntryForm = ({
           hsnId: item.hsnId || item.Hsn?.id,
           colorId: item.colorId || item.Color?.id,
           sizeId: item.sizeId || item.Size?.id,
+          gsmId: item.gsmId || item.Gsm?.id,
         })),
       );
       setSupplierId(data?.supplierId || fromInwardSupplierId || "");

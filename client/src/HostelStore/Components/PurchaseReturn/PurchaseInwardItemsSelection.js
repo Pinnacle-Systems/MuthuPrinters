@@ -53,6 +53,7 @@ const PurchaseInwardItemsSelection = ({
         sizeId: item.sizeId ?? "",
         colorId: item.colorId ?? "",
         itemGroupId: item.itemGroupId ?? "",
+        gsmId: item.gsmId ?? "",
       };
       const emptyIndex = newItems.findIndex(
         (v) => !v.styleItemId || v.styleItemId === null,
@@ -134,7 +135,7 @@ const PurchaseInwardItemsSelection = ({
               <table className="w-full border-collapse table-fixed">
                 <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10">
                   <tr>
-                    <th className="px-2 py-1 w-10 border border-gray-300">
+                    <th className="px-2 py-1 w-8 border border-gray-300">
                       <div className="flex flex-col items-center">
                         <span className="text-[10px] font-medium mb-[2px]">
                           Select
@@ -166,7 +167,7 @@ const PurchaseInwardItemsSelection = ({
                         onChange={(e) => setSearchDocId(e.target.value)}
                       />
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-24">
+                    <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-20">
                       <label>Inward Date</label>
                       <input
                         type="text"
@@ -180,19 +181,22 @@ const PurchaseInwardItemsSelection = ({
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-56">
                       Description of Goods
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-28">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16">
                       Size
                     </th>
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-28">
                       Color
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-10">
+                      GSM
+                    </th>
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-10">
                       UOM
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 ">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16">
                       PO Qty
                     </th>
-                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-20 ">
+                    <th className="px-1 py-1.5 border border-gray-300 text-xs w-16 ">
                       Inward Qty
                     </th>
                     <th className="px-1 py-1.5 border border-gray-300 text-xs w-24 ">
@@ -250,7 +254,9 @@ const PurchaseInwardItemsSelection = ({
                         <td className="border border-gray-300 text-[11px] py-1.5 px-2">
                           {item?.Color?.name}
                         </td>
-
+                        <td className="border border-gray-300 text-[11px] py-1.5 px-2">
+                          {item?.Gsm?.name}
+                        </td>
                         <td className="border border-gray-300 text-[11px] py-1.5 px-2">
                           {item?.Uom?.name}
                         </td>

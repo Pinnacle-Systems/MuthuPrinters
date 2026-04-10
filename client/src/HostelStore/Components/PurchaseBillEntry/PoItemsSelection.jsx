@@ -155,21 +155,6 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, tempItems, setTemp
                                                         />
                                                     </th>
                                                     <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-20">
-                                                        <label>Inv No</label>
-                                                        <input
-                                                            type="text"
-                                                            className="text-black h-6 focus:outline-none border  border-gray-400 rounded-lg w-full"
-                                                            placeholder="Search"
-                                                            value={searchInvNo}
-                                                            onChange={(e) => {
-                                                                setSearchInvNo(e.target.value);
-                                                            }}
-                                                            onFocus={(e) => { e.target.select() }}
-
-                                                        />
-
-                                                    </th>
-                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-20">
                                                         <label>Dc No</label>
                                                         <input
                                                             type="text"
@@ -184,6 +169,22 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, tempItems, setTemp
                                                         />
 
                                                     </th>
+                                                    {/* <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-20">
+                                                        <label>Inv No</label>
+                                                        <input
+                                                            type="text"
+                                                            className="text-black h-6 focus:outline-none border  border-gray-400 rounded-lg w-full"
+                                                            placeholder="Search"
+                                                            value={searchInvNo}
+                                                            onChange={(e) => {
+                                                                setSearchInvNo(e.target.value);
+                                                            }}
+                                                            onFocus={(e) => { e.target.select() }}
+
+                                                        />
+
+                                                    </th> */}
+
 
                                                     <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-64">
                                                         <label>Description of Goods</label>
@@ -194,6 +195,10 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, tempItems, setTemp
                                                     </th>
                                                     <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-32">
                                                         Color
+                                                    </th>
+                                                    <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-16">
+                                                        <label>GSM</label>
+
                                                     </th>
                                                     <th className="px-1 py-1.5 border border-gray-300 text-xs text-gray-800  w-16">
                                                         <label>UOM</label>
@@ -244,9 +249,9 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, tempItems, setTemp
                                                             {item?.PurchaseInward?.docDate ? getDateFromDateTimeToDisplay(item?.PurchaseInward?.docDate) : ""}
 
                                                         </td>
-                                                        <td className=" border border-gray-300  text-[11px] py-1.5 px-2">
+                                                        {/* <td className=" border border-gray-300  text-[11px] py-1.5 px-2">
                                                             {item?.PurchaseInward?.invNo}
-                                                        </td>
+                                                        </td> */}
                                                         <td className=" border border-gray-300  text-[11px] py-1.5 px-2">
                                                             {item?.PurchaseInward?.dcNo}
                                                         </td>
@@ -258,6 +263,9 @@ const PoItemsSelection = ({ inwardItems = [], setInwardItems, tempItems, setTemp
                                                         </td>
                                                         <td className=" border border-gray-300 text-[11px] py-1.5 px-2">
                                                             {item.Color?.name}
+                                                        </td>
+                                                        <td className=" border border-gray-300 text-[11px] py-1.5 px-2">
+                                                            {item.Gsm?.name}
                                                         </td>
                                                         <td className=" border border-gray-300 text-[11px] py-1.5 px-2">
                                                             {item.Uom?.name}

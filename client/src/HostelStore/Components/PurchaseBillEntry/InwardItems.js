@@ -51,6 +51,7 @@ const InwardItems = ({
     itemGroupId: "",
     sizeId: "",
     colorId: "",
+    gsmId: "",
   };
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -70,6 +71,7 @@ const InwardItems = ({
       inwardQty: "",
       poQty: "",
       poId: "",
+      gsmId: "",
     };
     setInwardItems([...inwardItems, newRow]);
   };
@@ -306,9 +308,9 @@ const InwardItems = ({
                 <th className={`w-20 px-4 py-2 text-center font-medium `}>
                   PI Date
                 </th>
-                <th className={`w-20 px-4 py-2 text-center font-medium `}>
+                {/* <th className={`w-20 px-4 py-2 text-center font-medium `}>
                   Inv No
-                </th>
+                </th> */}
                 <th className={`w-20 px-4 py-2 text-center font-medium `}>
                   Dc No
                 </th>
@@ -320,6 +322,9 @@ const InwardItems = ({
                 </th>
                 <th className={`w-36 px-4 py-2 text-center font-medium `}>
                   Color
+                </th>
+                <th className={`w-20 px-4 py-2 text-center font-medium `}>
+                  GSM
                 </th>
                 <th className={`w-20 px-4 py-2 text-center font-medium `}>
                   UOM
@@ -365,9 +370,9 @@ const InwardItems = ({
                         )
                       : ""}
                   </td>
-                  <td className="w-12 border border-gray-300 text-[11px]  pr-1 p-0.5">
+                  {/* <td className="w-12 border border-gray-300 text-[11px]  pr-1 p-0.5">
                     {row?.PurchaseInward?.invNo}
-                  </td>
+                  </td> */}
                   <td className="w-12 border border-gray-300 text-[11px]  pr-1 p-0.5">
                     {row?.PurchaseInward?.dcNo}
                   </td>
@@ -379,6 +384,9 @@ const InwardItems = ({
                   </td>
                   <td className=" border  pl-1 border-gray-300 text-[11px] ">
                     {row.Color?.name}
+                  </td>
+                  <td className=" border pl-1  border-gray-300 text-[11px] ">
+                    {row.Gsm?.name}
                   </td>
                   <td className=" border pl-1  border-gray-300 text-[11px] ">
                     {row.Uom?.name}

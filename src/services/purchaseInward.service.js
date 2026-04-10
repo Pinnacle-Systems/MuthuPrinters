@@ -303,26 +303,26 @@ async function get(req) {
     totalCount,
   };
 }
-function manualFilterSearchDataPIItems(
-  searchPoDate,
-  searchDueDate,
-  searchInwardType,
-  data,
-) {
-  const inwardTypeKey = searchInwardType
-    ? searchInwardType.split(" ")[0].toUpperCase()
-    : "";
-  return data.filter(
-    (item) =>
-      (searchPoDate
-        ? String(getDateFromDateTime(item.Po.docDate)).includes(searchPoDate)
-        : true) &&
-      (searchDueDate
-        ? String(getDateFromDateTime(item.Po.dueDate)).includes(searchDueDate)
-        : true) &&
-      (inwardTypeKey ? item.Po.poType.toUpperCase() === inwardTypeKey : true),
-  );
-}
+// function manualFilterSearchDataPIItems(
+//   searchPoDate,
+//   searchDueDate,
+//   searchInwardType,
+//   data,
+// ) {
+//   const inwardTypeKey = searchInwardType
+//     ? searchInwardType.split(" ")[0].toUpperCase()
+//     : "";
+//   return data.filter(
+//     (item) =>
+//       (searchPoDate
+//         ? String(getDateFromDateTime(item.Po.docDate)).includes(searchPoDate)
+//         : true) &&
+//       (searchDueDate
+//         ? String(getDateFromDateTime(item.Po.dueDate)).includes(searchDueDate)
+//         : true) &&
+//       (inwardTypeKey ? item.Po.poType.toUpperCase() === inwardTypeKey : true),
+//   );
+// }
 async function getOne(id) {
   const data = await prisma.purchaseInward.findUnique({
     where: {
@@ -585,30 +585,59 @@ async function getPurchaseInwardBillEntryItems(req) {
     searchDcNo,
     billType,
   } = req.query;
-  const docDateFilter = buildDateRange(searchPIDate);
+  // const docDateFilter = buildDateRange(searchPIDate);
 
   let data;
   let totalCount;
+
   if (pagination) {
+    // ✅ Step 1: Get all InwardItem IDs already referenced in PurchaseBillEntryItems
+    const alreadyBilledItems = await prisma.purchaseBillEntryItems.findMany({
+      where: {
+        purchaseInwardId: { not: null },
+      },
+      select: {
+        purchaseInwardId: true,
+        styleItemId: true,
+        sizeId: true,
+        colorId: true,
+        gsmId: true,
+      },
+    });
+
+    // ✅ Step 2: Extract the inwardItem IDs to exclude
+    // Since PurchaseBillEntryItems links to PurchaseInward (not InwardItems directly),
+    // we need to get the actual InwardItems IDs that are billed
+    const billedInwardItemIds = await prisma.purchaseBillEntryItems.findMany({
+      where: {
+        purchaseInwardId: { not: null },
+      },
+      select: {
+        docId: true,
+        styleItemId: true,
+        sizeId: true,
+        colorId: true,
+        gsmId: true,
+        purchaseInwardId: true,
+      },
+    });
+
+    // Build a set of composite keys to exclude: purchaseInwardId + styleItemId + sizeId
+    const billedKeys = new Set(
+      billedInwardItemIds.map(
+        (b) =>
+          `${b.purchaseInwardId}_${b.styleItemId}_${b.sizeId}_${b.colorId}_${b.gsmId}`,
+      ),
+    );
+
+    // ✅ Step 3: Fetch inward items normally
     data = await prisma.inwardItems.findMany({
       where: {
         PurchaseInward: {
-          docId: Boolean(searchDocId)
-            ? {
-                contains: searchDocId,
-              }
-            : undefined,
-          invNo: searchInvNo
-            ? {
-                contains: searchInvNo,
-              }
-            : undefined,
-          dcNo: Boolean(searchDcNo)
-            ? {
-                contains: searchDcNo,
-              }
-            : undefined,
-          docDate: docDateFilter,
+          docId: Boolean(searchDocId) ? { contains: searchDocId } : undefined,
+          invNo: searchInvNo ? { contains: searchInvNo } : undefined,
+          dcNo: Boolean(searchDcNo) ? { contains: searchDcNo } : undefined,
+          // docDate: docDateFilter,
           AND: [
             {
               OR: [
@@ -618,7 +647,6 @@ async function getPurchaseInwardBillEntryItems(req) {
               ],
             },
           ],
-
           supplierId: supplierId ? parseInt(supplierId) : undefined,
           inwardType: billType ? { contains: billType } : undefined,
         },
@@ -632,53 +660,26 @@ async function getPurchaseInwardBillEntryItems(req) {
             invNo: true,
             dcNo: true,
             id: true,
-
-            // dueDate: true,
-            // poType: true,
           },
         },
-        // Uom: {
-        //   select: {
-        //     name: true,
-        //   },
-        // },
-        Hsn: {
-          select: {
-            name: true,
-            tax: true,
-          },
-        },
-        StyleItem: {
-          select: {
-            name: true,
-          },
-        },
-        Uom: {
-          select: {
-            name: true,
-          },
-        },
-        Size: {
-          select: {
-            name: true,
-          },
-        },
-        Color: {
-          select: {
-            name: true,
-          },
-        },
-        Gsm: {
-          select: {
-            name: true,
-          },
-        },
+        Hsn: { select: { name: true, tax: true } },
+        StyleItem: { select: { name: true } },
+        Uom: { select: { name: true } },
+        Size: { select: { name: true } },
+        Color: { select: { name: true } },
+        Gsm: { select: { name: true } },
       },
     });
+    data = manualFilterSearchDataPIItems(searchPIDate, data);
 
-    data = data?.filter((i) => i.PurchaseInward.supplierId == supplierId);
+    // ✅ Step 4: Filter out already-billed items using composite key match
+    data = data.filter((item) => {
+      const key = `${item.purchaseInwardId}_${item.styleItemId}_${item.sizeId}_${item.colorId}_${item.gsmId}`;
+      return !billedKeys.has(key);
+    });
 
-    // data = await getAllDataPoItems(data);
+    // Filter by supplierId
+    data = data.filter((i) => i.PurchaseInward?.supplierId == supplierId);
   } else {
     data = await prisma.inwardItems.findMany({
       where: {
@@ -687,8 +688,20 @@ async function getPurchaseInwardBillEntryItems(req) {
       },
     });
   }
+
   return { statusCode: 0, data, totalCount };
 }
+
+function manualFilterSearchDataPIItems(searchPIDate, data) {
+  return data.filter((item) =>
+    searchPIDate
+      ? String(getDateFromDateTime(item.PurchaseInward?.docDate)).includes(
+          searchPIDate,
+        )
+      : true,
+  );
+}
+
 async function create(req) {
   const {
     userId,

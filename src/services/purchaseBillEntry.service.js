@@ -229,6 +229,7 @@ async function getOne(id) {
           StyleItem: true,
           Hsn: true,
           inwardQty: true,
+          Gsm: true,
           invNo: true,
           dcNo: true,
           docId: true,
