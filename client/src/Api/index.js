@@ -43,6 +43,7 @@ export const TAX_TERM_API = "taxTerm";
 export const HSN_API = "hsn";
 export const PARTY_BRANCH_API = "partyBranch";
 export const BRANCH_TYPE_MASTER = "branchType";
+export const APPROVAL_API = "approval";
 
 export const OPENING_BALANCE = "openingBalance";
 export const PO_API = "po";

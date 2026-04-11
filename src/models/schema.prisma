@@ -194,6 +194,8 @@ model User {
   approvalConfigs                ApprovalConfig[]
   approvalLogsApprovedBy         ApprovalLog[]          @relation(name: "approvedBy")
   approvalLogsRejectedBy         ApprovalLog[]          @relation(name: "rejectedBy")
+  approvalLevelUsers             ApprovalLevelUser[]
+  approvalLevelLogs              ApprovalLevelLog[]
 }
 
 model Employee {
@@ -1607,36 +1609,76 @@ model SizeTemplateList {
 }
 
 model ApprovalConfig {
-  id             Int           @id @default(autoincrement())
+  id             Int             @id @default(autoincrement())
   branchId       Int
   pageId         Int
-  active         Boolean       @default(false)
+  active         Boolean         @default(false)
   approvalLogs   ApprovalLog[]
-  Branch         Branch        @relation(fields: [branchId], references: [id])
-  Page           Page          @relation(fields: [pageId], references: [id])
+  Branch         Branch          @relation(fields: [branchId], references: [id])
+  Page           Page            @relation(fields: [pageId], references: [id])
   // Who can approve
   approverType   String? // ROLE or USER
   approverRoleId Int?
   approverUserId Int?
-  ApproverRole   Role?         @relation(fields: [approverRoleId], references: [id])
-  ApproverUser   User?         @relation(fields: [approverUserId], references: [id])
+  ApproverRole   Role?           @relation(fields: [approverRoleId], references: [id])
+  ApproverUser   User?           @relation(fields: [approverUserId], references: [id])
+  approvalLevels ApprovalLevel[]
 
   @@unique([branchId, pageId])
 }
 
-model ApprovalLog {
-  id               Int             @id @default(autoincrement())
+model ApprovalLevel {
+  id               Int                 @id @default(autoincrement())
   approvalConfigId Int?
-  referenceId      Int // poId / inwardId etc
-  referencePage    String // "PURCHASE ORDER"
+  levelNo          Int?
+  approveType      String              @default("OR")
+  condition        String?
+  ApprovalConfig   ApprovalConfig?     @relation(fields: [approvalConfigId], references: [id], onDelete: Cascade)
+  LevelUsers       ApprovalLevelUser[]
+  LevelLogs        ApprovalLevelLog[]
+
+  @@unique([approvalConfigId, levelNo])
+}
+
+model ApprovalLevelUser {
+  id              Int            @id @default(autoincrement())
+  approvalLevelId Int?
+  userId          Int?
+  ApprovalLevel   ApprovalLevel? @relation(fields: [approvalLevelId], references: [id], onDelete: Cascade)
+  User            User?          @relation(fields: [userId], references: [id])
+
+  @@unique([approvalLevelId, userId])
+}
+
+model ApprovalLog {
+  id               Int                @id @default(autoincrement())
+  approvalConfigId Int?
+  referenceId      Int
+  referencePage    String
   status           String?
   approvedById     Int?
   approvedAt       DateTime?
+  currentLevel     Int                @default(1)
   rejectedById     Int?
   rejectedAt       DateTime?
   remarks          String?
-  createdAt        DateTime        @default(now())
-  ApprovalConfig   ApprovalConfig? @relation(fields: [approvalConfigId], references: [id])
-  ApprovedBy       User?           @relation("approvedBy", fields: [approvedById], references: [id])
-  RejectedBy       User?           @relation("rejectedBy", fields: [rejectedById], references: [id])
+  createdAt        DateTime           @default(now())
+  ApprovalConfig   ApprovalConfig?    @relation(fields: [approvalConfigId], references: [id])
+  ApprovedBy       User?              @relation("approvedBy", fields: [approvedById], references: [id])
+  RejectedBy       User?              @relation("rejectedBy", fields: [rejectedById], references: [id])
+  LevelLogs        ApprovalLevelLog[]
+}
+
+model ApprovalLevelLog {
+  id              Int            @id @default(autoincrement())
+  approvalLogId   Int?
+  approvalLevelId Int?
+  levelNo         Int?
+  userId          Int?
+  action          String?
+  remarks         String?
+  createdAt       DateTime       @default(now())
+  ApprovalLog     ApprovalLog?   @relation(fields: [approvalLogId], references: [id], onDelete: Cascade)
+  ApprovalLevel   ApprovalLevel? @relation(fields: [approvalLevelId], references: [id], onDelete: Cascade)
+  User            User?          @relation(fields: [userId], references: [id])
 }

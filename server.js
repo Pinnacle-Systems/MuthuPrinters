@@ -56,6 +56,7 @@ import {
   itemGroup,
   Sizetemplate,
   purchaseReport,
+  approvalConfig,
 } from "./src/routes/index.js";
 
 import { socketMain } from "./src/sockets/socket.js";
@@ -144,6 +145,7 @@ app.use("/location", location);
 app.use("/purchaseBillEntry", purchaseBillEntry);
 app.use("/sizeTemplate", Sizetemplate);
 app.use("/purchaseReport", purchaseReport);
+app.use("/approval", approvalConfig);
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;

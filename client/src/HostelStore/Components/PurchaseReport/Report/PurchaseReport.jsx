@@ -323,9 +323,8 @@ export default function PurchaseReport() {
       case "returnQty":
         return (
           <div
-            className={`text-xs text-right ${
-              row.returnQty > 0 ? "text-[#6B3A2A] f" : "text-gray-600"
-            }`}
+            className={`text-xs text-right ${row.returnQty > 0 ? "text-[#6B3A2A] f" : "text-gray-600"
+              }`}
           >
             {formatQtyByUOM(row.returnQty, row.uom)}
           </div>

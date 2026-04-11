@@ -70,19 +70,23 @@ export const MultiSelectDropdown = ({
   disabled = false,
 }) => {
   return (
-    <div className={`m-1  md:grid-cols-2 items-center z-0 data  ${className}`}>
+    <div
+      className={`m-0.5  md:grid-cols-2 items-center z-0 data  ${className}`}
+    >
       <label
         className={`md:text-start   block text-xs font-bold text-slate-700 mb-1${labelName}`}
       >
         {name}
       </label>
       <MultiSelect
+        menuPortalTarget={document.body}
         options={options}
         value={selected}
         onChange={readOnly ? () => {} : setSelected}
         labelledBy="Select"
         hasSelectAll={false}
         styles={{
+          menuPortal: (base) => ({ ...base, zIndex: 99999 }),
           container: (base) => ({
             ...base,
             fontSize: "12px",
@@ -3582,3 +3586,162 @@ export function FxSelectWithAdd({
     </>
   );
 }
+
+export const customSelectStyles = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: "13px",
+    height: "13px",
+    padding: "12px 4px",
+    fontSize: "12px",
+    borderRadius: "8px",
+    fontFamily: "Poppins",
+    color: state.isDisabled ? "#6b7280" : "black",
+    backgroundColor: state.isDisabled ? "#f3f4f6" : "white", // bg-gray-100 vs bg-white
+    cursor: state.isDisabled ? "not-allowed" : "default",
+    borderColor: state.isFocused ? "#3b82f6" : "#d1d5db", // blue-500 vs gray-300
+    boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : base.boxShadow,
+    "&:hover": {
+      borderColor: state.isDisabled ? "#d1d5db" : "#9ca3af", // keep gray when disabled
+    },
+  }),
+  valueContainer: (base, state) => ({
+    ...base,
+    padding: "0 3px",
+    marginTop: "-8px",
+    fontSize: "12px",
+    fontFamily: "Poppins",
+    color: state.isDisabled ? "#6b7280" : "black",
+  }),
+  input: (base, state) => ({
+    ...base,
+    margin: 0,
+    fontSize: "12px",
+    padding: 0,
+    fontFamily: "Poppins",
+    color: state.isDisabled ? "#6b7280" : "black",
+  }),
+  singleValue: (base, state) => ({
+    ...base,
+    fontFamily: "Poppins",
+    fontSize: "12px",
+    color: state.isDisabled ? "#6b7280" : "black",
+  }),
+  placeholder: (base) => ({
+    ...base,
+    fontFamily: "Poppins",
+    color: "black",
+    fontSize: "12px",
+  }),
+  menu: (base, state) => ({
+    ...base,
+    fontFamily: "Poppins",
+    maxHeight: 150,
+    // overflowY: "auto",
+    fontSize: "12px",
+    color: state.isDisabled ? "#6b7280" : "black",
+    zIndex: 9999,
+  }),
+  option: (base, state) => ({
+    ...base,
+    fontFamily: "Poppins",
+    fontSize: "12px",
+    color: state.isDisabled ? "#6b7280" : "black",
+    color: state.isSelected ? "white" : "black",
+    padding: "6px 8px",
+  }),
+  dropdownIndicator: (base) => ({
+    ...base,
+    padding: 2,
+    svg: {
+      width: 14, // icon width
+      height: 14, // icon height
+    },
+    color: "black",
+    marginTop: "-9px",
+  }),
+
+  indicatorSeparator: () => ({ display: "none" }),
+  menuList: (base) => ({
+    ...base,
+    maxHeight: 150,
+    // overflowY: "auto",
+  }),
+  menu: (base) => ({
+    ...base,
+    zIndex: 9999,
+  }),
+};
+
+export const DropdownNew = forwardRef(
+  (
+    {
+      name,
+      dataList,
+      value,
+      setValue,
+      readonly = false,
+      disabled = false,
+      required = false,
+      clear = false,
+      placeholder,
+      width = "full",
+      otherField,
+      otherValue,
+      onKeyDown,
+      autoFocus,
+    },
+    ref,
+  ) => {
+    const options = [
+      ...(clear
+        ? [
+            {
+              value: "",
+              label: `Select ${name || placeholder || "Option"}`,
+              isDisabled: false,
+            },
+          ]
+        : []),
+      ...(dataList?.map((item) => ({
+        value: otherValue ? item?.[otherValue] : item?.id,
+        label: otherField ? item?.[otherField] : item?.name,
+      })) || []),
+    ];
+    const selectedOption = options.find((opt) => opt.value === value) || null;
+    return (
+      <div className={`${name ? "mb-2" : "mb-0"} w-${width}`}>
+        {name && (
+          <label className="block text-xs font-bold text-slate-700 mb-1">
+            {required ? (
+              <span className="">
+                {name} <span className="text-red-500">*</span>
+              </span>
+            ) : (
+              name
+            )}
+          </label>
+        )}
+        <Select
+          ref={ref}
+          options={options}
+          value={selectedOption}
+          onChange={(selected) => setValue(selected?.value || "")}
+          isDisabled={disabled || readonly}
+          isSearchable
+          isClearable={false}
+          menuShouldScrollIntoView={false}
+          maxMenuHeight={170} // <-- Reduce height here
+          onInputChange={(value) => value.toUpperCase()}
+          className="w-full px-1 -ml-1  text-xs rounded-lg
+          focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+          transition-all duration-150 shadow-sm"
+          placeholder={placeholder}
+          styles={customSelectStyles}
+          onKeyDown={onKeyDown}
+          autoFocus={autoFocus}
+        />
+      </div>
+    );
+  },
+);

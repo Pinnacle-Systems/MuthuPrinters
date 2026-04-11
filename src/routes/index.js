@@ -53,3 +53,4 @@ export { default as gsm } from "./gsm.route.js";
 export { default as size } from "./size.route.js";
 export { default as Sizetemplate } from "./sizeTemplate.route.js";
 export { default as purchaseReport } from "./purchaseReport.routes.js";
+export { default as approvalConfig } from "./approvalConfig.route.js";

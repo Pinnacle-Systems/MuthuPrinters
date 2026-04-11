@@ -53,6 +53,7 @@ import {
   purchaseInwardEntryApi,
   purchaseCancelApi,
   purchaseBillEntryApi,
+  ApprovalMasterApi,
 } from "./uniformService";
 
 const commonReducers = {
@@ -107,6 +108,7 @@ const commonReducers = {
   [purchaseBillEntryApi.reducerPath]: purchaseBillEntryApi.reducer,
   SizeTemplate: SizetemplateMasterApi.reducer,
   purchaseReport: purchaseReportApi.reducer,
+  approvalMaster: ApprovalMasterApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -159,6 +161,7 @@ const commonMiddleware = [
   sizeMasterApi.middleware,
   SizetemplateMasterApi.middleware,
   purchaseReportApi.middleware,
+  ApprovalMasterApi.middleware,
 ];
 
 const store = configureStore({
