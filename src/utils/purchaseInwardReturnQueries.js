@@ -1,6 +1,5 @@
-import { PrismaClient } from '#prisma-client'
+import { prisma } from '../lib/prisma.js'
 
-const prisma = new PrismaClient()
 async function getAllDataWithLotDetails(allData) {
     let promises = allData.map(async (item) => {
         item["lotDetails"] = await getLotDetailsForPInwardOrReturn(item.pInwardOrReturnId, item.poItemsId)

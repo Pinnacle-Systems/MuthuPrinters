@@ -1,7 +1,6 @@
-import { PrismaClient } from "#prisma-client";
+import { prisma } from "../lib/prisma.js";
 import moment from "moment";
 
-const prisma = new PrismaClient();
 
 export function getYearShortCode(year) {
   return `${new Date(year).getFullYear().toString().slice(2)}`;

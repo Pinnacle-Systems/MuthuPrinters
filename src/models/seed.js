@@ -1,11 +1,10 @@
-import { PrismaClient } from "#prisma-client";
+import { prisma } from "../lib/prisma.js";
 import bcrypt from "bcrypt";
 
 import pages from "./pages.json" assert { type: "json" };
 import pageGroups from "./pagesGroup.json" assert { type: "json" };
 
 
-const prisma = new PrismaClient();
 
 
 async function main() {

@@ -1,8 +1,7 @@
-import { PrismaClient } from "#prisma-client";
+import { prisma } from "../lib/prisma.js";
 import { substract } from "./helper.js";
 import { getTableRecordWithId } from "./helperQueries.js";
 
-const prisma = new PrismaClient()
 
 async function getStockObject(transType, inwardOrReturn, item, storeId, branchId) {
     let newItem = {};

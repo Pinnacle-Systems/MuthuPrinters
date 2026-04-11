@@ -5,6 +5,9 @@
   "version": "1.0.0",
   "description": "MuthuPrinters pnpm workspace",
   "packageManager": "pnpm@10.8.1",
+  "engines": {
+    "node": ">=22"
+  },
   "imports": {
     "#prisma-client": "./src/lib/prisma-client.js"
   },

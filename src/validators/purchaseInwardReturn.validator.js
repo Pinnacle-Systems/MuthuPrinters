@@ -1,8 +1,7 @@
-import { PrismaClient } from "#prisma-client";
+import { prisma } from "../lib/prisma.js";
 import { substract } from "../utils/helper.js";
 import { getStockQtyForRawMaterials } from "../utils/stockHelper.js";
 
-const prisma = new PrismaClient()
 
 export async function createPoInwardReturnItemsValidation(poInwardReturnItems, inwardOrReturn, poType, poInwardReturnCancelId, storeId, branchId) {
     let isAllItemsValid = await poInwardReturnItemsValidation(poInwardReturnItems, inwardOrReturn, poType, poInwardReturnCancelId, storeId, branchId)
