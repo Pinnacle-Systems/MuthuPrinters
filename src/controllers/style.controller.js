@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "#prisma-client";
 import {
   get as _get,
   getOne as _getOne,
@@ -7,7 +7,7 @@ import {
   update as _update,
   remove as _remove,
 } from "../services/style.service.js";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "#prisma-client";
 import fs from "fs";
 import path from "path";
 const prisma = new PrismaClient();

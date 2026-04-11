@@ -1,5 +1,4 @@
-import pkg from '@prisma/client';
-const { Prisma } = pkg;
+import { Prisma } from '#prisma-client';
 
 import { get as _get, getOne as _getOne, getSearch as _getSearch, create as _create, update as _update, remove as _remove } from '../services/BranchType.service.js';
 

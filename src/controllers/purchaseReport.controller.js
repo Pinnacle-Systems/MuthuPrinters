@@ -2,7 +2,7 @@
 //  purchaseReport.controller.js
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { Prisma } from "@prisma/client";
+import { Prisma } from "#prisma-client";
 import { getPurchaseReport } from "../services/purchaseReport.service.js";
 
 async function purchaseReportGet(req, res) {
