@@ -1,8 +1,7 @@
-import { PrismaClient } from "#prisma-client";
+import { prisma } from "../lib/prisma.js";
 import  fs from 'fs';
 
 
-const prisma = new PrismaClient();
 
 // get pages and write to pages.json
 async function getPagesSeed(){

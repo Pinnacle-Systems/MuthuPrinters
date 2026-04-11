@@ -1,6 +1,5 @@
 // import prisma from "../../models/getPrisma";
-import { PrismaClient } from '#prisma-client'
-const prisma = new PrismaClient()
+import { prisma } from '../../lib/prisma.js'
 
 export default async function profitReport(startDateStartTime, endDateEndTime) {
     return await prisma.$queryRaw`

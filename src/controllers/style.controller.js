@@ -7,10 +7,9 @@ import {
   update as _update,
   remove as _remove,
 } from "../services/style.service.js";
-import { PrismaClient } from "#prisma-client";
+import { prisma } from "../lib/prisma.js";
 import fs from "fs";
 import path from "path";
-const prisma = new PrismaClient();
 
 async function get(req, res, next) {
   try {
