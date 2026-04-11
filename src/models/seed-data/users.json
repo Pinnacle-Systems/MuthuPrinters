@@ -1,0 +1,20 @@
+[
+  {
+    "username": "SUPERADMIN",
+    "email": null,
+    "password": "$2b$10$QEejMsKS28kWROJKXlUxWe.XEeBxwmTWQt.iJskwQNCB8hI0d4GLe",
+    "active": true
+  },
+  {
+    "username": "STAMPPA HOADMIN",
+    "email": "@GMAIL.COM",
+    "password": "$2b$10$q5kOYsbEMQYIh5hmVlqMpuHIfKMy3lYESaseg/spDP4jrDzUbOaNK",
+    "active": true
+  },
+  {
+    "username": "TEST LOGINADMIN",
+    "email": "YOGESH@GMAIL.COM",
+    "password": "$2b$10$6GW/QfbPO2TwwPz4HjcfU.Ohz9Dtnbr4jfQlBdY2dkzQJOZUeyX5O",
+    "active": true
+  }
+]
