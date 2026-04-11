@@ -1,5 +1,5 @@
 {
-  "name": "pharma-frontend",
+  "name": "@muthu-printers/web",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -58,6 +58,7 @@
     "xlsx-js-style": "^1.2.0"
   },
   "scripts": {
+    "dev": "react-scripts start",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

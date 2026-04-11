@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "#prisma-client";
 import { substract } from "../utils/helper.js";
 import { getStockQtyForRawMaterials } from "../utils/stockHelper.js";
 

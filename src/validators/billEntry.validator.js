@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "#prisma-client";
 // import { validateSupplierActive } from "./commonValidators.js"
 import { substract } from "../utils/helper.js";
 
