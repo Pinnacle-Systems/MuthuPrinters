@@ -3,6 +3,14 @@ import { prisma } from "../lib/prisma.js";
 // ── Condition evaluator ─────────────────────────────────────────────────────
 // Safely evaluates simple expressions like "totalNetAmount > 10000"
 // or "true" (always apply). Returns boolean.
+// Condition = "totalNetAmount > 100000"   recordData = { totalNetAmount: 150000 }
+//      ↓
+// new Function("totalNetAmount", "return !!(totalNetAmount > 100000)")(150000)
+//      ↓
+// 150000 > 100000 = true ✅
+//      ↓
+// ApprovalLog created → PENDING
+
 function evaluateCondition(condition, record) {
   if (!condition || condition.trim() === "" || condition.trim() === "true") {
     return true;
@@ -35,23 +43,28 @@ export async function createApprovalLog(
   referencePage,
   recordData = {},
 ) {
-  const config = await prisma.approvalConfig.findUnique({
-    where: { branchId_pageId: { branchId: +branchId, pageId: +pageId } },
+  const config = await tx.approvalConfig.findUnique({
+    where: {
+      branchId_pageId: {
+        branchId: parseInt(branchId),
+        pageId: parseInt(pageId),
+      },
+    },
     include: {
-      ApprovalLevels: {
+      approvalLevels: {
         include: { LevelUsers: true },
         orderBy: { levelNo: "asc" },
       },
     },
   });
+  console.log("config", config);
   if (!config?.active) return null;
-
   // Filter levels whose condition is met
-  const applicableLevels = config.ApprovalLevels.filter((lvl) =>
+  const applicableLevels = config.approvalLevels.filter((lvl) =>
     evaluateCondition(lvl.condition, recordData),
   );
+  console.log("applicableLevels", applicableLevels);
   if (applicableLevels.length === 0) return null; // no levels apply → auto-pass
-
   const log = await tx.approvalLog.create({
     data: {
       approvalConfigId: config.id,
@@ -271,7 +284,8 @@ async function create(body) {
 
     // Build the record snapshot for condition evaluation
     const recordData = {
-      totalNetAmount: data.totalNetAmount ?? 0, // ← compute this from poItems if needed
+      // totalNetAmount: data.totalNetAmount ?? 0,
+      // ← compute this from poItems if needed
       supplierId: data.supplierId,
       poType: data.poType,
       branchId: data.branchId,

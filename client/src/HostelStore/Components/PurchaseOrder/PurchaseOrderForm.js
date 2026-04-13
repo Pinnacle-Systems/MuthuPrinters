@@ -19,7 +19,7 @@ import {
 } from "../../../Utils/helper";
 import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 import { toast } from "react-toastify";
-import { FiEdit2, FiPrinter, FiSave } from "react-icons/fi";
+import { FiEdit2, FiPrinter, FiSave, FiSend } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
 import {
   useAddPoMutation,
@@ -42,6 +42,8 @@ import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import { PayTermMaster, TermsAndCondition } from "../../../Basic/components";
 import { PartyMaster, TaxTemplate } from "..";
+import { useSelector } from "react-redux";
+import { useGetPagesQuery } from "../../../redux/services/PageMasterService";
 
 const PurchaseOrderForm = ({
   onClose,
@@ -91,6 +93,7 @@ const PurchaseOrderForm = ({
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [isNewVersion, setIsNewVersion] = useState(false);
   const [quoteVersion, setQuoteVersion] = useState("");
+  const [submitApproval, setSubmitApproval] = useState(false);
   const supplierRef = useRef(null);
   const termsRef = useRef(null);
   const [dispatchInvalidate] = useInvalidateTags();
@@ -102,6 +105,13 @@ const PurchaseOrderForm = ({
   const { data: supplierDetails } = useGetPartyByIdQuery(supplierId, {
     skip: !supplierId,
   });
+  const openTabs = useSelector((state) => state.openTabs);
+
+  const activeTab = openTabs.tabs.find((tab) => tab.active);
+  const { data: pageData } = useGetPagesQuery({});
+
+  const currentPageId =
+    (pageData?.data || []).find((i) => i.name === activeTab.name)?.id || "";
 
   const {
     data: singleData,
@@ -117,8 +127,10 @@ const PurchaseOrderForm = ({
 
   const syncFormWithDb = useCallback(
     (data) => {
-      // setReadOnly(true)
-
+      setReadOnly(
+        data?.approvalStatus?.status === "APPROVED" ||
+          data?.approvalStatus?.status === "REJECTED",
+      );
       setPoType(data?.poType ? data?.poType : "GENERAL");
       setDocDate(
         data?.docDate
@@ -178,30 +190,6 @@ const PurchaseOrderForm = ({
       syncFormWithDb(undefined);
     }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
-
-  let data = {
-    supplierId,
-    dueDate,
-    docDate,
-    branchId,
-    id,
-    userId,
-    remarks,
-    poItems: poItems?.filter((po) => po.styleItemId),
-    deliveryType,
-    deliveryToId,
-    discountType,
-    discountValue,
-    taxPercent,
-    finYearId,
-    poType,
-    taxTemplateId,
-    termsAndCondtion,
-    termsId,
-    isNewVersion,
-    quoteVersion,
-    payTermId,
-  };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
@@ -526,6 +514,33 @@ const PurchaseOrderForm = ({
       discountType,
       discountValue,
     );
+
+  let data = {
+    supplierId,
+    dueDate,
+    docDate,
+    branchId,
+    id,
+    userId,
+    remarks,
+    poItems: poItems?.filter((po) => po.styleItemId),
+    deliveryType,
+    deliveryToId,
+    discountType,
+    discountValue,
+    taxPercent,
+    finYearId,
+    poType,
+    taxTemplateId,
+    termsAndCondtion,
+    termsId,
+    isNewVersion,
+    quoteVersion,
+    payTermId,
+    pageId: currentPageId,
+    totalNetAmount: totals?.net,
+    submitApproval,
+  };
 
   function getTotalQty() {
     const filtered = poItems?.filter((item) => {
@@ -1174,6 +1189,25 @@ const PurchaseOrderForm = ({
             >
               <FiSave className="w-4 h-4 mr-2" />
               Save & New
+            </button>
+            <button
+              onClick={() => {
+                setSubmitApproval(true);
+                saveData("new");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setSubmitApproval(true);
+                  e.preventDefault();
+                  e.stopPropagation();
+                  saveData("new");
+                }
+              }}
+              disabled={readOnly}
+              className="bg-green-700 text-white px-4 py-1 rounded-md hover:bg-green-800 flex items-center text-sm"
+            >
+              <FiSend className="w-4 h-4 mr-2" />
+              Submit Approval
             </button>
           </div>
           <div className="flex gap-2 flex-wrap">

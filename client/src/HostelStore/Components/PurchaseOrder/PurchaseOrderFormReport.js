@@ -238,6 +238,27 @@ const PurchaseOrderFormReport = ({
     );
   };
 
+  function ApprovalBadge({ approvalStatus }) {
+    if (!approvalStatus) return null;
+
+    const colorMap = {
+      green: "bg-green-100 text-green-700",
+      red: "bg-red-100 text-red-700",
+      yellow: "bg-yellow-100 text-yellow-700",
+      gray: "bg-gray-100 text-gray-500",
+    };
+
+    return (
+      <span
+        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+          colorMap[approvalStatus.color] ?? colorMap.gray
+        }`}
+      >
+        {approvalStatus.label}
+      </span>
+    );
+  }
+
   return (
     <div
       //   id="registrationFormReport"
@@ -255,61 +276,31 @@ const PurchaseOrderFormReport = ({
 
                   <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
                     <div>Po No</div>
-                    {/* <input
-                                            type="text"
-                                            className="text-black h-5   w-full py-1.5  px-1 focus:outline-none border  border-gray-400 rounded-lg"
-                                            placeholder="Search"
-                                            value={serachDocNo}
-                                            onChange={(e) => {
-                                                setSerachDocNo(e.target.value);
-                                            }}
-                                        /> */}
                   </th>
-                  <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
+                  <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-24">
                     <div>Po Date</div>
-                    {/* <input
-                                            type="text"
-                                            className="text-black h-5   w-full py-1.5  px-1 focus:outline-none border  border-gray-400 rounded-lg"
-                                            placeholder="Search"
-                                            value={searchDate}
-                                            onChange={(e) => {
-                                                setSearchDate(e.target.value);
-                                            }}
-                                        /> */}
                   </th>
-                  <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
+                  <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-28">
                     <div>Delivery Date</div>
                   </th>
-                  <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-40">
+                  <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-24">
                     <div>Po Type</div>
-                    {/* <input
-                                            type="text"
-                                            className="text-black h-5   w-full py-1.5  px-1 focus:outline-none border  border-gray-400 rounded-lg"
-                                            placeholder="Search"
-                                            value={searchDate}
-                                            onChange={(e) => {
-                                                setSearchDate(e.target.value);
-                                            }}
-                                        /> */}
                   </th>
 
                   <th className="w-80  px-3   font-medium text-[13px] text-gray-900  text-center ">
                     <div>Supplier</div>
-                    {/* <input
-                                            type="text"
-                                            className="text-black h-5   w-full py-1.5  px-1 focus:outline-none border  border-gray-400 rounded-lg"
-                                            placeholder="Search"
-                                            value={searchClientName}
-                                            onChange={(e) => {
-                                                setSearchClientName(e.target.value);
-                                            }}
-                                        /> */}
                   </th>
                   <th
-                    className=" px-3 w-64  font-medium text-[13px]  text-gray-900  text-center "
+                    className=" px-3 w-56  font-medium text-[13px]  text-gray-900  text-center "
                     rowSpan={2}
                   >
-                    <div>Status</div>
+                    <div>PO Status</div>
+                  </th>
+                  <th
+                    className=" px-3 w-56  font-medium text-[13px]  text-gray-900  text-center "
+                    rowSpan={2}
+                  >
+                    <div>Approval Status</div>
                   </th>
                   <th
                     className="w-14   px-3  font-medium text-[13px]  text-gray-900  text-center "
@@ -334,7 +325,7 @@ const PurchaseOrderFormReport = ({
                       }}
                     />
                   </th>
-                  <th className="  px-1 font-medium text-[13px]  text-gray-900  text-center w-32">
+                  <th className="  px-1 font-medium text-[13px]  text-gray-900  text-center w-24">
                     <input
                       type="text"
                       className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
@@ -345,7 +336,7 @@ const PurchaseOrderFormReport = ({
                       }}
                     />
                   </th>
-                  <th className="  px-1 font-medium text-[13px]  text-gray-900  text-center w-32">
+                  <th className="  px-1 font-medium text-[13px]  text-gray-900  text-center w-24">
                     <input
                       type="text"
                       className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
@@ -356,7 +347,7 @@ const PurchaseOrderFormReport = ({
                       }}
                     />
                   </th>
-                  <th className="  px-1 font-medium text-[13px]  text-gray-900  text-center w-40">
+                  <th className="  px-1 font-medium text-[13px]  text-gray-900  text-center w-28">
                     <input
                       type="text"
                       className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
@@ -428,6 +419,11 @@ const PurchaseOrderFormReport = ({
                         </td>
                         <td className="py-1.5 text-center">
                           <StatusBadge status={dataObj?.status} />
+                        </td>
+                        <td className="py-1.5 text-center">
+                          <ApprovalBadge
+                            approvalStatus={dataObj?.approvalStatus}
+                          />
                         </td>
                         {rowActions && (
                           <td className="px-2 py-1">

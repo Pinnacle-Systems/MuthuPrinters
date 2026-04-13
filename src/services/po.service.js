@@ -11,6 +11,7 @@ import {
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { poUpdateValidator } from "../validators/po.validator.js";
+import { createApprovalLog } from "../utils/approvalHelper.js";
 // import { getTotalQty } from '../utils/poHelpers/getTotalQuantity.js';
 
 async function getNextDocId(branchId, shortCode, startTime, endTime) {
@@ -83,6 +84,40 @@ function getPOStatus(po) {
   if (totalInwardQty > 0) return "Partially Received";
   if (totalCancelQty > 0) return "Partially Cancelled";
   return "Pending";
+}
+
+function getPOApprovalStatus(log) {
+  // No approval log = not configured
+  if (!log) {
+    return {
+      status: "NOT_CONFIGURED",
+      label: "No Approval",
+      color: "gray",
+      currentLevel: null,
+      levelLogs: [],
+    };
+  }
+
+  const base = {
+    currentLevel: log.currentLevel,
+    levelLogs: log.LevelLogs ?? [],
+  };
+
+  switch (log.status) {
+    case "APPROVED":
+      return { ...base, status: "APPROVED", label: "Approved", color: "green" };
+    case "REJECTED":
+      return { ...base, status: "REJECTED", label: "Rejected", color: "red" };
+    case "PENDING":
+      return {
+        ...base,
+        status: "PENDING",
+        label: `Pending L${log.currentLevel}`,
+        color: "yellow",
+      };
+    default:
+      return { ...base, status: "UNKNOWN", label: "Unknown", color: "gray" };
+  }
 }
 
 async function get(req) {
@@ -212,12 +247,34 @@ async function get(req) {
     },
   });
   data = manualFilterSearchData(searchDate, searchDueDate, searchPoType, data);
+  const poIds = data.map((po) => po.id);
+  const approvalLogs = await prisma.approvalLog.findMany({
+    where: {
+      referencePage: "PURCHASE ORDER",
+      referenceId: { in: poIds },
+    },
+    select: {
+      id: true,
+      referenceId: true,
+      status: true,
+      currentLevel: true,
+      LevelLogs: {
+        select: {
+          action: true,
+          levelNo: true,
+          userId: true,
+          createdAt: true,
+          User: { select: { id: true, username: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+  const approvalLogMap = approvalLogs.reduce((acc, log) => {
+    acc[log.referenceId] = log;
+    return acc;
+  }, {});
   const totalCount = data.length;
-  // data = await getTotalQty(data);
-  // if (pagination) {
-  //     data = data.slice(((pageNumber - 1) * parseInt(dataPerPage)), pageNumber * dataPerPage)
-  // }
-
   let docId = finYearDate
     ? await getNextDocId(
         branchId,
@@ -226,14 +283,17 @@ async function get(req) {
         finYearDate?.endDateEndTime,
       )
     : "";
-  // console.log(data, "data")
   return {
     statusCode: 0,
-    data: data.map((po) => ({
-      ...po,
-      status: getPOStatus(po),
-      childRecord: po._count.inwardItems + po._count.purchaseCancelItems,
-    })),
+    data: data.map((po) => {
+      const log = approvalLogMap[po.id] ?? null;
+      return {
+        ...po,
+        status: getPOStatus(po),
+        approvalStatus: getPOApprovalStatus(log),
+        childRecord: po._count.inwardItems + po._count.purchaseCancelItems,
+      };
+    }),
     nextDocId: docId,
     totalCount,
   };
@@ -303,6 +363,47 @@ async function getOne(id) {
       poId: po.id,
     },
   });
+  const approvalLog = await prisma.approvalLog.findFirst({
+    where: {
+      referenceId: parseInt(id),
+      referencePage: "PURCHASE ORDER",
+    },
+    select: {
+      id: true,
+      status: true,
+      currentLevel: true,
+      ApprovalConfig: {
+        select: {
+          approvalLevels: {
+            orderBy: { levelNo: "asc" },
+            select: {
+              id: true,
+              levelNo: true,
+              approveType: true,
+              condition: true,
+              LevelUsers: {
+                select: {
+                  userId: true,
+                  User: { select: { id: true, username: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+      LevelLogs: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          levelNo: true,
+          action: true,
+          remarks: true,
+          createdAt: true,
+          User: { select: { id: true, username: true } },
+        },
+      },
+    },
+  });
 
   return {
     statusCode: 0,
@@ -310,6 +411,8 @@ async function getOne(id) {
       ...po,
       childRecordInward: childRecordInward,
       childRecordCancel: childRecordCancel,
+      approvalStatus: getPOApprovalStatus(approvalLog), // ✅ simple status badge
+      approvalLog: approvalLog ?? null,
     },
   };
 }
@@ -515,6 +618,8 @@ async function create(body) {
       taxPercent,
       termsId,
       payTermId,
+      pageId,
+      totalNetAmount,
     } = await body;
     let finYearDate = await getFinYearStartTimeEndTime(finYearId);
     const shortCode = finYearDate
@@ -573,6 +678,9 @@ async function create(body) {
         },
       });
       await createPoItems(tx, poItems, data, userId, branchId);
+      await createApprovalLog(tx, branchId, pageId, data.id, "PURCHASE ORDER", {
+        totalNetAmount: totalNetAmount,
+      });
     });
     return { statusCode: 0, data };
   } catch (err) {
