@@ -1,4 +1,4 @@
-import prisma from '../models/getPrisma.js';
+import { prisma } from '../lib/prisma.js';
 import { NoRecordFound } from '../configs/Responses.js';
 import { getDateFromDateTime, getYearShortCodeForFinYear } from '../utils/helper.js';
 import { getTableRecordWithId } from '../utils/helperQueries.js';

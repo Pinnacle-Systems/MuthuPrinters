@@ -1,20 +1,52 @@
 [
   {
+    "id": 1,
     "username": "SUPERADMIN",
     "email": null,
     "password": "$2b$10$QEejMsKS28kWROJKXlUxWe.XEeBxwmTWQt.iJskwQNCB8hI0d4GLe",
-    "active": true
+    "roleId": null,
+    "otp": null,
+    "active": true,
+    "employeeId": null
   },
   {
+    "id": 2,
+    "username": "Ms",
+    "email": "Msexports@gmail.com",
+    "password": "$2b$10$QEejMsKS28kWROJKXlUxWe.XEeBxwmTWQt.iJskwQNCB8hI0d4GLe",
+    "roleId": 1,
+    "otp": null,
+    "active": true,
+    "employeeId": null
+  },
+  {
+    "id": 9,
     "username": "STAMPPA HOADMIN",
     "email": "@GMAIL.COM",
     "password": "$2b$10$q5kOYsbEMQYIh5hmVlqMpuHIfKMy3lYESaseg/spDP4jrDzUbOaNK",
-    "active": true
+    "roleId": null,
+    "otp": null,
+    "active": true,
+    "employeeId": null
   },
   {
-    "username": "TEST LOGINADMIN",
-    "email": "YOGESH@GMAIL.COM",
-    "password": "$2b$10$6GW/QfbPO2TwwPz4HjcfU.Ohz9Dtnbr4jfQlBdY2dkzQJOZUeyX5O",
-    "active": true
+    "id": 10,
+    "username": "ADMIN",
+    "email": null,
+    "password": "$2b$10$sL.mBbpcGjm08Z6JY30Bxe7FXfRwrD8z.jFvsytsWXRdpIM3/bwpG",
+    "roleId": 5,
+    "otp": "VHZP3E",
+    "active": true,
+    "employeeId": 9
+  },
+  {
+    "id": 11,
+    "username": "BANYANADMIN",
+    "email": "AGF@GMAIL.COM",
+    "password": "$2b$10$KO5WMGcdj8onIA7JXdWa0.1mDibZ5Es2eBX4vTorSTAMq0mnbtbVG",
+    "roleId": 7,
+    "otp": null,
+    "active": true,
+    "employeeId": null
   }
 ]

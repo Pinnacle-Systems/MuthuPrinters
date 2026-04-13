@@ -1,7 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 
 import pages from "../seed-data/pages.json" with { type: "json" };
-import pageGroups from "../seed-data/pagesGroup.json" with { type: "json" };
+import pageGroups from "../seed-data/pageGroups.json" with { type: "json" };
 
 export async function seedPages() {
   const pageData = pages;
