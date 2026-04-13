@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import secureLocalStorage from "react-secure-storage";
-import { useGetCountriesQuery } from "../../../redux/services/CountryMasterService";
 import { toast } from "react-toastify";
 import {
   ReusableTable,
@@ -16,7 +15,6 @@ import { useDispatch } from "react-redux";
 import { Check, Power } from "lucide-react";
 import Modal from "../../../UiComponents/Modal";
 import Swal from "sweetalert2";
-import { CountryMaster } from "..";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";

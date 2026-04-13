@@ -7,24 +7,30 @@ import { ToastContainer } from 'react-toastify';
 import store from './redux/store';
 import { Provider } from 'react-redux';
 import { Font } from '@react-pdf/renderer'
+import timesRomanFontUrl from "../fonts/times new roman.ttf";
+import timesBoldFontUrl from "../fonts/times new roman bold.ttf";
 
 Font.register({
   family: 'Times-Roman',
-  src: '/fonts/times new roman.ttf',
+  src: timesRomanFontUrl,
  
   
 })
 Font.register({
   family: 'Times-Bold',
-  src: '/fonts/times new roman bold.ttf',
+  src: timesBoldFontUrl,
 })
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <>
-      <Provider store={store}>
-        <Routing />
-      </Provider>
-      <ToastContainer />
-  </>
+  React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(
+      Provider,
+      { store },
+      React.createElement(Routing),
+    ),
+    React.createElement(ToastContainer),
+  )
 );

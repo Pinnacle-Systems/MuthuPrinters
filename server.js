@@ -83,7 +83,7 @@ const __dirname = dirname(__filename);
 
 app.use(express.json());
 
-const path = __dirname + "/client/build/";
+const path = __dirname + "/client/dist/";
 
 app.use(express.static(path));
 

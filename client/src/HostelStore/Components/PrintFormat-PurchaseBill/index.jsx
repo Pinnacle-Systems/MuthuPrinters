@@ -115,7 +115,7 @@ export default function PrintFormat({ poBillItems = [], innerRef, date, data, id
       {/* Additional Charges Table */}
       <View style={styles.table}>
         {/* Row 1 */}
-        <View style={styles.tableRow}>
+        <View style={styles.chargeTableRow}>
           <View style={styles.tableCol}>
             <Text style={styles.textLabel}>Ice Price</Text>
             <Text style={styles.textValue}>{data.icePrice || 0}</Text>
@@ -135,7 +135,7 @@ export default function PrintFormat({ poBillItems = [], innerRef, date, data, id
         </View>
 
         {/* Row 2 */}
-        <View style={styles.tableRow}>
+        <View style={styles.chargeTableRow}>
           <View style={styles.tableCol}>
             <Text style={styles.textLabel}>Tollgate</Text>
             <Text style={styles.textValue}>{data.tollgate || 0}</Text>
@@ -199,17 +199,6 @@ const styles = StyleSheet.create({
   page: {
     padding: 15,
   },
-  tableRow: {
-    flexDirection: 'row',
-    // Other row styles here
-  },
-  tableRowOdd: {
-    backgroundColor: '#f9f9f9', // Or your desired color for odd rows
-  },
-  tableCell: {
-    padding: 5,
-    // Other cell styles here
-  },
   withBorder: {
     borderRightWidth: 1, // Thickness of the right border
     borderRightColor: '#000', // Color of the right border
@@ -225,7 +214,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  tableRow: {
+  chargeTableRow: {
     flexDirection: 'row',
     justifyContent: 'space-between', // Ensures spacing between columns
     paddingVertical: 5,
@@ -257,20 +246,6 @@ const styles = StyleSheet.create({
   footerce: {
     padding: 20,
   },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  value: {
-    fontSize: 12,
-    color: '#333',
-  },
   highlightRow: {
     backgroundColor: '#f0f9ff', // Light blue background to highlight
     padding: 2,
@@ -282,10 +257,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#007bff', // Blue text color for emphasis
-  },
-  amountInWordsContainer: {
-    marginTop: 20,
-    marginBottom:20
   },
 
   logo: {

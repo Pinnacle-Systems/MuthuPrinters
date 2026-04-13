@@ -3646,8 +3646,8 @@ export const customSelectStyles = {
     ...base,
     fontFamily: "Poppins",
     fontSize: "12px",
-    color: state.isDisabled ? "#6b7280" : "black",
     color: state.isSelected ? "white" : "black",
+    backgroundColor: state.isSelected ? "#047857" : base.backgroundColor,
     padding: "6px 8px",
   }),
   dropdownIndicator: (base) => ({
@@ -3666,10 +3666,6 @@ export const customSelectStyles = {
     ...base,
     maxHeight: 150,
     // overflowY: "auto",
-  }),
-  menu: (base) => ({
-    ...base,
-    zIndex: 9999,
   }),
 };
 

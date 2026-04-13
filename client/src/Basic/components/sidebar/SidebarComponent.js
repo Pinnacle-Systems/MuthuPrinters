@@ -194,13 +194,6 @@ const SidebarComponent = ({
         className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow"
       />
     ),
-    "DEPARTMENT MASTER": (
-      <img
-        src={department}
-        alt="country"
-        className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow"
-      />
-    ),
     "UOM MASTER": (
       <img
         src={uom}
@@ -239,8 +232,6 @@ const SidebarComponent = ({
     // "SALES REPORT":<img src={salesReport} alt="country" className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow" />,
     // "SALES RETURN REPORT":<img src={salesReturnReport} alt="country" className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow" />,
     // "STOCK SUMMARY REPORT":<img src={stockSummary} alt="country" className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow" />,
-
-    "GSM MASTER": <img />,
     "GAUGE MASTER": <img />,
     "HSN MASTER": (
       <img

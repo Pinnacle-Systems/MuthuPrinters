@@ -2,9 +2,8 @@ import { Loader } from "../../../Basic/components"
 import useTaxDetailsHook from "../../../CustomHooks/TaxHookDetails"
 import { discountTypes } from "../../../Utils/DropdownData"
 import numberToWords from "number-to-words";
+import { numberToText } from "number-to-text";
 import { amountInWords, formatAmountIN } from "../../../Utils/helper";
-
-const numberToText = require('number-to-text')
 
 const PoSummary = ({ poItems, readOnly, taxTypeId, isSupplierOutside, discountType, setDiscountType, discountValue, setDiscountValue, remarks, setRemarks }) => {
 
