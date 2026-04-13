@@ -1116,7 +1116,6 @@ async function getPoItems(req) {
       },
     });
   }
-
   totalCount = data.length;
   return { statusCode: 0, data, totalCount };
 }
