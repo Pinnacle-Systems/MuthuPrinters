@@ -63,7 +63,6 @@ export async function createApprovalLog(
   const applicableLevels = config.approvalLevels.filter((lvl) =>
     evaluateCondition(lvl.condition, recordData),
   );
-  console.log("applicableLevels", applicableLevels);
   if (applicableLevels.length === 0) return null; // no levels apply → auto-pass
   const log = await tx.approvalLog.create({
     data: {
@@ -113,7 +112,13 @@ export async function canUserActOnLevel(approvalLog, userId) {
 
 // ── 5. Advance or complete approval ────────────────────────────────────────
 // Call this after a user approves one level.
-async function advanceApproval(tx, approvalLog, applicableLevelNos) {
+async function advanceApproval(
+  tx,
+  approvalLog,
+  applicableLevelNos,
+  userId,
+  remarks,
+) {
   const nextLevel = applicableLevelNos.find(
     (n) => n > approvalLog.currentLevel,
   );
@@ -126,7 +131,12 @@ async function advanceApproval(tx, approvalLog, applicableLevelNos) {
   // All levels done → fully APPROVED
   return await tx.approvalLog.update({
     where: { id: approvalLog.id },
-    data: { status: "APPROVED" },
+    data: {
+      status: "APPROVED",
+      approvedById: parseInt(userId),
+      approvedAt: new Date(),
+      remarks: remarks || null,
+    },
   });
 }
 
@@ -140,11 +150,11 @@ export async function approveRecord(
 ) {
   return await prisma.$transaction(async (tx) => {
     const log = await tx.approvalLog.findFirst({
-      where: { referenceId: +referenceId, referencePage },
+      where: { referenceId: parseInt(referenceId), referencePage },
       include: {
         ApprovalConfig: {
           include: {
-            ApprovalLevels: {
+            approvalLevels: {
               include: { LevelUsers: true },
               orderBy: { levelNo: "asc" },
             },
@@ -161,7 +171,7 @@ export async function approveRecord(
       return { statusCode: 1, message: "Already rejected" };
 
     const config = log.ApprovalConfig;
-    const applicableLevels = config.ApprovalLevels.filter((lvl) =>
+    const applicableLevels = config.approvalLevels.filter((lvl) =>
       evaluateCondition(lvl.condition, recordData),
     );
     const currentLevel = applicableLevels.find(
@@ -172,7 +182,7 @@ export async function approveRecord(
 
     // Auth check
     const isAuthorised = currentLevel.LevelUsers.some(
-      (lu) => lu.userId === +userId,
+      (lu) => lu.userId === parseInt(userId),
     );
     if (!isAuthorised)
       return { statusCode: 1, message: "Not authorised to approve this level" };
@@ -183,7 +193,7 @@ export async function approveRecord(
         approvalLogId: log.id,
         approvalLevelId: currentLevel.id,
         levelNo: currentLevel.levelNo,
-        userId: +userId,
+        userId: parseInt(userId),
         action: "APPROVED",
         remarks: remarks || null,
       },
@@ -195,13 +205,13 @@ export async function approveRecord(
         (ll) =>
           ll.approvalLevelId === currentLevel.id && ll.action === "APPROVED",
       ),
-      { userId: +userId }, // optimistically include current action
+      { userId: parseInt(userId) }, // optimistically include current action
     ];
 
     const uniqueApprovers = new Set(levelApprovals.map((l) => l.userId));
     const requiredCount = currentLevel.LevelUsers.length;
     const levelSatisfied =
-      currentLevel.approverLogic === "OR"
+      currentLevel.approveType === "OR"
         ? uniqueApprovers.size >= 1
         : uniqueApprovers.size >= requiredCount; // AND: all users must approve
 
@@ -229,10 +239,10 @@ export async function rejectRecord(
 ) {
   return await prisma.$transaction(async (tx) => {
     const log = await tx.approvalLog.findFirst({
-      where: { referenceId: +referenceId, referencePage },
+      where: { referenceId: parseInt(referenceId), referencePage },
       include: {
         ApprovalConfig: {
-          include: { ApprovalLevels: { include: { LevelUsers: true } } },
+          include: { approvalLevels: { include: { LevelUsers: true } } },
         },
         LevelLogs: true,
       },
@@ -244,11 +254,11 @@ export async function rejectRecord(
         message: `Cannot reject — status is ${log.status}`,
       };
 
-    const currentLevel = log.ApprovalConfig.ApprovalLevels.find(
+    const currentLevel = log.ApprovalConfig.approvalLevels.find(
       (l) => l.levelNo === log.currentLevel,
     );
     const isAuthorised = currentLevel?.LevelUsers.some(
-      (lu) => lu.userId === +userId,
+      (lu) => lu.userId === parseInt(userId),
     );
     if (!isAuthorised)
       return { statusCode: 1, message: "Not authorised to reject this level" };
@@ -258,7 +268,7 @@ export async function rejectRecord(
         approvalLogId: log.id,
         approvalLevelId: currentLevel.id,
         levelNo: currentLevel.levelNo,
-        userId: +userId,
+        userId: parseInt(userId),
         action: "REJECTED",
         remarks: remarks || null,
       },
@@ -266,7 +276,12 @@ export async function rejectRecord(
 
     const updated = await tx.approvalLog.update({
       where: { id: log.id },
-      data: { status: "REJECTED" },
+      data: {
+        status: "REJECTED",
+        rejectedById: parseInt(userId),
+        rejectedAt: new Date(),
+        remarks: remarks || null,
+      },
     });
     return { statusCode: 0, data: updated };
   });

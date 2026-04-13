@@ -30,6 +30,7 @@ import { useDispatch } from "react-redux";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
+import { useGetUserByIdQuery } from "../../../redux/services/UsersMasterService.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -54,6 +55,7 @@ export default function Form() {
   const { data: branchData } = useGetBranchByIdQuery(branchId, {
     skip: !branchId,
   });
+  const { data: userData } = useGetUserByIdQuery(userId)
   const [
     trigger,
     {
@@ -192,7 +194,7 @@ export default function Form() {
             itemsPerPage={10}
             onCreateInward={handleCreateInward} // ⬅️
             onCreateCancel={handleCreateCancel}
-            // searchStyleId={searchStyleId}
+            userData={userData?.data}
           />
         </div>
       </div>

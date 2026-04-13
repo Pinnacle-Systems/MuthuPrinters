@@ -1,4 +1,3 @@
-import { Prisma } from "../lib/prisma.js";
 import { prisma } from "../lib/prisma.js";
 
 import { NoRecordFound } from "../configs/Responses.js";
@@ -11,9 +10,11 @@ import {
 } from "../utils/helper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
-import { poUpdateValidator } from "../validators/po.validator.js";
-import { createApprovalLog } from "../utils/approvalHelper.js";
-// import { getTotalQty } from '../utils/poHelpers/getTotalQuantity.js';
+import {
+  approveRecord,
+  createApprovalLog,
+  rejectRecord,
+} from "../utils/approvalHelper.js";
 
 async function getNextDocId(branchId, shortCode, startTime, endTime) {
   let lastObject = await prisma.po.findFirst({
@@ -113,8 +114,8 @@ function getPOApprovalStatus(log) {
       return {
         ...base,
         status: "PENDING",
-        label: `Pending L${log.currentLevel}`,
-        color: "yellow",
+        label: `PENDING`,
+        color: "orange",
       };
     default:
       return { ...base, status: "UNKNOWN", label: "Unknown", color: "gray" };
@@ -437,130 +438,6 @@ async function getSearch(req) {
     },
   });
   return { statusCode: 0, data: data };
-}
-
-async function getLotWiseReturnRolls(lotNo, poItemsId) {
-  const alreadyReturnData = await prisma.$queryRaw`
-    SELECT
-      COALESCE(SUM("ReturnLotDetails".qty), 0) AS "lotQty",
-      COALESCE(SUM("ReturnLotDetails"."noOfRolls"), 0) AS "lotRolls"
-    FROM "directReturnItems"
-    LEFT JOIN "DirectReturnOrPoReturn"
-      ON "DirectReturnOrPoReturn".id = "directReturnItems"."directReturnOrPoReturnId"
-    LEFT JOIN "ReturnLotDetails"
-      ON "ReturnLotDetails"."directReturnItemsId" = "directReturnItems".id
-    WHERE "directReturnItems"."poItemsId" = ${poItemsId}
-      AND "DirectReturnOrPoReturn"."poInwardOrDirectInward" = 'PurchaseReturn'
-  `;
-  return alreadyReturnData[0];
-}
-
-async function getStockQty(
-  storeId,
-  itemType,
-  accessoryId,
-  colorId,
-  uomId,
-  designId,
-  gaugeId,
-  loopLengthId,
-  gsmId,
-  sizeId,
-  fabricId,
-  kDiaId,
-  fDiaId,
-  yarnId,
-) {
-  const conditions =
-    itemType == "Accessory"
-      ? Prisma.sql`
-          "colorId" = ${colorId}
-          AND "uomId" = ${uomId}
-          AND "sizeId" = ${sizeId}
-          AND "accessoryId" = ${accessoryId}
-          AND "storeId" = ${storeId}
-        `
-      : Prisma.sql`
-          "yarnId" = ${yarnId}
-          AND "colorId" = ${colorId}
-          AND "uomId" = ${uomId}
-        `;
-
-  const stockData = await prisma.$queryRaw`
-    SELECT
-      COALESCE(SUM(qty), 0) AS "stockQty",
-      COALESCE(SUM("noOfRolls"), 0) AS "stockRolls"
-    FROM "Stock"
-    WHERE ${conditions}
-  `;
-  return stockData[0];
-}
-
-async function getStockQtyByLot(
-  lotNo,
-  storeId,
-  itemType,
-  accessoryId,
-  colorId,
-  uomId,
-  designId,
-  gaugeId,
-  loopLengthId,
-  gsmId,
-  sizeId,
-  fabricId,
-  kDiaId,
-  fDiaId,
-) {
-  const conditions =
-    itemType == "DyedFabric"
-      ? Prisma.sql`
-          "colorId" = ${colorId}
-          AND "uomId" = ${uomId}
-          AND "designId" = ${designId}
-          AND "gaugeId" = ${gaugeId}
-          AND "loopLengthId" = ${loopLengthId}
-          AND "gsmId" = ${gsmId}
-          AND "fabricId" = ${fabricId}
-          AND "kDiaId" = ${kDiaId}
-          AND "fDiaId" = ${fDiaId}
-        `
-      : Prisma.sql`
-          "colorId" = ${colorId}
-          AND "uomId" = ${uomId}
-          AND "sizeId" = ${sizeId}
-          AND "accessoryId" = ${accessoryId}
-        `;
-
-  const stockData = await prisma.$queryRaw`
-    SELECT
-      COALESCE(SUM(qty), 0) AS "stockQty",
-      COALESCE(SUM("noOfRolls"), 0) AS "stockRolls"
-    FROM "Stock"
-    WHERE ${conditions}
-  `;
-  return stockData[0];
-}
-
-function getStockObject(transType, item) {
-  let newItem = {};
-  if (transType === "GreyYarn" || transType === "DyedYarn") {
-    newItem["yarnId"] = parseInt(item["yarnId"]);
-  } else if (transType === "GreyFabric" || transType === "DyedFabric") {
-    newItem["fabricId"] = parseInt(item["fabricId"]);
-    newItem["designId"] = parseInt(item["designId"]);
-    newItem["gaugeId"] = parseInt(item["gaugeId"]);
-    newItem["loopLengthId"] = parseInt(item["loopLengthId"]);
-    newItem["gsmId"] = parseInt(item["gsmId"]);
-    newItem["kDiaId"] = parseInt(item["kDiaId"]);
-    newItem["fDiaId"] = parseInt(item["fDiaId"]);
-  } else if (transType === "Accessory") {
-    newItem["accessoryId"] = parseInt(item["accessoryId"]);
-    newItem["sizeId"] = item["sizeId"] ? parseInt(item["sizeId"]) : undefined;
-  }
-  newItem["uomId"] = parseInt(item["uomId"]);
-  newItem["colorId"] = parseInt(item["colorId"]);
-  return newItem;
 }
 
 export function getPoItemObject(poMaterial, item) {
@@ -1010,7 +887,7 @@ async function getPoItemById(id) {
   const data = await prisma.poItems.findUnique({
     where: { id: parseInt(id) },
     include: {
-      Po: { select: { docId: true, dueDate: true, docDate: true } },
+      Po: { select: { docId: true, dueDate: true, docDate: true, id: true } },
       Uom: { select: { name: true } },
       StyleItem: { select: { name: true } },
       Hsn: { select: { name: true } },
@@ -1134,6 +1011,7 @@ async function getPoItems(req) {
       include: {
         Po: {
           select: {
+            id: true,
             supplierId: true,
             docDate: true,
             dueDate: true,
@@ -1158,6 +1036,43 @@ async function getPoItems(req) {
     data = data?.filter((i) => i.Po.supplierId == supplierId);
 
     data = await getAllDataPoItems(data);
+    // ✅ STEP 1: Get unique PO ids from filtered items
+    const poIds = [...new Set(data.map((item) => item.Po.id))];
+    console.log("poIds", poIds);
+    // ✅ STEP 2: Fetch all approval logs for these POs in ONE query
+    const approvalLogs = await prisma.approvalLog.findMany({
+      where: {
+        referencePage: "PURCHASE ORDER",
+        referenceId: { in: poIds },
+      },
+      select: {
+        referenceId: true,
+        status: true,
+        currentLevel: true,
+      },
+    });
+
+    // ✅ STEP 3: Build map { poId: approvalLog }
+    const approvalLogMap = approvalLogs.reduce((acc, log) => {
+      acc[log.referenceId] = log;
+      return acc;
+    }, {});
+
+    // ✅ STEP 4: Attach approval status to each item
+    data = data.map((item) => {
+      const log = approvalLogMap[item.Po.id] ?? null;
+      return {
+        ...item,
+        approvalStatus: getPOApprovalStatus(log),
+      };
+    });
+
+    // ✅ STEP 5: Filter — keep only APPROVED or NOT_CONFIGURED (no approval setup)
+    data = data.filter(
+      (item) =>
+        item.approvalStatus.status === "APPROVED" ||
+        item.approvalStatus.status === "NOT_CONFIGURED",
+    );
   } else {
     data = await prisma.poItems.findMany({
       where: {
@@ -1166,7 +1081,54 @@ async function getPoItems(req) {
       },
     });
   }
+  totalCount = data.length;
   return { statusCode: 0, data, totalCount };
 }
 
-export { get, getOne, getSearch, create, update, remove, getPoItems };
+async function createApproveStatus(body) {
+  try {
+    const {
+      userId,
+      remarks,
+      recordData,
+      referencePage,
+      referenceId,
+      actionType,
+    } = body;
+    if (!userId) {
+      return res.json({ statusCode: 1, message: "userId is required" });
+    }
+    if (actionType === "REJECT" && !remarks?.trim()) {
+      return { statusCode: 1, message: "Remarks required for rejection" };
+    }
+    let result;
+    if (actionType === "APPROVE") {
+      result = await approveRecord(
+        referenceId,
+        referencePage,
+        userId,
+        remarks,
+        recordData ?? { true: true },
+      );
+    } else {
+      result = await rejectRecord(referenceId, referencePage, userId, remarks);
+    }
+    return { statusCode: 0, data: result };
+  } catch (err) {
+    return {
+      statusCode: 400,
+      message: err.message,
+    };
+  }
+}
+
+export {
+  get,
+  getOne,
+  getSearch,
+  create,
+  update,
+  remove,
+  getPoItems,
+  createApproveStatus,
+};

@@ -50,6 +50,7 @@ const PurchaseInwardItemsSelection = ({
         sizeId: item.sizeId ?? "",
         colorId: item.colorId ?? "",
         itemGroupId: item.itemGroupId ?? "",
+        Po: item?.Po ?? "",
       };
 
       const emptyIndex = newItems.findIndex(

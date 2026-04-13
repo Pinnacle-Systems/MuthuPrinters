@@ -320,8 +320,8 @@ const PoItems = ({
 
       <div ref={gridWrapperRef} className="h-full">
         <TransactionGrid
-        title=""
-        columns={PO_GRID_COLUMNS}
+          title=""
+          columns={PO_GRID_COLUMNS}
           rows={visibleRows}
           footer={footer}
           getRowKey={(item) => `${item.row.quoteVersion || "draft"}-${item.originalIndex}`}

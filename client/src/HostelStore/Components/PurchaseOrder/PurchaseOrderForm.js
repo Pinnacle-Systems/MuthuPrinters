@@ -131,13 +131,11 @@ const PurchaseOrderForm = ({
 
   const [addData] = useAddPoMutation();
   const [updateData] = useUpdatePoMutation();
-
+  const status = singleData?.data?.approvalStatus?.status;
   const syncFormWithDb = useCallback(
     (data) => {
-      setReadOnly(
-        data?.approvalStatus?.status === "APPROVED" ||
-          data?.approvalStatus?.status === "REJECTED",
-      );
+      const status = data?.approvalStatus?.status;
+      setReadOnly(["APPROVED", "PENDING"].includes(status) || readOnly);
       setPoType(data?.poType ? data?.poType : "GENERAL");
       setDocDate(
         data?.docDate
@@ -181,6 +179,7 @@ const PurchaseOrderForm = ({
   useEffect(() => {
     if (id) {
       syncFormWithDb(singleData?.data);
+      console.log(readOnly, "readOnly");
     } else {
       syncFormWithDb(undefined);
     }

@@ -205,6 +205,7 @@ const InwardItems = ({
       inwardQty: "", // ⬅️ user fills this
       price: item.price || "",
       gsmId: item.gsmId || "",
+      Po: item?.Po ?? "",
     }));
 
     // Pad to minimum 4 rows
