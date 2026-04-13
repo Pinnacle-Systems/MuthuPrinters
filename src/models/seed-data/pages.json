@@ -8,6 +8,14 @@
     "pageGroupId": 2
   },
   {
+    "id": 2,
+    "name": "EMPLOYEE MASTER",
+    "link": "EMPLOYEEMASTER",
+    "type": "Masters",
+    "active": true,
+    "pageGroupId": 13
+  },
+  {
     "id": 3,
     "name": "STATE MASTER",
     "link": "STATEMASTER",
@@ -44,7 +52,7 @@
     "name": "FIN YEAR MASTER",
     "link": "FINYEARMASTER",
     "type": "Masters",
-    "active": false,
+    "active": true,
     "pageGroupId": 2
   },
   {
@@ -72,6 +80,14 @@
     "pageGroupId": 14
   },
   {
+    "id": 12,
+    "name": "CUSTOMER / SUPPLIER MASTER",
+    "link": "CUSTOMER / SUPPLIER MASTER",
+    "type": "Masters",
+    "active": true,
+    "pageGroupId": 23
+  },
+  {
     "id": 47,
     "name": "PRODUCT MASTER",
     "link": "PRODUCTMASTER",
@@ -80,12 +96,28 @@
     "pageGroupId": 15
   },
   {
+    "id": 48,
+    "name": "PURCHASE BILL ENTRY",
+    "link": "PURCHASEBILLENTRY",
+    "type": "Transactions",
+    "active": true,
+    "pageGroupId": 11
+  },
+  {
     "id": 49,
     "name": "SALES BILL ENTRY",
     "link": "SALESBILLENTRY",
     "type": "Transactions",
     "active": false,
     "pageGroupId": 12
+  },
+  {
+    "id": 50,
+    "name": "PURCHASE RETURN",
+    "link": "PURCHASE RETURN",
+    "type": "Transactions",
+    "active": true,
+    "pageGroupId": 11
   },
   {
     "id": 51,
@@ -224,12 +256,20 @@
     "pageGroupId": 15
   },
   {
+    "id": 72,
+    "name": "ITEM MASTER",
+    "link": "ITEM MASTER",
+    "type": "Masters",
+    "active": true,
+    "pageGroupId": 15
+  },
+  {
     "id": 73,
     "name": "COLOR MASTER",
     "link": "COLOR MASTER",
     "type": "Masters",
     "active": true,
-    "pageGroupId": 15
+    "pageGroupId": 2
   },
   {
     "id": 74,
@@ -237,7 +277,7 @@
     "link": "TAX TERM MASTER",
     "type": "Masters",
     "active": true,
-    "pageGroupId": 23
+    "pageGroupId": 22
   },
   {
     "id": 75,
@@ -245,7 +285,7 @@
     "link": "TAX TEMPLATE",
     "type": "Masters",
     "active": true,
-    "pageGroupId": 23
+    "pageGroupId": 22
   },
   {
     "id": 76,
@@ -261,7 +301,31 @@
     "link": "HSN MASTER",
     "type": "Masters",
     "active": true,
-    "pageGroupId": 15
+    "pageGroupId": 2
+  },
+  {
+    "id": 79,
+    "name": "BRANCH TYPE MASTER",
+    "link": "BRANCH TYPE MASTER",
+    "type": "Masters",
+    "active": true,
+    "pageGroupId": 2
+  },
+  {
+    "id": 80,
+    "name": "PURCHASE ORDER",
+    "link": "PURCHASE ORDER",
+    "type": "Transactions",
+    "active": true,
+    "pageGroupId": 11
+  },
+  {
+    "id": 81,
+    "name": "TERMS & CONDTIONS MASTER",
+    "link": "TERMS & CONDTIONS MASTER",
+    "type": "Masters",
+    "active": true,
+    "pageGroupId": 23
   },
   {
     "id": 82,
@@ -269,7 +333,7 @@
     "link": "PAY TERM MASTER",
     "type": "Masters",
     "active": true,
-    "pageGroupId": 24
+    "pageGroupId": 23
   },
   {
     "id": 83,
@@ -280,12 +344,28 @@
     "pageGroupId": 2
   },
   {
+    "id": 84,
+    "name": "PURCHASE INWARD",
+    "link": "PURCHASE INWARD",
+    "type": "Transactions",
+    "active": true,
+    "pageGroupId": 11
+  },
+  {
+    "id": 85,
+    "name": "PURCHASE CANCEL",
+    "link": "PURCHASE CANCEL",
+    "type": "Transactions",
+    "active": true,
+    "pageGroupId": 11
+  },
+  {
     "id": 86,
     "name": "ITEM GROUP MASTER",
     "link": "ITEM GROUP MASTER",
     "type": "Masters",
     "active": true,
-    "pageGroupId": 15
+    "pageGroupId": 2
   },
   {
     "id": 87,
@@ -301,7 +381,7 @@
     "link": "SIZE MASTER",
     "type": "Masters",
     "active": true,
-    "pageGroupId": 15
+    "pageGroupId": 2
   },
   {
     "id": 89,
@@ -309,84 +389,20 @@
     "link": "SIZE TEMPLATE MASTER",
     "type": "Masters",
     "active": true,
-    "pageGroupId": 15
-  },
-  {
-    "id": 90,
-    "name": "PURCHASE ORDER",
-    "link": "PURCHASE ORDER",
-    "type": "Transactions",
-    "active": true,
-    "pageGroupId": 11
-  },
-  {
-    "id": 91,
-    "name": "PURCHASE CANCEL",
-    "link": "PURCHASE CANCEL",
-    "type": "Transactions",
-    "active": true,
-    "pageGroupId": 11
-  },
-  {
-    "id": 92,
-    "name": "PURCHASE INWARD",
-    "link": "PURCHASE INWARD",
-    "type": "Transactions",
-    "active": true,
-    "pageGroupId": 11
-  },
-  {
-    "id": 93,
-    "name": "PURCHASE RETURN",
-    "link": "PURCHASE RETURN",
-    "type": "Transactions",
-    "active": true,
-    "pageGroupId": 11
-  },
-  {
-    "id": 94,
-    "name": "PURCHASE BILL ENTRY",
-    "link": "PURCHASE BILL ENTRY",
-    "type": "Transactions",
-    "active": true,
-    "pageGroupId": 11
-  },
-  {
-    "id": 95,
-    "name": "EMPLOYEE MASTER",
-    "link": "EMPLOYEEMASTER",
-    "type": "Masters",
-    "active": true,
-    "pageGroupId": 13
-  },
-  {
-    "id": 97,
-    "name": "ITEM MASTER",
-    "link": "ITEM MASTER",
-    "type": "Masters",
-    "active": true,
-    "pageGroupId": 15
-  },
-  {
-    "id": 98,
-    "name": "BRANCH TYPE MASTER",
-    "link": "BRANCH TYPE MASTER",
-    "type": "Masters",
-    "active": true,
     "pageGroupId": 2
   },
   {
-    "id": 99,
-    "name": "TERMS & CONDTIONS MASTER",
-    "link": "TERMS & CONDTIONS MASTER",
-    "type": "Masters",
+    "id": 90,
+    "name": "PURCHASE REPORT",
+    "link": "PURCHASE REPORT",
+    "type": "Reports",
     "active": true,
-    "pageGroupId": 24
+    "pageGroupId": 17
   },
   {
-    "id": 100,
-    "name": "CUSTOMER / SUPPLIER MASTER",
-    "link": "CUSTOMER / SUPPLIER MASTER",
+    "id": 91,
+    "name": "APPROVAL CONFIGURATION",
+    "link": "APPROVAL CONFIGURATION",
     "type": "Masters",
     "active": true,
     "pageGroupId": 24

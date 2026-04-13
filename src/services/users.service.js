@@ -24,8 +24,6 @@ const xprisma = prisma.$extends({
 
 async function login(req) {
     const { username, password } = req.body
-    //  const returnData = await getSubscriptionDetails()
-    // if (returnData) return returnData
     const data = await xprisma.user.findUnique({
         where: {
             username: username
@@ -56,6 +54,26 @@ async function login(req) {
     };
     const isMatched = await bcrypt.compare(password, data.password);
     if (!isMatched) return { statusCode: 1, message: "Invalid Password" };
+
+    if (data.role?.company?.name) {
+        const subscriptionResult = await getSubscriptionDetails(data.role.company.name);
+
+        if (subscriptionResult?.statusCode === 0 && subscriptionResult.data) {
+            data.role.company.Subscription = [
+                {
+                    ...subscriptionResult.data,
+                    planStatus: findDateInRange(
+                        subscriptionResult.data.validFrom,
+                        subscriptionResult.data.expireAt,
+                        new Date(),
+                    ),
+                },
+            ];
+        } else if (subscriptionResult?.message) {
+            return subscriptionResult;
+        }
+    }
+
     const token = jwt.sign(
         {
             userId: data.id,

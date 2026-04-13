@@ -82,10 +82,18 @@ const Login = () => {
                 );
                 navigate(PRODUCT_ADMIN_HOME_PATH);
               } else {
+                const subscriptions =
+                  result.data.userInfo.role?.company?.Subscription ?? [];
+                const latestSubscription = subscriptions[0] ?? null;
                 const currentPlanActive =
-                  result.data.userInfo.role.company.Subscription.some(
-                    (sub) => sub.planStatus,
-                  );
+                  subscriptions.some((sub) => sub.planStatus);
+
+                if (!latestSubscription?.expireAt) {
+                  toast.error("No subscription is configured for this company.");
+                  setLoading(false);
+                  return;
+                }
+
                 if (currentPlanActive) {
                   secureLocalStorage.setItem(
                     sessionStorage.getItem("sessionId") + "employeeId",
@@ -122,10 +130,7 @@ const Login = () => {
                   secureLocalStorage.setItem(
                     sessionStorage.getItem("sessionId") +
                       "latestActivePlanExpireDate",
-                    new Date(
-                      result.data.userInfo.role.company.Subscription[0]
-                        .expireAt,
-                    ).toDateString(),
+                    new Date(latestSubscription.expireAt).toDateString(),
                   );
                   secureLocalStorage.setItem(
                     sessionStorage.getItem("sessionId") + "userRole",
@@ -133,9 +138,7 @@ const Login = () => {
                   );
                   setIsGlobalOpen(true);
                 } else {
-                  const expireDate = new Date(
-                    result.data.userInfo.role.company.Subscription[0].expireAt,
-                  );
+                  const expireDate = new Date(latestSubscription.expireAt);
                   setPlanExpirationDate(expireDate.toDateString());
                 }
               }

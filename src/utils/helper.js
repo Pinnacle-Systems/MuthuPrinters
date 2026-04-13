@@ -190,7 +190,19 @@ export function generateSubscriptionCode(length = 6) {
 }
 
 export function findDateInRange(fromDate, toDate, checkDate) {
-  if (fromDate <= checkDate && checkDate <= toDate) {
+  const from = new Date(fromDate);
+  const to = new Date(toDate);
+  const check = new Date(checkDate);
+
+  if (
+    Number.isNaN(from.getTime()) ||
+    Number.isNaN(to.getTime()) ||
+    Number.isNaN(check.getTime())
+  ) {
+    return false;
+  }
+
+  if (from <= check && check <= to) {
     return true;
   }
   return false;
