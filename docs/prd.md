@@ -19,7 +19,7 @@ Create reusable ERP transaction primitives inside MuthuPrinters that can later b
 - TransactionGrid
 - Lookup + Autofill
 - Manifest + Config + Merge system
-- Sales Invoice vertical slice
+- Purchase Order vertical slice
 - Adoption path inside the current app
 
 ## Out of scope for v1
@@ -47,6 +47,17 @@ Create reusable ERP transaction primitives inside MuthuPrinters that can later b
 - Standardize one lookup/autofill flow behind a reusable interface.
 - Move one set of transaction calculations and validations behind a module boundary.
 - Demonstrate that a UX change in shared code affects more than one screen.
+- Use Purchase Order as the first proving workflow and Sales Invoice as the next adopter once the runtime seam is stable.
+
+## First slice details
+- Purchase Order is the first transaction primitive slice in this repo.
+- The first milestone focuses on client-side runtime reuse, not backend extraction.
+- The Purchase Order slice must cover:
+  - fixed header/footer with scrollable item body
+  - reusable transaction grid with phantom rows
+  - reusable lookup/autofill contract for item enrichment
+  - save-time validation with explicit warn/block/ignore outcomes
+  - module-owned calculations and validations behind a boundary
 
 ## Non-functional requirements
 - Responsive under 100 rows with no virtualization

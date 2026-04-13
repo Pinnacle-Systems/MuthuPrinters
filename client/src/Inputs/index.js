@@ -28,6 +28,11 @@ import useOutsideClick from "../CustomHooks/handleOutsideClick";
 import Modal from "../UiComponents/Modal";
 import DynamicRenderer from "../HostelStore/Components/DeliveryChallan/DynamicComponent";
 
+const FORM_LABEL_CLASS = "block text-[10px] font-bold text-slate-700 mb-1";
+const FORM_LABEL_MUTED_CLASS = "block text-[10px] font-bold text-gray-600 mb-1";
+const INLINE_LABEL_CLASS = "md:text-start flex text-[10px] font-bold text-slate-700";
+const FORM_INPUT_TEXT_CLASS = "text-[10px]";
+
 export const handleOnChange = (event, setValue, type) => {
   const inputValue = event.target.value;
   const inputSelectionStart = event.target.selectionStart;
@@ -74,7 +79,7 @@ export const MultiSelectDropdown = ({
       className={`m-0.5  md:grid-cols-2 items-center z-0 data  ${className}`}
     >
       <label
-        className={`md:text-start   block text-xs font-bold text-slate-700 mb-1${labelName}`}
+        className={`md:text-start block text-[10px] font-bold text-slate-700 mb-1${labelName}`}
       >
         {name}
       </label>
@@ -162,7 +167,7 @@ export const TextInput = forwardRef(
     return (
       <div className={`mb-2 ${width}`}>
         {name && (
-          <label className="block text-xs font-bold text-slate-700 mb-1">
+          <label className={FORM_LABEL_CLASS}>
             {required ? <RequiredLabel name={label ? label : name} /> : name}
           </label>
         )}
@@ -181,7 +186,7 @@ export const TextInput = forwardRef(
           onFocus={onFocus}
           disabled={disabled}
           tabIndex={tabIndex ?? undefined}
-          className={`w-full px-3 py-1 text-xs border border-gray-300 rounded-lg
+          className={`w-full px-3 py-1 border border-gray-300 rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm
           ${
@@ -189,7 +194,7 @@ export const TextInput = forwardRef(
               ? "bg-gray-100 text-gray-500 cursor-not-allowed"
               : "bg-white hover:border-gray-400"
           }
-          ${className}`}
+          ${FORM_INPUT_TEXT_CLASS} ${className}`}
           autoFocus={autoFocus}
           onKeyDown={onKeyDown}
         />
@@ -211,7 +216,7 @@ export const LongTextInput = ({
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 items-center md:my-0.5 md:px-1 data gap-1">
-      <label className="md:text-start flex">
+      <label className={INLINE_LABEL_CLASS}>
         {required ? <RequiredLabel name={name} /> : `${name}`}
       </label>
       <input
@@ -340,6 +345,9 @@ export const DropdownInput = forwardRef(
     };
 
     const isDisabled = readOnly || disabled;
+    const selectedLabel =
+      options?.find((option) => String(option.value) === String(value))?.show ||
+      "";
 
     useEffect(() => {
       if (ref?.current && openOnFocus) {
@@ -350,10 +358,20 @@ export const DropdownInput = forwardRef(
     return (
       <div className={`mb-2 ${width}`}>
         {name && (
-          <label className="block text-xs font-bold text-slate-700 mb-1">
+          <label className={FORM_LABEL_CLASS}>
             {required ? <RequiredLabel name={name} /> : name}
           </label>
         )}
+        {isDisabled ? (
+          <div
+            title={selectedLabel || "Select"}
+            className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
+            bg-slate-100 text-slate-700 shadow-sm whitespace-nowrap overflow-hidden text-ellipsis
+            ${FORM_INPUT_TEXT_CLASS} ${className}`}
+          >
+            {selectedLabel || "Select"}
+          </div>
+        ) : (
         <select
           ref={ref}
           onBlur={onBlur}
@@ -361,12 +379,12 @@ export const DropdownInput = forwardRef(
           tabIndex={tabIndex ?? undefined}
           defaultValue={defaultValue}
           required={required}
-          className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
+          className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
     focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
     transition-all duration-150 shadow-sm
     ${readOnly || disabled ? "bg-slate-100 cursor-not-allowed" : "bg-white cursor-pointer"}
     ${!value || value === "" ? "text-gray-500" : "text-gray-800"}
-    ${className}
+    ${FORM_INPUT_TEXT_CLASS} ${className}
     appearance-none bg-no-repeat bg-right pr-8`}
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
@@ -398,6 +416,7 @@ export const DropdownInput = forwardRef(
             </option>
           ))}
         </select>
+        )}
       </div>
     );
   },
@@ -521,7 +540,7 @@ export const CurrencyInput = ({
   };
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 items-center md:my-1 md:px-1 data">
-      <label htmlFor="id" className="md:text-start flex">
+      <label htmlFor="id" className={INLINE_LABEL_CLASS}>
         {required ? <RequiredLabel name={name} /> : `${name}`}
       </label>
       <input
@@ -564,7 +583,7 @@ export const DateInput = ({
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 items-center md:my-1 md:px-1 data w-full">
-      <label htmlFor="id" className={`md:text-start flex ${inputHead}`}>
+      <label htmlFor="id" className={`${INLINE_LABEL_CLASS} ${inputHead || ""}`}>
         {required ? <RequiredLabel name={name} /> : `${name}`}
       </label>
       <input
@@ -597,7 +616,7 @@ export const LongDateInput = ({
 }) => {
   return (
     <div className="grid grid-flow-col item-center justify-center gap-12 w-56 items-center md:px-1 data">
-      <label htmlFor="id" className="md:text-start flex">
+      <label htmlFor="id" className={INLINE_LABEL_CLASS}>
         {required ? <RequiredLabel name={name} /> : `${name}`}
       </label>
       <input
@@ -755,11 +774,11 @@ export function ReusableInput({
   return (
     <div className="mb-2">
       {required ? (
-        <span className="text-xs text-slate-700 font-bold mb-1   block">
+        <span className={FORM_LABEL_CLASS}>
           {label} <span className="text-red-500">*</span>
         </span>
       ) : (
-        <span className="text-xs text-slate-700 font-bold mb-1   block">
+        <span className={FORM_LABEL_CLASS}>
           {label}
         </span>
       )}
@@ -775,11 +794,11 @@ export function ReusableInput({
         readOnly={readOnly}
         onKeyDown={onKeyDown}
         disabled={disabled}
-        className={`w-full px-2 py-1 text-xs border border-slate-300 rounded-md 
+        className={`w-full px-2 py-1 border border-slate-300 rounded-md 
           focus:border-indigo-300 focus:outline-none transition-all duration-200
           hover:border-slate-400 ${
             readOnly || disabled ? "bg-slate-100" : ""
-          } ${className}`}
+          } ${FORM_INPUT_TEXT_CLASS} ${className}`}
         autoFocus={autoFocus}
       />
     </div>
@@ -799,7 +818,7 @@ export function ReusableInputNew({
   return (
     <div className="mb-2">
       {label && (
-        <label className="block  font-bold text-slate-700 mb-1 text-xs">
+        <label className={FORM_LABEL_CLASS}>
           {label}
         </label>
       )}
@@ -814,11 +833,11 @@ export function ReusableInputNew({
         placeholder={placeholder}
         readOnly={readOnly}
         disabled={disabled}
-        className={`w-full px-2 py-1 text-xs border border-slate-300 rounded-md 
+        className={`w-full px-2 py-1 border border-slate-300 rounded-md 
           focus:border-indigo-300 focus:outline-none transition-all duration-200
           hover:border-slate-400 ${
             readOnly || disabled ? "bg-slate-100" : ""
-          } ${className}`}
+          } ${FORM_INPUT_TEXT_CLASS} ${className}`}
       />
     </div>
   );
@@ -1337,10 +1356,10 @@ export const DropdownInputNew = forwardRef(
           tabIndex={tabIndex ?? undefined}
           defaultValue={defaultValue}
           required={required}
-          className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
+          className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm ${readOnly || disabled ? "bg-slate-100" : ""}
-          ${className}`}
+          ${FORM_INPUT_TEXT_CLASS} ${className}`}
           value={value}
           onChange={(e) => {
             beforeChange();
@@ -1668,7 +1687,7 @@ export const ToggleButton = forwardRef(
     return (
       <div>
         <div className="">
-          <label className={`block  font-bold text-slate-700 mb-1 text-xs`}>
+          <label className={FORM_LABEL_CLASS}>
             {required ? <RequiredLabel name={name} /> : `${name}`}
           </label>
           <div className="flex items-center mt-1">
@@ -1745,7 +1764,7 @@ export const TextInputNew1 = forwardRef(
     return (
       <div className={`mb-1 ${width}`}>
         {name && (
-          <label className="block text-xs font-bold text-gray-600 mb-1">
+          <label className={FORM_LABEL_MUTED_CLASS}>
             {required ? <RequiredLabel name={label ? label : name} /> : name}
           </label>
         )}
@@ -2786,7 +2805,7 @@ export const DateInputNew = forwardRef(
       <div className="grid-cols-1 md:grid-cols-3 items-center md:px-1 mb-1">
         {name && (
           <label
-            className={`block  font-bold text-slate-700 mb-1 text-xs ${
+            className={`${FORM_LABEL_CLASS} ${
               required
                 ? 'after:content-["*"] after:ml-0.5 after:text-red-500'
                 : ""
@@ -2802,9 +2821,9 @@ export const DateInputNew = forwardRef(
           disabled={disabled}
           required={required}
           min={isToday ? today : undefined}
-          className={`w-full px-2 py-1 text-xs border border-slate-300 rounded-md 
+          className={`w-full px-2 py-1 border border-slate-300 rounded-md 
           focus:border-indigo-300 focus:outline-none transition-all duration-200
-          hover:border-slate-400 ${readOnly || disabled ? "bg-slate-100" : ""} ${className}`}
+          hover:border-slate-400 ${readOnly || disabled ? "bg-slate-100" : ""} ${FORM_INPUT_TEXT_CLASS} ${className}`}
           id="id"
           value={value}
           onFocus={handleFocus}
@@ -2837,7 +2856,7 @@ export const TextAreaNew = ({
   return (
     <div className=" w-full mb-1">
       {name && (
-        <label className="block text-xs font-bold text-gray-600 mb-1">
+        <label className={FORM_LABEL_MUTED_CLASS}>
           {required ? <RequiredLabel name={label ?? name} /> : (label ?? name)}
         </label>
       )}
@@ -2855,7 +2874,7 @@ export const TextAreaNew = ({
         onChange={(e) => handleOnChange(e, setValue)}
         onBlur={onBlur}
         placeholder={name}
-        className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
+        className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm  resize-y
 
@@ -2864,7 +2883,7 @@ export const TextAreaNew = ({
               ? "bg-gray-100 text-gray-500 cursor-not-allowed"
               : "bg-white hover:border-gray-400"
           }
-          ${inputClass}`}
+          ${FORM_INPUT_TEXT_CLASS} ${inputClass}`}
       ></textarea>
     </div>
   );

@@ -4,6 +4,9 @@ import { FaEdit, FaTrash } from "react-icons/fa";
 import Swal from "sweetalert2";
 import Modal from "../UiComponents/Modal";
 
+const FORM_LABEL_CLASS = "block text-[10px] font-bold text-slate-700 mb-1";
+const FORM_INPUT_TEXT_CLASS = "text-[10px]";
+
 const RequiredLabel = ({ name }) => (
   <p>
     {`${name}`}
@@ -41,6 +44,7 @@ export const DropdownWithModal = forwardRef(
       childComponent = null,
       addNewModalWidth = "w-[40%] h-[45%]",
       widthClass,
+      dropdownMinWidth,
     },
     ref,
   ) => {
@@ -91,7 +95,7 @@ export const DropdownWithModal = forwardRef(
         setDropdownPos({
           top: rect.bottom,
           left: rect.left,
-          width: rect.width,
+          width: Math.max(rect.width, dropdownMinWidth || 0),
         });
       }
     }, []);
@@ -159,13 +163,26 @@ export const DropdownWithModal = forwardRef(
       const handleOnChange = (e) => {
         setValue(e.target.value);
       };
+      const selectedLabel =
+        options?.find((option) => String(option.value) === String(value))
+          ?.show || "";
       return (
         <div className={`mb-1 ${width}`}>
           {name && (
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className={FORM_LABEL_CLASS}>
               {required ? <RequiredLabel name={name} /> : name}
             </label>
           )}
+          {isDisabled ? (
+            <div
+              title={selectedLabel || "Select"}
+              className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
+              bg-slate-100 text-slate-700 shadow-sm whitespace-nowrap overflow-hidden text-ellipsis
+              ${FORM_INPUT_TEXT_CLASS} ${className}`}
+            >
+              {selectedLabel || "Select"}
+            </div>
+          ) : (
           <select
             ref={ref}
             onBlur={onBlur}
@@ -173,10 +190,10 @@ export const DropdownWithModal = forwardRef(
             tabIndex={tabIndex ?? undefined}
             defaultValue={defaultValue}
             required={required}
-            className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
+            className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
             focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
             transition-all duration-150 shadow-sm ${readOnly || disabled ? "bg-slate-100" : ""}
-            ${className}`}
+            ${FORM_INPUT_TEXT_CLASS} ${className}`}
             value={value}
             onChange={(e) => {
               beforeChange();
@@ -202,6 +219,7 @@ export const DropdownWithModal = forwardRef(
               </option>
             ))}
           </select>
+          )}
         </div>
       );
     }
@@ -209,6 +227,27 @@ export const DropdownWithModal = forwardRef(
     // Custom dropdown (searchable or has addNewComponent)
     const selectedLabel =
       options?.find((o) => String(o.value) === String(value))?.show || "";
+
+    if (isDisabled) {
+      return (
+        <div className={`mb-1 ${width}`} ref={containerRef}>
+          {name && (
+            <label className={FORM_LABEL_CLASS}>
+              {required ? <RequiredLabel name={name} /> : name}
+            </label>
+          )}
+          <div
+            title={selectedLabel || "Select"}
+            className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
+            bg-slate-100 text-slate-700 shadow-sm whitespace-nowrap overflow-hidden text-ellipsis
+            ${FORM_INPUT_TEXT_CLASS} ${className}`}
+          >
+            {selectedLabel || "Select"}
+          </div>
+        </div>
+      );
+    }
+
     const filtered = (options || []).filter((o) =>
       String(o.show).toLowerCase().includes(search.toLowerCase()),
     );
@@ -261,11 +300,11 @@ export const DropdownWithModal = forwardRef(
 
     return (
       <div className={`mb-1 ${width}`} ref={containerRef}>
-        {name && (
-          <label className="block text-xs font-bold text-slate-700 mb-1">
-            {required ? <RequiredLabel name={name} /> : name}
-          </label>
-        )}
+          {name && (
+            <label className={FORM_LABEL_CLASS}>
+              {required ? <RequiredLabel name={name} /> : name}
+            </label>
+          )}
         <button
           ref={(el) => {
             buttonRef.current = el;
@@ -324,11 +363,11 @@ export const DropdownWithModal = forwardRef(
               setIsOpen(false);
             }
           }}
-          className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg text-left
+          className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg text-left
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm flex justify-between items-center
           ${isDisabled ? "bg-slate-100 cursor-not-allowed" : "bg-white cursor-pointer"}
-          ${className}`}
+          ${FORM_INPUT_TEXT_CLASS} ${className}`}
         >
           <span className={selectedLabel ? "text-gray-800" : "text-gray-500"}>
             {selectedLabel || "Select"}

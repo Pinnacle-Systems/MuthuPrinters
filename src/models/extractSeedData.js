@@ -502,6 +502,30 @@ const supportedEntities = {
     filterRow: () => true,
     cleanup: (row) => row,
   },
+  colors: {
+    tableNames: ["muthuprinters_color", "color"],
+    dumpFile: "muthuprinters_color.sql",
+    columns: ["id", "name", "active"],
+    outputFile: "colors.json",
+    mapRow: (row) => ({
+      ...row,
+      active: Boolean(row.active),
+    }),
+    filterRow: () => true,
+    cleanup: (row) => row,
+  },
+  sizes: {
+    tableNames: ["muthuprinters_size", "size"],
+    dumpFile: "muthuprinters_size.sql",
+    columns: ["id", "name", "active", "companyId"],
+    outputFile: "sizes.json",
+    mapRow: (row) => ({
+      ...row,
+      active: Boolean(row.active),
+    }),
+    filterRow: () => true,
+    cleanup: (row) => row,
+  },
 };
 
 function getUsageText() {

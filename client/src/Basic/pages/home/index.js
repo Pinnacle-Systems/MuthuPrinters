@@ -40,25 +40,29 @@ const Home = () => {
       >
         <LogoutConfirm setLogout={setLogout} />
       </Modal>
-      <div className="flex flex-col h-screen"  style={{ backgroundColor: "#F1F1F0" }}>
-        <div>
+      <div
+        className="flex flex-col h-screen overflow-hidden"
+        style={{ backgroundColor: "#F1F1F0" }}
+      >
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {isSuperAdmin ? (
             <>
               <SuperAdminHeader
                 setIsGlobalOpen={setIsGlobalOpen}
                 setLogout={setLogout}
               />
-              <div className="p-1 bg-gray-100 ">
+              <div className="p-1 bg-gray-100">
                 <ActiveTabList />
               </div>
             </>
           ) : (
             <>
-              <div className="">
+              <div className="shrink-0">
                 <Header profile={profile} setProfile={setProfile} />
               </div>
+              <div className="shrink-0 h-[42px]" />
 
-              <div className="p-2">
+              <div className="p-1 flex-1 min-h-0 overflow-hidden">
                 <ActiveTabList />
               </div>
 
