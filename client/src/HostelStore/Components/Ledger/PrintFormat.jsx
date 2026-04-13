@@ -245,16 +245,6 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
 
-    label: {
-        fontSize: 8,
-        fontWeight: "bold",
-    },
-
-    value: {
-        fontSize: 8,
-        textAlign: "right",
-        flexShrink: 1, // helps long text wrap properly
-    },
 });
 
 const LedgerReportPrintFormat = ({ ledgerData, startDate, endDate, branchData, partyId, partyData }) => {

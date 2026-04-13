@@ -1,10 +1,8 @@
 import React from "react";
 import moment from "moment/moment";
-import { bloodList } from "../../../Utils/DropdownData";
 import { AddNewButton } from "../../../Buttons";
 import { EMPTY_ICON } from "../../../icons";
 import { Loader } from "../../components";
-import { findFromList } from "../../../Utils/helper";
 
 const ACTIVE = (
   <button className="rounded bg-green-500 border border-green-300 p-1 disabled">
@@ -17,9 +15,46 @@ const INACTIVE = (
 
   </button>
 );
-const BLOOD_LIST = bloodList;
 const MOMENT = moment;
-const FIND_FROM_LIST = findFromList;
+
+function getTableValue(expression, dataObj) {
+  switch (expression) {
+    case "dataObj.code":
+      return dataObj.code;
+    case "dataObj.name":
+      return dataObj.name;
+    case "dataObj.username":
+      return dataObj.username;
+    case "dataObj.link":
+      return dataObj.link;
+    case "dataObj.regNo":
+      return dataObj.regNo;
+    case "dataObj.aliasName":
+      return dataObj.aliasName;
+    case "dataObj.branchCode":
+      return dataObj.branchCode;
+    case "dataObj.branchName":
+      return dataObj.branchName;
+    case "dataObj.country.name":
+      return dataObj.country?.name;
+    case "dataObj.state.name":
+      return dataObj.state?.name;
+    case "dataObj?.id":
+      return dataObj?.id;
+    case "dataObj?.role?.name":
+      return dataObj?.role?.name;
+    case "dataObj?.EmployeeCategory?.name":
+      return dataObj?.EmployeeCategory?.name;
+    case "dataObj.active ? ACTIVE : INACTIVE":
+      return dataObj.active ? ACTIVE : INACTIVE;
+    case "MOMENT.utc(dataObj.from).format('DD-MM-YYYY')":
+      return MOMENT.utc(dataObj.from).format("DD-MM-YYYY");
+    case "MOMENT.utc(dataObj.to).format('DD-MM-YYYY')":
+      return MOMENT.utc(dataObj.to).format("DD-MM-YYYY");
+    default:
+      return "";
+  }
+}
 
 const Report = ({
   heading,
@@ -85,8 +120,8 @@ const Report = ({
                         onClick={() => onClick(dataObj.id)}
                       >
                         {tableDataNames.map((data, index) => (
-                          <td key={index} className="table-data" style={{ backgroundColor: data === "dataObj.color" ? eval("dataObj.pantone") : undefined }}>
-                            {eval(data)}
+                          <td key={index} className="table-data" style={{ backgroundColor: data === "dataObj.color" ? dataObj?.pantone : undefined }}>
+                            {getTableValue(data, dataObj)}
                           </td>
                         ))}
                       </tr>

@@ -53,16 +53,14 @@ const MonthlyPurchase = () => {
       return moment.utc(item?.createdAt).format("YYYY-MM-DD") >= startDate && moment.utc(item?.createdAt).format("YYYY-MM-DD") <= endDate;
     });
   };
-  const totalAmount = purData.reduce((total, item) => total + (item.Qty * item.AvgPrice), 0);
+  let totalAmount = purData.reduce((total, item) => total + (item.Qty * item.AvgPrice), 0);
   const totalQty = purData.reduce((total,item) => total + item.Qty,0 )
   const AvgPrice = purData.reduce((total, item) => total + item.price, 0) / purData.length;
- console.log(filterData(),"filterData")
   let filterParty = filterData()?.filter(item => partyList.find(i => parseInt(i.value) === parseInt(item.supplierId)));
   for (const obj of filterParty) {
     totalAmount += obj.netBillValue;
 
   }
-  console.log(partyList,"Party")
   const { data: allData, isProLoading, isProFetching } = useGetProductQuery({ params });
 
 

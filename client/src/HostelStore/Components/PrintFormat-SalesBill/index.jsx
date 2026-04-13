@@ -146,17 +146,6 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
     marginBottom: 5,
   },
-  tableRow: {
-    flexDirection: 'row',
-    // Other row styles here
-  },
-  tableRowOdd: {
-    backgroundColor: '#f9f9f9', // Or your desired color for odd rows
-  },
-  tableCell: {
-    padding: 5,
-    // Other cell styles here
-  },
   withBorder: {
     borderRightWidth: 1, // Thickness of the right border
     borderRightColor: '#000', // Color of the right border
