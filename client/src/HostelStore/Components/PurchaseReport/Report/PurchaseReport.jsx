@@ -45,11 +45,11 @@ export default function PurchaseReport() {
     isError,
   } = useGetPurchaseReportQuery(queryParams);
 
-  const allData = useMemo(
-    () => (apiData?.data || []).map(computePORow),
-    [apiData],
-  );
-  // const allData = useMemo(() => dummyData.map(computePORow), []);
+  // const allData = useMemo(
+  //   () => (apiData?.data || []).map(computePORow),
+  //   [apiData],
+  // );
+  const allData = useMemo(() => dummyData.map(computePORow), []);
   const [colOrder, setColOrder] = useState(() => COLUMNS.map((c) => c.key));
   const [groupKeys, setGroupKeys] = useState([]);
   const [groupDirs, setGroupDirs] = useState({});

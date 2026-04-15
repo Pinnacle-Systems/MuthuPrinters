@@ -387,7 +387,7 @@ export async function approveRecord(
         LevelLogs: true,
       },
     });
-
+    console.log(log, "log");
     if (!log) return { statusCode: 1, message: "Approval log not found" };
     if (log.status === "APPROVED")
       return { statusCode: 1, message: "Already approved" };
@@ -399,6 +399,7 @@ export async function approveRecord(
     const currentLevel = applicableLevels.find(
       (l) => l.levelNo === log.currentLevel,
     );
+    console.log(currentLevel, "currentLevel");
     if (!currentLevel)
       return { statusCode: 1, message: "Current level not found" };
 

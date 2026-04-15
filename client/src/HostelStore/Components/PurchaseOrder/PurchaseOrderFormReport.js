@@ -120,6 +120,20 @@ const PurchaseOrderFormReport = ({
   }, [previewPOId, allData, dispatch]);
 
   useEffect(() => {
+    if (!previewPOId) return;
+    if (!allData?.data?.length) return;
+
+    const searchDocId = findFromList(previewPOId, allData.data, "docId");
+
+    if (searchDocId) {
+      setSerachDocNo(searchDocId);
+
+      // clear AFTER applying filter
+      dispatch(push({ name: "PURCHASE ORDER", previewId: null }));
+    }
+  }, [previewPOId, allData, dispatch]);
+
+  useEffect(() => {
     if (allData?.totalCount) {
       setTotalCount(allData?.totalCount);
     }
