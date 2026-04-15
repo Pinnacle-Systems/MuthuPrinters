@@ -144,7 +144,7 @@ const PurchaseItemsSelection = ({
                     {/* SELECT ALL */}
                     <th className="px-2 py-1 w-10 border border-gray-300">
                       <div className="flex flex-col items-center">
-                        <span className="text-[10px] font-medium mb-[2px]">
+                        <span className="text-[11px] font-medium mb-[2px]">
                           Select
                         </span>
                         <input

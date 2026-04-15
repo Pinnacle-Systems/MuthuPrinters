@@ -4,8 +4,8 @@ import { FaEdit, FaTrash } from "react-icons/fa";
 import Swal from "sweetalert2";
 import Modal from "../UiComponents/Modal";
 
-const FORM_LABEL_CLASS = "block text-[10px] font-bold text-slate-700 mb-1";
-const FORM_INPUT_TEXT_CLASS = "text-[10px]";
+const FORM_LABEL_CLASS = "block text-[11px] font-bold text-slate-700 mb-1";
+const FORM_INPUT_TEXT_CLASS = "text-[11px]";
 
 const RequiredLabel = ({ name }) => (
   <p>
@@ -56,7 +56,8 @@ export const DropdownWithModal = forwardRef(
     const [dropdownPos, setDropdownPos] = useState({
       top: 0,
       left: 0,
-      width: 0,
+      minWidth: 0,
+      maxWidth: 0,
     });
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const containerRef = useRef(null);
@@ -92,13 +93,18 @@ export const DropdownWithModal = forwardRef(
     const updateDropdownPos = useCallback(() => {
       if (buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect();
+        const viewportPadding = 12;
         setDropdownPos({
           top: rect.bottom,
           left: rect.left,
-          width: Math.max(rect.width, dropdownMinWidth || 0),
+          minWidth: Math.max(rect.width, dropdownMinWidth || 0),
+          maxWidth: Math.max(
+            Math.max(rect.width, dropdownMinWidth || 0),
+            window.innerWidth - rect.left - viewportPadding,
+          ),
         });
       }
-    }, []);
+    }, [dropdownMinWidth]);
 
     // Close on outside click (searchable mode)
     useEffect(() => {
@@ -176,49 +182,49 @@ export const DropdownWithModal = forwardRef(
           {isDisabled ? (
             <div
               title={selectedLabel || "Select"}
-              className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
+              className={`flex h-7 w-full items-center px-3 py-0 border border-gray-300 rounded-lg
               bg-slate-100 text-slate-700 shadow-sm whitespace-nowrap overflow-hidden text-ellipsis
               ${FORM_INPUT_TEXT_CLASS} ${className}`}
             >
               {selectedLabel || "Select"}
             </div>
           ) : (
-          <select
-            ref={ref}
-            onBlur={onBlur}
-            autoFocus={autoFocus}
-            tabIndex={tabIndex ?? undefined}
-            defaultValue={defaultValue}
-            required={required}
-            className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
+            <select
+              ref={ref}
+              onBlur={onBlur}
+              autoFocus={autoFocus}
+              tabIndex={tabIndex ?? undefined}
+              defaultValue={defaultValue}
+              required={required}
+              className={`h-7 w-full px-3 py-0 border border-gray-300 rounded-lg
             focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
             transition-all duration-150 shadow-sm ${readOnly || disabled ? "bg-slate-100" : ""}
             ${FORM_INPUT_TEXT_CLASS} ${className}`}
-            value={value}
-            onChange={(e) => {
-              beforeChange();
-              handleOnChange(e);
-            }}
-            onFocus={(e) => {
-              if (openOnFocus) {
-                e.target.click();
-              }
-            }}
-            disabled={isDisabled}
-          >
-            <option value="" hidden={!clear} className="text-gray-800">
-              Select
-            </option>
-            {options?.map((option, index) => (
-              <option
-                key={index}
-                value={option.value}
-                className="text-xs py-1 text-gray-800"
-              >
-                {option.show}
+              value={value}
+              onChange={(e) => {
+                beforeChange();
+                handleOnChange(e);
+              }}
+              onFocus={(e) => {
+                if (openOnFocus) {
+                  e.target.click();
+                }
+              }}
+              disabled={isDisabled}
+            >
+              <option value="" hidden={!clear} className="text-gray-800">
+                Select
               </option>
-            ))}
-          </select>
+              {options?.map((option, index) => (
+                <option
+                  key={index}
+                  value={option.value}
+                  className="text-xs py-1 text-gray-800"
+                >
+                  {option.show}
+                </option>
+              ))}
+            </select>
           )}
         </div>
       );
@@ -238,7 +244,7 @@ export const DropdownWithModal = forwardRef(
           )}
           <div
             title={selectedLabel || "Select"}
-            className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
+            className={`flex h-7 w-full items-center px-3 py-0 border border-gray-300 rounded-lg
             bg-slate-100 text-slate-700 shadow-sm whitespace-nowrap overflow-hidden text-ellipsis
             ${FORM_INPUT_TEXT_CLASS} ${className}`}
           >
@@ -300,11 +306,11 @@ export const DropdownWithModal = forwardRef(
 
     return (
       <div className={`mb-1 ${width}`} ref={containerRef}>
-          {name && (
-            <label className={FORM_LABEL_CLASS}>
-              {required ? <RequiredLabel name={name} /> : name}
-            </label>
-          )}
+        {name && (
+          <label className={FORM_LABEL_CLASS}>
+            {required ? <RequiredLabel name={name} /> : name}
+          </label>
+        )}
         <button
           ref={(el) => {
             buttonRef.current = el;
@@ -363,9 +369,9 @@ export const DropdownWithModal = forwardRef(
               setIsOpen(false);
             }
           }}
-          className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg text-left
+          className={`flex h-7 w-full items-center justify-between border border-gray-300 rounded-lg px-3 py-0 text-left
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
-          transition-all duration-150 shadow-sm flex justify-between items-center
+          transition-all duration-150 shadow-sm
           ${isDisabled ? "bg-slate-100 cursor-not-allowed" : "bg-white cursor-pointer"}
           ${FORM_INPUT_TEXT_CLASS} ${className}`}
         >
@@ -395,7 +401,9 @@ export const DropdownWithModal = forwardRef(
                 position: "fixed",
                 top: dropdownPos.top,
                 left: dropdownPos.left,
-                width: dropdownPos.width,
+                minWidth: dropdownPos.minWidth,
+                width: "max-content",
+                maxWidth: dropdownPos.maxWidth,
                 zIndex: 9999,
               }}
               className="bg-white border border-gray-300 rounded-lg shadow-lg"
@@ -466,7 +474,7 @@ export const DropdownWithModal = forwardRef(
                     >
                       <span
                         onClick={() => handleSelect(option.value)}
-                        className="flex-1 truncate"
+                        className="flex-1 pr-2 whitespace-nowrap"
                       >
                         {option.show}
                       </span>

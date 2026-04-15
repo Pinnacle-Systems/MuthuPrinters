@@ -1,4 +1,4 @@
-import { Prisma } from '#prisma-client'
+import { Prisma } from '../lib/prisma.js'
 
 import { verifyOtp as _verifyOtp, sendOtp as _sendOtp, get as _get, login as _login, getOne as _getOne, getSearch as _getSearch, create as _create, update as _update, remove as _remove } from '../services/users.service.js';
 

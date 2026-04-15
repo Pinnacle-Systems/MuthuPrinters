@@ -1,3 +1,4 @@
+import { Prisma } from "../lib/prisma.js";
 import { prisma } from "../lib/prisma.js";
 
 import { NoRecordFound } from '../configs/Responses.js';
@@ -62,58 +63,60 @@ async function get(req) {
     const productListData = productList? JSON.parse(productList) : []
    const { startTime: startDateStartTime, endTime: startDateEndTime } = getDateTimeRange(fromDate);
    const { startTime: endDateStartTime, endTime: endDateEndTime } = getDateTimeRange(toDate);
-   const PartyData = partyListData.map(party => `'${party}'`).join(", ");
-   const ProductData = productListData.map(product => `'${product}'`).join(", ");
-   console.log(PartyData,"partyData")
-   console.log(ProductData,"ProductData")
+   console.log(partyListData,"partyData")
+   console.log(productListData,"ProductData")
    if (purchaseReport) {
-    const pData = PartyData.length > 0 ? ` AND party.name IN (${PartyData})` : '';  
-    const prodData = ProductData.length > 0 ? ` AND product.name IN (${ProductData})` : '';
-    
-    let dateFilter;
+    const pData = partyListData.length > 0
+        ? Prisma.sql`AND party."name" IN (${Prisma.join(partyListData)})`
+        : Prisma.empty;
+    const prodData = productListData.length > 0
+        ? Prisma.sql`AND product."name" IN (${Prisma.join(productListData)})`
+        : Prisma.empty;
+
+    let startDate;
+    let endDate;
     const today = new Date().toISOString().slice(0, 10); 
     
     if (startDateStartTime && endDateEndTime) {
-        const startDate = getDateFromDateTimeDB(startDateStartTime);
-        const endDate = getDateFromDateTimeDB(endDateEndTime);
+        startDate = getDateFromDateTimeDB(startDateStartTime);
+        endDate = getDateFromDateTimeDB(endDateEndTime);
         
       
         if (startDate && endDate && !isNaN(Date.parse(startDate)) && !isNaN(Date.parse(endDate))) {
-            dateFilter = `DATE(purchaseBill.createdAt) BETWEEN '${startDate}' AND '${endDate}'`;
+            startDate = startDate;
+            endDate = endDate;
         } else {
-            dateFilter = `DATE(purchaseBill.createdAt) = '${today}'`;
+            startDate = today;
+            endDate = today;
         }
     } else {
-        dateFilter = `DATE(purchaseBill.createdAt) = '${today}'`;
+        startDate = today;
+        endDate = today;
     }
 
-    const sql = `
+    data = await prisma.$queryRaw`
         SELECT
-            DATE(purchaseBill.createdAt) AS Date,
-            party.name AS Party,
-            product.name AS Product,
-            SUM(poBillItems.qty) AS Qty,
-            FORMAT(AVG(poBillItems.price), 2) AS AvgPrice,
-            SUM(poBillItems.qty) * FORMAT(AVG(poBillItems.price), 2) AS TotalPrice
+            DATE("purchaseBill"."createdAt") AS "Date",
+            party."name" AS "Party",
+            product."name" AS "Product",
+            SUM("poBillItems"."qty") AS "Qty",
+            ROUND(AVG("poBillItems"."price")::numeric, 2) AS "AvgPrice",
+            SUM("poBillItems"."qty") * ROUND(AVG("poBillItems"."price")::numeric, 2) AS "TotalPrice"
         FROM
-            poBillItems
+            "PoBillItems" "poBillItems"
         JOIN
-            product ON poBillItems.productId = product.id
+            "Product" product ON "poBillItems"."productId" = product.id
         JOIN
-            purchaseBill ON purchaseBill.id = poBillItems.purchaseBillId
+            "PurchaseBill" "purchaseBill" ON "purchaseBill".id = "poBillItems"."purchaseBillId"
         JOIN
-            party ON party.id = purchaseBill.supplierId
+            "Party" party ON party.id = "purchaseBill"."supplierId"
         WHERE
-            ${dateFilter}
+            DATE("purchaseBill"."createdAt") BETWEEN ${startDate} AND ${endDate}
             ${pData}
             ${prodData}
         GROUP BY
-            DATE(purchaseBill.createdAt), party.name, product.name
+            DATE("purchaseBill"."createdAt"), party."name", product."name"
     `;
-    
-    console.log(sql);
-
-    data = await prisma.$queryRawUnsafe(sql);
     return { statusCode: 0, data };
 }
 
@@ -195,11 +198,11 @@ async function getOne(id) {
     if (!data) return NoRecordFound("purchaseBill");
     data["PoBillItems"] = await (async function getReturnQty() {
         const promises = data["PoBillItems"].map(async (i) => {
-            const sql = `
-            SELECT COALESCE(SUM(QTY),0) as returnQty FROM PoReturnItems WHERE purchaseBillItemsId=${i.id}
-            `
-            console.log(sql);
-            let returnQty = await prisma.$queryRawUnsafe(sql);
+            const returnQty = await prisma.$queryRaw`
+                SELECT COALESCE(SUM("qty"), 0) AS "returnQty"
+                FROM "PoReturnItems"
+                WHERE "purchaseBillItemsId" = ${i.id}
+            `;
             i["alreadyReturnQty"] = returnQty[0]['returnQty']
             return i
         })

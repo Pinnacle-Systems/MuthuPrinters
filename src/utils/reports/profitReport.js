@@ -3,55 +3,55 @@ import { prisma } from '../../lib/prisma.js'
 
 export default async function profitReport(startDateStartTime, endDateEndTime) {
     return await prisma.$queryRaw`
-   select Product, Qty, FORMAT(purchaseAmount,2) as 'Purchase Amount', FORMAT(saleAmount,2) as 'Sale Amount', FORMAT(saleAmount - purchaseAmount, 2) as Profit from (SELECT 
-    product.name AS Product,
-    sum(qty) as Qty,
-    sum(salesbillitemsout.price * qty) as saleAmount,
+   select "Product", "Qty", ROUND("purchaseAmount"::numeric, 2) as "Purchase Amount", ROUND("saleAmount"::numeric, 2) as "Sale Amount", ROUND(("saleAmount" - "purchaseAmount")::numeric, 2) as "Profit" from (SELECT 
+    product."name" AS "Product",
+    sum(salesbillitemsout."qty") as "Qty",
+    sum(salesbillitemsout."price" * salesbillitemsout."qty") as "saleAmount",
     ROUND((SELECT 
-                    SUM(e.purchaseAmount)
+                    SUM(e."purchaseAmount")
                 FROM
                     (SELECT 
-                        d.product,
-                            d.purchaseRate,
-                            d.qty,
-                            d.purchaseRate * qty AS purchaseAmount
+                        d."product",
+                            d."purchaseRate",
+                            d."qty",
+                            d."purchaseRate" * d."qty" AS "purchaseAmount"
                     FROM
                         (SELECT 
-                        product.name AS product,
-                            qty,
+                        product."name" AS "product",
+                            salesbillitems."qty",
                             (SELECT 
-                                    SUM(e.amount) / SUM(e.qty)
+                                    SUM(e."amount") / NULLIF(SUM(e."qty"), 0)
                                 FROM
                                     (SELECT 
-                                    pobillitems.price,
-                                        pobillitems.qty,
-                                        pobillitems.price * pobillitems.qty AS amount 
+                                    pobillitems."price",
+                                        pobillitems."qty",
+                                        pobillitems."price" * pobillitems."qty" AS "amount" 
                                 FROM
-                                    pobillitems
-                                JOIN purchasebill pb ON pb.id = pobillitems.purchaseBillId
+                                    "PoBillItems" pobillitems
+                                JOIN "PurchaseBill" pb ON pb.id = pobillitems."purchaseBillId"
                                 WHERE
-                                    pb.createdAt < sb.createdAt
-                                        AND pobillitems.productId = salesbillitems.productId
+                                    pb."createdAt" < sb."createdAt"
+                                        AND pobillitems."productId" = salesbillitems."productId"
                                       ) e) AS purchaseRate
                             
                     FROM
-                        salesbillitems
-                    JOIN salesbill sb ON sb.id = salesbillitems.salesbillid
-                    LEFT JOIN product ON product.id = salesbillitems.productId
+                        "SalesBillItems" salesbillitems
+                    JOIN "SalesBill" sb ON sb.id = salesbillitems."salesBillId"
+                    LEFT JOIN "Product" product ON product.id = salesbillitems."productId"
                     WHERE
-                        salesbillitems.productId = salesbillitemsout.productId AND isOn = '1'
+                        salesbillitems."productId" = salesbillitemsout."productId" AND sb."isOn" = true
                             AND
-                sb.createdAt BETWEEN ${startDateStartTime} AND ${endDateEndTime}
+                sb."createdAt" BETWEEN ${startDateStartTime} AND ${endDateEndTime}
                             ) d) e),
             2) AS purchaseAmount
 FROM
-    salesbillitems salesbillitemsout
+    "SalesBillItems" salesbillitemsout
         LEFT JOIN
-    product ON product.id = salesbillitemsout.productId
+    "Product" product ON product.id = salesbillitemsout."productId"
     LEFT JOIN
-    SalesBill salebill ON salebill.id = salesbillitemsout.salesBillId
-    WHERE salebill.createdAt BETWEEN ${startDateStartTime} AND ${endDateEndTime} AND isOn = '1'
-GROUP BY salesbillitemsout.productId , product.name )f
-    ORDER BY Product
+    "SalesBill" salebill ON salebill.id = salesbillitemsout."salesBillId"
+    WHERE salebill."createdAt" BETWEEN ${startDateStartTime} AND ${endDateEndTime} AND salebill."isOn" = true
+GROUP BY salesbillitemsout."productId" , product."name" )f
+    ORDER BY "Product"
     `
 }

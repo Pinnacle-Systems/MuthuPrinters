@@ -133,11 +133,11 @@ async function getOne(id) {
 
     data["SalesReturnItems"] = await (async function getReturnQty() {
         const promises = data["SalesReturnItems"].map(async (i) => {
-            const sql = `
-            SELECT COALESCE(SUM(QTY),0) as qty FROM SalesReturnItems WHERE salesBillItemsId=${i.salesBillItemsId}
-            `
-            console.log(sql);
-            let returnQty = await prisma.$queryRawUnsafe(sql);
+            const returnQty = await prisma.$queryRaw`
+                SELECT COALESCE(SUM("qty"), 0) AS "qty"
+                FROM "SalesReturnItems"
+                WHERE "salesBillItemsId" = ${i.salesBillItemsId}
+            `;
             i["alreadyReturnQty"] = returnQty[0]['qty']
             return i
         })

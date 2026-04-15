@@ -121,7 +121,7 @@ function LinkedBadge({ poDocId, color = "green" }) {
   }[color];
   return (
     <span
-      className={`inline-block px-2 py-0.5 rounded-full text-[10px] border ${cls}`}
+      className={`inline-block px-2 py-0.5 rounded-full text-[11px] border ${cls}`}
     >
       Linked to {poDocId}
     </span>
@@ -261,7 +261,7 @@ function POItemsTab({ row }) {
         {formatQtyByUOM(bal, uomName)}
       </span>,
       !isDone && pend > 0 ? (
-        <span className="px-2 py-0.5 bg-blue-50 text-blue-800 rounded-full text-[10px] font-medium">
+        <span className="px-2 py-0.5 bg-blue-50 text-blue-800 rounded-full text-[11px] font-medium">
           {formatQtyByUOM(pend, uomName)} pending
         </span>
       ) : (
@@ -328,7 +328,7 @@ function InwardTab({ row }) {
         {/* Show receipt type badge — important for Against Invoice */}
         {doc.receiptType && (
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
               doc.receiptType?.toLowerCase() === "against invoice"
                 ? "bg-purple-50 text-purple-700 border-purple-200"
                 : "bg-gray-100 text-gray-500 border-gray-200"

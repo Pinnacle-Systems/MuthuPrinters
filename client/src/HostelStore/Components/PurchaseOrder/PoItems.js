@@ -10,10 +10,16 @@ import {
   LookupField,
   TransactionGrid,
 } from "../../../Basic/components/Reuseable";
+import {
+  focusFirstEditableFieldInRow,
+  focusNextGridField,
+} from "../../../Basic/components/Reuseable/gridNavigation";
 import { VIEW } from "../../../icons";
+import { findFromList } from "../../../Utils/helper";
 import {
   createPurchaseOrderRow,
   createPurchaseOrderRows,
+  DEFAULT_PURCHASE_ORDER_ROWS,
   resolveStyleItemPatch,
 } from "./purchaseOrder.module";
 
@@ -21,7 +27,7 @@ const PO_GRID_COLUMNS = [
   {
     key: "serial",
     label: "S.No",
-    className: "w-12 px-4 py-2 text-center font-medium text-[12px]",
+    className: "w-12 px-4 py-2 text-center font-medium text-[11px]",
   },
   {
     key: "styleItemId",
@@ -30,27 +36,22 @@ const PO_GRID_COLUMNS = [
         Description of Goods<span className="text-red-500">*</span>
       </>
     ),
-    className: "w-80 px-2 py-2 text-center font-medium text-[12px]",
-  },
-  {
-    key: "itemGroupId",
-    label: "Item Group",
-    className: "w-36 px-4 py-2 text-center font-medium text-[12px]",
+    className: "w-80 px-2 py-2 text-center font-medium text-[11px]",
   },
   {
     key: "sizeId",
     label: "Size",
-    className: "w-20 px-4 py-2 text-center font-medium text-[12px]",
+    className: "w-20 px-4 py-2 text-center font-medium text-[11px]",
   },
   {
     key: "colorId",
     label: "Color",
-    className: "w-32 px-4 py-2 text-center font-medium text-[12px]",
+    className: "w-32 px-4 py-2 text-center font-medium text-[11px]",
   },
   {
     key: "gsmId",
     label: "GSM",
-    className: "w-20 px-4 py-2 text-center font-medium text-[12px]",
+    className: "w-20 px-4 py-2 text-center font-medium text-[11px]",
   },
   {
     key: "uomId",
@@ -59,7 +60,7 @@ const PO_GRID_COLUMNS = [
         UOM<span className="text-red-500">*</span>
       </>
     ),
-    className: "w-20 px-4 py-2 text-center font-medium text-[12px]",
+    className: "w-20 px-4 py-2 text-center font-medium text-[11px]",
   },
   {
     key: "qty",
@@ -68,7 +69,7 @@ const PO_GRID_COLUMNS = [
         Quantity<span className="text-red-500">*</span>
       </>
     ),
-    className: "w-24 px-4 py-2 text-center font-medium text-[12px]",
+    className: "w-24 px-4 py-2 text-center font-medium text-[11px]",
   },
   {
     key: "price",
@@ -77,22 +78,17 @@ const PO_GRID_COLUMNS = [
         Price<span className="text-red-500">*</span>
       </>
     ),
-    className: "w-24 px-1 py-2 text-center font-medium text-[12px]",
+    className: "w-24 px-1 py-2 text-center font-medium text-[11px]",
   },
   {
     key: "gross",
     label: "Gross",
-    className: "w-28 px-1 py-2 text-center font-medium text-[12px]",
+    className: "w-28 px-1 py-2 text-center font-medium text-[11px]",
   },
   {
     key: "tax",
     label: "Tax",
-    className: "w-20 px-1 py-2 text-center font-medium text-[12px]",
-  },
-  {
-    key: "actions",
-    label: "Actions",
-    className: "w-20 px-1 py-2 text-center font-medium text-[12px]",
+    className: "w-20 px-1 py-2 text-center font-medium text-[11px]",
   },
 ];
 
@@ -113,10 +109,10 @@ const PoItems = ({
   termsRef,
   gsmList,
 }) => {
+  const gridWrapperRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
   const [focusedField, setFocusedField] = useState(null);
-  const actionRefs = useRef([]);
   const [triggerGetStyleItem] = useLazyGetStyleItemMasterByIdQuery();
 
   const isVisibleRow = (row) =>
@@ -167,7 +163,12 @@ const PoItems = ({
   };
 
   const handleDeleteAllRows = () => {
-    setPoItems(createPurchaseOrderRows(4, id ? (isNewVersion ? "New" : quoteVersion) : quoteVersion));
+    setPoItems(
+      createPurchaseOrderRows(
+        DEFAULT_PURCHASE_ORDER_ROWS,
+        id ? (isNewVersion ? "New" : quoteVersion) : quoteVersion,
+      ),
+    );
   };
 
   const handleRightClick = (event, rowIndex) => {
@@ -192,7 +193,7 @@ const PoItems = ({
 
   useEffect(() => {
     setPoItems((prev) => {
-      const requiredRows = 4;
+      const requiredRows = DEFAULT_PURCHASE_ORDER_ROWS;
 
       if (!id) {
         if (prev.length >= requiredRows) return prev;
@@ -228,15 +229,49 @@ const PoItems = ({
     ]);
   }, [isNewVersion, quoteVersion, setPoItems]);
 
-  const focusActionCell = (index) => {
-    setTimeout(() => {
-      actionRefs.current[index]?.focus();
-    }, 200);
+  const focusNextRowFromTaxModal = (originalRowIndex) => {
+    const visibleRowIndex = visibleRows.findIndex(
+      (item) => item.originalIndex === originalRowIndex,
+    );
+
+    const focusVisibleRow = (targetVisibleRowIndex) => {
+      const tableBody = gridWrapperRef.current?.querySelector("tbody");
+      const targetRow = tableBody?.querySelectorAll("tr")?.[targetVisibleRowIndex];
+
+      if (targetRow) {
+        focusFirstEditableFieldInRow(targetRow);
+      }
+    };
+
+    if (visibleRowIndex >= 0 && visibleRowIndex < visibleRows.length - 1) {
+      window.setTimeout(() => {
+        focusVisibleRow(visibleRowIndex + 1);
+      }, 80);
+      return;
+    }
+
+    addRow();
+
+    window.setTimeout(() => {
+      focusVisibleRow(visibleRows.length);
+    }, 120);
+  };
+
+  const handleGridEnterNavigation = (event) => {
+    if (event.key !== "Enter") return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    focusNextGridField({
+      currentElement: event.target,
+      onReachGridEnd: addRow,
+    });
   };
 
   const footer = (
     <tr className="bg-gray-50 h-6 font-medium text-gray-800 text-[12px]">
-      <td className="text-right px-4 border border-gray-300 font-medium" colSpan={7}>
+      <td className="text-right px-4 border border-gray-300 font-medium" colSpan={6}>
         Total
       </td>
       <td className="text-right border border-gray-300 px-1 font-medium">
@@ -258,7 +293,7 @@ const PoItems = ({
           }, 0)
           .toFixed(2)}
       </td>
-      <td className="border border-gray-300" colSpan={2}></td>
+      <td className="border border-gray-300"></td>
     </tr>
   );
 
@@ -267,9 +302,7 @@ const PoItems = ({
       <Modal
         isOpen={Number.isInteger(currentSelectedIndex)}
         onClose={() => {
-          const index = currentSelectedIndex;
           setCurrentSelectedIndex("");
-          focusActionCell(index);
         }}
       >
         <TaxDetailsFullTemplate
@@ -281,26 +314,29 @@ const PoItems = ({
           handleInputChange={handleInputChange}
           id={id}
           isNewVersion={isNewVersion}
-          onCloseFocus={focusActionCell}
+          onCloseFocus={focusNextRowFromTaxModal}
         />
       </Modal>
 
-      <TransactionGrid
-        title="List Of Items"
+      <div ref={gridWrapperRef} className="h-full">
+        <TransactionGrid
+        title=""
         columns={PO_GRID_COLUMNS}
-        rows={visibleRows}
-        footer={footer}
-        getRowKey={(item) => `${item.row.quoteVersion || "draft"}-${item.originalIndex}`}
-        getRowClassName={(_, index) =>
-          `${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer h-6`
-        }
-        renderRow={(item, index) => {
-          const row = item.row;
-          const rowIndex = item.originalIndex;
+          rows={visibleRows}
+          footer={footer}
+          getRowKey={(item) => `${item.row.quoteVersion || "draft"}-${item.originalIndex}`}
+          getRowClassName={(_, index) =>
+            `${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer h-6`
+          }
+          renderRow={(item, index) => {
+            const row = item.row;
+            const rowIndex = item.originalIndex;
 
-          return (
-          <>
+            return (
+            <>
             <td
+              data-grid-row={index}
+              data-grid-col={0}
               className="w-12 border border-gray-300 text-[11px] text-center"
               onContextMenu={(event) => {
                 if (!readOnly) {
@@ -310,7 +346,12 @@ const PoItems = ({
             >
               {index + 1}
             </td>
-            <td className="text-[11px] border border-gray-300 text-left">
+            <td
+              data-grid-row={index}
+              data-grid-col={0}
+              data-grid-editable="true"
+              className="grid-editable-cell text-[11px] border border-gray-300 text-left"
+            >
               <LookupField
                 component={FxSelectWithAdd}
                 inputId={`styleItemId-input-${index}`}
@@ -344,29 +385,16 @@ const PoItems = ({
                 childComponent={StyleItemMaster}
                 addNewModalWidth="w-[50%] h-[57%]"
                 nextRef={termsRef}
+                advanceOnEnter
+                advanceOnSelect
               />
             </td>
-            <td className="border border-gray-300 text-[11px]">
-              <FxSelect
-                value={row.itemGroupId}
-                onChange={(value) => handleInputChange(value, rowIndex, "itemGroupId")}
-                options={(itemGroupList?.data || [])
-                  .filter((item) => (id ? true : item.active))
-                  .map((item) => ({
-                    label: item.name,
-                    value: item.id,
-                  }))}
-                readOnly={true}
-                placeholder=""
-                onBlur={() => handleInputChange(row.itemGroupId, rowIndex, "itemGroupId")}
-                onKeyDown={(event) => {
-                  if (event.key === "Delete") {
-                    handleInputChange("", rowIndex, "itemGroupId");
-                  }
-                }}
-              />
-            </td>
-            <td className="border border-gray-300 text-[11px]">
+            <td
+              data-grid-row={index}
+              data-grid-col={1}
+              data-grid-editable="true"
+              className="grid-editable-cell border border-gray-300 text-[11px]"
+            >
               <FxSelectWithAdd
                 value={row.sizeId}
                 onChange={(value) => handleInputChange(value, rowIndex, "sizeId")}
@@ -392,9 +420,16 @@ const PoItems = ({
                 addNew={true}
                 childComponent={Size}
                 addNewModalWidth="w-[30%] h-[45%]"
+                advanceOnEnter
+                advanceOnSelect
               />
             </td>
-            <td className="border border-gray-300 text-[11px]">
+            <td
+              data-grid-row={index}
+              data-grid-col={2}
+              data-grid-editable="true"
+              className="grid-editable-cell border border-gray-300 text-[11px]"
+            >
               <FxSelectWithAdd
                 value={row.colorId}
                 onChange={(value) => handleInputChange(value, rowIndex, "colorId")}
@@ -415,9 +450,16 @@ const PoItems = ({
                 addNew={true}
                 childComponent={ColorMaster}
                 addNewModalWidth="w-[30%] h-[45%]"
+                advanceOnEnter
+                advanceOnSelect
               />
             </td>
-            <td className="border border-gray-300 text-[11px]">
+            <td
+              data-grid-row={index}
+              data-grid-col={3}
+              data-grid-editable="true"
+              className="grid-editable-cell border border-gray-300 text-[11px]"
+            >
               <FxSelect
                 value={row.gsmId}
                 onChange={(value) => handleInputChange(value, rowIndex, "gsmId")}
@@ -435,33 +477,25 @@ const PoItems = ({
                     handleInputChange("", rowIndex, "gsmId");
                   }
                 }}
+                advanceOnEnter
+                advanceOnSelect
               />
             </td>
-            <td className="border border-gray-300 text-[11px]">
-              <FxSelect
-                value={row.uomId}
-                onChange={(value) => handleInputChange(value, rowIndex, "uomId")}
-                options={(uomList?.data || [])
-                  .filter((item) => item.active)
-                  .map((item) => ({
-                    label: item.name,
-                    value: item.id,
-                  }))}
-                readOnly={true}
-                placeholder=""
-                onBlur={() => handleInputChange(row.uomId, rowIndex, "uomId")}
-                onKeyDown={(event) => {
-                  if (event.key === "Delete") {
-                    handleInputChange("", rowIndex, "uomId");
-                  }
-                }}
-              />
+            <td className="border border-gray-300 px-2 text-[11px] text-slate-700">
+              <span className="block truncate">
+                {findFromList(row.uomId, uomList?.data, "name") || ""}
+              </span>
             </td>
-            <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
+            <td
+              data-grid-row={index}
+              data-grid-col={4}
+              data-grid-editable="true"
+              className="grid-editable-cell border-blue-gray-200 text-[11px] border border-gray-300 text-right"
+            >
               <input
                 type="number"
                 min="0"
-                className="text-right px-1 w-full table-data-input"
+                className="w-full bg-transparent px-1 text-right table-data-input disabled:bg-transparent"
                 onFocus={(event) => {
                   event.target.select();
                   setFocusedField(`${index}-qty`);
@@ -479,14 +513,20 @@ const PoItems = ({
                   handleInputChange(value ? Number(value).toFixed(2) : "", rowIndex, "qty");
                   setFocusedField(null);
                 }}
+                onKeyDown={handleGridEnterNavigation}
                 disabled={id ? !isNewVersion : readOnly || (row.stockQty ?? 0) > 0}
               />
             </td>
-            <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
+            <td
+              data-grid-row={index}
+              data-grid-col={5}
+              data-grid-editable="true"
+              className="grid-editable-cell border-blue-gray-200 text-[11px] border border-gray-300 text-right"
+            >
               <input
                 type="number"
                 min="0"
-                className="text-right px-1 w-full table-data-input"
+                className="w-full bg-transparent px-1 text-right table-data-input disabled:bg-transparent"
                 onFocus={(event) => {
                   event.target.select();
                   setFocusedField(`${index}-price`);
@@ -504,6 +544,7 @@ const PoItems = ({
                   handleInputChange(value ? Number(value).toFixed(2) : "", rowIndex, "price");
                   setFocusedField(null);
                 }}
+                onKeyDown={handleGridEnterNavigation}
                 disabled={id ? !isNewVersion : readOnly}
               />
             </td>
@@ -511,7 +552,7 @@ const PoItems = ({
               <input
                 type="number"
                 onFocus={(event) => event.target.select()}
-                className="text-right rounded px-1 w-full"
+                className="w-full rounded bg-transparent px-1 text-right disabled:bg-transparent"
                 value={
                   !row.qty || !row.price
                     ? 0.0
@@ -520,7 +561,12 @@ const PoItems = ({
                 disabled={true}
               />
             </td>
-            <td className="border border-gray-300 text-[11px]">
+            <td
+              data-grid-row={index}
+              data-grid-col={6}
+              data-grid-editable="true"
+              className="grid-editable-cell border border-gray-300 text-[11px]"
+            >
               <button
                 disabled={!row?.styleItemId}
                 className="text-center rounded w-full table-data-input"
@@ -528,6 +574,14 @@ const PoItems = ({
                   if (event.key === "Enter") {
                     event.preventDefault();
                     event.stopPropagation();
+
+                    if (!taxTemplateId) {
+                      toast.info("Please select Tax Type", {
+                        position: "top-center",
+                      });
+                      return;
+                    }
+
                     setCurrentSelectedIndex(rowIndex);
                   }
                 }}
@@ -543,27 +597,11 @@ const PoItems = ({
                 {VIEW}
               </button>
             </td>
-            <td className="w-2 border border-gray-300">
-              <input
-                ref={(element) => {
-                  actionRefs.current[rowIndex] = element;
-                }}
-                className="w-full table-data-input"
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    if (index === visibleRows.length - 1) {
-                      addRow();
-                    }
-                  }
-                }}
-                disabled={id ? !isNewVersion : readOnly}
-              />
-            </td>
-          </>
-        );
-        }}
-      />
+            </>
+          );
+          }}
+        />
+      </div>
 
       {contextMenu ? (
         <div

@@ -19,9 +19,11 @@ const TransactionGrid = ({
     <div
       className={`border border-slate-200 px-2 bg-white rounded-md shadow-sm w-full h-full min-h-0 flex flex-col ${containerClassName}`}
     >
-      <div className="flex justify-between items-center my-2 shrink-0">
-        <h2 className="font-medium text-slate-700">{title}</h2>
-      </div>
+      {title ? (
+        <div className="flex justify-between items-center my-2 shrink-0">
+          <h2 className="font-medium text-slate-700">{title}</h2>
+        </div>
+      ) : null}
 
       <div className={`w-full flex-1 min-h-0 overflow-auto my-1 ${className}`}>
         <table className={tableClassName}>

@@ -25,6 +25,8 @@ export const PURCHASE_ORDER_TRANSACTION_DEFINITION = {
   actions: ["saveClose", "saveNew", "submitApproval", "summary", "print"],
 };
 
+export const DEFAULT_PURCHASE_ORDER_ROWS = 20;
+
 export const createPurchaseOrderRow = (quoteVersion = "") => ({
   styleItemId: "",
   hsnId: "",
@@ -39,7 +41,10 @@ export const createPurchaseOrderRow = (quoteVersion = "") => ({
   gsmId: "",
 });
 
-export const createPurchaseOrderRows = (count = 4, quoteVersion = "") =>
+export const createPurchaseOrderRows = (
+  count = DEFAULT_PURCHASE_ORDER_ROWS,
+  quoteVersion = "",
+) =>
   Array.from({ length: count }, () => createPurchaseOrderRow(quoteVersion));
 
 export const getVisiblePurchaseOrderRows = ({

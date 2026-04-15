@@ -14,7 +14,7 @@ import moment from "moment";
 import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
 import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 import { toast } from "react-toastify";
-import { FiEdit2, FiPrinter, FiSave, FiSend } from "react-icons/fi";
+import { FiEdit2, FiEye, FiPrinter, FiSave, FiSend } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
 import {
   useAddPoMutation,
@@ -45,6 +45,7 @@ import {
 } from "../../../Basic/components/Reuseable";
 import {
   createPurchaseOrderRows,
+  DEFAULT_PURCHASE_ORDER_ROWS,
   getPurchaseOrderPayload,
   getPurchaseOrderTaxSnapshot,
   showValidationResult,
@@ -147,7 +148,7 @@ const PurchaseOrderForm = ({
       setPoItems(
         data?.poItems
           ? data?.poItems
-          : createPurchaseOrderRows(4, quoteVersion),
+          : createPurchaseOrderRows(DEFAULT_PURCHASE_ORDER_ROWS, quoteVersion),
       );
       setDocId(data?.docId ? data?.docId : "New");
       setDiscountType(data?.discountType || "Percentage");
@@ -430,9 +431,46 @@ const PurchaseOrderForm = ({
   const filtered = Object.fromEntries(
     Object.entries(taxGroupWise)
       .filter(([key]) => key && key !== "undefined")
-      .map(([key, arr]) => [key, arr.filter((item) => item && item.yarnId)])
+      .map(([key, arr]) => [
+        key,
+        arr.filter((item) => {
+          if (!item) return false;
+
+          const gross = parseFloat(item?.gross || 0) || 0;
+          const quantity = parseFloat(item?.quantity || 0) || 0;
+
+          return Boolean(
+            item?.styleItemId ||
+              item?.itemId ||
+              item?.yarnId ||
+              item?.description ||
+              gross > 0 ||
+              quantity > 0,
+          );
+        }),
+      ])
       .filter(([_, arr]) => arr.length > 0),
   );
+
+  const taxBreakdownSummary =
+    totals?.slabBreakup?.filter((row) => (row?.amount || 0) > 0) || [];
+
+  const taxBreakdownContent =
+    taxBreakdownSummary.length > 0 ? (
+      <div className="space-y-0.5 border-t border-slate-100 pt-1">
+        {taxBreakdownSummary.map((row) => (
+          <div
+            key={`${row.tax}-${row.amount}`}
+            className="flex items-center justify-between gap-2 text-[11px]"
+          >
+            <span className="text-slate-500">{row.tax}</span>
+            <span className="font-medium text-slate-700">
+              {`Rs.${parseFloat(row.amount || 0).toFixed(2)}`}
+            </span>
+          </div>
+        ))}
+      </div>
+    ) : null;
 
   const quoteVersionOptions = [
     ...new Set(
@@ -530,17 +568,20 @@ const PurchaseOrderForm = ({
   const chip = getModeChip();
 
   const actionButtonClass =
-    "px-4 py-1 rounded-md flex items-center text-sm text-white";
+    "px-3 py-2 rounded-md flex items-center justify-center text-sm text-white transition";
+  const actionIconPairClass = "flex items-center gap-1";
 
   const leftActions = [
     {
       key: "save-close",
-      label: (
-        <>
-          <HiOutlineRefresh className="w-4 h-4 mr-2" />
-          Save & Close
-        </>
+      icon: (
+        <span className={actionIconPairClass}>
+          <FiSave className="h-4 w-4" />
+          <HiX className="h-4 w-4" />
+        </span>
       ),
+      hoverLabel: "Save & Close",
+      iconOnly: true,
       onClick: () => saveData("close"),
       onKeyDown: (e) => {
         if (e.key === "Enter") {
@@ -554,12 +595,14 @@ const PurchaseOrderForm = ({
     },
     {
       key: "save-new",
-      label: (
-        <>
-          <FiSave className="w-4 h-4 mr-2" />
-          Save & New
-        </>
+      icon: (
+        <span className={actionIconPairClass}>
+          <FiSave className="h-4 w-4" />
+          <HiOutlineRefresh className="h-4 w-4" />
+        </span>
       ),
+      hoverLabel: "Save & New",
+      iconOnly: true,
       onClick: () => saveData("new"),
       onKeyDown: (e) => {
         if (e.key === "Enter") {
@@ -573,12 +616,9 @@ const PurchaseOrderForm = ({
     },
     {
       key: "submit-approval",
-      label: (
-        <>
-          <FiSend className="w-4 h-4 mr-2" />
-          Submit Approval
-        </>
-      ),
+      icon: <FiSend className="h-4 w-4" />,
+      hoverLabel: "Submit Approval",
+      iconOnly: true,
       onClick: () => {
         setSubmitApproval(true);
         saveData("new", { submitApprovalOverride: true });
@@ -602,19 +642,18 @@ const PurchaseOrderForm = ({
       : [
           {
             key: "edit",
-            label: (
-              <>
-                <FiEdit2 className="w-4 h-4 mr-2" />
-                Edit
-              </>
-            ),
+            icon: <FiEdit2 className="h-4 w-4" />,
+            hoverLabel: "Edit",
+            iconOnly: true,
             onClick: () => setReadOnly(false),
             className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
           },
         ]),
     {
       key: "summary",
-      label: "View Po Summary",
+      icon: <FiEye className="h-4 w-4" />,
+      hoverLabel: "View PO Summary",
+      iconOnly: true,
       onClick: () => {
         if (!taxTemplateId) {
           toast.info("Please Select Tax Template !", {
@@ -640,16 +679,13 @@ const PurchaseOrderForm = ({
         }
       },
       className:
-        "text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1 rounded",
+        "bg-blue-600 text-white font-semibold hover:bg-blue-800 rounded-md px-3 py-2 flex items-center justify-center transition",
     },
     {
       key: "print",
-      label: (
-        <>
-          <FiPrinter className="w-4 h-4 mr-2" />
-          Print
-        </>
-      ),
+      icon: <FiPrinter className="h-4 w-4" />,
+      hoverLabel: "Print",
+      iconOnly: true,
       onClick: () => {
         setPrintModalOpen(true);
       },
@@ -664,8 +700,8 @@ const PurchaseOrderForm = ({
     },
   ];
 
-  const compactFieldClass = "px-2 py-1 text-[10px]";
-  const compactModalFieldClass = "w-full px-2 py-1 text-[10px]";
+  const compactFieldClass = "px-2 py-1 text-[11px]";
+  const compactModalFieldClass = "w-full px-2 py-1 text-[11px]";
   const compactCardClass =
     "border border-slate-200 px-1.5 py-1 bg-white rounded-md shadow-sm";
   const compactSectionTitleClass =
@@ -674,213 +710,441 @@ const PurchaseOrderForm = ({
   const fieldWidthMedium = "w-full min-w-0";
   const fieldWidthDate = "w-full min-w-0";
   const narrowFieldWrap = "min-w-0";
+  const partyDropdownMinWidth = 260;
+  const supplierCompactGridClass =
+    "grid grid-cols-1 gap-1 items-end md:grid-cols-2 xl:grid-cols-[172px_minmax(0,1.15fr)_minmax(0,0.8fr)]";
+  const deliveryCompactGridClass =
+    "grid grid-cols-1 gap-1 items-end md:grid-cols-[76px_minmax(0,1fr)_104px] xl:grid-cols-[76px_minmax(0,1fr)_104px]";
+  const sidebarSectionGridClass = "grid grid-cols-1 gap-1";
+  const sidebarTwoColumnGridClass = "grid grid-cols-2 gap-1";
+
+  const basicDetailsFields = (
+    <>
+      <div className={narrowFieldWrap}>
+        <ReusableInput
+          label="Order No"
+          readOnly
+          value={docId}
+          className={`${compactFieldClass} ${fieldWidthMedium}`}
+        />
+      </div>
+      <div className={narrowFieldWrap}>
+        <ReusableInput
+          label="Order Date"
+          value={docDate}
+          type={"date"}
+          required={true}
+          readOnly={true}
+          disabled
+          className={`${compactFieldClass} ${fieldWidthDate}`}
+        />
+      </div>
+      <div className={narrowFieldWrap}>
+        <DropdownInput
+          name="Po Type"
+          options={poTypes}
+          value={poType}
+          setValue={(value) => {
+            setPoType(value);
+          }}
+          required={true}
+          readOnly={readOnly}
+          disabled={orderId || id}
+          ref={supplierRef}
+          className={`${compactFieldClass} w-full max-w-none`}
+        />
+      </div>
+      <div className={narrowFieldWrap}>
+        <DropdownInput
+          name="Tax Type"
+          options={dropDownListObject(
+            taxTypeList ? taxTypeList?.data : [],
+            "name",
+            "id",
+          )}
+          value={taxTemplateId}
+          setValue={setTaxTemplateId}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactFieldClass} w-full max-w-none`}
+        />
+      </div>
+      <div className={narrowFieldWrap}>
+        <DropdownWithModal
+          name="Pay Term"
+          options={dropDownListObject(
+            id
+              ? payTermList?.data
+              : payTermList?.data?.filter((item) => item?.active),
+            "name",
+            "id",
+          )}
+          value={payTermId}
+          setValue={setPayTermId}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactModalFieldClass} w-full max-w-none`}
+          dropdownMinWidth={240}
+          addNewLabel="+ Add New Pay Term"
+          childComponent={PayTermMaster}
+          addNewModalWidth="w-[40%] h-[66%]"
+        />
+      </div>
+    </>
+  );
+
+  const supplierDetailsFields = (
+    <>
+      <div className="min-w-0 md:col-span-2 xl:col-span-1">
+        <DropdownWithModal
+          name="Supplier"
+          options={dropDownListObject(
+            id
+              ? supplierList?.data?.filter((item) => item?.isSupplier)
+              : supplierList?.data?.filter(
+                  (item) => item?.active && item?.isSupplier,
+                ),
+            "name",
+            "id",
+          )}
+          value={supplierId}
+          setValue={setSupplierId}
+          required={true}
+          readOnly={readOnly}
+          className={compactModalFieldClass}
+          dropdownMinWidth={partyDropdownMinWidth}
+          addNewLabel="+ Add New Supplier"
+          childComponent={PartyMaster}
+          addNewModalWidth="w-[90%] h-[95%]"
+          disabled={id}
+        />
+      </div>
+
+      <div className={narrowFieldWrap}>
+        <TextInput
+          name="Contact Person"
+          placeholder="Contact name"
+          value={findFromList(
+            supplierId,
+            supplierList?.data,
+            "contactPersonName",
+          )}
+          disabled={true}
+          className={`${compactFieldClass} ${fieldWidthMedium}`}
+        />
+      </div>
+
+      <div className={narrowFieldWrap}>
+        <TextInput
+          name="Phone"
+          placeholder="Contact name"
+          value={findFromList(supplierId, supplierList?.data, "contactNumber")}
+          disabled={true}
+          className={`${compactFieldClass} ${fieldWidthMedium}`}
+        />
+      </div>
+    </>
+  );
+
+  const deliveryDetailsFields = (
+    <>
+      <div className={narrowFieldWrap}>
+        <DropdownInput
+          name="Delivery Type"
+          options={deliveryTypes}
+          value={deliveryType}
+          setValue={setDeliveryType}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactFieldClass} ${fieldWidthShort}`}
+        />
+      </div>
+      <div className="min-w-0">
+        {deliveryType == "ToSelf" ? (
+          <DropdownInput
+            name="Delivery To"
+            options={
+              deliveryType === "ToSelf"
+                ? dropDownListObject(
+                    branchList ? branchList.data : [],
+                    "branchName",
+                    "id",
+                  )
+                : dropDownListObject(supplierListBasedOnSupply, "name", "id")
+            }
+            value={deliveryToId}
+            setValue={setDeliveryToId}
+            required={true}
+            readOnly={readOnly}
+            className={compactFieldClass}
+          />
+        ) : (
+          <DropdownWithModal
+            name="Delivery To"
+            options={dropDownListObject(
+              id
+                ? supplierList?.data
+                : supplierList?.data?.filter((item) => item?.active),
+              "name",
+              "id",
+            )}
+            value={deliveryToId}
+            setValue={setDeliveryToId}
+            required={true}
+            readOnly={readOnly}
+            className={compactModalFieldClass}
+            dropdownMinWidth={partyDropdownMinWidth}
+            addNewLabel="+ Add New Customer"
+            childComponent={PartyMaster}
+            addNewModalWidth="w-[90%] h-[95%]"
+          />
+        )}
+      </div>
+      <div className={narrowFieldWrap}>
+        <DateInputNew
+          name="Delivery Date"
+          value={dueDate}
+          setValue={setDueDate}
+          type={"date"}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactFieldClass} ${fieldWidthDate}`}
+        />
+      </div>
+    </>
+  );
+
+  const basicDetailsCompactSection = (
+    <div className={compactCardClass}>
+      <h2 className={compactSectionTitleClass}>Basic Details</h2>
+      <div className="grid grid-cols-2 gap-1 items-end md:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_104px_minmax(0,1fr)]">
+        {basicDetailsFields}
+      </div>
+    </div>
+  );
+
+  const supplierDetailsCompactSection = (
+    <div className={compactCardClass}>
+      <h2 className={compactSectionTitleClass}>Supplier Details</h2>
+      <div className={supplierCompactGridClass}>{supplierDetailsFields}</div>
+    </div>
+  );
+
+  const deliveryDetailsCompactSection = (
+    <div className={compactCardClass}>
+      <h2 className={compactSectionTitleClass}>Delivery Details</h2>
+      <div className={deliveryCompactGridClass}>{deliveryDetailsFields}</div>
+    </div>
+  );
+
+  const basicDetailsSidebarSection = (
+    <div className={sidebarSectionGridClass}>
+      <div className={sidebarTwoColumnGridClass}>
+        <div className={narrowFieldWrap}>
+          <ReusableInput
+            label="Order No"
+            readOnly
+            value={docId}
+            className={`${compactFieldClass} ${fieldWidthMedium}`}
+          />
+        </div>
+        <div className={narrowFieldWrap}>
+          <ReusableInput
+            label="Order Date"
+            value={docDate}
+            type={"date"}
+            required={true}
+            readOnly={true}
+            disabled
+            className={`${compactFieldClass} ${fieldWidthDate}`}
+          />
+        </div>
+      </div>
+      <div className={sidebarTwoColumnGridClass}>
+        <div className={narrowFieldWrap}>
+          <DropdownInput
+            name="Po Type"
+            options={poTypes}
+            value={poType}
+            setValue={(value) => {
+              setPoType(value);
+            }}
+            required={true}
+            readOnly={readOnly}
+            disabled={orderId || id}
+            className={`${compactFieldClass} w-full max-w-none`}
+          />
+        </div>
+        <div className={narrowFieldWrap}>
+          <DropdownInput
+            name="Tax Type"
+            options={dropDownListObject(
+              taxTypeList ? taxTypeList?.data : [],
+              "name",
+              "id",
+            )}
+            value={taxTemplateId}
+            setValue={setTaxTemplateId}
+            required={true}
+            readOnly={readOnly}
+            className={`${compactFieldClass} w-full max-w-none`}
+          />
+        </div>
+      </div>
+      <div className={narrowFieldWrap}>
+        <DropdownWithModal
+          name="Pay Term"
+          options={dropDownListObject(
+            id
+              ? payTermList?.data
+              : payTermList?.data?.filter((item) => item?.active),
+            "name",
+            "id",
+          )}
+          value={payTermId}
+          setValue={setPayTermId}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactModalFieldClass} w-full max-w-none`}
+          dropdownMinWidth={240}
+          addNewLabel="+ Add New Pay Term"
+          childComponent={PayTermMaster}
+          addNewModalWidth="w-[40%] h-[66%]"
+        />
+      </div>
+    </div>
+  );
+
+  const supplierDetailsSidebarSection = (
+    <div className={sidebarSectionGridClass}>
+      <div className={narrowFieldWrap}>
+        <DropdownWithModal
+          name="Supplier"
+          options={dropDownListObject(
+            id
+              ? supplierList?.data?.filter((item) => item?.isSupplier)
+              : supplierList?.data?.filter(
+                  (item) => item?.active && item?.isSupplier,
+                ),
+            "name",
+            "id",
+          )}
+          value={supplierId}
+          setValue={setSupplierId}
+          required={true}
+          readOnly={readOnly}
+          className={compactModalFieldClass}
+          dropdownMinWidth={partyDropdownMinWidth}
+          addNewLabel="+ Add New Supplier"
+          childComponent={PartyMaster}
+          addNewModalWidth="w-[90%] h-[95%]"
+          disabled={id}
+        />
+      </div>
+      <div className={sidebarTwoColumnGridClass}>
+        <div className={narrowFieldWrap}>
+          <TextInput
+            name="Contact Person"
+            placeholder="Contact name"
+            value={findFromList(
+              supplierId,
+              supplierList?.data,
+              "contactPersonName",
+            )}
+            disabled={true}
+            className={`${compactFieldClass} ${fieldWidthMedium}`}
+          />
+        </div>
+        <div className={narrowFieldWrap}>
+          <TextInput
+            name="Phone"
+            placeholder="Contact name"
+            value={findFromList(
+              supplierId,
+              supplierList?.data,
+              "contactNumber",
+            )}
+            disabled={true}
+            className={`${compactFieldClass} ${fieldWidthMedium}`}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const deliveryDetailsSidebarSection = (
+    <div className={sidebarSectionGridClass}>
+      <div className={narrowFieldWrap}>
+        <DropdownInput
+          name="Delivery Type"
+          options={deliveryTypes}
+          value={deliveryType}
+          setValue={setDeliveryType}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactFieldClass} ${fieldWidthShort}`}
+        />
+      </div>
+      <div className="min-w-0">
+        {deliveryType == "ToSelf" ? (
+          <DropdownInput
+            name="Delivery To"
+            options={
+              deliveryType === "ToSelf"
+                ? dropDownListObject(
+                    branchList ? branchList.data : [],
+                    "branchName",
+                    "id",
+                  )
+                : dropDownListObject(supplierListBasedOnSupply, "name", "id")
+            }
+            value={deliveryToId}
+            setValue={setDeliveryToId}
+            required={true}
+            readOnly={readOnly}
+            className={compactFieldClass}
+          />
+        ) : (
+          <DropdownWithModal
+            name="Delivery To"
+            options={dropDownListObject(
+              id
+                ? supplierList?.data
+                : supplierList?.data?.filter((item) => item?.active),
+              "name",
+              "id",
+            )}
+            value={deliveryToId}
+            setValue={setDeliveryToId}
+            required={true}
+            readOnly={readOnly}
+            className={compactModalFieldClass}
+            dropdownMinWidth={partyDropdownMinWidth}
+            addNewLabel="+ Add New Customer"
+            childComponent={PartyMaster}
+            addNewModalWidth="w-[90%] h-[95%]"
+          />
+        )}
+      </div>
+      <div className={narrowFieldWrap}>
+        <DateInputNew
+          name="Delivery Date"
+          value={dueDate}
+          setValue={setDueDate}
+          type={"date"}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactFieldClass} ${fieldWidthDate}`}
+        />
+      </div>
+    </div>
+  );
 
   const headerContent = (
-    <div className="grid grid-cols-1 xl:grid-cols-12 gap-1">
-      <div className={`${compactCardClass} lg:col-span-4`}>
-        <h2 className={compactSectionTitleClass}>Basic Details</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-1 items-end">
-          <div className={narrowFieldWrap}>
-            <ReusableInput
-              label="Order No"
-              readOnly
-              value={docId}
-              className={`${compactFieldClass} ${fieldWidthMedium}`}
-            />
-          </div>
-          <div className={narrowFieldWrap}>
-            <ReusableInput
-              label="Order Date"
-              value={docDate}
-              type={"date"}
-              required={true}
-              readOnly={true}
-              disabled
-              className={`${compactFieldClass} ${fieldWidthDate}`}
-            />
-          </div>
-          <div className={narrowFieldWrap}>
-            <DropdownInput
-              name="Po Type"
-              options={poTypes}
-              value={poType}
-              setValue={(value) => {
-                setPoType(value);
-              }}
-              required={true}
-              readOnly={readOnly}
-              disabled={orderId || id}
-              ref={supplierRef}
-              className={`${compactFieldClass} w-full max-w-none`}
-            />
-          </div>
-          <div className={narrowFieldWrap}>
-            <DropdownInput
-              name="Tax Type"
-              options={dropDownListObject(
-                taxTypeList ? taxTypeList?.data : [],
-                "name",
-                "id",
-              )}
-              value={taxTemplateId}
-              setValue={setTaxTemplateId}
-              required={true}
-              readOnly={readOnly}
-              className={`${compactFieldClass} w-full max-w-none`}
-            />
-          </div>
-          <div className={narrowFieldWrap}>
-            <DropdownWithModal
-              name="Pay Term"
-              options={dropDownListObject(
-                id
-                  ? payTermList?.data
-                  : payTermList?.data?.filter((item) => item?.active),
-                "name",
-                "id",
-              )}
-              value={payTermId}
-              setValue={setPayTermId}
-              required={true}
-              readOnly={readOnly}
-              className={`${compactModalFieldClass} w-full max-w-none`}
-              dropdownMinWidth={240}
-              addNewLabel="+ Add New Pay Term"
-              childComponent={PayTermMaster}
-              addNewModalWidth="w-[40%] h-[66%]"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className={`${compactCardClass} lg:col-span-4`}>
-        <h2 className={compactSectionTitleClass}>Supplier Details</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] gap-1 items-end">
-          <div className="min-w-0 md:col-span-2 xl:col-span-1">
-            <DropdownWithModal
-              name="Supplier"
-              options={dropDownListObject(
-                id
-                  ? supplierList?.data?.filter((item) => item?.isSupplier)
-                  : supplierList?.data?.filter(
-                      (item) => item?.active && item?.isSupplier,
-                    ),
-                "name",
-                "id",
-              )}
-              value={supplierId}
-              setValue={setSupplierId}
-              required={true}
-              readOnly={readOnly}
-              className={compactModalFieldClass}
-              addNewLabel="+ Add New Supplier"
-              childComponent={PartyMaster}
-              addNewModalWidth="w-[90%] h-[95%]"
-              disabled={id}
-            />
-          </div>
-
-          <div className={narrowFieldWrap}>
-            <TextInput
-              name="Contact Person"
-              placeholder="Contact name"
-              value={findFromList(
-                supplierId,
-                supplierList?.data,
-                "contactPersonName",
-              )}
-              disabled={true}
-              className={`${compactFieldClass} ${fieldWidthMedium}`}
-            />
-          </div>
-
-          <div className={narrowFieldWrap}>
-            <TextInput
-              name="Phone"
-              placeholder="Contact name"
-              value={findFromList(
-                supplierId,
-                supplierList?.data,
-                "contactNumber",
-              )}
-              disabled={true}
-              className={`${compactFieldClass} ${fieldWidthMedium}`}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className={`${compactCardClass} lg:col-span-4`}>
-        <h2 className={compactSectionTitleClass}>Delivery Details</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-1 items-end">
-          <div className={narrowFieldWrap}>
-            <DropdownInput
-              name="Delivery Type"
-              options={deliveryTypes}
-              value={deliveryType}
-              setValue={setDeliveryType}
-              required={true}
-              readOnly={readOnly}
-              className={`${compactFieldClass} ${fieldWidthShort}`}
-            />
-          </div>
-          <div className="col-span-2">
-            {deliveryType == "ToSelf" ? (
-              <DropdownInput
-                name="Delivery To"
-                options={
-                  deliveryType === "ToSelf"
-                    ? dropDownListObject(
-                        branchList ? branchList.data : [],
-                        "branchName",
-                        "id",
-                      )
-                    : dropDownListObject(
-                        supplierListBasedOnSupply,
-                        "name",
-                        "id",
-                      )
-                }
-                value={deliveryToId}
-                setValue={setDeliveryToId}
-                required={true}
-                readOnly={readOnly}
-                className={compactFieldClass}
-              />
-            ) : (
-              <DropdownWithModal
-                name="Delivery To"
-                options={dropDownListObject(
-                  id
-                    ? supplierList?.data
-                    : supplierList?.data?.filter((item) => item?.active),
-                  "name",
-                  "id",
-                )}
-                value={deliveryToId}
-                setValue={setDeliveryToId}
-                required={true}
-                readOnly={readOnly}
-                className={compactModalFieldClass}
-                addNewLabel="+ Add New Customer"
-                childComponent={PartyMaster}
-                addNewModalWidth="w-[90%] h-[95%]"
-              />
-            )}
-          </div>
-          <div className={narrowFieldWrap}>
-            <DateInputNew
-              name="Delivery Date"
-              value={dueDate}
-              setValue={setDueDate}
-              type={"date"}
-              required={true}
-              readOnly={readOnly}
-              className={`${compactFieldClass} ${fieldWidthDate}`}
-            />
-          </div>
-        </div>
-      </div>
+    <div className="grid grid-cols-1 gap-1 xl:grid-cols-[minmax(0,5fr)_minmax(0,3.6fr)_minmax(0,3.4fr)]">
+      {basicDetailsCompactSection}
+      {supplierDetailsCompactSection}
+      {deliveryDetailsCompactSection}
     </div>
   );
 
@@ -907,11 +1171,51 @@ const PurchaseOrderForm = ({
         }
         totalsRows={[
           {
-            key: "totalQty",
-            label: "Total Qty",
-            value: parseFloat(getTotalQty()).toFixed(3),
-            summaryColumn: "left",
+            key: "taxableAmount",
+            label: "Taxable Amount",
+            value: `Rs.${parseFloat(totals?.taxable || 0).toFixed(2)}`,
+            summaryColumn: "right",
           },
+          {
+            key: "netAmount",
+            label: "Net Amount",
+            value: `Rs.${parseFloat(totals?.net || 0).toFixed(2)}`,
+            summaryColumn: "right",
+            emphasized: true,
+          },
+        ]}
+        extraTotalsContent={taxBreakdownContent}
+        extraTotalsContentColumn="right"
+      />
+      <TransactionActions
+        leftActions={leftActions}
+        rightActions={rightActions}
+      />
+    </>
+  );
+
+  const sidebarFooterContent = (
+    <>
+      <CommonFormFooter
+        remarks={remarks}
+        setRemarks={setRemarks}
+        terms={termsAndCondtion}
+        setTerms={setTermsAndCondtion}
+        readOnly={readOnly}
+        showTermSelect={true}
+        termValue={termsId}
+        onTermChange={(value) => setTermsId(value)}
+        termOptions={
+          (id
+            ? termsData?.data
+            : termsData?.data?.filter((item) => item?.active)
+          )?.map((item) => ({
+            value: item?.id,
+            label: item?.name,
+            templateText: item?.description || "",
+          })) || []
+        }
+        totalsRows={[
           {
             key: "taxableAmount",
             label: "Taxable Amount",
@@ -926,6 +1230,9 @@ const PurchaseOrderForm = ({
             emphasized: true,
           },
         ]}
+        extraTotalsContent={taxBreakdownContent}
+        extraTotalsContentColumn="right"
+        stacked={true}
       />
       <TransactionActions
         leftActions={leftActions}
@@ -933,6 +1240,103 @@ const PurchaseOrderForm = ({
       />
     </>
   );
+
+  const summaryPair = (label, value) => (
+    <span>
+      <span className="font-semibold text-slate-800">{label}:</span>{" "}
+      <span className="font-normal text-slate-700">{value || "-"}</span>
+    </span>
+  );
+
+  const transactionDetailsSummary = [
+    summaryPair("Order No", `${docId || "New"} · ${docDate || "No date"}`),
+    summaryPair("PO Type", poType),
+    summaryPair(
+      "Tax",
+      findFromList(taxTemplateId, taxTypeList?.data, "name") || "-",
+    ),
+    summaryPair(
+      "Pay Term",
+      findFromList(payTermId, payTermList?.data, "name") || "-",
+    ),
+    summaryPair(
+      "Supplier",
+      findFromList(supplierId, supplierList?.data, "name") || "-",
+    ),
+    summaryPair(
+      "Contact",
+      findFromList(supplierId, supplierList?.data, "contactPersonName") || "-",
+    ),
+    summaryPair(
+      "Phone",
+      findFromList(supplierId, supplierList?.data, "contactNumber") || "-",
+    ),
+    summaryPair(
+      "Delivery",
+      `${deliveryType || "-"} to ${
+      deliveryType === "ToSelf"
+        ? findFromList(deliveryToId, branchList?.data, "branchName") || "-"
+        : findFromList(deliveryToId, supplierList?.data, "name") || "-"
+    }`,
+    ),
+    summaryPair("Due", dueDate),
+  ];
+
+  const sidebarDetailsSections = [
+    {
+      id: "basic-details",
+      title: "Basic Details",
+      content: basicDetailsSidebarSection,
+      summary: [
+        summaryPair("Order No", docId || "New"),
+        summaryPair("Date", docDate || "-"),
+        summaryPair("PO Type", poType || "-"),
+        summaryPair(
+          "Tax",
+          findFromList(taxTemplateId, taxTypeList?.data, "name") || "-",
+        ),
+        summaryPair(
+          "Pay Term",
+          findFromList(payTermId, payTermList?.data, "name") || "-",
+        ),
+      ],
+    },
+    {
+      id: "supplier-details",
+      title: "Supplier Details",
+      content: supplierDetailsSidebarSection,
+      summary: [
+        summaryPair(
+          "Supplier",
+          findFromList(supplierId, supplierList?.data, "name") || "-",
+        ),
+        summaryPair(
+          "Contact",
+          findFromList(supplierId, supplierList?.data, "contactPersonName") ||
+            "-",
+        ),
+        summaryPair(
+          "Phone",
+          findFromList(supplierId, supplierList?.data, "contactNumber") || "-",
+        ),
+      ],
+    },
+    {
+      id: "delivery-details",
+      title: "Delivery Details",
+      content: deliveryDetailsSidebarSection,
+      summary: [
+        summaryPair("Type", deliveryType || "-"),
+        summaryPair(
+          "To",
+          deliveryType === "ToSelf"
+            ? findFromList(deliveryToId, branchList?.data, "branchName") || "-"
+            : findFromList(deliveryToId, supplierList?.data, "name") || "-",
+        ),
+        summaryPair("Date", dueDate || "-"),
+      ],
+    },
+  ];
 
   return (
     <>
@@ -1005,6 +1409,15 @@ const PurchaseOrderForm = ({
         onClose={onClose}
         onKeyDown={handleKeyDown}
         header={headerContent}
+        detailsContent={headerContent}
+        detailsTitle="Transaction Details"
+        detailsLayout="compact"
+        detailsLayouts={["compact", "sidebar"]}
+        detailsSummary={transactionDetailsSummary}
+        sidebarDetailsSections={sidebarDetailsSections}
+        sidebarWidthClass="w-[300px]"
+        sidebarFooter={sidebarFooterContent}
+        defaultDetailsCollapsed={true}
         gridItems={
           <PoItems
             id={id}

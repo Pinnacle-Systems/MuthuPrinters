@@ -1,3 +1,4 @@
+import { Prisma } from "../lib/prisma.js";
 import { prisma } from "../lib/prisma.js";
 
 import { NoRecordFound } from '../configs/Responses.js';
@@ -75,47 +76,44 @@ async function get(req) {
         return { statusCode: 0, data };
     }
 
-    const PartyData = partyListData.map(party => `'${party}'`).join(", ");
-    const ProductData = productListData.map(product => `'${product}'`).join(", ");
-    // console.log(PartyData, "partyData");
-    // console.log(ProductData, "ProductData");
-
     if (salesReport) {
-        const pData = PartyData.length > 0 ? ` AND party.name IN (${PartyData})` : '';
-        const prodData = ProductData.length > 0 ? ` AND product.name IN (${ProductData})` : '';
-        const dateFilter = (startDateStartTime && endDateEndTime) ?
-            ` DATE(salesBill.createdAt) BETWEEN '${getDateFromDateTimeDB(startDateStartTime)}' AND '${getDateFromDateTimeDB(endDateEndTime)}'` : '';
+        const pData = partyListData.length > 0
+            ? Prisma.sql`AND party."name" IN (${Prisma.join(partyListData)})`
+            : Prisma.empty;
+        const prodData = productListData.length > 0
+            ? Prisma.sql`AND product."name" IN (${Prisma.join(productListData)})`
+            : Prisma.empty;
+        const reportFromDate = startDateStartTime && endDateEndTime
+            ? getDateFromDateTimeDB(startDateStartTime)
+            : fromDate;
+        const reportToDate = startDateStartTime && endDateEndTime
+            ? getDateFromDateTimeDB(endDateEndTime)
+            : toDate;
 
-
-        console.log(dateFilter, "dateFilter");
-        const sql = `
+        data = await prisma.$queryRaw`
             SELECT
-                DATE(salesBill.selectedDate) AS Date,
-                party.name AS Party,
-                product.name AS Product,
-                SUM(salesBillItems.qty) AS Qty,
-                FORMAT(AVG(salesBillItems.price), 2) AS AvgPrice,
-                SUM(salesBillItems.qty) * FORMAT(AVG(salesBillItems.price), 2) AS TotalPrice
+                DATE("salesBill"."selectedDate") AS "Date",
+                party."name" AS "Party",
+                product."name" AS "Product",
+                SUM("salesBillItems"."qty") AS "Qty",
+                ROUND(AVG("salesBillItems"."price")::numeric, 2) AS "AvgPrice",
+                SUM("salesBillItems"."qty") * ROUND(AVG("salesBillItems"."price")::numeric, 2) AS "TotalPrice"
             FROM
-                salesBillItems
+                "SalesBillItems" "salesBillItems"
             JOIN
-                product ON salesBillItems.productId = product.id
+                "Product" product ON "salesBillItems"."productId" = product.id
             JOIN
-                salesBill ON salesBill.id = salesBillItems.salesBillId
+                "SalesBill" "salesBill" ON "salesBill".id = "salesBillItems"."salesBillId"
             JOIN
-                party ON party.id = salesBill.supplierId
+                "Party" party ON party.id = "salesBill"."supplierId"
             WHERE
-                 salesBill.selectedDate BETWEEN '${fromDate}' AND '${toDate}'
-                AND salesBill.isOn = '1'
+                "salesBill"."selectedDate" BETWEEN ${reportFromDate} AND ${reportToDate}
+                AND "salesBill"."isOn" = true
                 ${pData}
                 ${prodData}
             GROUP BY
-                DATE(salesBill.selectedDate), party.name, product.name
+                DATE("salesBill"."selectedDate"), party."name", product."name"
         `;
-
-        console.log(sql);
-
-        data = await prisma.$queryRawUnsafe(sql);
         return { statusCode: 0, data };
     } else {
         data = await prisma.salesBill.findMany({
@@ -206,11 +204,11 @@ async function getOne(id) {
 
     data["SalesBillItems"] = await (async function getReturnQty() {
         const promises = data["SalesBillItems"].map(async (i) => {
-            const sql = `
-            SELECT COALESCE(SUM(QTY),0) as returnQty FROM SalesReturnItems WHERE salesBillItemsId=${i.id}
-            `
-            console.log(sql);
-            let returnQty = await prisma.$queryRawUnsafe(sql);
+            const returnQty = await prisma.$queryRaw`
+                SELECT COALESCE(SUM("qty"), 0) AS "returnQty"
+                FROM "SalesReturnItems"
+                WHERE "salesBillItemsId" = ${i.id}
+            `;
             i["alreadyReturnQty"] = returnQty[0]['returnQty']
             return i
         })
