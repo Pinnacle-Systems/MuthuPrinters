@@ -399,6 +399,7 @@ export async function approveRecord(
     const currentLevel = applicableLevels.find(
       (l) => l.levelNo === log.currentLevel,
     );
+    console.log(currentLevel, "currentLevel");
     if (!currentLevel)
       return { statusCode: 1, message: "Current level not found" };
 
