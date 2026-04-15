@@ -42,6 +42,8 @@ export async function createApprovalLog(
   referenceId,
   referencePage,
   recordData = {},
+  referenceDocId,
+  userId,
 ) {
   const config = await tx.approvalConfig.findUnique({
     where: {
@@ -57,7 +59,6 @@ export async function createApprovalLog(
       },
     },
   });
-  console.log("config", config);
   if (!config?.active) return null;
   // Filter levels whose condition is met
   const applicableLevels = config.approvalLevels.filter((lvl) =>
@@ -71,6 +72,8 @@ export async function createApprovalLog(
       referencePage,
       status: "PENDING",
       currentLevel: applicableLevels[0].levelNo,
+      referenceDocId: referenceDocId,
+      raisedById: parseInt(userId),
     },
   });
   return { log, applicableLevels };
@@ -83,7 +86,7 @@ export async function getApprovalLog(referenceId, referencePage) {
     include: {
       ApprovalConfig: {
         include: {
-          ApprovalLevels: {
+          approvalLevels: {
             include: { LevelUsers: { include: { User: true } } },
             orderBy: { levelNo: "asc" },
           },
@@ -163,7 +166,7 @@ export async function approveRecord(
         LevelLogs: true,
       },
     });
-
+    console.log(log, "log");
     if (!log) return { statusCode: 1, message: "Approval log not found" };
     if (log.status === "APPROVED")
       return { statusCode: 1, message: "Already approved" };
@@ -174,9 +177,11 @@ export async function approveRecord(
     const applicableLevels = config.approvalLevels.filter((lvl) =>
       evaluateCondition(lvl.condition, recordData),
     );
+    console.log(applicableLevels, "applicableLevels");
     const currentLevel = applicableLevels.find(
       (l) => l.levelNo === log.currentLevel,
     );
+    console.log(currentLevel, "currentLevel");
     if (!currentLevel)
       return { statusCode: 1, message: "Current level not found" };
 
@@ -184,6 +189,7 @@ export async function approveRecord(
     const isAuthorised = currentLevel.LevelUsers.some(
       (lu) => lu.userId === parseInt(userId),
     );
+    console.log(userId, "userId");
     if (!isAuthorised)
       return { statusCode: 1, message: "Not authorised to approve this level" };
 
@@ -225,7 +231,13 @@ export async function approveRecord(
 
     // Level satisfied → advance
     const applicableLevelNos = applicableLevels.map((l) => l.levelNo);
-    const updated = await advanceApproval(tx, log, applicableLevelNos);
+    const updated = await advanceApproval(
+      tx,
+      log,
+      applicableLevelNos,
+      userId,
+      remarks,
+    );
     return { statusCode: 0, data: updated };
   });
 }

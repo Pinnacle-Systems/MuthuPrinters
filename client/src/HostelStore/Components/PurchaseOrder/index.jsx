@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import PurchaseOrderForm from "./PurchaseOrderForm.js";
 import PurchaseOrderFormReport from "./PurchaseOrderFormReport.js";
 import { getCommonParams } from "../../../Utils/helper.js";
@@ -22,15 +22,12 @@ import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterS
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
-import purchaseInwardEntryApi from "../../../redux/uniformService/PurchaseInwardEntry";
-import purchaseReturnApi from "../../../redux/services/PurchaseReturnService";
-import purchaseCancelApi from "../../../redux/uniformService/PurchaseCancelService";
-import StyleItemMasterApi from "../../../redux/services/StyleItemMasterService.js";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
 import { useGetUserByIdQuery } from "../../../redux/services/UsersMasterService.js";
+import { push } from "../../../redux/features/opentabs";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -39,6 +36,9 @@ export default function Form() {
   const [showInwardForm, setShowInwardForm] = useState(false);
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [selectedPoId, setSelectedPoId] = useState("");
+
+  const openTabs = useSelector((state) => state.openTabs);
+  const previewPOId = useMemo(() => openTabs.tabs.find(i => i.name === "PURCHASE ORDER")?.previewId, [openTabs]);
 
   const dispatch = useDispatch();
   const { branchId, companyId, finYearId, userId } = getCommonParams();
@@ -160,6 +160,13 @@ export default function Form() {
   const { data: colorList } = useGetColorMasterQuery({ params });
   const { data: gsmList } = useGetGsmMasterQuery({ params });
 
+  useEffect(() => {
+    if (!previewPOId) return
+    setId(previewPOId);
+    setShowForm(true);
+    // dispatch(push({ name: "PURCHASE ORDER", previewId: null }))
+  }, [previewPOId, dispatch])
+
   return (
     <>
       <div
@@ -195,6 +202,7 @@ export default function Form() {
             onCreateInward={handleCreateInward} // ⬅️
             onCreateCancel={handleCreateCancel}
             userData={userData?.data}
+            previewPOId={previewPOId}
           />
         </div>
       </div>
@@ -224,6 +232,7 @@ export default function Form() {
             colorList={colorList}
             branchData={branchData}
             gsmList={gsmList}
+            userData={userData?.data}
           />
         </div>
       )}

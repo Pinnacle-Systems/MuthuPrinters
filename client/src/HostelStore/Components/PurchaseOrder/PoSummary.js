@@ -40,7 +40,7 @@ const PoSummary = ({
               <select
                 autoFocus
                 name="type"
-                disabled={id ? !isNewVersion : readOnly}
+                disabled={readOnly}
                 className="text-left w-full rounded h-8"
                 value={discountType}
                 onChange={(e) => {
@@ -63,7 +63,7 @@ const PoSummary = ({
               <input
                 type="text"
                 name="value"
-                disabled={id ? !isNewVersion : readOnly || !discountType}
+                disabled={readOnly || !discountType}
                 className="h-7 w-full text-right"
                 value={discountValue}
                 onKeyDown={(e) => {
@@ -159,17 +159,17 @@ const PoSummary = ({
                 type="text"
                 name="value"
                 className="h-7 w-full text-right"
-               value={
-  amount === 0
-    ? "Rupees Zero Only"
-    : "Rupees " +
-      numberToWords
-        .toWords(amount)
-        .replace(/,/g, "")        // remove commas only
-        .replace(/-/g, " ")       // ✅ hyphen → space ("Fifty Five")
-        .replace(/\b\w/g, (c) => c.toUpperCase()) +
-      " Only"
-}
+                value={
+                  amount === 0
+                    ? "Rupees Zero Only"
+                    : "Rupees " +
+                      numberToWords
+                        .toWords(amount)
+                        .replace(/,/g, "") // remove commas only
+                        .replace(/-/g, " ") // ✅ hyphen → space ("Fifty Five")
+                        .replace(/\b\w/g, (c) => c.toUpperCase()) +
+                      " Only"
+                }
               />
             </td>
           </tr>

@@ -570,9 +570,18 @@ async function create(body) {
         },
       });
       await createPoItems(tx, poItems, data, userId, branchId);
-      await createApprovalLog(tx, branchId, pageId, data.id, "PURCHASE ORDER", {
-        totalNetAmount: totalNetAmount,
-      });
+      await createApprovalLog(
+        tx,
+        branchId,
+        pageId,
+        data.id,
+        "PURCHASE ORDER",
+        {
+          totalNetAmount: totalNetAmount,
+        },
+        data?.docId,
+        userId,
+      );
     });
     return { statusCode: 0, data };
   } catch (err) {
@@ -649,10 +658,10 @@ async function update(id, body) {
     discountType,
     discountValue,
     taxPercent,
-    isNewVersion,
-    quoteVersion,
     termsId,
     payTermId,
+    isNewVersion,
+    quoteVersion,
   } = await body;
   let data;
   const dataFound = await prisma.po.findUnique({
@@ -726,46 +735,60 @@ async function update(id, body) {
           : undefined,
         termsId: termsId ? parseInt(termsId) : null,
         payTermId: payTermId ? parseInt(payTermId) : null,
-        poItems: {
-          createMany: {
-            data: poItems
-              .filter((i) => i["quoteVersion"] == "New")
-              .map((temp) => {
-                let newItem = {};
-                newItem["styleItemId"] = parseInt(temp["styleItemId"]);
-                newItem["uomId"] = temp["uomId"];
-                newItem["hsnId"] = temp["hsnId"]
-                  ? parseInt(temp["hsnId"])
-                  : null;
-                newItem["qty"] = parseFloat(temp["qty"]);
-                newItem["price"] = parseFloat(temp["price"]);
-                newItem["discountType"] = temp["discountType"];
-                newItem["discountValue"] = parseFloat(
-                  temp["discountValue"] || 0,
-                );
-                newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
-                newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
-                newItem["itemGroupId"] = temp["itemGroupId"]
-                  ? parseInt(temp["itemGroupId"])
-                  : null;
-                newItem["sizeId"] = temp["sizeId"]
-                  ? parseInt(temp["sizeId"])
-                  : null;
-                newItem["colorId"] = temp["colorId"]
-                  ? parseInt(temp["colorId"])
-                  : null;
-                return newItem;
-              }),
-          },
-        },
+        // poItems: {
+        //   createMany: {
+        //     data: poItems
+        //       .filter((i) => i["quoteVersion"] == "New")
+        //       .map((temp) => {
+        //         let newItem = {};
+        //         newItem["styleItemId"] = parseInt(temp["styleItemId"]);
+        //         newItem["uomId"] = temp["uomId"];
+        //         newItem["hsnId"] = temp["hsnId"]
+        //           ? parseInt(temp["hsnId"])
+        //           : null;
+        //         newItem["qty"] = parseFloat(temp["qty"]);
+        //         newItem["price"] = parseFloat(temp["price"]);
+        //         newItem["discountType"] = temp["discountType"];
+        //         newItem["discountValue"] = parseFloat(
+        //           temp["discountValue"] || 0,
+        //         );
+        //         newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
+        //         newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
+        //         newItem["itemGroupId"] = temp["itemGroupId"]
+        //           ? parseInt(temp["itemGroupId"])
+        //           : null;
+        //         newItem["sizeId"] = temp["sizeId"]
+        //           ? parseInt(temp["sizeId"])
+        //           : null;
+        //         newItem["colorId"] = temp["colorId"]
+        //           ? parseInt(temp["colorId"])
+        //           : null;
+        //         return newItem;
+        //       }),
+        //   },
+        // },
       },
     });
-    // await updatePoItems(tx, poItems, data, userId, branchId, nextQuoteVersion);
+    await updatePoItems(
+      tx,
+      poItems,
+      data,
+      quoteVersion,
+      currentQuoteVersion,
+      isNewVersion,
+    );
   });
   return { statusCode: 0, data };
 }
 
-async function updatePoItems(tx, poItems, po, userId, branchId, quoteVersion) {
+async function updatePoItems(
+  tx,
+  poItems,
+  po,
+  quoteVersion,
+  currentQuoteVersion,
+  isNewVersion,
+) {
   const promises = poItems.map(async (itemDetails) => {
     const qty = itemDetails?.qty
       ? Math.round(parseFloat(itemDetails.qty))
@@ -791,8 +814,15 @@ async function updatePoItems(tx, poItems, po, userId, branchId, quoteVersion) {
           taxPercent: itemDetails?.taxPercent
             ? parseInt(itemDetails.taxPercent)
             : null,
+          itemGroupId: itemDetails?.itemGroupId
+            ? parseInt(itemDetails.itemGroupId)
+            : null,
+          sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
+          colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
           gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
-          quoteVersion,
+          quoteVersion: isNewVersion
+            ? currentQuoteVersion + 1
+            : parseInt(quoteVersion),
         },
       });
 
@@ -816,7 +846,14 @@ async function updatePoItems(tx, poItems, po, userId, branchId, quoteVersion) {
           taxPercent: itemDetails?.taxPercent
             ? parseInt(itemDetails.taxPercent)
             : null,
-          quoteVersion,
+          quoteVersion: isNewVersion
+            ? currentQuoteVersion + 1
+            : parseInt(quoteVersion),
+          itemGroupId: itemDetails?.itemGroupId
+            ? parseInt(itemDetails.itemGroupId)
+            : null,
+          sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
+          colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
           gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
         },
       });

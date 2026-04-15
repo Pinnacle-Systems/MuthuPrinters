@@ -17,7 +17,7 @@ import { FiCheck } from "react-icons/fi";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import Modal from "../../../UiComponents/Modal";
 import { toast } from "react-toastify";
-
+import { findFromList } from "../../../Utils/helper";
 const PurchaseOrderFormReport = ({
   onClick,
   onView,
@@ -28,6 +28,7 @@ const PurchaseOrderFormReport = ({
   onCreateInward, // ⬅️ new
   onCreateCancel,
   userData,
+  previewPOId,
 }) => {
   const branchId = secureLocalStorage.getItem(
     sessionStorage.getItem("sessionId") + "currentBranchId",
@@ -84,6 +85,20 @@ const PurchaseOrderFormReport = ({
       pageNumber: currentPageNumber,
     },
   });
+
+  useEffect(() => {
+    if (!previewPOId) return;
+    if (!allData?.data?.length) return;
+
+    const searchDocId = findFromList(previewPOId, allData.data, "docId");
+
+    if (searchDocId) {
+      setSerachDocNo(searchDocId);
+
+      // clear AFTER applying filter
+      dispatch(push({ name: "PURCHASE ORDER", previewId: null }));
+    }
+  }, [previewPOId, allData, dispatch]);
 
   useEffect(() => {
     if (allData?.totalCount) {
@@ -492,6 +507,11 @@ const PurchaseOrderFormReport = ({
                       placeholder="Search"
                       value={serachDocNo}
                       onChange={(e) => {
+                        // if (previewPOId) {
+                        //   dispatch(
+                        //     push({ name: "PURSCHASE ORDER", previewId: null }),
+                        //   );
+                        // }
                         setSerachDocNo(e.target.value);
                       }}
                     />

@@ -23,6 +23,7 @@ import { push } from "../../../redux/features/opentabs";
 import Swal from "sweetalert2";
 import Logout from "../../../Basic/components/LogoutConfirm";
 import PageSearch from "./PageSearch";
+import Notification from "./Notification";
 const BASE_URL = process.env.REACT_APP_SERVER_URL;
 
 const Header = ({ profile, setProfile }) => {
@@ -153,6 +154,7 @@ const Header = ({ profile, setProfile }) => {
         <div className="relative">
           <PageSearch pageList={allowedPages} />
         </div>
+        <Notification />
         <p>WELCOME</p> &nbsp;{" "}
         <div className="text-black">{userName?.toUpperCase()}</div>
         <div className="relative text-left" ref={ref}>

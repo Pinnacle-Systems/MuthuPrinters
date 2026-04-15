@@ -68,6 +68,19 @@ const approvalMasterApi = createApi({
       },
       providesTags: ["Approval"],
     }),
+    getPendingApproval: builder.query({
+      query: ({ params }) => {
+        return {
+          url: `${APPROVAL_API}/getPendingApproval`,
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+          params,
+        };
+      },
+      providesTags: ["po"],
+    }),
     addApproval: builder.mutation({
       query: (payload) => ({
         url: APPROVAL_API,
@@ -102,6 +115,7 @@ export const {
   useGetApprovalNewQuery,
   useLazyGetApprovalByIdQuery,
   useGetApprovalByIdQuery,
+  useGetPendingApprovalQuery,
   useAddApprovalMutation,
   useUpdateApprovalMutation,
   useDeleteApprovalMutation,

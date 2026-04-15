@@ -194,6 +194,7 @@ model User {
   approvalLogsRejectedBy         ApprovalLog[]          @relation(name: "rejectedBy")
   approvalLevelUsers             ApprovalLevelUser[]
   approvalLevelLogs              ApprovalLevelLog[]
+  approvalLogsRaisedBy           ApprovalLog[]          @relation(name: "raisedBy")
 }
 
 model Employee {
@@ -1653,7 +1654,9 @@ model ApprovalLog {
   approvalConfigId Int?
   referenceId      Int
   referencePage    String
+  referenceDocId   String?
   status           String?
+  isRead           Boolean            @default(false)
   approvedById     Int?
   approvedAt       DateTime?
   currentLevel     Int                @default(1)
@@ -1665,6 +1668,8 @@ model ApprovalLog {
   ApprovedBy       User?              @relation("approvedBy", fields: [approvedById], references: [id])
   RejectedBy       User?              @relation("rejectedBy", fields: [rejectedById], references: [id])
   LevelLogs        ApprovalLevelLog[]
+  RaisedBy         User?              @relation("raisedBy", fields: [raisedById], references: [id])
+  raisedById       Int?
 }
 
 model ApprovalLevelLog {
