@@ -203,8 +203,16 @@ async function get(req) {
         {
           AND: finYearDate
             ? [
-                { createdAt: { gte: finYearDate.startDateStartTime } },
-                { createdAt: { lte: finYearDate.endDateEndTime } },
+                {
+                  createdAt: {
+                    gte: finYearDate.startDateStartTime,
+                  },
+                },
+                {
+                  createdAt: {
+                    lte: finYearDate.endDateEndTime,
+                  },
+                },
               ]
             : undefined,
         },
@@ -387,8 +395,13 @@ async function getOne(id) {
       prisma.inwardItems.count({ where: { poId: po.id } }),
       prisma.purchaseCancelItems.count({ where: { poId: po.id } }),
       prisma.approvalLog.findFirst({
-        where: { referenceId: parseInt(id), referencePage: REFERENCE_PAGE },
-        orderBy: { createdAt: "desc" },
+        where: {
+          referenceId: parseInt(id),
+          referencePage: "PURCHASE ORDER",
+        },
+        orderBy: {
+          createdAt: "desc", // ✅ always latest
+        },
         select: {
           id: true,
           status: true,
@@ -681,7 +694,6 @@ async function update(id, body) {
     quoteVersion,
     submitApproval,
   } = await body;
-
   const dataFound = await prisma.po.findUnique({
     where: { id: parseInt(id) },
     include: { poItems: true, quoteVersions: true },
@@ -752,7 +764,6 @@ async function update(id, body) {
         payTermId: payTermId ? parseInt(payTermId) : null,
       },
     });
-
     if (isNewVersion) {
       await createNewVersionItems(
         tx,
@@ -1165,3 +1176,36 @@ export {
   getPoItems,
   createApproveStatus,
 };
+
+//  poItems: {
+//       createMany: {
+//         data: poItems
+//           .filter((i) => i["quoteVersion"] == "New")
+//           .map((temp) => {
+//             let newItem = {};
+//             newItem["styleItemId"] = parseInt(temp["styleItemId"]);
+//             newItem["uomId"] = temp["uomId"];
+//             newItem["hsnId"] = temp["hsnId"]
+//               ? parseInt(temp["hsnId"])
+//               : null;
+//             newItem["qty"] = parseFloat(temp["qty"]);
+//             newItem["price"] = parseFloat(temp["price"]);
+//             newItem["discountType"] = temp["discountType"];
+//             newItem["discountValue"] = parseFloat(
+//               temp["discountValue"] || 0,
+//             );
+//             newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
+//             newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
+//             newItem["itemGroupId"] = temp["itemGroupId"]
+//               ? parseInt(temp["itemGroupId"])
+//               : null;
+//             newItem["sizeId"] = temp["sizeId"]
+//               ? parseInt(temp["sizeId"])
+//               : null;
+//             newItem["colorId"] = temp["colorId"]
+//               ? parseInt(temp["colorId"])
+//               : null;
+//             return newItem;
+//           }),
+//       },
+//     },
