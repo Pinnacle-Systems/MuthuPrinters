@@ -10,11 +10,11 @@
 
 export function fmtDate(d) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+
+  const dateOnly = d.substring(0, 10); // "YYYY-MM-DD"
+  const [yyyy, mm, dd] = dateOnly.split("-");
+
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 export function daysUntil(d) {

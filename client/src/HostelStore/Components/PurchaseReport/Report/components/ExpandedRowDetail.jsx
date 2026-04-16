@@ -15,7 +15,10 @@ const TABS = [
   { key: "return", label: (r) => `Return (${r.returnDocs?.length ?? 0})` },
   { key: "bill", label: (r) => `Bill Entry (${r.billDocs?.length ?? 0})` },
 ];
-
+function fmt3(val) {
+  if (val === null || val === undefined) return "—";
+  return Number(val).toFixed(3);
+}
 // Qty / price columns — right-aligned in tbody
 const RIGHT_ALIGN = new Set([
   "PO Qty",
@@ -48,7 +51,7 @@ export default function ExpandedRowDetail({ row }) {
           <strong
             className={row.balanceQty > 0 ? "text-red-700" : "text-green-700"}
           >
-            {row.balanceQty}
+            {row.balanceQty?.toFixed(3)}
           </strong>
         </span>
         <span>
@@ -239,30 +242,26 @@ function POItemsTab({ row }) {
       item.Color?.name || "—",
       item.Gsm?.name || "—",
       uomName,
-      formatQtyByUOM(qty, uomName),
-      formatQtyByUOM(iq, uomName),
+      fmt3(qty),
+      fmt3(iq),
       cq > 0 ? (
-        <span className="font-semibold text-red-600">
-          {formatQtyByUOM(cq, uomName)}
-        </span>
+        <span className="font-semibold text-red-600">{fmt3(cq)}</span>
       ) : (
         <span className="text-gray-400">0</span>
       ),
       rq > 0 ? (
-        <span className="font-semibold text-amber-600">
-          {formatQtyByUOM(rq, uomName)}
-        </span>
+        <span className="font-semibold text-amber-600">{fmt3(rq)}</span>
       ) : (
         <span className="text-gray-400">0</span>
       ),
       <span
         className={`font-semibold ${bal > 0 ? (row.dueAlert === "overdue" ? "text-red-700" : "text-green-700") : "text-gray-400"}`}
       >
-        {formatQtyByUOM(bal, uomName)}
+        {fmt3(bal)}
       </span>,
       !isDone && pend > 0 ? (
         <span className="px-2 py-0.5 bg-blue-50 text-blue-800 rounded-full text-[11px] font-medium">
-          {formatQtyByUOM(pend, uomName)} pending
+          {fmt3(pend)} pending
         </span>
       ) : (
         <span className="text-gray-400">—</span>
@@ -381,13 +380,13 @@ function InwardTab({ row }) {
         item.Color?.name || "—", // 3  Color
         item.Gsm?.name || "—", // 4  GSM
         uomName, // 5  UOM
-        formatQtyByUOM(item.poQty, uomName), // 6  PO Qty
-        formatQtyByUOM(item.inwardQty, uomName), // 7  Inward Qty
+        fmt3(item.poQty), // 6  PO Qty
+        fmt3(item.inwardQty), // 7  Inward Qty
         fmtAmount(item.price), // 8  Price (₹ + 2dp)
         item.discountType || "—", // 9  Discount Type
         fmtDiscount(item.discountValue, item.discountType), // 10 Item Discount
         item.taxPercent != null
-          ? `${Number(item.taxPercent).toFixed(2)}%`
+          ? `${Number(item.taxPercent).toFixed(3)}%`
           : "—", // 11 Tax %
       ];
     }),
@@ -442,7 +441,7 @@ function CancelTab({ row }) {
         item.Gsm?.name || "—",
         uomName,
         <span className="font-semibold text-red-600">
-          {formatQtyByUOM(item.cancelQty, uomName)}
+          {fmt3(item.cancelQty)}
         </span>,
         // item.poDocId || row.docId,
 
@@ -502,7 +501,7 @@ function ReturnTab({ row }) {
         item.Gsm?.name || "—",
         uomName,
         <span className="font-semibold text-amber-600">
-          {formatQtyByUOM(item.returnQty, uomName)}
+          {fmt3(item.returnQty)}
         </span>,
 
         // item.invNo || "—",
@@ -527,13 +526,13 @@ function fmtDiscount(discountValue, discountType) {
     discountValue === 0
   )
     return "—";
-  const val = Number(discountValue).toFixed(2);
+  const val = Number(discountValue).toFixed(3);
   return discountType === "Percentage" ? `${val}%` : `₹${val}`;
 }
 
 function fmtAmount(val) {
   if (val === null || val === undefined) return "—";
-  return `₹${Number(val).toFixed(2)}`;
+  return `₹${Number(val).toFixed(3)}`;
 }
 
 // ─── tab: Bill Entry ──────────────────────────────────────────────────────────
@@ -596,12 +595,12 @@ function BillTab({ row }) {
         item.Color?.name || "—", // 3  Color
         item.Gsm?.name || "—", // 4  GSM
         uomName, // 5  UOM
-        formatQtyByUOM(item.inwardQty, uomName), // 6  Billed Qty
+        fmt3(item.inwardQty), // 6  Billed Qty
         fmtAmount(item.price), // 7  Price (₹ + 2dp)
         item.discountType || "—", // 8  Discount Type
         fmtDiscount(item.discountValue, item.discountType), // 9  Item Discount (% or ₹)
         item.taxPercent != null
-          ? `${Number(item.taxPercent).toFixed(2)}%`
+          ? `${Number(item.taxPercent).toFixed(3)}%`
           : "—", // 10 Tax %
         // item.invNo || "—",
         item.dcNo || "—", // 12 DC No
