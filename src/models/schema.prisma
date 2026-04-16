@@ -196,6 +196,7 @@ model User {
   approvalLogsRaisedBy           ApprovalLog[]          @relation(name: "raisedBy")
 }
 
+
 model Employee {
   id                 Int               @id @default(autoincrement())
   name               String
@@ -1724,6 +1725,7 @@ model ApprovalLog {
 
   @@index([referenceId, referencePage])
 }
+
 
 model ApprovalLevelLog {
   id              Int            @id @default(autoincrement())
