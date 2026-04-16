@@ -14,9 +14,17 @@ import moment from "moment";
 import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
 import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 import { toast } from "react-toastify";
-import { FiEdit2, FiEye, FiPrinter, FiSave, FiSend } from "react-icons/fi";
+import {
+  FiCheck,
+  FiEdit2,
+  FiEye,
+  FiPrinter,
+  FiSave,
+  FiSend,
+} from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
 import {
+  useAddApprovalStausMutation,
   useAddPoMutation,
   useGetPoByIdQuery,
   useUpdatePoMutation,
@@ -51,6 +59,7 @@ import {
   showValidationResult,
   validatePurchaseOrderData,
 } from "./purchaseOrder.module";
+import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 
 const PurchaseOrderForm = ({
   onClose,
@@ -101,11 +110,15 @@ const PurchaseOrderForm = ({
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [isNewVersion, setIsNewVersion] = useState(false);
   const [quoteVersion, setQuoteVersion] = useState("");
+  const [approvalModal, setApprovalModal] = useState(false);
+  const [actionType, setActionType] = useState("");
+  const [approvalRemarks, setApprovalRemarks] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [requirementId, setRequirementId] = useState("");
+
   const supplierRef = useRef(null);
   const termsRef = useRef(null);
   const [dispatchInvalidate] = useInvalidateTags();
-
-  const [requirementId, setRequirementId] = useState("");
 
   const { branchId, userId, finYearId } = getCommonParams();
   const params = { branchId, userId, finYearId, poMaterial: poMaterial };
@@ -130,13 +143,14 @@ const PurchaseOrderForm = ({
   const childRecordCount =
     singleData?.data?.childRecordInward + singleData?.data?.childRecordCancel;
 
+  const [addApprovalStatus] = useAddApprovalStausMutation();
   const [addData] = useAddPoMutation();
   const [updateData] = useUpdatePoMutation();
   const status = singleData?.data?.approvalStatus?.status;
   const syncFormWithDb = useCallback(
     (data) => {
       const status = data?.approvalStatus?.status;
-      setReadOnly(["APPROVED", "PENDING"].includes(status) || readOnly);
+      setReadOnly((["PENDING"].includes(status) && !isAdmin) || readOnly);
       setPoType(data?.poType ? data?.poType : "GENERAL");
       setDocDate(
         data?.docDate
@@ -374,6 +388,51 @@ const PurchaseOrderForm = ({
     }
   };
 
+  const handleApprovalAction = (type) => {
+    setActionType(type);
+    setApprovalRemarks("");
+    setApprovalModal(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (actionType === "REJECT" && !approvalRemarks.trim()) {
+      toast.warning("Remarks required for sending back!");
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const result = await addApprovalStatus({
+        userId: userData?.id,
+        remarks: approvalRemarks || null,
+        actionType,
+        referenceId: id,
+        referencePage: "PURCHASE ORDER",
+        recordData: {},
+      }).unwrap();
+
+      if (result.statusCode === 0) {
+        toast.success(
+          result.message ||
+            (actionType === "APPROVE"
+              ? "Purchase Order Approved!"
+              : "Sent Back for Review!"),
+        );
+        setApprovalModal(false);
+        invalidatePurchaseModule();
+        dispatchInvalidate();
+        onClose();
+      } else {
+        toast.error(result.message || "Action failed");
+        setApprovalModal(false);
+      }
+    } catch (err) {
+      toast.error(err?.data?.message || "Something went wrong!");
+      setApprovalModal(false);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const dateRef = useRef(null);
 
   useEffect(() => {
@@ -437,11 +496,11 @@ const PurchaseOrderForm = ({
 
           return Boolean(
             item?.styleItemId ||
-              item?.itemId ||
-              item?.yarnId ||
-              item?.description ||
-              gross > 0 ||
-              quantity > 0,
+            item?.itemId ||
+            item?.yarnId ||
+            item?.description ||
+            gross > 0 ||
+            quantity > 0,
           );
         }),
       ])
@@ -623,23 +682,56 @@ const PurchaseOrderForm = ({
             hoverLabel: "Submit Approval",
             iconOnly: true,
             onClick: () => {
-              saveData("new", { submitApprovalOverride: true });
+              saveData("close", { submitApprovalOverride: true });
             },
             onKeyDown: (e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
                 e.stopPropagation();
-                saveData("new", { submitApprovalOverride: true });
+                saveData("close", { submitApprovalOverride: true });
               }
             },
-            disabled: readOnly,
             className: `bg-green-700 hover:bg-green-800 ${actionButtonClass}`,
           },
         ]),
+    ...(id && isAdmin && status === "PENDING"
+      ? [
+          {
+            key: "send-back",
+            icon: <MdKeyboardDoubleArrowLeft className="h-4 w-4" />,
+            hoverLabel: "Send Back for Review",
+            iconOnly: true,
+            onClick: () => handleApprovalAction("REJECT"),
+            onKeyDown: (e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                handleApprovalAction("REJECT");
+              }
+            },
+            className: `bg-blue-600 hover:bg-blue-700 ${actionButtonClass}`,
+          },
+          {
+            key: "approve",
+            icon: <FiCheck className="h-4 w-4" />,
+            hoverLabel: "Approve",
+            iconOnly: true,
+            onClick: () => handleApprovalAction("APPROVE"),
+            onKeyDown: (e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                handleApprovalAction("APPROVE");
+              }
+            },
+            className: `bg-green-600 hover:bg-green-700 ${actionButtonClass}`,
+          },
+        ]
+      : []),
   ];
 
   const rightActions = [
-    ...(!id || !readOnly
+    ...(!id || !readOnly || status === "PENDING"
       ? []
       : [
           {
@@ -1276,10 +1368,10 @@ const PurchaseOrderForm = ({
     summaryPair(
       "Delivery",
       `${deliveryType || "-"} to ${
-      deliveryType === "ToSelf"
-        ? findFromList(deliveryToId, branchList?.data, "branchName") || "-"
-        : findFromList(deliveryToId, supplierList?.data, "name") || "-"
-    }`,
+        deliveryType === "ToSelf"
+          ? findFromList(deliveryToId, branchList?.data, "branchName") || "-"
+          : findFromList(deliveryToId, supplierList?.data, "name") || "-"
+      }`,
     ),
     summaryPair("Due", dueDate),
   ];
@@ -1342,6 +1434,130 @@ const PurchaseOrderForm = ({
 
   return (
     <>
+      <Modal
+        isOpen={approvalModal}
+        onClose={() => setApprovalModal(false)}
+        widthClass="w-[420px]"
+      >
+        <div className="space-y-4">
+          <h2
+            className={`text-base font-semibold ${
+              actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
+            }`}
+          >
+            {actionType === "APPROVE"
+              ? "✅ Approve Purchase Order"
+              : "↩️ Send Back for Review"}
+          </h2>
+
+          <div className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-xs space-y-1.5">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500">PO No</span>
+              <span className="font-medium text-gray-800">{docId}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500">Supplier</span>
+              <span className="font-medium text-gray-800">
+                {findFromList(supplierId, supplierList?.data, "name")}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500">Current Approval</span>
+              <span
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                  status === "APPROVED"
+                    ? "bg-green-100 text-green-700"
+                    : status === "REJECTED"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-orange-100 text-orange-700"
+                }`}
+              >
+                {status === "PENDING" ? "Waiting For Approval" : status}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">
+              Remarks{" "}
+              {actionType === "REJECT" && (
+                <span className="text-red-500">* required</span>
+              )}
+            </label>
+            <textarea
+              rows={3}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300 resize-none"
+              placeholder={
+                actionType === "APPROVE"
+                  ? "Optional remarks..."
+                  : "Reason for sending back (required)..."
+              }
+              value={approvalRemarks}
+              onChange={(e) => setApprovalRemarks(e.target.value)}
+              autoFocus
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setApprovalModal(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  setApprovalModal(false);
+                }
+              }}
+              className="px-4 py-1.5 text-xs rounded text-white hover:bg-red-600 bg-red-500"
+            >
+              Cancel
+            </button>
+            <button
+              disabled={actionLoading}
+              onClick={handleConfirmAction}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleConfirmAction();
+                }
+              }}
+              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${
+                actionType === "APPROVE"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-blue-600 hover:bg-blue-700"
+              } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
+            >
+              {actionLoading ? (
+                <>
+                  <svg
+                    className="animate-spin h-3 w-3"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8z"
+                    />
+                  </svg>
+                  Processing...
+                </>
+              ) : actionType === "APPROVE" ? (
+                "Confirm Approve"
+              ) : (
+                "Send Back"
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
       <Modal
         isOpen={summary}
         onClose={() => setSummary(false)}

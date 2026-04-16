@@ -79,7 +79,7 @@ const approvalMasterApi = createApi({
           params,
         };
       },
-      providesTags: ["po"],
+      providesTags: ["Approval"],
     }),
     addApproval: builder.mutation({
       query: (payload) => ({

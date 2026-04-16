@@ -19,6 +19,8 @@ import Modal from "../../../UiComponents/Modal";
 import { toast } from "react-toastify";
 import { findFromList } from "../../../Utils/helper";
 import { useGetPagesQuery } from "../../../redux/services/PageMasterService";
+import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
+
 const PurchaseOrderFormReport = ({
   onClick,
   onView,
@@ -170,6 +172,7 @@ const PurchaseOrderFormReport = ({
               : "Sent Back for Review!",
         );
         setApprovalModal(false);
+        invalidatePurchaseModule();
       } else {
         toast.error(result.message || "Action failed");
         setApprovalModal(false);
@@ -668,7 +671,7 @@ const PurchaseOrderFormReport = ({
                             <td className="px-2 py-1">
                               <div className="flex items-center justify-center gap-1.5">
                                 {/* ↩️ Send Back — show when PENDING or APPROVED */}
-                                {["PENDING", "APPROVED"].includes(
+                                {["PENDING"].includes(
                                   dataObj?.approvalStatus?.status,
                                 ) && (
                                   <Tooltip title="Send Back for Review" arrow>

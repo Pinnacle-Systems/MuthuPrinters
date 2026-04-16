@@ -99,7 +99,14 @@ const Notification = () => {
                                                 className="border-b hover:bg-gray-50 transition"
                                             >
                                                 <td className="px-3 py-3 font-medium text-gray-700">
-                                                    {log.status === "PENDING" ? "APPROVAL REQUEST" : log.status}
+                                                    {/* {log.status === "PENDING" ? "APPROVAL REQUEST" : log.status} */}
+                                                    {log.raisedById === parseInt(userId)
+                                                        ? log.status === "APPROVED"
+                                                            ? "✅ Approved"
+                                                            : log.status === "REJECTED"
+                                                                ? "↩️ Rejected"
+                                                                : "⏳ Awaiting Approval"
+                                                        : "🔔 Approval Request"}
                                                 </td>
                                                 <td className="px-3 py-3 text-blue-500 hover:underline" onClick={() => openRecord(log)}>
                                                     # {log.referenceDocId}

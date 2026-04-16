@@ -31,19 +31,22 @@ const TaxDetailsFullTemplate = ({
     ? 0
     : parseFloat(row["taxPercent"]);
 
-  const handleExitToNextRow = useCallback((event) => {
-    if (event?.key && event.key !== "Enter" && event.key !== "Tab") {
-      return;
-    }
+  const handleExitToNextRow = useCallback(
+    (event) => {
+      if (event?.key && event.key !== "Enter" && event.key !== "Tab") {
+        return;
+      }
 
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-    document.activeElement?.blur?.();
-    setCurrentSelectedIndex("");
-    window.setTimeout(() => {
-      onCloseFocus?.(index);
-    }, 0);
-  }, [index, onCloseFocus, setCurrentSelectedIndex]);
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      document.activeElement?.blur?.();
+      setCurrentSelectedIndex("");
+      window.setTimeout(() => {
+        onCloseFocus?.(index);
+      }, 0);
+    },
+    [index, onCloseFocus, setCurrentSelectedIndex],
+  );
 
   const focusField = (fieldRef) => {
     window.setTimeout(() => {
@@ -63,17 +66,17 @@ const TaxDetailsFullTemplate = ({
         {
           key: "discountType",
           ref: discountTypeRef,
-          disabled: id ? !isNewVersion : readOnly,
+          disabled: readOnly,
         },
         {
           key: "discountValue",
           ref: discountValueRef,
-          disabled: id ? !isNewVersion : readOnly || !discountType,
+          disabled: readOnly || !discountType,
         },
         {
           key: "taxPercent",
           ref: taxPercentRef,
-          disabled: id ? !isNewVersion : readOnly,
+          disabled: readOnly,
         },
       ];
 
@@ -123,7 +126,7 @@ const TaxDetailsFullTemplate = ({
               <select
                 autoFocus
                 ref={discountTypeRef}
-                disabled={id ? !isNewVersion : readOnly}
+                disabled={readOnly}
                 className="text-left w-full rounded h-8"
                 value={discountType}
                 onChange={(e) =>
@@ -148,7 +151,7 @@ const TaxDetailsFullTemplate = ({
               <input
                 ref={discountValueRef}
                 type="text"
-                disabled={id ? !isNewVersion : readOnly || !discountType}
+                disabled={readOnly || !discountType}
                 className="h-7 w-full text-right"
                 value={discountValue}
                 onFocus={(e) => e.target.select()}
@@ -173,7 +176,7 @@ const TaxDetailsFullTemplate = ({
               <input
                 ref={taxPercentRef}
                 type="text"
-                disabled={id ? !isNewVersion : readOnly}
+                disabled={readOnly}
                 className="h-7 w-full text-right"
                 value={taxPercent}
                 onChange={(e) => {

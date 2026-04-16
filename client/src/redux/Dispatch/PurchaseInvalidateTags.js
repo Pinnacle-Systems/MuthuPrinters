@@ -20,5 +20,5 @@ export const invalidatePurchaseModule = () => {
   store.dispatch(
     purchaseBillEntryApi.util.invalidateTags(["PurchaseBillEntry"]),
   );
-  store.dispatch(approvalMasterApi.util.invalidateTags(["approval"]));
+  store.dispatch(approvalMasterApi.util.invalidateTags(["Approval"]));
 };

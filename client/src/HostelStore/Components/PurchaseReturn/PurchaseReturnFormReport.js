@@ -54,7 +54,13 @@ const PurchaseReturnFormReport = ({
 
   useEffect(() => {
     setCurrentPageNumber(1);
-  }, [serachDocNo, searchClientName, searchDate, searchSupplier, searchInwardType]);
+  }, [
+    serachDocNo,
+    searchClientName,
+    searchDate,
+    searchSupplier,
+    searchInwardType,
+  ]);
 
   const companyId = secureLocalStorage.getItem(
     sessionStorage.getItem("sessionId") + "userCompanyId",
@@ -324,7 +330,9 @@ const PurchaseReturnFormReport = ({
                         className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${
                           index % 2 === 0 ? "bg-white" : "bg-gray-100"
                         }`}
-                        onClick={() => {onClick(dataObj.id)}}
+                        onClick={() => {
+                          onClick(dataObj.id);
+                        }}
                       >
                         <td className="text-center ">{index + 1}</td>
 

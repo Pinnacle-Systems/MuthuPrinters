@@ -169,9 +169,9 @@ async function get(req) {
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-      finYearDate?.startDateStartTime,
-      finYearDate?.endDateEndTime,
-    )
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
     : "";
   let data = await prisma.po.findMany({
     where: {
@@ -179,34 +179,34 @@ async function get(req) {
         {
           AND: finYearDate
             ? [
-              {
-                createdAt: {
-                  gte: finYearDate.startDateStartTime,
+                {
+                  createdAt: {
+                    gte: finYearDate.startDateStartTime,
+                  },
                 },
-              },
-              {
-                createdAt: {
-                  lte: finYearDate.endDateEndTime,
+                {
+                  createdAt: {
+                    lte: finYearDate.endDateEndTime,
+                  },
                 },
-              },
-            ]
+              ]
             : undefined,
         },
         {
           AND:
             startDate && endDate
               ? [
-                {
-                  createdAt: {
-                    gte: startDateStartTime,
+                  {
+                    createdAt: {
+                      gte: startDateStartTime,
+                    },
                   },
-                },
-                {
-                  createdAt: {
-                    lte: endDateEndTime,
+                  {
+                    createdAt: {
+                      lte: endDateEndTime,
+                    },
                   },
-                },
-              ]
+                ]
               : undefined,
         },
       ],
@@ -215,23 +215,23 @@ async function get(req) {
       // poType: Boolean(searchPoType) ? { contains: searchPoType } : undefined,
       docId: Boolean(serachDocNo)
         ? {
-          contains: serachDocNo,
-        }
+            contains: serachDocNo,
+          }
         : undefined,
       OR:
         supplierId || Boolean(filterParties)
           ? [
-            {
-              supplierId: supplierId ? parseInt(supplierId) : undefined,
-            },
-            {
-              supplierId: Boolean(filterParties)
-                ? {
-                  in: filterParties.split(",").map((i) => parseInt(i)),
-                }
-                : undefined,
-            },
-          ]
+              {
+                supplierId: supplierId ? parseInt(supplierId) : undefined,
+              },
+              {
+                supplierId: Boolean(filterParties)
+                  ? {
+                      in: filterParties.split(",").map((i) => parseInt(i)),
+                    }
+                  : undefined,
+              },
+            ]
           : undefined,
       Supplier: {
         aliasName: Boolean(searchSupplierAliasName)
@@ -309,11 +309,11 @@ async function get(req) {
   const totalCount = data.length;
   let docId = finYearDate
     ? await getNextDocId(
-      branchId,
-      shortCode,
-      finYearDate?.startDateStartTime,
-      finYearDate?.endDateEndTime,
-    )
+        branchId,
+        shortCode,
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
     : "";
   return {
     statusCode: 0,
@@ -402,6 +402,9 @@ async function getOne(id) {
         where: {
           referenceId: parseInt(id),
           referencePage: "PURCHASE ORDER",
+        },
+        orderBy: {
+          createdAt: "desc", // ✅ always latest
         },
         select: {
           id: true,
@@ -560,9 +563,9 @@ async function create(body) {
     let finYearDate = await getFinYearStartTimeEndTime(finYearId);
     const shortCode = finYearDate
       ? getYearShortCodeForFinYear(
-        finYearDate?.startDateStartTime,
-        finYearDate?.endDateEndTime,
-      )
+          finYearDate?.startDateStartTime,
+          finYearDate?.endDateEndTime,
+        )
       : "";
     let newDocId = await getNextDocId(
       branchId,
@@ -697,7 +700,6 @@ async function update(id, body) {
     submitApproval,
     pageId,
   } = await body;
-  console.log(submitApproval, "submitApproval");
   let data;
   const dataFound = await prisma.po.findUnique({
     where: {
@@ -763,10 +765,10 @@ async function update(id, body) {
           : parseInt(quoteVersion),
         quoteVersions: isNewVersion
           ? {
-            create: {
-              quoteVersion: currentQuoteVersion + 1,
-            },
-          }
+              create: {
+                quoteVersion: currentQuoteVersion + 1,
+              },
+            }
           : undefined,
         termsId: termsId ? parseInt(termsId) : null,
         payTermId: payTermId ? parseInt(payTermId) : null,
@@ -804,14 +806,24 @@ async function update(id, body) {
         // },
       },
     });
-    await updatePoItems(
-      tx,
-      poItems,
-      data,
-      quoteVersion,
-      currentQuoteVersion,
-      isNewVersion,
-    );
+    if (isNewVersion) {
+      await createNewVersionItems(
+        tx,
+        poItems,
+        data.id,
+        currentQuoteVersion + 1,
+      );
+    } else {
+      await updatePoItems(
+        tx,
+        poItems,
+        data,
+        quoteVersion,
+        currentQuoteVersion,
+        isNewVersion,
+      );
+    }
+
     if (submitApproval) {
       await createApprovalLog(
         tx,
@@ -914,13 +926,50 @@ async function updatePoItems(
   return Promise.all(promises);
 }
 
-async function remove(id) {
-  const data = await prisma.po.delete({
-    where: {
-      id: parseInt(id),
-    },
+async function createNewVersionItems(tx, poItems, poId, version) {
+  return await tx.poItems.createMany({
+    data: poItems
+      .filter((i) => i["quoteVersion"] === "New")
+      .map((temp) => ({
+        poId,
+        styleItemId: temp.styleItemId ? parseInt(temp.styleItemId) : null,
+        uomId: temp.uomId ? parseInt(temp.uomId) : null,
+        hsnId: temp.hsnId ? parseInt(temp.hsnId) : null,
+        qty: parseFloat(temp.qty),
+        price: parseFloat(temp.price),
+        discountType: temp.discountType,
+        discountValue: parseFloat(temp.discountValue || 0),
+        taxPercent: parseFloat(temp.taxPercent || 0),
+        quoteVersion: version,
+        itemGroupId: temp.itemGroupId ? parseInt(temp.itemGroupId) : null,
+        sizeId: temp.sizeId ? parseInt(temp.sizeId) : null,
+        colorId: temp.colorId ? parseInt(temp.colorId) : null,
+        gsmId: temp.gsmId ? parseInt(temp.gsmId) : null,
+      })),
   });
-  return { statusCode: 0, data };
+}
+
+async function remove(id) {
+  const poId = parseInt(id);
+
+  return await prisma.$transaction(async (tx) => {
+    // 1. Delete related approval logs
+    await tx.approvalLog.deleteMany({
+      where: {
+        referencePage: "PURCHASE ORDER",
+        referenceId: poId,
+      },
+    });
+
+    // 2. Delete PO
+    const data = await tx.po.delete({
+      where: {
+        id: poId,
+      },
+    });
+
+    return { statusCode: 0, data };
+  });
 }
 
 function manualFilterSearchDataPoItems(
@@ -1088,8 +1137,8 @@ async function getPoItems(req) {
         Po: {
           docId: Boolean(searchDocId)
             ? {
-              contains: searchDocId,
-            }
+                contains: searchDocId,
+              }
             : undefined,
           supplierId: supplierId ? parseInt(supplierId) : undefined,
         },
@@ -1234,3 +1283,36 @@ export {
   getPoItems,
   createApproveStatus,
 };
+
+//  poItems: {
+//       createMany: {
+//         data: poItems
+//           .filter((i) => i["quoteVersion"] == "New")
+//           .map((temp) => {
+//             let newItem = {};
+//             newItem["styleItemId"] = parseInt(temp["styleItemId"]);
+//             newItem["uomId"] = temp["uomId"];
+//             newItem["hsnId"] = temp["hsnId"]
+//               ? parseInt(temp["hsnId"])
+//               : null;
+//             newItem["qty"] = parseFloat(temp["qty"]);
+//             newItem["price"] = parseFloat(temp["price"]);
+//             newItem["discountType"] = temp["discountType"];
+//             newItem["discountValue"] = parseFloat(
+//               temp["discountValue"] || 0,
+//             );
+//             newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
+//             newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
+//             newItem["itemGroupId"] = temp["itemGroupId"]
+//               ? parseInt(temp["itemGroupId"])
+//               : null;
+//             newItem["sizeId"] = temp["sizeId"]
+//               ? parseInt(temp["sizeId"])
+//               : null;
+//             newItem["colorId"] = temp["colorId"]
+//               ? parseInt(temp["colorId"])
+//               : null;
+//             return newItem;
+//           }),
+//       },
+//     },
