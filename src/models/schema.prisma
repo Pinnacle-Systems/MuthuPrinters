@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
 }
 
 model Page {
@@ -197,6 +197,7 @@ model User {
   approvalLogsRaisedBy           ApprovalLog[]          @relation(name: "raisedBy")
 }
 
+
 model Employee {
   id                 Int               @id @default(autoincrement())
   name               String
@@ -231,7 +232,7 @@ model Employee {
   permCityId         Int?
   permPincode        Int?
   active             Boolean?          @default(true)
-  image              Bytes?            @db.LongBlob
+  image              Bytes?            @db.ByteA
   Branch             Branch?           @relation(fields: [branchId], references: [id])
   branchId           Int?
   EmployeeCategory   EmployeeCategory? @relation(fields: [employeeCategoryId], references: [id])
@@ -1239,7 +1240,7 @@ model PoItems {
 
 model TermsAndConditions {
   id                    Int                    @id @default(autoincrement())
-  description           String?                @db.LongText
+  description           String?                @db.Text
   name                  String?
   active                Boolean?               @default(true)
   Company               Company?               @relation(fields: [companyId], references: [id])
@@ -1280,7 +1281,7 @@ model PurchaseInward {
   supplierId             Int?
   active                 Boolean                  @default(true)
   vehicleNo              String?
-  remarks                String?                  @db.LongText
+  remarks                String?                  @db.Text
   inwardItems            InwardItems[]
   inwardType             String?
   Store                  Location?                @relation(fields: [storeId], references: [id])
@@ -1370,7 +1371,7 @@ model PurchaseInwardReturn {
   termsAndCondition   String?
   Terms               TermsAndConditions?   @relation(fields: [termsId], references: [id])
   termsId             Int?
-  remarks             String?               @db.LongText
+  remarks             String?               @db.Text
   returnType          String?
   Store               Location?             @relation(fields: [storeId], references: [id])
   storeId             Int?
@@ -1427,7 +1428,7 @@ model PurchaseCancel {
   termsAndCondition   String?
   Terms               TermsAndConditions?   @relation(fields: [termsId], references: [id])
   termsId             Int?
-  remarks             String?               @db.LongText
+  remarks             String?               @db.Text
   poType              String?
   Store               Location?             @relation(fields: [storeId], references: [id])
   storeId             Int?
@@ -1481,7 +1482,7 @@ model PurchaseBillEntry {
   supplierId             Int?
   Company                Company?                 @relation(fields: [companyId], references: [id])
   companyId              Int?
-  remarks                String?                  @db.LongText
+  remarks                String?                  @db.Text
   user                   User?                    @relation(fields: [userId], references: [id])
   userId                 Int?
   netBillValue           Float?
@@ -1538,7 +1539,7 @@ model PurchaseLedger {
   supplierId          Int?
   docId               String?
   docDate             DateTime?
-  remarks             String?            @db.LongText
+  remarks             String?            @db.Text
 }
 
 model Size {
@@ -1671,6 +1672,7 @@ model ApprovalLog {
   RaisedBy         User?              @relation("raisedBy", fields: [raisedById], references: [id])
   raisedById       Int?
 }
+
 
 model ApprovalLevelLog {
   id              Int            @id @default(autoincrement())
