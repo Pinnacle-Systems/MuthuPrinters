@@ -88,9 +88,18 @@ function getPOStatus(po) {
   return "Pending";
 }
 
-function getPOApprovalStatus(log) {
+function getPOApprovalStatus(log, isApprovalConfigured = false) {
   // No approval log = not configured
   if (!log) {
+    if (isApprovalConfigured) {
+      return {
+        status: "NOTAPPROVED",
+        label: "Not Approved",
+        color: "orange",
+        currentLevel: 1,
+        levelLogs: [],
+      };
+    }
     return {
       status: "NOT_CONFIGURED",
       label: "No Approval",
@@ -103,6 +112,7 @@ function getPOApprovalStatus(log) {
   const base = {
     currentLevel: log.currentLevel,
     levelLogs: log.LevelLogs ?? [],
+    remarks: log.remarks,
   };
 
   switch (log.status) {
@@ -115,6 +125,13 @@ function getPOApprovalStatus(log) {
         ...base,
         status: "PENDING",
         label: `PENDING`,
+        color: "orange",
+      };
+    case "NOTAPPROVED":
+      return {
+        ...base,
+        status: "NOTAPPROVED",
+        label: "Not Approved",
         color: "orange",
       };
     default:
@@ -145,6 +162,7 @@ async function get(req) {
     searchClientName,
     searchDate,
     searchMaterial,
+    pageId,
   } = req.query;
   const { startTime: startDateStartTime } = getDateTimeRange(startDate);
   const { endTime: endDateEndTime } = getDateTimeRange(endDate);
@@ -250,6 +268,17 @@ async function get(req) {
   });
   data = manualFilterSearchData(searchDate, searchDueDate, searchPoType, data);
   const poIds = data.map((po) => po.id);
+  const approvalConfig = await prisma.approvalConfig.findUnique({
+    where: {
+      branchId_pageId: {
+        branchId: parseInt(branchId),
+        pageId: parseInt(pageId), // 80
+      },
+    },
+    select: { id: true, active: true },
+  });
+
+  const isApprovalConfigured = approvalConfig?.active === true;
   const approvalLogs = await prisma.approvalLog.findMany({
     where: {
       referencePage: "PURCHASE ORDER",
@@ -259,6 +288,7 @@ async function get(req) {
       id: true,
       referenceId: true,
       status: true,
+      remarks: true,
       currentLevel: true,
       LevelLogs: {
         select: {
@@ -292,7 +322,7 @@ async function get(req) {
       return {
         ...po,
         status: getPOStatus(po),
-        approvalStatus: getPOApprovalStatus(log),
+        approvalStatus: getPOApprovalStatus(log, isApprovalConfigured),
         childRecord: po._count.inwardItems + po._count.purchaseCancelItems,
       };
     }),
@@ -355,65 +385,79 @@ async function getOne(id) {
 
   // Assign updated PoItems back to PO object
   po.poItems = updatedItems;
-  const childRecordInward = await prisma.inwardItems.count({
+  const PO_PAGE = await prisma.page.findFirst({
     where: {
-      poId: po.id,
-    },
-  });
-  const childRecordCancel = await prisma.purchaseCancelItems.count({
-    where: {
-      poId: po.id,
-    },
-  });
-  const approvalLog = await prisma.approvalLog.findFirst({
-    where: {
-      referenceId: parseInt(id),
-      referencePage: "PURCHASE ORDER",
+      name: "PURCHASE ORDER",
     },
     select: {
       id: true,
-      status: true,
-      currentLevel: true,
-      ApprovalConfig: {
+    },
+  });
+  const PO_PAGE_ID = PO_PAGE?.id;
+  const [childRecordInward, childRecordCancel, approvalLog, approvalConfig] =
+    await Promise.all([
+      prisma.inwardItems.count({ where: { poId: po.id } }),
+      prisma.purchaseCancelItems.count({ where: { poId: po.id } }),
+      prisma.approvalLog.findFirst({
+        where: {
+          referenceId: parseInt(id),
+          referencePage: "PURCHASE ORDER",
+        },
         select: {
-          approvalLevels: {
-            orderBy: { levelNo: "asc" },
+          id: true,
+          status: true,
+          currentLevel: true,
+          ApprovalConfig: {
             select: {
-              id: true,
-              levelNo: true,
-              approveType: true,
-              condition: true,
-              LevelUsers: {
+              approvalLevels: {
+                orderBy: { levelNo: "asc" },
                 select: {
-                  userId: true,
-                  User: { select: { id: true, username: true } },
+                  id: true,
+                  levelNo: true,
+                  approveType: true,
+                  condition: true,
+                  LevelUsers: {
+                    select: {
+                      userId: true,
+                      User: { select: { id: true, username: true } },
+                    },
+                  },
                 },
               },
             },
           },
+          LevelLogs: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              id: true,
+              levelNo: true,
+              action: true,
+              remarks: true,
+              createdAt: true,
+              User: { select: { id: true, username: true } },
+            },
+          },
         },
-      },
-      LevelLogs: {
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          levelNo: true,
-          action: true,
-          remarks: true,
-          createdAt: true,
-          User: { select: { id: true, username: true } },
+      }),
+      prisma.approvalConfig.findFirst({
+        where: {
+          pageId: PO_PAGE_ID, // 80
+          branchId: po.branchId, // use branchId from the fetched po
+          active: true,
         },
-      },
-    },
-  });
+        select: { id: true },
+      }),
+    ]);
+
+  const isApprovalConfigured = !!approvalConfig;
 
   return {
     statusCode: 0,
     data: {
       ...po,
-      childRecordInward: childRecordInward,
-      childRecordCancel: childRecordCancel,
-      approvalStatus: getPOApprovalStatus(approvalLog), // ✅ simple status badge
+      childRecordInward,
+      childRecordCancel,
+      approvalStatus: getPOApprovalStatus(approvalLog, isApprovalConfigured),
       approvalLog: approvalLog ?? null,
     },
   };
@@ -662,7 +706,10 @@ async function update(id, body) {
     payTermId,
     isNewVersion,
     quoteVersion,
+    submitApproval,
+    pageId,
   } = await body;
+  console.log(submitApproval, "submitApproval");
   let data;
   const dataFound = await prisma.po.findUnique({
     where: {
@@ -777,6 +824,20 @@ async function update(id, body) {
       currentQuoteVersion,
       isNewVersion,
     );
+    if (submitApproval) {
+      await createApprovalLog(
+        tx,
+        branchId,
+        pageId,
+        data.id,
+        "PURCHASE ORDER",
+        {
+          true: true,
+        },
+        data?.docId,
+        userId,
+      );
+    }
   });
   return { statusCode: 0, data };
 }
@@ -1075,40 +1136,56 @@ async function getPoItems(req) {
     data = await getAllDataPoItems(data);
     // ✅ STEP 1: Get unique PO ids from filtered items
     const poIds = [...new Set(data.map((item) => item.Po.id))];
-    console.log("poIds", poIds);
-    // ✅ STEP 2: Fetch all approval logs for these POs in ONE query
-    const approvalLogs = await prisma.approvalLog.findMany({
+    const PO_PAGE = await prisma.page.findFirst({
       where: {
-        referencePage: "PURCHASE ORDER",
-        referenceId: { in: poIds },
+        name: "PURCHASE ORDER",
       },
       select: {
-        referenceId: true,
-        status: true,
-        currentLevel: true,
+        id: true,
       },
     });
+    const PO_PAGE_ID = PO_PAGE?.id;
+    const [approvalLogs, approvalConfig] = await Promise.all([
+      prisma.approvalLog.findMany({
+        where: {
+          referencePage: "PURCHASE ORDER",
+          referenceId: { in: poIds },
+        },
+        select: {
+          referenceId: true,
+          status: true,
+          currentLevel: true,
+        },
+      }),
+      prisma.approvalConfig.findFirst({
+        where: {
+          pageId: PO_PAGE_ID, // 80
+          branchId: parseInt(branchId),
+          active: true,
+        },
+        select: { id: true },
+      }),
+    ]);
 
-    // ✅ STEP 3: Build map { poId: approvalLog }
+    const isApprovalConfigured = !!approvalConfig;
+
     const approvalLogMap = approvalLogs.reduce((acc, log) => {
       acc[log.referenceId] = log;
       return acc;
     }, {});
 
-    // ✅ STEP 4: Attach approval status to each item
     data = data.map((item) => {
       const log = approvalLogMap[item.Po.id] ?? null;
       return {
         ...item,
-        approvalStatus: getPOApprovalStatus(log),
+        approvalStatus: getPOApprovalStatus(log, isApprovalConfigured),
       };
     });
 
-    // ✅ STEP 5: Filter — keep only APPROVED or NOT_CONFIGURED (no approval setup)
-    data = data.filter(
-      (item) =>
-        item.approvalStatus.status === "APPROVED" ||
-        item.approvalStatus.status === "NOT_CONFIGURED",
+    // If approval is configured: only let APPROVED items through
+    // If not configured at all: let everything through
+    data = data.filter((item) =>
+      isApprovalConfigured ? item.approvalStatus.status === "APPROVED" : true,
     );
   } else {
     data = await prisma.poItems.findMany({
@@ -1150,7 +1227,7 @@ async function createApproveStatus(body) {
     } else {
       result = await rejectRecord(referenceId, referencePage, userId, remarks);
     }
-    return { statusCode: 0, data: result };
+    return result;
   } catch (err) {
     return {
       statusCode: 400,

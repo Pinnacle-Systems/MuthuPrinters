@@ -30,6 +30,7 @@ import { useGetRolesQuery } from "../../../redux/services/RolesMasterService";
 import { useGetUserQuery } from "../../../redux/services/UsersMasterService";
 import ApprovalDetails from "./ApprovalDetails";
 import { getCommonParams } from "../../../Utils/helper";
+import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 
 export default function Form({
   onSuccess,
@@ -165,6 +166,7 @@ export default function Form({
         icon: "success",
       });
       dispatchInvalidate();
+      invalidatePurchaseModule();
     } catch (error) {
       console.log(error);
       console.log("handle");

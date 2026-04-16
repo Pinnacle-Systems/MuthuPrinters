@@ -154,6 +154,9 @@ export async function approveRecord(
   return await prisma.$transaction(async (tx) => {
     const log = await tx.approvalLog.findFirst({
       where: { referenceId: parseInt(referenceId), referencePage },
+      orderBy: {
+        createdAt: "desc", // ✅ always latest
+      },
       include: {
         ApprovalConfig: {
           include: {
@@ -166,7 +169,6 @@ export async function approveRecord(
         LevelLogs: true,
       },
     });
-    console.log(log, "log");
     if (!log) return { statusCode: 1, message: "Approval log not found" };
     if (log.status === "APPROVED")
       return { statusCode: 1, message: "Already approved" };
@@ -177,11 +179,9 @@ export async function approveRecord(
     const applicableLevels = config.approvalLevels.filter((lvl) =>
       evaluateCondition(lvl.condition, recordData),
     );
-    console.log(applicableLevels, "applicableLevels");
     const currentLevel = applicableLevels.find(
       (l) => l.levelNo === log.currentLevel,
     );
-    console.log(currentLevel, "currentLevel");
     if (!currentLevel)
       return { statusCode: 1, message: "Current level not found" };
 
@@ -189,7 +189,6 @@ export async function approveRecord(
     const isAuthorised = currentLevel.LevelUsers.some(
       (lu) => lu.userId === parseInt(userId),
     );
-    console.log(userId, "userId");
     if (!isAuthorised)
       return { statusCode: 1, message: "Not authorised to approve this level" };
 
@@ -252,6 +251,9 @@ export async function rejectRecord(
   return await prisma.$transaction(async (tx) => {
     const log = await tx.approvalLog.findFirst({
       where: { referenceId: parseInt(referenceId), referencePage },
+      orderBy: {
+        createdAt: "desc", // ✅ always latest
+      },
       include: {
         ApprovalConfig: {
           include: { approvalLevels: { include: { LevelUsers: true } } },
@@ -263,7 +265,7 @@ export async function rejectRecord(
     if (log.status !== "PENDING")
       return {
         statusCode: 1,
-        message: `Cannot reject — status is ${log.status}`,
+        message: `Cannot reject status is ${log.status}`,
       };
 
     const currentLevel = log.ApprovalConfig.approvalLevels.find(

@@ -11,13 +11,14 @@ import { reactPaginateIndexToPageNumber } from "../../../Utils/helper";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Inbox, XCircle } from "lucide-react";
 import Tooltip from "@mui/material/Tooltip";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { push } from "../../../redux/features/opentabs";
 import { FiCheck } from "react-icons/fi";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import Modal from "../../../UiComponents/Modal";
 import { toast } from "react-toastify";
 import { findFromList } from "../../../Utils/helper";
+import { useGetPagesQuery } from "../../../redux/services/PageMasterService";
 const PurchaseOrderFormReport = ({
   onClick,
   onView,
@@ -71,20 +72,36 @@ const PurchaseOrderFormReport = ({
     branchId,
     companyId,
   };
+  const openTabs = useSelector((state) => state.openTabs);
+  const activeTab = openTabs.tabs.find((tab) => tab.active);
+  const { data: pageData } = useGetPagesQuery({});
+
+  const currentPageId =
+    (pageData?.data || []).find((i) => i.name === activeTab.name)?.id || "";
+
+  useEffect(() => {
+    console.log(currentPageId, "currentPageId");
+  }, [currentPageId]);
 
   const {
     data: allData,
     isFetching,
     isLoading,
-  } = useGetPoQuery({
-    params: {
-      branchId,
-      ...searchFields,
-      pagination: true,
-      dataPerPage,
-      pageNumber: currentPageNumber,
+  } = useGetPoQuery(
+    {
+      params: {
+        branchId,
+        ...searchFields,
+        pagination: true,
+        dataPerPage,
+        pageNumber: currentPageNumber,
+        pageId: currentPageId,
+      },
     },
-  });
+    {
+      skip: !currentPageId, // ✅ IMPORTANT
+    },
+  );
 
   useEffect(() => {
     if (!previewPOId) return;
@@ -146,16 +163,20 @@ const PurchaseOrderFormReport = ({
 
       if (result.statusCode === 0) {
         toast.success(
-          actionType === "APPROVE"
-            ? "Purchase Order Approved!"
-            : "Sent Back for Review!",
+          result.message
+            ? result?.message
+            : actionType === "APPROVE"
+              ? "Purchase Order Approved!"
+              : "Sent Back for Review!",
         );
         setApprovalModal(false);
       } else {
         toast.error(result.message || "Action failed");
+        setApprovalModal(false);
       }
     } catch (err) {
       toast.error(err?.data?.message || "Something went wrong!");
+      setApprovalModal(false);
     } finally {
       setActionLoading(false);
     }
@@ -479,6 +500,14 @@ const PurchaseOrderFormReport = ({
                   >
                     <div>Approval Status</div>
                   </th>
+                  {!isAdmin && (
+                    <th
+                      className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
+                      rowSpan={2}
+                    >
+                      <div> Remarks</div>
+                    </th>
+                  )}
                   {isAdmin && (
                     <th
                       className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
@@ -583,7 +612,9 @@ const PurchaseOrderFormReport = ({
                           "Cancelled",
                           "Closed (Inward + Cancelled)",
                         ].includes(dataObj.status) ||
-                        dataObj?.approvalStatus?.status === "PENDING";
+                        dataObj?.approvalStatus?.status === "PENDING" ||
+                        dataObj?.approvalStatus?.status === "NOTAPPROVED" ||
+                        dataObj?.approvalStatus?.status === "REJECTED";
                       return (
                         <tr
                           onKeyDown={(e) => {
@@ -626,6 +657,13 @@ const PurchaseOrderFormReport = ({
                               approvalStatus={dataObj?.approvalStatus}
                             />
                           </td>
+                          {!isAdmin && (
+                            <td className="px-2 py-1">
+                              <div className="flex items-center justify-center gap-1.5 text-orange-700">
+                                {dataObj?.approvalStatus?.remarks || "-"}
+                              </div>
+                            </td>
+                          )}
                           {isAdmin && (
                             <td className="px-2 py-1">
                               <div className="flex items-center justify-center gap-1.5">
@@ -638,6 +676,7 @@ const PurchaseOrderFormReport = ({
                                       onClick={() =>
                                         handleApprovalAction(dataObj, "REJECT")
                                       }
+                                      // disabled={dataObj?.approvalStatus?.status === "PENDING"}
                                       className="p-1.5 rounded-md bg-blue-200 text-blue-700 hover:bg-blue-300 transition"
                                     >
                                       <MdKeyboardDoubleArrowLeft size={16} />
@@ -661,12 +700,12 @@ const PurchaseOrderFormReport = ({
                                 )}
 
                                 {/* Already approved */}
-                                {dataObj?.approvalStatus?.status ===
+                                {/* {dataObj?.approvalStatus?.status ===
                                   "APPROVED" && (
                                   <span className="text-[10px] text-green-600 font-semibold px-1">
                                     ✅ Approved
                                   </span>
-                                )}
+                                )} */}
 
                                 {/* Not configured — no approval setup */}
                                 {dataObj?.approvalStatus?.status ===
