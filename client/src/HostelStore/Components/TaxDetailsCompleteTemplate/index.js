@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useRef } from "react";
 import { discountTypes } from "../../../Utils/DropdownData";
 
 import { Loader } from "../../../Basic/components";
@@ -17,6 +17,9 @@ const TaxDetailsFullTemplate = ({
   onCloseFocus,
 }) => {
   const row = poItems[index];
+  const discountTypeRef = useRef(null);
+  const discountValueRef = useRef(null);
+  const taxPercentRef = useRef(null);
 
   if (!row) return null;
 
@@ -27,6 +30,70 @@ const TaxDetailsFullTemplate = ({
   let taxPercent = isNaN(parseFloat(row["taxPercent"]))
     ? 0
     : parseFloat(row["taxPercent"]);
+
+  const handleExitToNextRow = useCallback((event) => {
+    if (event?.key && event.key !== "Enter" && event.key !== "Tab") {
+      return;
+    }
+
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    document.activeElement?.blur?.();
+    setCurrentSelectedIndex("");
+    window.setTimeout(() => {
+      onCloseFocus?.(index);
+    }, 0);
+  }, [index, onCloseFocus, setCurrentSelectedIndex]);
+
+  const focusField = (fieldRef) => {
+    window.setTimeout(() => {
+      fieldRef.current?.focus?.();
+      fieldRef.current?.select?.();
+    }, 0);
+  };
+
+  const focusNextEditableField = useCallback(
+    (event, currentField) => {
+      if (event.key !== "Enter" && event.key !== "Tab") return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const orderedFields = [
+        {
+          key: "discountType",
+          ref: discountTypeRef,
+          disabled: id ? !isNewVersion : readOnly,
+        },
+        {
+          key: "discountValue",
+          ref: discountValueRef,
+          disabled: id ? !isNewVersion : readOnly || !discountType,
+        },
+        {
+          key: "taxPercent",
+          ref: taxPercentRef,
+          disabled: id ? !isNewVersion : readOnly,
+        },
+      ];
+
+      const currentIndex = orderedFields.findIndex(
+        (field) => field.key === currentField,
+      );
+
+      const nextField = orderedFields
+        .slice(currentIndex + 1)
+        .find((field) => !field.disabled);
+
+      if (nextField) {
+        focusField(nextField.ref);
+        return;
+      }
+
+      handleExitToNextRow(event);
+    },
+    [discountType, handleExitToNextRow, id, isNewVersion, readOnly],
+  );
 
   return (
     <div
@@ -55,11 +122,15 @@ const TaxDetailsFullTemplate = ({
             <td className="border border-gray-500" colSpan={2}>
               <select
                 autoFocus
+                ref={discountTypeRef}
                 disabled={id ? !isNewVersion : readOnly}
                 className="text-left w-full rounded h-8"
                 value={discountType}
                 onChange={(e) =>
                   handleInputChange(e.target.value, index, "discountType")
+                }
+                onKeyDown={(event) =>
+                  focusNextEditableField(event, "discountType")
                 }
               >
                 <option value={""}>Select</option>
@@ -75,6 +146,7 @@ const TaxDetailsFullTemplate = ({
             <td className="border border-gray-500">Discount</td>
             <td className="border border-gray-500" colSpan={2}>
               <input
+                ref={discountValueRef}
                 type="text"
                 disabled={id ? !isNewVersion : readOnly || !discountType}
                 className="h-7 w-full text-right"
@@ -82,6 +154,9 @@ const TaxDetailsFullTemplate = ({
                 onFocus={(e) => e.target.select()}
                 onChange={(e) =>
                   handleInputChange(e.target.value, index, "discountValue")
+                }
+                onKeyDown={(event) =>
+                  focusNextEditableField(event, "discountValue")
                 }
               />
             </td>
@@ -94,17 +169,9 @@ const TaxDetailsFullTemplate = ({
           </tr>
           <tr className="h-7">
             <td className="border border-gray-500">Tax</td>
-            <td
-              className="border border-gray-500"
-              colSpan={2}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setCurrentSelectedIndex("");
-                  onCloseFocus(index); // 🔥 focus back
-                }
-              }}
-            >
+            <td className="border border-gray-500" colSpan={2}>
               <input
+                ref={taxPercentRef}
                 type="text"
                 disabled={id ? !isNewVersion : readOnly}
                 className="h-7 w-full text-right"
@@ -113,6 +180,7 @@ const TaxDetailsFullTemplate = ({
                   handleInputChange(e.target.value, index, "taxPercent");
                 }}
                 onFocus={(e) => e.target.select()}
+                onKeyDown={handleExitToNextRow}
               />
             </td>
           </tr>

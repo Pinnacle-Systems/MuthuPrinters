@@ -11,15 +11,10 @@ import {
 import { deliveryTypes, poTypes } from "../../../Utils/DropdownData";
 import { useCallback, useEffect, useRef, useState } from "react";
 import moment from "moment";
-import {
-  findFromList,
-  getCommonParams,
-  isGridDatasValid,
-  ModeChip,
-} from "../../../Utils/helper";
+import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
 import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 import { toast } from "react-toastify";
-import { FiEdit2, FiPrinter, FiSave, FiSend } from "react-icons/fi";
+import { FiEdit2, FiEye, FiPrinter, FiSave, FiSend } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
 import {
   useAddPoMutation,
@@ -36,7 +31,6 @@ import { useGetBranchByIdQuery } from "../../../redux/services/BranchMasterServi
 import { groupBy } from "lodash";
 import PoItems from "./PoItems";
 import PurchaseOrderPrintFormat from "./PrintFormat-PO";
-import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
@@ -44,6 +38,19 @@ import { PayTermMaster, TermsAndCondition } from "../../../Basic/components";
 import { PartyMaster, TaxTemplate } from "..";
 import { useSelector } from "react-redux";
 import { useGetPagesQuery } from "../../../redux/services/PageMasterService";
+import {
+  CommonFormFooter,
+  TransactionActions,
+  TransactionLayout,
+} from "../../../Basic/components/Reuseable";
+import {
+  createPurchaseOrderRows,
+  DEFAULT_PURCHASE_ORDER_ROWS,
+  getPurchaseOrderPayload,
+  getPurchaseOrderTaxSnapshot,
+  showValidationResult,
+  validatePurchaseOrderData,
+} from "./purchaseOrder.module";
 
 const PurchaseOrderForm = ({
   onClose,
@@ -141,19 +148,7 @@ const PurchaseOrderForm = ({
       setPoItems(
         data?.poItems
           ? data?.poItems
-          : Array.from({ length: 4 }, () => ({
-              styleItemId: "",
-              hsnId: "",
-              uomId: "",
-              price: "",
-              qty: "",
-              quoteVersion: quoteVersion,
-              netAmount: 0,
-              itemGroupId: "",
-              sizeId: "",
-              colorId: "",
-              gsmId: "",
-            })),
+          : createPurchaseOrderRows(DEFAULT_PURCHASE_ORDER_ROWS, quoteVersion),
       );
       setDocId(data?.docId ? data?.docId : "New");
       setDiscountType(data?.discountType || "Percentage");
@@ -304,93 +299,53 @@ const PurchaseOrderForm = ({
   };
 
   const findDuplicates = (items) => {
-    const versionFilteredItems = items.filter((row) => {
-      if (!id) return true; // new entry — all rows
-      if (isNewVersion) return row.quoteVersion === "New";
-      return parseInt(row.quoteVersion) === parseInt(quoteVersion ?? "");
-    });
-    const seen = new Map(); // key -> first index
-    const duplicates = [];
-
-    versionFilteredItems.forEach((row, index) => {
-      const key = [
-        row.styleItemId || "",
-        row.sizeId || "",
-        row.colorId || "",
-        row.gsmId || "",
-      ].join("-");
-
-      if (seen.has(key)) {
-        duplicates.push({
-          firstIndex: seen.get(key),
-          duplicateIndex: index,
-          styleItemId: row.styleItemId,
-          sizeId: row.sizeId,
-          colorId: row.colorId,
-          gsmId: row.gsmId,
-        });
-      } else {
-        seen.set(key, index);
-      }
-    });
-
-    return duplicates; // empty array = no duplicates
+    return items;
   };
 
   const validateData = (data) => {
-    const filledItems = (data?.poItems || []).filter(
-      (item) => item.styleItemId,
-    );
-    const duplicates = findDuplicates(filledItems);
-    const dup = duplicates[0];
-
-    const checks = [
-      { condition: !data.dueDate, title: "Delivery Date is required!" },
-      { condition: !data.poType, title: "PO Type is required!" },
-      { condition: !data.taxTemplateId, title: "Tax Template is required!" },
-      { condition: !data.supplierId, title: "Supplier is required!" },
-      { condition: !data.deliveryType, title: "Delivery Type is required!" },
-      { condition: !data.deliveryToId, title: "Delivery To is required!" },
-      {
-        condition: filledItems.length === 0,
-        title: "Please add at least one item!",
-      },
-      {
-        condition: !isGridDatasValid(data?.poItems, false, [
-          "styleItemId",
-          "uomId",
-          "qty",
-          "price",
-        ]),
-        title: "Please fill all required item fields!",
-      },
-      {
-        condition: duplicates.length > 0,
-        title: "Duplicate Item Found!",
-        html: dup
-          ? `Item - ${findFromList(dup?.styleItemId, styleItemList?.data, "name")}, Size - ${findFromList(dup?.sizeId, sizeList?.data, "name")}, Color - ${findFromList(dup?.colorId, colorList?.data, "name")}, GSM - ${findFromList(dup?.gsmId, gsmList?.data, "name")}`
-          : "",
-      },
-    ];
-
-    const failed = checks.find((c) => c.condition);
-    if (failed) {
-      Swal.fire({
-        icon: "warning",
-        title: failed.title,
-        html: failed.html,
-        timer: failed.html ? undefined : 1500,
-        showConfirmButton: !!failed.html,
-        confirmButtonText: "OK",
-      });
-      return false;
-    }
-
-    return true;
+    const result = validatePurchaseOrderData({
+      data,
+      id,
+      isNewVersion,
+      quoteVersion,
+      styleItemList,
+      sizeList,
+      colorList,
+      gsmList,
+    });
+    return showValidationResult(result);
   };
 
-  const saveData = (nextProcess) => {
-    if (!validateData(data)) {
+  const saveData = (nextProcess, options = {}) => {
+    const submitApprovalFlag = options.submitApprovalOverride ?? submitApproval;
+    const payload = getPurchaseOrderPayload({
+      supplierId,
+      dueDate,
+      docDate,
+      branchId,
+      id,
+      userId,
+      remarks,
+      poItems,
+      deliveryType,
+      deliveryToId,
+      discountType,
+      discountValue,
+      taxPercent,
+      finYearId,
+      poType,
+      taxTemplateId,
+      termsAndCondtion,
+      termsId,
+      isNewVersion,
+      quoteVersion,
+      payTermId,
+      pageId: currentPageId,
+      totalNetAmount: totals?.net,
+      submitApproval: submitApprovalFlag,
+    });
+
+    if (!validateData(payload)) {
       return;
     }
     if (id) {
@@ -401,21 +356,25 @@ const PurchaseOrderForm = ({
     if (nextProcess == "draft" && !id) {
       handleSubmitCustom(
         addData,
-        (data = { ...data, draftSave: true }),
+        { ...payload, draftSave: true },
         "Added",
         nextProcess,
       );
     } else if (id && nextProcess == "draft") {
       handleSubmitCustom(
         updateData,
-        { ...data, draftSave: true },
+        { ...payload, draftSave: true },
         "Updated",
         nextProcess,
       );
     } else if (id) {
-      handleSubmitCustom(updateData, data, "Updated", nextProcess);
+      handleSubmitCustom(updateData, payload, "Updated", nextProcess);
     } else {
-      handleSubmitCustom(addData, data, "Added", nextProcess);
+      handleSubmitCustom(addData, payload, "Added", nextProcess);
+    }
+
+    if (submitApproval || submitApprovalFlag) {
+      setSubmitApproval(false);
     }
   };
 
@@ -444,15 +403,6 @@ const PurchaseOrderForm = ({
   }
   let supplierListBasedOnSupply = filterSupplier();
 
-  const taxGroupWise = groupBy(poItems, "taxPercent");
-
-  const filtered = Object.fromEntries(
-    Object.entries(taxGroupWise)
-      .filter(([key]) => key && key !== "undefined")
-      .map(([key, arr]) => [key, arr.filter((item) => item && item.yarnId)])
-      .filter(([_, arr]) => arr.length > 0),
-  );
-
   const { data: deliveryToBranch } = useGetBranchByIdQuery(deliveryToId, {
     skip: deliveryType === "ToParty",
   });
@@ -465,21 +415,68 @@ const PurchaseOrderForm = ({
       ? deliveryToSupplier?.data
       : deliveryToBranch?.data;
 
-  function isSupplierOutside() {
-    if (supplierDetails) {
-      return supplierDetails?.data?.City?.state?.name !== "TAMILNADU";
-    }
-    return false;
-  }
+  const { isSupplierOutside, enrichedPoItems, totals } =
+    getPurchaseOrderTaxSnapshot({
+      poItems,
+      supplierDetails,
+      discountType,
+      discountValue,
+      id,
+      isNewVersion,
+      quoteVersion,
+    });
+
+  const taxGroupWise = groupBy(poItems, "taxPercent");
+
+  const filtered = Object.fromEntries(
+    Object.entries(taxGroupWise)
+      .filter(([key]) => key && key !== "undefined")
+      .map(([key, arr]) => [
+        key,
+        arr.filter((item) => {
+          if (!item) return false;
+
+          const gross = parseFloat(item?.gross || 0) || 0;
+          const quantity = parseFloat(item?.quantity || 0) || 0;
+
+          return Boolean(
+            item?.styleItemId ||
+              item?.itemId ||
+              item?.yarnId ||
+              item?.description ||
+              gross > 0 ||
+              quantity > 0,
+          );
+        }),
+      ])
+      .filter(([_, arr]) => arr.length > 0),
+  );
+
+  const taxBreakdownSummary =
+    totals?.slabBreakup?.filter((row) => (row?.amount || 0) > 0) || [];
+
+  const taxBreakdownContent =
+    taxBreakdownSummary.length > 0 ? (
+      <div className="space-y-0.5 border-t border-slate-100 pt-1">
+        {taxBreakdownSummary.map((row) => (
+          <div
+            key={`${row.tax}-${row.amount}`}
+            className="flex items-center justify-between gap-2 text-[11px]"
+          >
+            <span className="text-slate-500">{row.tax}</span>
+            <span className="font-medium text-slate-700">
+              {`Rs.${parseFloat(row.amount || 0).toFixed(2)}`}
+            </span>
+          </div>
+        ))}
+      </div>
+    ) : null;
 
   const quoteVersionOptions = [
     ...new Set(
       poItems
         .filter(
-          (i) =>
-            i?.styleItemId && // ⬅️ only rows with actual data
-            i?.quoteVersion &&
-            i?.quoteVersion !== "New",
+          (i) => i?.styleItemId && i?.quoteVersion && i?.quoteVersion !== "New",
         )
         .map((i) => Number(i.quoteVersion))
         .filter((n) => n > 0),
@@ -494,67 +491,19 @@ const PurchaseOrderForm = ({
     }
   };
 
-  const { items: enrichedPoItems } =
-    calculateTaxWithHSNBreakupAndInsertIntoPoItems(
-      poItems,
-      isSupplierOutside(),
-      discountType,
-      discountValue,
-    );
-
-  const { items: _, ...totals } =
-    calculateTaxWithHSNBreakupAndInsertIntoPoItems(
-      poItems?.filter((i) => {
-        if (!i.styleItemId) return false;
-        if (!id) return true;
-        if (isNewVersion) return i.quoteVersion === "New";
-        return parseInt(i.quoteVersion) === parseInt(quoteVersion ?? "");
-      }),
-      isSupplierOutside(),
-      discountType,
-      discountValue,
-    );
-
-  let data = {
-    supplierId,
-    dueDate,
-    docDate,
-    branchId,
-    id,
-    userId,
-    remarks,
-    poItems: poItems?.filter((po) => po.styleItemId),
-    deliveryType,
-    deliveryToId,
-    discountType,
-    discountValue,
-    taxPercent,
-    finYearId,
-    poType,
-    taxTemplateId,
-    termsAndCondtion,
-    termsId,
-    isNewVersion,
-    quoteVersion,
-    payTermId,
-    pageId: currentPageId,
-    totalNetAmount: totals?.net,
-    submitApproval,
-  };
-
   function getTotalQty() {
-    const filtered = poItems?.filter((item) => {
-      if (!item.styleItemId) return false; // skip empty rows
+    const filteredRows = poItems?.filter((item) => {
+      if (!item.styleItemId) return false;
 
-      if (!id) return true; // new entry — all rows
+      if (!id) return true;
 
       if (isNewVersion) return item.quoteVersion === "New";
 
       return parseInt(item.quoteVersion) === parseInt(quoteVersion ?? "");
     });
 
-    const qty = filtered?.reduce((acc, curr) => {
-      return acc + (parseFloat(curr?.qty) || 0); // ✅ parseFloat not parseInt
+    const qty = filteredRows?.reduce((acc, curr) => {
+      return acc + (parseFloat(curr?.qty) || 0);
     }, 0);
 
     return parseFloat(qty || 0);
@@ -579,7 +528,7 @@ const PurchaseOrderForm = ({
       );
       setTermsAndCondtion(selectedTerm?.description || "");
     }
-  }, [termsId]);
+  }, [id, termsData, termsId]);
 
   const getTitleChip = (text) => {
     if (id && readOnly) {
@@ -617,6 +566,777 @@ const PurchaseOrderForm = ({
   };
 
   const chip = getModeChip();
+
+  const actionButtonClass =
+    "px-3 py-2 rounded-md flex items-center justify-center text-sm text-white transition";
+  const actionIconPairClass = "flex items-center gap-1";
+
+  const leftActions = [
+    {
+      key: "save-close",
+      icon: (
+        <span className={actionIconPairClass}>
+          <FiSave className="h-4 w-4" />
+          <HiX className="h-4 w-4" />
+        </span>
+      ),
+      hoverLabel: "Save & Close",
+      iconOnly: true,
+      onClick: () => saveData("close"),
+      onKeyDown: (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          saveData("close");
+          e.stopPropagation();
+        }
+      },
+      disabled: readOnly,
+      className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
+    },
+    {
+      key: "save-new",
+      icon: (
+        <span className={actionIconPairClass}>
+          <FiSave className="h-4 w-4" />
+          <HiOutlineRefresh className="h-4 w-4" />
+        </span>
+      ),
+      hoverLabel: "Save & New",
+      iconOnly: true,
+      onClick: () => saveData("new"),
+      onKeyDown: (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          saveData("new");
+        }
+      },
+      disabled: readOnly,
+      className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
+    },
+    {
+      key: "submit-approval",
+      icon: <FiSend className="h-4 w-4" />,
+      hoverLabel: "Submit Approval",
+      iconOnly: true,
+      onClick: () => {
+        setSubmitApproval(true);
+        saveData("new", { submitApprovalOverride: true });
+      },
+      onKeyDown: (e) => {
+        if (e.key === "Enter") {
+          setSubmitApproval(true);
+          e.preventDefault();
+          e.stopPropagation();
+          saveData("new", { submitApprovalOverride: true });
+        }
+      },
+      disabled: readOnly,
+      className: `bg-green-700 hover:bg-green-800 ${actionButtonClass}`,
+    },
+  ];
+
+  const rightActions = [
+    ...(!id || !readOnly
+      ? []
+      : [
+          {
+            key: "edit",
+            icon: <FiEdit2 className="h-4 w-4" />,
+            hoverLabel: "Edit",
+            iconOnly: true,
+            onClick: () => setReadOnly(false),
+            className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
+          },
+        ]),
+    {
+      key: "summary",
+      icon: <FiEye className="h-4 w-4" />,
+      hoverLabel: "View PO Summary",
+      iconOnly: true,
+      onClick: () => {
+        if (!taxTemplateId) {
+          toast.info("Please Select Tax Template !", {
+            position: "top-center",
+          });
+          return;
+        }
+        setSummary(true);
+      },
+      onKeyDown: (e) => {
+        if (!taxTemplateId) {
+          e.preventDefault();
+          e.stopPropagation();
+          toast.info("Please Select Tax Template !", {
+            position: "top-center",
+          });
+          return;
+        }
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          setSummary(true);
+        }
+      },
+      className:
+        "bg-blue-600 text-white font-semibold hover:bg-blue-800 rounded-md px-3 py-2 flex items-center justify-center transition",
+    },
+    {
+      key: "print",
+      icon: <FiPrinter className="h-4 w-4" />,
+      hoverLabel: "Print",
+      iconOnly: true,
+      onClick: () => {
+        setPrintModalOpen(true);
+      },
+      onKeyDown: (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          setPrintModalOpen(true);
+        }
+      },
+      className: `bg-slate-600 hover:bg-slate-700 ${actionButtonClass}`,
+    },
+  ];
+
+  const compactFieldClass = "px-2 py-1 text-[11px]";
+  const compactModalFieldClass = "w-full px-2 py-1 text-[11px]";
+  const compactCardClass =
+    "border border-slate-200 px-1.5 py-1 bg-white rounded-md shadow-sm";
+  const compactSectionTitleClass =
+    "font-medium text-[11px] text-slate-700 mb-0.5";
+  const fieldWidthShort = "w-full min-w-0";
+  const fieldWidthMedium = "w-full min-w-0";
+  const fieldWidthDate = "w-full min-w-0";
+  const narrowFieldWrap = "min-w-0";
+  const partyDropdownMinWidth = 260;
+  const supplierCompactGridClass =
+    "grid grid-cols-1 gap-1 items-end md:grid-cols-2 xl:grid-cols-[172px_minmax(0,1.15fr)_minmax(0,0.8fr)]";
+  const deliveryCompactGridClass =
+    "grid grid-cols-1 gap-1 items-end md:grid-cols-[76px_minmax(0,1fr)_104px] xl:grid-cols-[76px_minmax(0,1fr)_104px]";
+  const sidebarSectionGridClass = "grid grid-cols-1 gap-1";
+  const sidebarTwoColumnGridClass = "grid grid-cols-2 gap-1";
+
+  const basicDetailsFields = (
+    <>
+      <div className={narrowFieldWrap}>
+        <ReusableInput
+          label="Order No"
+          readOnly
+          value={docId}
+          className={`${compactFieldClass} ${fieldWidthMedium}`}
+        />
+      </div>
+      <div className={narrowFieldWrap}>
+        <ReusableInput
+          label="Order Date"
+          value={docDate}
+          type={"date"}
+          required={true}
+          readOnly={true}
+          disabled
+          className={`${compactFieldClass} ${fieldWidthDate}`}
+        />
+      </div>
+      <div className={narrowFieldWrap}>
+        <DropdownInput
+          name="Po Type"
+          options={poTypes}
+          value={poType}
+          setValue={(value) => {
+            setPoType(value);
+          }}
+          required={true}
+          readOnly={readOnly}
+          disabled={orderId || id}
+          ref={supplierRef}
+          className={`${compactFieldClass} w-full max-w-none`}
+        />
+      </div>
+      <div className={narrowFieldWrap}>
+        <DropdownInput
+          name="Tax Type"
+          options={dropDownListObject(
+            taxTypeList ? taxTypeList?.data : [],
+            "name",
+            "id",
+          )}
+          value={taxTemplateId}
+          setValue={setTaxTemplateId}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactFieldClass} w-full max-w-none`}
+        />
+      </div>
+      <div className={narrowFieldWrap}>
+        <DropdownWithModal
+          name="Pay Term"
+          options={dropDownListObject(
+            id
+              ? payTermList?.data
+              : payTermList?.data?.filter((item) => item?.active),
+            "name",
+            "id",
+          )}
+          value={payTermId}
+          setValue={setPayTermId}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactModalFieldClass} w-full max-w-none`}
+          dropdownMinWidth={240}
+          addNewLabel="+ Add New Pay Term"
+          childComponent={PayTermMaster}
+          addNewModalWidth="w-[40%] h-[66%]"
+        />
+      </div>
+    </>
+  );
+
+  const supplierDetailsFields = (
+    <>
+      <div className="min-w-0 md:col-span-2 xl:col-span-1">
+        <DropdownWithModal
+          name="Supplier"
+          options={dropDownListObject(
+            id
+              ? supplierList?.data?.filter((item) => item?.isSupplier)
+              : supplierList?.data?.filter(
+                  (item) => item?.active && item?.isSupplier,
+                ),
+            "name",
+            "id",
+          )}
+          value={supplierId}
+          setValue={setSupplierId}
+          required={true}
+          readOnly={readOnly}
+          className={compactModalFieldClass}
+          dropdownMinWidth={partyDropdownMinWidth}
+          addNewLabel="+ Add New Supplier"
+          childComponent={PartyMaster}
+          addNewModalWidth="w-[90%] h-[95%]"
+          disabled={id}
+        />
+      </div>
+
+      <div className={narrowFieldWrap}>
+        <TextInput
+          name="Contact Person"
+          placeholder="Contact name"
+          value={findFromList(
+            supplierId,
+            supplierList?.data,
+            "contactPersonName",
+          )}
+          disabled={true}
+          className={`${compactFieldClass} ${fieldWidthMedium}`}
+        />
+      </div>
+
+      <div className={narrowFieldWrap}>
+        <TextInput
+          name="Phone"
+          placeholder="Contact name"
+          value={findFromList(supplierId, supplierList?.data, "contactNumber")}
+          disabled={true}
+          className={`${compactFieldClass} ${fieldWidthMedium}`}
+        />
+      </div>
+    </>
+  );
+
+  const deliveryDetailsFields = (
+    <>
+      <div className={narrowFieldWrap}>
+        <DropdownInput
+          name="Delivery Type"
+          options={deliveryTypes}
+          value={deliveryType}
+          setValue={setDeliveryType}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactFieldClass} ${fieldWidthShort}`}
+        />
+      </div>
+      <div className="min-w-0">
+        {deliveryType == "ToSelf" ? (
+          <DropdownInput
+            name="Delivery To"
+            options={
+              deliveryType === "ToSelf"
+                ? dropDownListObject(
+                    branchList ? branchList.data : [],
+                    "branchName",
+                    "id",
+                  )
+                : dropDownListObject(supplierListBasedOnSupply, "name", "id")
+            }
+            value={deliveryToId}
+            setValue={setDeliveryToId}
+            required={true}
+            readOnly={readOnly}
+            className={compactFieldClass}
+          />
+        ) : (
+          <DropdownWithModal
+            name="Delivery To"
+            options={dropDownListObject(
+              id
+                ? supplierList?.data
+                : supplierList?.data?.filter((item) => item?.active),
+              "name",
+              "id",
+            )}
+            value={deliveryToId}
+            setValue={setDeliveryToId}
+            required={true}
+            readOnly={readOnly}
+            className={compactModalFieldClass}
+            dropdownMinWidth={partyDropdownMinWidth}
+            addNewLabel="+ Add New Customer"
+            childComponent={PartyMaster}
+            addNewModalWidth="w-[90%] h-[95%]"
+          />
+        )}
+      </div>
+      <div className={narrowFieldWrap}>
+        <DateInputNew
+          name="Delivery Date"
+          value={dueDate}
+          setValue={setDueDate}
+          type={"date"}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactFieldClass} ${fieldWidthDate}`}
+        />
+      </div>
+    </>
+  );
+
+  const basicDetailsCompactSection = (
+    <div className={compactCardClass}>
+      <h2 className={compactSectionTitleClass}>Basic Details</h2>
+      <div className="grid grid-cols-2 gap-1 items-end md:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_104px_minmax(0,1fr)]">
+        {basicDetailsFields}
+      </div>
+    </div>
+  );
+
+  const supplierDetailsCompactSection = (
+    <div className={compactCardClass}>
+      <h2 className={compactSectionTitleClass}>Supplier Details</h2>
+      <div className={supplierCompactGridClass}>{supplierDetailsFields}</div>
+    </div>
+  );
+
+  const deliveryDetailsCompactSection = (
+    <div className={compactCardClass}>
+      <h2 className={compactSectionTitleClass}>Delivery Details</h2>
+      <div className={deliveryCompactGridClass}>{deliveryDetailsFields}</div>
+    </div>
+  );
+
+  const basicDetailsSidebarSection = (
+    <div className={sidebarSectionGridClass}>
+      <div className={sidebarTwoColumnGridClass}>
+        <div className={narrowFieldWrap}>
+          <ReusableInput
+            label="Order No"
+            readOnly
+            value={docId}
+            className={`${compactFieldClass} ${fieldWidthMedium}`}
+          />
+        </div>
+        <div className={narrowFieldWrap}>
+          <ReusableInput
+            label="Order Date"
+            value={docDate}
+            type={"date"}
+            required={true}
+            readOnly={true}
+            disabled
+            className={`${compactFieldClass} ${fieldWidthDate}`}
+          />
+        </div>
+      </div>
+      <div className={sidebarTwoColumnGridClass}>
+        <div className={narrowFieldWrap}>
+          <DropdownInput
+            name="Po Type"
+            options={poTypes}
+            value={poType}
+            setValue={(value) => {
+              setPoType(value);
+            }}
+            required={true}
+            readOnly={readOnly}
+            disabled={orderId || id}
+            className={`${compactFieldClass} w-full max-w-none`}
+          />
+        </div>
+        <div className={narrowFieldWrap}>
+          <DropdownInput
+            name="Tax Type"
+            options={dropDownListObject(
+              taxTypeList ? taxTypeList?.data : [],
+              "name",
+              "id",
+            )}
+            value={taxTemplateId}
+            setValue={setTaxTemplateId}
+            required={true}
+            readOnly={readOnly}
+            className={`${compactFieldClass} w-full max-w-none`}
+          />
+        </div>
+      </div>
+      <div className={narrowFieldWrap}>
+        <DropdownWithModal
+          name="Pay Term"
+          options={dropDownListObject(
+            id
+              ? payTermList?.data
+              : payTermList?.data?.filter((item) => item?.active),
+            "name",
+            "id",
+          )}
+          value={payTermId}
+          setValue={setPayTermId}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactModalFieldClass} w-full max-w-none`}
+          dropdownMinWidth={240}
+          addNewLabel="+ Add New Pay Term"
+          childComponent={PayTermMaster}
+          addNewModalWidth="w-[40%] h-[66%]"
+        />
+      </div>
+    </div>
+  );
+
+  const supplierDetailsSidebarSection = (
+    <div className={sidebarSectionGridClass}>
+      <div className={narrowFieldWrap}>
+        <DropdownWithModal
+          name="Supplier"
+          options={dropDownListObject(
+            id
+              ? supplierList?.data?.filter((item) => item?.isSupplier)
+              : supplierList?.data?.filter(
+                  (item) => item?.active && item?.isSupplier,
+                ),
+            "name",
+            "id",
+          )}
+          value={supplierId}
+          setValue={setSupplierId}
+          required={true}
+          readOnly={readOnly}
+          className={compactModalFieldClass}
+          dropdownMinWidth={partyDropdownMinWidth}
+          addNewLabel="+ Add New Supplier"
+          childComponent={PartyMaster}
+          addNewModalWidth="w-[90%] h-[95%]"
+          disabled={id}
+        />
+      </div>
+      <div className={sidebarTwoColumnGridClass}>
+        <div className={narrowFieldWrap}>
+          <TextInput
+            name="Contact Person"
+            placeholder="Contact name"
+            value={findFromList(
+              supplierId,
+              supplierList?.data,
+              "contactPersonName",
+            )}
+            disabled={true}
+            className={`${compactFieldClass} ${fieldWidthMedium}`}
+          />
+        </div>
+        <div className={narrowFieldWrap}>
+          <TextInput
+            name="Phone"
+            placeholder="Contact name"
+            value={findFromList(
+              supplierId,
+              supplierList?.data,
+              "contactNumber",
+            )}
+            disabled={true}
+            className={`${compactFieldClass} ${fieldWidthMedium}`}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const deliveryDetailsSidebarSection = (
+    <div className={sidebarSectionGridClass}>
+      <div className={narrowFieldWrap}>
+        <DropdownInput
+          name="Delivery Type"
+          options={deliveryTypes}
+          value={deliveryType}
+          setValue={setDeliveryType}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactFieldClass} ${fieldWidthShort}`}
+        />
+      </div>
+      <div className="min-w-0">
+        {deliveryType == "ToSelf" ? (
+          <DropdownInput
+            name="Delivery To"
+            options={
+              deliveryType === "ToSelf"
+                ? dropDownListObject(
+                    branchList ? branchList.data : [],
+                    "branchName",
+                    "id",
+                  )
+                : dropDownListObject(supplierListBasedOnSupply, "name", "id")
+            }
+            value={deliveryToId}
+            setValue={setDeliveryToId}
+            required={true}
+            readOnly={readOnly}
+            className={compactFieldClass}
+          />
+        ) : (
+          <DropdownWithModal
+            name="Delivery To"
+            options={dropDownListObject(
+              id
+                ? supplierList?.data
+                : supplierList?.data?.filter((item) => item?.active),
+              "name",
+              "id",
+            )}
+            value={deliveryToId}
+            setValue={setDeliveryToId}
+            required={true}
+            readOnly={readOnly}
+            className={compactModalFieldClass}
+            dropdownMinWidth={partyDropdownMinWidth}
+            addNewLabel="+ Add New Customer"
+            childComponent={PartyMaster}
+            addNewModalWidth="w-[90%] h-[95%]"
+          />
+        )}
+      </div>
+      <div className={narrowFieldWrap}>
+        <DateInputNew
+          name="Delivery Date"
+          value={dueDate}
+          setValue={setDueDate}
+          type={"date"}
+          required={true}
+          readOnly={readOnly}
+          className={`${compactFieldClass} ${fieldWidthDate}`}
+        />
+      </div>
+    </div>
+  );
+
+  const headerContent = (
+    <div className="grid grid-cols-1 gap-1 xl:grid-cols-[minmax(0,5fr)_minmax(0,3.6fr)_minmax(0,3.4fr)]">
+      {basicDetailsCompactSection}
+      {supplierDetailsCompactSection}
+      {deliveryDetailsCompactSection}
+    </div>
+  );
+
+  const footerContent = (
+    <>
+      <CommonFormFooter
+        remarks={remarks}
+        setRemarks={setRemarks}
+        terms={termsAndCondtion}
+        setTerms={setTermsAndCondtion}
+        readOnly={readOnly}
+        showTermSelect={true}
+        termValue={termsId}
+        onTermChange={(value) => setTermsId(value)}
+        termOptions={
+          (id
+            ? termsData?.data
+            : termsData?.data?.filter((item) => item?.active)
+          )?.map((item) => ({
+            value: item?.id,
+            label: item?.name,
+            templateText: item?.description || "",
+          })) || []
+        }
+        totalsRows={[
+          {
+            key: "taxableAmount",
+            label: "Taxable Amount",
+            value: `Rs.${parseFloat(totals?.taxable || 0).toFixed(2)}`,
+            summaryColumn: "right",
+          },
+          {
+            key: "netAmount",
+            label: "Net Amount",
+            value: `Rs.${parseFloat(totals?.net || 0).toFixed(2)}`,
+            summaryColumn: "right",
+            emphasized: true,
+          },
+        ]}
+        extraTotalsContent={taxBreakdownContent}
+        extraTotalsContentColumn="right"
+      />
+      <TransactionActions
+        leftActions={leftActions}
+        rightActions={rightActions}
+      />
+    </>
+  );
+
+  const sidebarFooterContent = (
+    <>
+      <CommonFormFooter
+        remarks={remarks}
+        setRemarks={setRemarks}
+        terms={termsAndCondtion}
+        setTerms={setTermsAndCondtion}
+        readOnly={readOnly}
+        showTermSelect={true}
+        termValue={termsId}
+        onTermChange={(value) => setTermsId(value)}
+        termOptions={
+          (id
+            ? termsData?.data
+            : termsData?.data?.filter((item) => item?.active)
+          )?.map((item) => ({
+            value: item?.id,
+            label: item?.name,
+            templateText: item?.description || "",
+          })) || []
+        }
+        totalsRows={[
+          {
+            key: "taxableAmount",
+            label: "Taxable Amount",
+            value: `Rs.${parseFloat(totals?.taxable || 0).toFixed(2)}`,
+            summaryColumn: "right",
+          },
+          {
+            key: "netAmount",
+            label: "Net Amount",
+            value: `Rs.${parseFloat(totals?.net || 0).toFixed(2)}`,
+            summaryColumn: "right",
+            emphasized: true,
+          },
+        ]}
+        extraTotalsContent={taxBreakdownContent}
+        extraTotalsContentColumn="right"
+        stacked={true}
+      />
+      <TransactionActions
+        leftActions={leftActions}
+        rightActions={rightActions}
+      />
+    </>
+  );
+
+  const summaryPair = (label, value) => (
+    <span>
+      <span className="font-semibold text-slate-800">{label}:</span>{" "}
+      <span className="font-normal text-slate-700">{value || "-"}</span>
+    </span>
+  );
+
+  const transactionDetailsSummary = [
+    summaryPair("Order No", `${docId || "New"} · ${docDate || "No date"}`),
+    summaryPair("PO Type", poType),
+    summaryPair(
+      "Tax",
+      findFromList(taxTemplateId, taxTypeList?.data, "name") || "-",
+    ),
+    summaryPair(
+      "Pay Term",
+      findFromList(payTermId, payTermList?.data, "name") || "-",
+    ),
+    summaryPair(
+      "Supplier",
+      findFromList(supplierId, supplierList?.data, "name") || "-",
+    ),
+    summaryPair(
+      "Contact",
+      findFromList(supplierId, supplierList?.data, "contactPersonName") || "-",
+    ),
+    summaryPair(
+      "Phone",
+      findFromList(supplierId, supplierList?.data, "contactNumber") || "-",
+    ),
+    summaryPair(
+      "Delivery",
+      `${deliveryType || "-"} to ${
+      deliveryType === "ToSelf"
+        ? findFromList(deliveryToId, branchList?.data, "branchName") || "-"
+        : findFromList(deliveryToId, supplierList?.data, "name") || "-"
+    }`,
+    ),
+    summaryPair("Due", dueDate),
+  ];
+
+  const sidebarDetailsSections = [
+    {
+      id: "basic-details",
+      title: "Basic Details",
+      content: basicDetailsSidebarSection,
+      summary: [
+        summaryPair("Order No", docId || "New"),
+        summaryPair("Date", docDate || "-"),
+        summaryPair("PO Type", poType || "-"),
+        summaryPair(
+          "Tax",
+          findFromList(taxTemplateId, taxTypeList?.data, "name") || "-",
+        ),
+        summaryPair(
+          "Pay Term",
+          findFromList(payTermId, payTermList?.data, "name") || "-",
+        ),
+      ],
+    },
+    {
+      id: "supplier-details",
+      title: "Supplier Details",
+      content: supplierDetailsSidebarSection,
+      summary: [
+        summaryPair(
+          "Supplier",
+          findFromList(supplierId, supplierList?.data, "name") || "-",
+        ),
+        summaryPair(
+          "Contact",
+          findFromList(supplierId, supplierList?.data, "contactPersonName") ||
+            "-",
+        ),
+        summaryPair(
+          "Phone",
+          findFromList(supplierId, supplierList?.data, "contactNumber") || "-",
+        ),
+      ],
+    },
+    {
+      id: "delivery-details",
+      title: "Delivery Details",
+      content: deliveryDetailsSidebarSection,
+      summary: [
+        summaryPair("Type", deliveryType || "-"),
+        summaryPair(
+          "To",
+          deliveryType === "ToSelf"
+            ? findFromList(deliveryToId, branchList?.data, "branchName") || "-"
+            : findFromList(deliveryToId, supplierList?.data, "name") || "-",
+        ),
+        summaryPair("Date", dueDate || "-"),
+      ],
+    },
+  ];
 
   return (
     <>
@@ -682,302 +1402,23 @@ const PurchaseOrderForm = ({
           />
         </PDFViewer>
       </Modal>
-      <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
-        <div className="flex justify-between items-center">
-          <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            Purchase Order
-            <ModeChip id={id} readOnly={readOnly} />
-          </h1>
-          <button
-            onClick={() => {
-              onClose();
-            }}
-            className="text-indigo-600 hover:text-indigo-700"
-            title="Back to Report"
-          >
-            <IoArrowBackCircleSharp className="w-7 h-7" />
-          </button>
-        </div>
-      </div>
-      <div className="space-y-2 py-2" onKeyDown={handleKeyDown}>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-            <h2 className="font-medium text-slate-700 mb-2">Basic Details</h2>
-            <div className="grid grid-cols-2 gap-1">
-              <ReusableInput label="Purchase Order No" readOnly value={docId} />
-              <ReusableInput
-                label="Purchase Order Date"
-                value={docDate}
-                type={"date"}
-                required={true}
-                readOnly={true}
-                disabled
-              />
-              {/* <DropdownInput
-                name="Pay Term"
-                options={dropDownListObject(
-                  payTermList ? payTermList?.data : [],
-                  "name",
-                  "id",
-                )}
-                value={payTermId}
-                setValue={(val) => {
-                  setPayTermId(val);
-                }}
-                required={false}
-                readOnly={readOnly}
-                // autoFocus={true}
-                ref={supplierRef}
-              /> */}
-              {!readOnly && id && (
-                <div className="col-span-1 mt-3">
-                  <CheckBox
-                    name="New Version"
-                    value={isNewVersion}
-                    setValue={setIsNewVersion}
-                    readOnly={readOnly}
-                    className="w-full"
-                    disabled={childRecordCount > 0}
-                  />
-                </div>
-              )}
-              {Boolean(id) && quoteVersionOptions.length > 0 && (
-                <DropdownInput
-                  readOnly={readOnly}
-                  name="Current Version"
-                  value={quoteVersion}
-                  setValue={(value) => setQuoteVersion(value)}
-                  options={quoteVersionOptions.map((i) => ({
-                    show: i,
-                    value: i,
-                  }))}
-                  className="w-full"
-                />
-              )}
-            </div>
-          </div>
-
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-            <h2 className="font-medium text-slate-700 mb-2">Po Details</h2>
-            <div className="grid grid-cols-2 gap-1 ">
-              <DropdownInput
-                name="Po Type"
-                options={poTypes}
-                value={poType}
-                setValue={(value) => {
-                  setPoType(value);
-                }}
-                required={true}
-                readOnly={readOnly}
-                disabled={orderId || id}
-                ref={supplierRef}
-              />
-
-              <DropdownInput
-                name="Tax Type"
-                options={dropDownListObject(
-                  taxTypeList ? taxTypeList?.data : [],
-                  "name",
-                  "id",
-                )}
-                value={taxTemplateId}
-                setValue={setTaxTemplateId}
-                required={true}
-                readOnly={readOnly}
-              />
-              {/* <DropdownWithModal
-                name="Tax Type"
-                options={dropDownListObject(
-                  id
-                    ? taxTypeList?.data
-                    : taxTypeList?.data?.filter((item) => item?.active),
-                  "name",
-                  "id",
-                )}
-                value={taxTemplateId}
-                setValue={setTaxTemplateId}
-                required={true}
-                readOnly={readOnly}
-                className={`w-[150px]`}
-                // disabled={childRecord.current > 0}
-                addNewLabel="+ Add New Tax Template"
-                childComponent={TaxTemplate}
-                addNewModalWidth="w-[82%] h-[85%]"
-              /> */}
-              <DropdownWithModal
-                name="Pay Term"
-                options={dropDownListObject(
-                  id
-                    ? payTermList?.data
-                    : payTermList?.data?.filter((item) => item?.active),
-                  "name",
-                  "id",
-                )}
-                value={payTermId}
-                setValue={setPayTermId}
-                required={true}
-                readOnly={readOnly}
-                className={`w-[150px]`}
-                // disabled={childRecord.current > 0}
-                addNewLabel="+ Add New Pay Term"
-                childComponent={PayTermMaster}
-                addNewModalWidth="w-[40%] h-[66%]"
-              />
-            </div>
-          </div>
-
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-            <h2 className="font-medium text-slate-700 mb-2">
-              Supplier Details
-            </h2>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="col-span-2">
-                {/* <ReusableSearchableInput
-                  label="Supplier"
-                  component="PartyMaster"
-                  placeholder="Search Supplier ..."
-                  optionList={supplierList?.data?.filter(
-                    (item) => item.isSupplier,
-                  )}
-                  setSearchTerm={(value) => {
-                    setSupplierId(value);
-                  }}
-                  searchTerm={supplierId}
-                  show={"isSupplier"}
-                  required={true}
-                  disabled={id}
-                  isSupplier={true}
-                /> */}
-                <DropdownWithModal
-                  name="Supplier"
-                  options={dropDownListObject(
-                    id
-                      ? supplierList?.data?.filter((item) => item?.isSupplier)
-                      : supplierList?.data?.filter(
-                          (item) => item?.active && item?.isSupplier,
-                        ),
-                    "name",
-                    "id",
-                  )}
-                  value={supplierId}
-                  setValue={setSupplierId}
-                  required={true}
-                  readOnly={readOnly}
-                  className={`w-[150px]`}
-                  // disabled={childRecord.current > 0}
-                  addNewLabel="+ Add New Supplier"
-                  childComponent={PartyMaster}
-                  addNewModalWidth="w-[90%] h-[95%]"
-                  disabled={id}
-                />
-              </div>
-
-              <TextInput
-                name="Contact Person"
-                placeholder="Contact name"
-                value={findFromList(
-                  supplierId,
-                  supplierList?.data,
-                  "contactPersonName",
-                )}
-                disabled={true}
-              />
-
-              <TextInput
-                name="Phone"
-                placeholder="Contact name"
-                value={findFromList(
-                  supplierId,
-                  supplierList?.data,
-                  "contactNumber",
-                )}
-                disabled={true}
-              />
-            </div>
-          </div>
-
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-            <h2 className="font-medium text-slate-700 mb-2">
-              Delivery Details
-            </h2>
-            <div className="grid grid-cols-3 gap-2">
-              <DropdownInput
-                name="Delivery Type"
-                options={deliveryTypes}
-                // option={delivery}
-                value={deliveryType}
-                setValue={setDeliveryType}
-                required={true}
-                readOnly={readOnly}
-              />
-              <div className="col-span-2">
-                {deliveryType == "ToSelf" ? (
-                  <DropdownInput
-                    name="Delivery To"
-                    options={
-                      deliveryType === "ToSelf"
-                        ? dropDownListObject(
-                            branchList ? branchList.data : [],
-                            "branchName",
-                            "id",
-                          )
-                        : dropDownListObject(
-                            supplierListBasedOnSupply,
-                            "name",
-                            "id",
-                          )
-                    }
-                    value={deliveryToId}
-                    setValue={setDeliveryToId}
-                    required={true}
-                    readOnly={readOnly}
-                  />
-                ) : (
-                  // <DropdownInput
-                  //   name="Delivery To"
-                  //   options={dropDownListObject(
-                  //     supplierList?.data,
-                  //     "name",
-                  //     "id",
-                  //   )}
-                  //   value={deliveryToId}
-                  //   setValue={setDeliveryToId}
-                  //   required={true}
-                  //   readOnly={readOnly}
-                  // />
-                  <DropdownWithModal
-                    name="Delivery To"
-                    options={dropDownListObject(
-                      id
-                        ? supplierList?.data
-                        : supplierList?.data?.filter((item) => item?.active),
-                      "name",
-                      "id",
-                    )}
-                    value={deliveryToId}
-                    setValue={setDeliveryToId}
-                    required={true}
-                    readOnly={readOnly}
-                    className={`w-[150px]`}
-                    // disabled={childRecord.current > 0}
-                    addNewLabel="+ Add New Customer"
-                    childComponent={PartyMaster}
-                    addNewModalWidth="w-[90%] h-[95%]"
-                  />
-                )}
-              </div>
-              <DateInputNew
-                name="Delivery Date"
-                value={dueDate}
-                setValue={setDueDate}
-                type={"date"}
-                required={true}
-                readOnly={readOnly}
-              />
-            </div>
-          </div>
-        </div>
-        <fieldset className="">
+      <TransactionLayout
+        title="Purchase Order"
+        badge={<ModeChip id={id} readOnly={readOnly} />}
+        closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
+        onClose={onClose}
+        onKeyDown={handleKeyDown}
+        header={headerContent}
+        detailsContent={headerContent}
+        detailsTitle="Transaction Details"
+        detailsLayout="compact"
+        detailsLayouts={["compact", "sidebar"]}
+        detailsSummary={transactionDetailsSummary}
+        sidebarDetailsSections={sidebarDetailsSections}
+        sidebarWidthClass="w-[300px]"
+        sidebarFooter={sidebarFooterContent}
+        defaultDetailsCollapsed={true}
+        gridItems={
           <PoItems
             id={id}
             poItems={poItems}
@@ -996,280 +1437,9 @@ const PurchaseOrderForm = ({
             termsRef={termsRef}
             gsmList={gsmList}
           />
-        </fieldset>
-
-        <div className="grid grid-cols-4 gap-3">
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-            <div className="flex flex-col gap-2">
-              {/* <h2 className="font-bold text-slate-700 mb-2 text-base">
-                Terms & Conditions
-              </h2> */}
-
-              {/* <select
-                value={termsId}
-                onChange={(e) => {
-                  const selectedId = e.target.value;
-
-                  setTermsId(selectedId);
-
-                  const selectedTerm = termsData?.data?.find(
-                    (item) => String(item.id) === String(selectedId),
-                  );
-
-                  setTermsAndCondtion(selectedTerm?.description || "");
-                }}
-                readOnly={readOnly}
-                className="text-left h-15  w-full rounded py-1 border-2 border-gray-200 text-[13px]"
-              >
-                <option></option>
-                {(id
-                  ? termsData?.data
-                  : termsData?.data?.filter((item) => item?.active)
-                )?.map((blend) => (
-                  <option value={blend.id} key={blend.id}>
-                    {blend?.name.substring(0, 50)}
-                  </option>
-                ))}
-              </select> */}
-              <DropdownWithModal
-                ref={termsRef}
-                name="Terms & Conditions"
-                options={dropDownListObject(
-                  id
-                    ? termsData?.data
-                    : termsData?.data?.filter((item) => item?.active),
-                  "name",
-                  "id",
-                )}
-                value={termsId}
-                setValue={setTermsId}
-                readOnly={readOnly}
-                className={`w-[150px]`}
-                // disabled={childRecord.current > 0}
-                addNewLabel="+ Add New Terms and Condition"
-                childComponent={TermsAndCondition}
-                addNewModalWidth="w-[40%] h-[70%]"
-                disabled={id}
-              />
-            </div>
-          </div>
-
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm flex items-center">
-            <textarea
-              // ref={termsRef}
-              disabled={readOnly}
-              readOnly={readOnly}
-              className="w-full h-20 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
-              value={termsAndCondtion}
-              onChange={(e) => setTermsAndCondtion(e.target.value)}
-              placeholder="Type Terms & Conditions..."
-              onKeyDown={(e) => {
-                if (e.ctrlKey && e.key === "Enter") {
-                  e.preventDefault();
-
-                  const textarea = e.target;
-                  const start = textarea.selectionStart;
-                  const end = textarea.selectionEnd;
-
-                  const newValue =
-                    termsAndCondtion.substring(0, start) +
-                    "\n" +
-                    termsAndCondtion.substring(end);
-
-                  setTermsAndCondtion(newValue);
-
-                  // ✅ Restore focus + cursor properly
-                  requestAnimationFrame(() => {
-                    textarea.focus();
-                    textarea.setSelectionRange(start + 1, start + 1);
-                  });
-                }
-              }}
-            />
-            {/* <textarea
-                className="w-full h-32 focus:outline-none border border-gray-300 rounded p-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                value={termsAndCondtion}
-              disabled={readOnly}
-                onChange={(e) => setTermsAndCondtion(e.target.value)}
-              placeholder="Type Terms & Conditions..."
-                
-              /> */}
-          </div>
-
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-            <h2 className="font-semibold text-slate-700 mb-2 text-xs">
-              Remarks
-            </h2>
-            <textarea
-              readOnly={readOnly}
-              value={remarks}
-              onChange={(e) => {
-                setRemarks(e.target.value);
-              }}
-              className="w-full h-14 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md  focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
-              placeholder="Additional notes..."
-            />
-          </div>
-          <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-            <div className="flex justify-between py-1 text-sm">
-              <span className="text-slate-600">Total Qty</span>
-              <span className="font-medium">
-                {parseFloat(getTotalQty()).toFixed(3)}
-              </span>
-            </div>
-            <div className="flex justify-between py-1 text-sm">
-              <span className="text-slate-600">Taxable Amount</span>
-              <span className="font-medium">
-                Rs.{parseFloat(totals?.taxable || 0).toFixed(2)}{" "}
-              </span>
-            </div>
-            {/* <div className="flex justify-between py-1 text-sm">
-                  <span className="text-slate-600">Tax Amount</span>
-                  <span className="font-medium">Rs.{taxDetails?.grossAmount}</span>
-                </div> */}
-            <div className="flex justify-between py-1 text-sm">
-              <span className="text-slate-600">Net Amount</span>
-              <span className="font-medium">
-                Rs.{parseFloat(totals?.net || 0).toFixed(2)}
-              </span>
-            </div>
-          </div>
-
-          {/* <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm">
-            <h2 className="font-bold text-slate-800 mb-2 text-base">
-              Po Summary
-            </h2>
-
-            <button
-              className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1 ml-5 rounded"
-              onClick={() => {
-                if (!taxTemplateId) {
-                  toast.info("Please Select Tax Template !", {
-                    position: "top-center",
-                  });
-                  return;
-                }
-                setSummary(true);
-              }}
-            >
-              View Po Summary
-            </button>
-          </div> */}
-        </div>
-
-        <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
-          {/* Left Buttons */}
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => saveData("close")}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  saveData("close");
-                  e.stopPropagation();
-                }
-              }}
-              disabled={readOnly}
-              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
-            >
-              <HiOutlineRefresh className="w-4 h-4 mr-2" />
-              Save & Close
-            </button>
-            <button
-              onClick={() => saveData("new")}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  saveData("new");
-                }
-              }}
-              disabled={readOnly}
-              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
-            >
-              <FiSave className="w-4 h-4 mr-2" />
-              Save & New
-            </button>
-            <button
-              onClick={() => {
-                setSubmitApproval(true);
-                saveData("new");
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setSubmitApproval(true);
-                  e.preventDefault();
-                  e.stopPropagation();
-                  saveData("new");
-                }
-              }}
-              disabled={readOnly}
-              className="bg-green-700 text-white px-4 py-1 rounded-md hover:bg-green-800 flex items-center text-sm"
-            >
-              <FiSend className="w-4 h-4 mr-2" />
-              Submit Approval
-            </button>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {!id ||
-              (readOnly && (
-                <button
-                  className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-sm"
-                  onClick={() => setReadOnly(false)}
-                >
-                  <FiEdit2 className="w-4 h-4 mr-2" />
-                  Edit
-                </button>
-              ))}
-            <button
-              className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1  rounded"
-              onClick={() => {
-                if (!taxTemplateId) {
-                  toast.info("Please Select Tax Template !", {
-                    position: "top-center",
-                  });
-                  return;
-                }
-                setSummary(true);
-              }}
-              onKeyDown={(e) => {
-                if (!taxTemplateId) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  toast.info("Please Select Tax Template !", {
-                    position: "top-center",
-                  });
-                  return;
-                }
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setSummary(true);
-                }
-              }}
-            >
-              View Po Summary
-            </button>
-            <button
-              className="bg-slate-600 text-white px-4 py-1 rounded-md hover:bg-slate-700 flex items-center text-sm"
-              onClick={() => {
-                // handlePrint()
-                setPrintModalOpen(true);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setPrintModalOpen(true);
-                }
-              }}
-            >
-              <FiPrinter className="w-4 h-4 mr-2" />
-              Print
-            </button>
-          </div>
-        </div>
-      </div>
+        }
+        footer={footerContent}
+      />
     </>
   );
 };

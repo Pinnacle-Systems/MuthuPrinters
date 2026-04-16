@@ -185,6 +185,17 @@ label {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
 } 
 
+.grid-editable-cell {
+  transition:
+    background-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out;
+}
+
+.grid-editable-cell:focus-within {
+  background-color: rgba(219, 234, 254, 0.65);
+  box-shadow: inset 0 0 0 1px #2563eb;
+}
+
 @media print {
   .no-print {
     display: none;

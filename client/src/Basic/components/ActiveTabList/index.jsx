@@ -147,16 +147,20 @@ const ActiveTabList = () => {
 
   return (
     // <div className="relative ">
-    <div className="w-full mt-10" style={{ backgroundColor: "#F1F1F0" }}>
-      <div className="flex justify-between">
+    <div
+      className="w-full h-full min-h-0 flex flex-col overflow-hidden"
+      style={{ backgroundColor: "#F1F1F0" }}
+    >
+      <div className="flex justify-between shrink-0">
         <div className="flex gap-2 ">
           {currentShowingTabs.map((tab, index) => (
             <div
               key={index}
-              className={`px-2 rounded-lg text-[11px] d-flex content-center items-center gap-1 hover:bg-gray-500 hover:text-white transition my-1 ${tab.active
+              className={`px-2 rounded-lg text-[11px] d-flex content-center items-center gap-1 hover:bg-gray-500 hover:text-white transition my-1 ${
+                tab.active
                   ? "bg-gray-500 text-white border border-gray-500"
                   : "text-gray-500 border border-gray-500"
-                }`}
+              }`}
             >
               <button
                 onClick={() => {
@@ -191,8 +195,9 @@ const ActiveTabList = () => {
             {hiddenTabs.map((tab) => (
               <li
                 key={tab.name}
-                className={`flex justify-between  ${tab.active ? "bg-[#009688]" : "bg-gray-300"
-                  } `}
+                className={`flex justify-between  ${
+                  tab.active ? "bg-[#009688]" : "bg-gray-300"
+                } `}
               >
                 <button
                   onClick={() => {
@@ -215,7 +220,10 @@ const ActiveTabList = () => {
         )}
       </div>
       {openTabs.tabs.map((tab, index) => (
-        <div key={index} className={`${tab.active ? "block" : "hidden"} `}>
+        <div
+          key={index}
+          className={`${tab.active ? "block" : "hidden"} flex-1 min-h-0 overflow-hidden`}
+        >
           {tabs[tab.name]}
         </div>
       ))}

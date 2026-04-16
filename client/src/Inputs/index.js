@@ -27,6 +27,16 @@ import { useModal } from "../Basic/pages/home/context/ModalContext";
 import useOutsideClick from "../CustomHooks/handleOutsideClick";
 import Modal from "../UiComponents/Modal";
 import DynamicRenderer from "../HostelStore/Components/DeliveryChallan/DynamicComponent";
+import {
+  focusNextGridField,
+  focusPreviousGridField,
+} from "../Basic/components/Reuseable/gridNavigation";
+
+const FORM_LABEL_CLASS = "block text-[11px] font-bold text-slate-700 mb-1";
+const FORM_LABEL_MUTED_CLASS = "block text-[11px] font-bold text-gray-600 mb-1";
+const INLINE_LABEL_CLASS =
+  "md:text-start flex text-[11px] font-bold text-slate-700";
+const FORM_INPUT_TEXT_CLASS = "text-[11px]";
 
 export const handleOnChange = (event, setValue, type) => {
   const inputValue = event.target.value;
@@ -74,7 +84,7 @@ export const MultiSelectDropdown = ({
       className={`m-0.5  md:grid-cols-2 items-center z-0 data  ${className}`}
     >
       <label
-        className={`md:text-start   block text-xs font-bold text-slate-700 mb-1${labelName}`}
+        className={`md:text-start block text-[11px] font-bold text-slate-700 mb-1${labelName}`}
       >
         {name}
       </label>
@@ -160,9 +170,9 @@ export const TextInput = forwardRef(
       if (onBlur) onBlur(e);
     };
     return (
-      <div className={`mb-2 ${width}`}>
+      <div className={`mb-1 ${width}`}>
         {name && (
-          <label className="block text-xs font-bold text-slate-700 mb-1">
+          <label className={FORM_LABEL_CLASS}>
             {required ? <RequiredLabel name={label ? label : name} /> : name}
           </label>
         )}
@@ -181,7 +191,7 @@ export const TextInput = forwardRef(
           onFocus={onFocus}
           disabled={disabled}
           tabIndex={tabIndex ?? undefined}
-          className={`w-full px-3 py-1 text-xs border border-gray-300 rounded-lg
+          className={`h-7 w-full px-3 py-0 border border-gray-300 rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm
           ${
@@ -189,7 +199,7 @@ export const TextInput = forwardRef(
               ? "bg-gray-100 text-gray-500 cursor-not-allowed"
               : "bg-white hover:border-gray-400"
           }
-          ${className}`}
+          ${FORM_INPUT_TEXT_CLASS} ${className}`}
           autoFocus={autoFocus}
           onKeyDown={onKeyDown}
         />
@@ -211,7 +221,7 @@ export const LongTextInput = ({
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 items-center md:my-0.5 md:px-1 data gap-1">
-      <label className="md:text-start flex">
+      <label className={INLINE_LABEL_CLASS}>
         {required ? <RequiredLabel name={name} /> : `${name}`}
       </label>
       <input
@@ -340,6 +350,9 @@ export const DropdownInput = forwardRef(
     };
 
     const isDisabled = readOnly || disabled;
+    const selectedLabel =
+      options?.find((option) => String(option.value) === String(value))?.show ||
+      "";
 
     useEffect(() => {
       if (ref?.current && openOnFocus) {
@@ -348,56 +361,67 @@ export const DropdownInput = forwardRef(
     }, [openOnFocus]);
 
     return (
-      <div className={`mb-2 ${width}`}>
+      <div className={`mb-1 ${width}`}>
         {name && (
-          <label className="block text-xs font-bold text-slate-700 mb-1">
+          <label className={FORM_LABEL_CLASS}>
             {required ? <RequiredLabel name={name} /> : name}
           </label>
         )}
-        <select
-          ref={ref}
-          onBlur={onBlur}
-          autoFocus={autoFocus}
-          tabIndex={tabIndex ?? undefined}
-          defaultValue={defaultValue}
-          required={required}
-          className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
+        {isDisabled ? (
+          <div
+            title={selectedLabel || "Select"}
+            className={`flex h-7 w-full items-center px-3 py-0 border border-gray-300 rounded-lg
+            bg-slate-100 text-slate-700 shadow-sm whitespace-nowrap overflow-hidden text-ellipsis
+            ${FORM_INPUT_TEXT_CLASS} ${className}`}
+          >
+            {selectedLabel || "Select"}
+          </div>
+        ) : (
+          <select
+            ref={ref}
+            onBlur={onBlur}
+            autoFocus={autoFocus}
+            tabIndex={tabIndex ?? undefined}
+            defaultValue={defaultValue}
+            required={required}
+            className={`h-7 w-full px-3 py-0 border border-gray-300 rounded-lg
     focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
     transition-all duration-150 shadow-sm
     ${readOnly || disabled ? "bg-slate-100 cursor-not-allowed" : "bg-white cursor-pointer"}
     ${!value || value === "" ? "text-gray-500" : "text-gray-800"}
-    ${className}
+    ${FORM_INPUT_TEXT_CLASS} ${className}
     appearance-none bg-no-repeat bg-right pr-8`}
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-            backgroundSize: "12px",
-            backgroundPosition: "right 0.75rem center",
-          }}
-          value={value}
-          onChange={(e) => {
-            beforeChange();
-            handleOnChange(e);
-          }}
-          onFocus={(e) => {
-            if (openOnFocus) {
-              e.target.click();
-            }
-          }}
-          disabled={isDisabled}
-        >
-          <option value="" hidden={!clear} className="text-gray-800">
-            Select
-          </option>
-          {options?.map((option, index) => (
-            <option
-              key={index}
-              value={option.value}
-              className="text-xs py-1 text-gray-800"
-            >
-              {option.show}
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+              backgroundSize: "12px",
+              backgroundPosition: "right 0.75rem center",
+            }}
+            value={value}
+            onChange={(e) => {
+              beforeChange();
+              handleOnChange(e);
+            }}
+            onFocus={(e) => {
+              if (openOnFocus) {
+                e.target.click();
+              }
+            }}
+            disabled={isDisabled}
+          >
+            <option value="" hidden={!clear} className="text-gray-800">
+              Select
             </option>
-          ))}
-        </select>
+            {options?.map((option, index) => (
+              <option
+                key={index}
+                value={option.value}
+                className="text-xs py-1 text-gray-800"
+              >
+                {option.show}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
     );
   },
@@ -521,7 +545,7 @@ export const CurrencyInput = ({
   };
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 items-center md:my-1 md:px-1 data">
-      <label htmlFor="id" className="md:text-start flex">
+      <label htmlFor="id" className={INLINE_LABEL_CLASS}>
         {required ? <RequiredLabel name={name} /> : `${name}`}
       </label>
       <input
@@ -564,7 +588,10 @@ export const DateInput = ({
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 items-center md:my-1 md:px-1 data w-full">
-      <label htmlFor="id" className={`md:text-start flex ${inputHead}`}>
+      <label
+        htmlFor="id"
+        className={`${INLINE_LABEL_CLASS} ${inputHead || ""}`}
+      >
         {required ? <RequiredLabel name={name} /> : `${name}`}
       </label>
       <input
@@ -597,7 +624,7 @@ export const LongDateInput = ({
 }) => {
   return (
     <div className="grid grid-flow-col item-center justify-center gap-12 w-56 items-center md:px-1 data">
-      <label htmlFor="id" className="md:text-start flex">
+      <label htmlFor="id" className={INLINE_LABEL_CLASS}>
         {required ? <RequiredLabel name={name} /> : `${name}`}
       </label>
       <input
@@ -753,15 +780,13 @@ export function ReusableInput({
   required,
 }) {
   return (
-    <div className="mb-2">
+    <div className="mb-1">
       {required ? (
-        <span className="text-xs text-slate-700 font-bold mb-1   block">
+        <span className={FORM_LABEL_CLASS}>
           {label} <span className="text-red-500">*</span>
         </span>
       ) : (
-        <span className="text-xs text-slate-700 font-bold mb-1   block">
-          {label}
-        </span>
+        <span className={FORM_LABEL_CLASS}>{label}</span>
       )}
       <input
         type={type}
@@ -775,11 +800,11 @@ export function ReusableInput({
         readOnly={readOnly}
         onKeyDown={onKeyDown}
         disabled={disabled}
-        className={`w-full px-2 py-1 text-xs border border-slate-300 rounded-md 
+        className={`h-7 w-full px-2 py-0 border border-slate-300 rounded-md 
           focus:border-indigo-300 focus:outline-none transition-all duration-200
           hover:border-slate-400 ${
             readOnly || disabled ? "bg-slate-100" : ""
-          } ${className}`}
+          } ${FORM_INPUT_TEXT_CLASS} ${className}`}
         autoFocus={autoFocus}
       />
     </div>
@@ -797,12 +822,8 @@ export function ReusableInputNew({
   disabled,
 }) {
   return (
-    <div className="mb-2">
-      {label && (
-        <label className="block  font-bold text-slate-700 mb-1 text-xs">
-          {label}
-        </label>
-      )}
+    <div className="mb-1">
+      {label && <label className={FORM_LABEL_CLASS}>{label}</label>}
       <input
         type={type}
         value={value}
@@ -814,11 +835,11 @@ export function ReusableInputNew({
         placeholder={placeholder}
         readOnly={readOnly}
         disabled={disabled}
-        className={`w-full px-2 py-1 text-xs border border-slate-300 rounded-md 
+        className={`h-7 w-full px-2 py-0 border border-slate-300 rounded-md 
           focus:border-indigo-300 focus:outline-none transition-all duration-200
           hover:border-slate-400 ${
             readOnly || disabled ? "bg-slate-100" : ""
-          } ${className}`}
+          } ${FORM_INPUT_TEXT_CLASS} ${className}`}
       />
     </div>
   );
@@ -1337,10 +1358,10 @@ export const DropdownInputNew = forwardRef(
           tabIndex={tabIndex ?? undefined}
           defaultValue={defaultValue}
           required={required}
-          className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
+          className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm ${readOnly || disabled ? "bg-slate-100" : ""}
-          ${className}`}
+          ${FORM_INPUT_TEXT_CLASS} ${className}`}
           value={value}
           onChange={(e) => {
             beforeChange();
@@ -1668,7 +1689,7 @@ export const ToggleButton = forwardRef(
     return (
       <div>
         <div className="">
-          <label className={`block  font-bold text-slate-700 mb-1 text-xs`}>
+          <label className={FORM_LABEL_CLASS}>
             {required ? <RequiredLabel name={name} /> : `${name}`}
           </label>
           <div className="flex items-center mt-1">
@@ -1745,7 +1766,7 @@ export const TextInputNew1 = forwardRef(
     return (
       <div className={`mb-1 ${width}`}>
         {name && (
-          <label className="block text-xs font-bold text-gray-600 mb-1">
+          <label className={FORM_LABEL_MUTED_CLASS}>
             {required ? <RequiredLabel name={label ? label : name} /> : name}
           </label>
         )}
@@ -2783,10 +2804,10 @@ export const DateInputNew = forwardRef(
       }
     };
     return (
-      <div className="grid-cols-1 md:grid-cols-3 items-center md:px-1 mb-1">
+      <div className="grid-cols-1 md:grid-cols-3 items-center mb-1">
         {name && (
           <label
-            className={`block  font-bold text-slate-700 mb-1 text-xs ${
+            className={`${FORM_LABEL_CLASS} ${
               required
                 ? 'after:content-["*"] after:ml-0.5 after:text-red-500'
                 : ""
@@ -2802,9 +2823,9 @@ export const DateInputNew = forwardRef(
           disabled={disabled}
           required={required}
           min={isToday ? today : undefined}
-          className={`w-full px-2 py-1 text-xs border border-slate-300 rounded-md 
+        className={`h-7 w-full px-2 py-0 border border-slate-300 rounded-md 
           focus:border-indigo-300 focus:outline-none transition-all duration-200
-          hover:border-slate-400 ${readOnly || disabled ? "bg-slate-100" : ""} ${className}`}
+          hover:border-slate-400 ${readOnly || disabled ? "bg-slate-100" : ""} ${FORM_INPUT_TEXT_CLASS} ${className}`}
           id="id"
           value={value}
           onFocus={handleFocus}
@@ -2837,7 +2858,7 @@ export const TextAreaNew = ({
   return (
     <div className=" w-full mb-1">
       {name && (
-        <label className="block text-xs font-bold text-gray-600 mb-1">
+        <label className={FORM_LABEL_MUTED_CLASS}>
           {required ? <RequiredLabel name={label ?? name} /> : (label ?? name)}
         </label>
       )}
@@ -2855,7 +2876,7 @@ export const TextAreaNew = ({
         onChange={(e) => handleOnChange(e, setValue)}
         onBlur={onBlur}
         placeholder={name}
-        className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
+        className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm  resize-y
 
@@ -2864,7 +2885,7 @@ export const TextAreaNew = ({
               ? "bg-gray-100 text-gray-500 cursor-not-allowed"
               : "bg-white hover:border-gray-400"
           }
-          ${inputClass}`}
+          ${FORM_INPUT_TEXT_CLASS} ${inputClass}`}
       ></textarea>
     </div>
   );
@@ -3220,19 +3241,19 @@ export const customStyles = {
     backgroundColor: "transparent",
     minHeight: "unset",
     height: "18px",
-    fontSize: "12px",
+    fontSize: "11px",
     cursor: "pointer",
   }),
 
   placeholder: (base) => ({
     ...base,
     color: "#9ca3af", // Tailwind gray-400
-    fontSize: "12px",
+    fontSize: "11px",
   }),
 
   singleValue: (base) => ({
     ...base,
-    fontSize: "12px",
+    fontSize: "11px",
     color: "black",
   }),
 
@@ -3261,7 +3282,7 @@ export const customStyles = {
     ...base,
     margin: 0,
     padding: 0,
-    fontSize: "12px",
+    fontSize: "11px",
     color: "black",
   }),
 
@@ -3271,7 +3292,7 @@ export const customStyles = {
 
   option: (base, state) => ({
     ...base,
-    fontSize: "12px",
+    fontSize: "11px",
     padding: "4px 6px", // reduce inside padding
     minHeight: "18px", // reduce height
     lineHeight: "18px",
@@ -3286,7 +3307,7 @@ export const customStyles = {
   menu: (base) => ({
     ...base,
     zIndex: 9999,
-    fontSize: "12px",
+    fontSize: "11px",
   }),
   menuList: (base) => ({
     ...base,
@@ -3341,9 +3362,42 @@ export default function FxSelect({
   onBlur,
   onKeyDown,
   inputId,
+  advanceOnEnter = false,
+  advanceOnSelect = false,
+  nextRef,
 }) {
+  const selectRef = useRef(null);
+  const [menuIsOpen, setMenuIsOpen] = useState(false);
+  const pendingAdvanceRef = useRef(false);
+
+  const focusNextField = () => {
+    const control =
+      selectRef.current?.controlRef ||
+      document.getElementById(inputId || "") ||
+      document.activeElement;
+
+    focusNextGridField({
+      currentElement: control,
+      onReachGridEnd: () => {
+        nextRef?.current?.focus?.();
+      },
+    });
+  };
+
+  const focusPreviousField = () => {
+    const control =
+      selectRef.current?.controlRef ||
+      document.getElementById(inputId || "") ||
+      document.activeElement;
+
+    focusPreviousGridField({
+      currentElement: control,
+    });
+  };
+
   return (
     <Select
+      ref={selectRef}
       styles={customStyles}
       onInputChange={(value, { action }) => {
         if (action === "input-change") {
@@ -3359,12 +3413,43 @@ export default function FxSelect({
       isDisabled={readOnly}
       options={options}
       value={options.find((opt) => opt.value === value) || null}
-      onChange={(selected) => onChange(selected?.value || "")}
+      onChange={(selected) => {
+        onChange(selected?.value || "");
+
+        if (advanceOnSelect && menuIsOpen) {
+          pendingAdvanceRef.current = true;
+        }
+      }}
       onBlur={onBlur}
-      onKeyDown={onKeyDown}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && advanceOnEnter && !menuIsOpen) {
+          event.preventDefault();
+          focusNextField();
+          return;
+        }
+
+        if (event.key === "Tab" && event.shiftKey) {
+          event.preventDefault();
+          focusPreviousField();
+          return;
+        }
+
+        onKeyDown?.(event);
+      }}
       placeholder={placeholder}
       menuPortalTarget={document.body}
       inputId={inputId}
+      onMenuOpen={() => setMenuIsOpen(true)}
+      onMenuClose={() => {
+        setMenuIsOpen(false);
+
+        if (pendingAdvanceRef.current) {
+          pendingAdvanceRef.current = false;
+          window.setTimeout(() => {
+            focusNextField();
+          }, 0);
+        }
+      }}
     />
   );
 }
@@ -3382,65 +3467,37 @@ export function FxSelectWithAdd({
   childComponent = null,
   addNewModalWidth = "w-[40%] h-[48%]",
   nextRef,
+  advanceOnEnter = false,
+  advanceOnSelect = true,
 }) {
   const [showAddNewModal, setShowAddNewModal] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [menuIsOpen, setMenuIsOpen] = useState(false);
   const selectRef = useRef(null);
+  const pendingAdvanceRef = useRef(false);
 
   const CREATE_NEW_VALUE = "__CREATE_NEW__";
 
   // ✅ Helper function to focus next field
   const focusNextField = () => {
-    setTimeout(() => {
-      const current = selectRef.current?.controlRef;
-      if (!current) return;
+    const current = selectRef.current?.controlRef || document.activeElement;
+    if (!current) return;
 
-      // ✅ find current TD
-      const currentTd = current.closest("td");
-      if (!currentTd) return;
+    focusNextGridField({
+      currentElement: current,
+      onReachGridEnd: () => {
+        nextRef?.current?.focus?.();
+      },
+    });
+  };
 
-      const currentTr = currentTd.parentElement;
-      const tds = Array.from(currentTr.querySelectorAll("td"));
+  const focusPreviousField = () => {
+    const current = selectRef.current?.controlRef || document.activeElement;
+    if (!current) return;
 
-      const currentIndex = tds.indexOf(currentTd);
-
-      let nextTd = null;
-
-      // 👉 find next valid td (skip readonly / empty)
-      for (let i = currentIndex + 1; i < tds.length; i++) {
-        const td = tds[i];
-
-        const focusable = td.querySelector(
-          `
-  input:not([disabled]):not([readonly]),
-  textarea:not([disabled]):not([readonly]),
-  select:not([disabled]),
-  .react-select__control[aria-disabled="false"]
-`,
-        );
-
-        if (focusable) {
-          nextTd = td;
-          break;
-        }
-      }
-
-      // 👉 if not found → go to next row
-      if (!nextTd) {
-        const nextRow = currentTr.nextElementSibling;
-        if (nextRow) {
-          nextTd = nextRow.querySelector("td");
-        }
-      }
-
-      if (nextTd) {
-        const el = nextTd.querySelector(
-          'input:not([disabled]):not([readonly]), .react-select__control:not([aria-disabled="true"])',
-        );
-
-        el?.focus();
-      }
-    }, 50);
+    focusPreviousGridField({
+      currentElement: current,
+    });
   };
 
   const handleAddNewSuccess = (newValue) => {
@@ -3523,15 +3580,17 @@ export function FxSelectWithAdd({
 
             onChange(val);
             setSearchValue("");
-            // ✅ Move focus immediately after selection
-            focusNextField();
+
+            if (advanceOnSelect && menuIsOpen) {
+              pendingAdvanceRef.current = true;
+            }
           }
         }}
         onBlur={onBlur}
         filterOption={() => true}
         onKeyDown={(e) => {
           // ✅ Handle Enter key - focus next field
-          if (e.key === "Enter") {
+          if (e.key === "Enter" && advanceOnEnter && !menuIsOpen) {
             // If a value is selected, focus next field
             if (value) {
               e.preventDefault();
@@ -3541,6 +3600,12 @@ export function FxSelectWithAdd({
           }
 
           if (e.key === "Tab") {
+            if (e.shiftKey) {
+              e.preventDefault();
+              focusPreviousField();
+              return;
+            }
+
             if (!value && nextRef) {
               e.preventDefault();
               nextRef?.current?.focus();
@@ -3554,6 +3619,17 @@ export function FxSelectWithAdd({
         menuPortalTarget={document.body}
         inputId={inputId}
         noOptionsMessage={() => "No options"}
+        onMenuOpen={() => setMenuIsOpen(true)}
+        onMenuClose={() => {
+          setMenuIsOpen(false);
+
+          if (pendingAdvanceRef.current) {
+            pendingAdvanceRef.current = false;
+            window.setTimeout(() => {
+              focusNextField();
+            }, 0);
+          }
+        }}
         onFocus={() => {
           setSearchValue(""); // ✅ reset when user comes back
         }}

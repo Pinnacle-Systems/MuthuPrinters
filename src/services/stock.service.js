@@ -1,3 +1,4 @@
+import { Prisma } from "../lib/prisma.js";
 import { prisma } from "../lib/prisma.js";
 
 import { NoRecordFound } from '../configs/Responses.js';
@@ -36,7 +37,7 @@ export async function getPcsStock(req) {
     const storeFilter = Prisma.sql`stockForPcs.storeId = ${storeId}`
     const processFilter = processId ? Prisma.sql`stockForPcs.prevProcessId = ${prevProcessId}` : Prisma.sql`stockForPcs.prevProcessId IS NULL`
     const productionDeliveryIdFilter = Prisma.sql`(productionDelivery.id < ${productionDeliveryId} or productionDelivery.id IS NULL)`
-    const isPackingFilter = isPacking ? Prisma.sql`process.isPacking = 1` : Prisma.sql`(process.isPacking = 0 OR process.isPacking IS NULL)`
+    const isPackingFilter = isPacking ? Prisma.sql`process.isPacking = true` : Prisma.sql`(process.isPacking = false OR process.isPacking IS NULL)`
     let filterConditions = []
     if (styleId) {
         filterConditions.push(Prisma.sql`stockForPcs.styleId = ${styleId}`)
@@ -54,7 +55,7 @@ export async function getPcsStock(req) {
     const where = Prisma.sql`where ${Prisma.join(filterConditions, ' and ')}`
     let data = await prisma.$queryRaw`
     select style.sku as styleName, stockForPcs.styleId,stockForPcs.portionId,portion.name as portionName, stockForPcs.sizeId,stockForPcs.colorId,color.name as colorName, stockForPcs.uomId, unitOfMeasurement.name as uomName, 
-    size.name as sizeName, stockForPcs.prevProcessId, IF(stockForPcs.prevProcessId is null, "Cutting",process.name) as processName, sum(stockforpcs.qty) as qty
+    size.name as sizeName, stockForPcs.prevProcessId, CASE WHEN stockForPcs.prevProcessId is null THEN 'Cutting' ELSE process.name END as processName, sum(stockforpcs.qty) as qty
     from stockforpcs
     left join productionDeliveryDetails on productionDeliveryDetails.id = stockforpcs.productionDeliveryDetailsId 
     left join productionDelivery on productionDelivery.id = productionDeliveryDetails.productionDeliveryId
@@ -67,7 +68,7 @@ export async function getPcsStock(req) {
     left join portion on portion.id = stockForPcs.portionId 
     left join unitOfMeasurement on unitOfMeasurement.id = stockForPcs.uomId 
     ${where}
-    group by stockForPcs.styleId,stockForPcs.portionId, stockForPcs.sizeId, stockForPcs.prevProcessId, stockForPcs.colorId, stockForPcs.    
+    group by style.sku, stockForPcs.styleId, stockForPcs.portionId, portion.name, stockForPcs.sizeId, stockForPcs.colorId, color.name, stockForPcs.uomId, unitOfMeasurement.name, size.name, stockForPcs.prevProcessId, process.name
     having sum(stockforpcs.qty) > 0
     `
     let totalCount = data.length
@@ -94,33 +95,32 @@ async function get(req) {
 
     // Fetch QuatationStock data once
     const quatationStockData = await prisma.$queryRaw`
-    SELECT sbi.productId, SUM(sbi.qty) AS TotalQty
-    FROM SalesBillItems sbi
-    JOIN SalesBill sb ON sbi.salesBillId = sb.id
-    WHERE sb.isOn = 0
-    GROUP BY sbi.productId
+    SELECT
+        sbi."productId",
+        COALESCE(SUM(sbi.qty), 0) AS "totalQty"
+    FROM "SalesBillItems" sbi
+    JOIN "SalesBill" sb ON sbi."salesBillId" = sb.id
+    WHERE sb."isOn" = false
+    GROUP BY sbi."productId"
     `;
     console.log(quatationStockData,"quatationStockData")
 
     const quatationStockMap = new Map(
-        quatationStockData.map(item => [item.productId, item.TotalQty])
+        quatationStockData.map(item => [item.productId, item.totalQty])
     );
     console.log(quatationStockMap,"quatationStockMap")
 
     if (stockData) {
         data = await prisma.$queryRaw`
         SELECT
-            stock.productId,
+            stock."productId",
             product.name,
-            SUM(stock.qty) AS sum
-        FROM 
-            stock
-        LEFT JOIN
-            product ON product.id = stock.productId
-        WHERE 
-            stock.branchId = ${parseInt(branchId)}
+            COALESCE(SUM(stock.qty), 0) AS sum
+        FROM "Stock" stock
+        LEFT JOIN "Product" product ON product.id = stock."productId"
+        WHERE stock."branchId" = ${parseInt(branchId)}
         GROUP BY
-            stock.productId;
+            stock."productId", product.name;
         `;
         data = data.map(item => ({
             ...item,
@@ -137,16 +137,15 @@ async function get(req) {
     if (stockReport) {
         data = await prisma.$queryRaw`
         SELECT
+            stock."productId",
             product.name AS Product,
-            SUM(stock.qty) AS Stock,
-            saleprice AS "SaleRate",
-            (saleprice * SUM(stock.qty)) AS "SaleValue"
-        FROM
-            stock
-        LEFT JOIN
-            product ON product.id = stock.productId
+            COALESCE(SUM(stock.qty), 0) AS Stock,
+            product.price AS "SaleRate",
+            (product.price * COALESCE(SUM(stock.qty), 0)) AS "SaleValue"
+        FROM "Stock" stock
+        LEFT JOIN "Product" product ON product.id = stock."productId"
         GROUP BY
-            product.name, saleprice
+            stock."productId", product.name, product.price
         ORDER BY
             product.name;
         `;
@@ -222,44 +221,40 @@ async function getOne(id, query) {
          if(isOn == 'false'){
             data = await prisma.$queryRaw`
             SELECT
-               SUM(qty) AS stockQty,
-               productId
-           FROM
-               stock
-           WHERE 
-
-               stock.productId = ${productId} 
-           GROUP BY
-               productId
+               COALESCE(SUM(qty), 0) AS "stockQty",
+               "productId"
+           FROM "Stock"
+           WHERE "productId" = ${productId}
+           GROUP BY "productId"
        `;
          }
      else if(salesBillItemsId)
         {
             data = await prisma.$queryRaw`
              SELECT
-                SUM(qty) AS stockQty,
-                productId
-            FROM
-                stock
-            WHERE 
-
-                stock.productId = ${productId}  AND (stock.id < (select max(id) from stock where salesBillItemsId = ${salesBillItemsId}))
-            GROUP BY
-                productId
+                COALESCE(SUM(qty), 0) AS "stockQty",
+                "productId"
+            FROM "Stock"
+            WHERE "productId" = ${productId}
+              AND (
+                id < (
+                    SELECT MAX(id)
+                    FROM "Stock"
+                    WHERE "salesBillItemsId" = ${salesBillItemsId}
+                )
+              )
+            GROUP BY "productId"
         `;
         }
         
         else{
             data = await prisma.$queryRaw`
             SELECT
-                SUM(qty) AS stockQty,
-                productId
-            FROM
-                stock
-            WHERE 
-                stock.productId = ${productId} 
-            GROUP BY
-                productId
+                COALESCE(SUM(qty), 0) AS "stockQty",
+                "productId"
+            FROM "Stock"
+            WHERE "productId" = ${productId}
+            GROUP BY "productId"
         `;
         }
       

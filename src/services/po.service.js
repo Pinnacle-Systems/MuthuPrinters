@@ -1,3 +1,4 @@
+import { Prisma } from "../lib/prisma.js";
 import { prisma } from "../lib/prisma.js";
 
 import { NoRecordFound } from "../configs/Responses.js";
@@ -439,11 +440,18 @@ async function getSearch(req) {
 }
 
 async function getLotWiseReturnRolls(lotNo, poItemsId) {
-  let returnDatas = `select sum(ReturnLotDetails.qty) as lotQty,sum(ReturnLotDetails.noOfRolls) as lotRolls from directReturnItems left join DirectReturnOrPoReturn on DirectReturnOrPoReturn.id=directReturnItems.directReturnOrPoReturnId
-    left join ReturnLotDetails on ReturnLotDetails.directReturnItemsId=directReturnItems.id
-    where directReturnItems.poItemsId=${poItemsId}  and DirectReturnOrPoReturn.poInwardOrDirectInward="PurchaseReturn" ;
-    `;
-  const alreadyReturnData = await prisma.$queryRawUnsafe(returnDatas);
+  const alreadyReturnData = await prisma.$queryRaw`
+    SELECT
+      COALESCE(SUM("ReturnLotDetails".qty), 0) AS "lotQty",
+      COALESCE(SUM("ReturnLotDetails"."noOfRolls"), 0) AS "lotRolls"
+    FROM "directReturnItems"
+    LEFT JOIN "DirectReturnOrPoReturn"
+      ON "DirectReturnOrPoReturn".id = "directReturnItems"."directReturnOrPoReturnId"
+    LEFT JOIN "ReturnLotDetails"
+      ON "ReturnLotDetails"."directReturnItemsId" = "directReturnItems".id
+    WHERE "directReturnItems"."poItemsId" = ${poItemsId}
+      AND "DirectReturnOrPoReturn"."poInwardOrDirectInward" = 'PurchaseReturn'
+  `;
   return alreadyReturnData[0];
 }
 
@@ -463,30 +471,28 @@ async function getStockQty(
   fDiaId,
   yarnId,
 ) {
-  let sql;
+  const conditions =
+    itemType == "Accessory"
+      ? Prisma.sql`
+          "colorId" = ${colorId}
+          AND "uomId" = ${uomId}
+          AND "sizeId" = ${sizeId}
+          AND "accessoryId" = ${accessoryId}
+          AND "storeId" = ${storeId}
+        `
+      : Prisma.sql`
+          "yarnId" = ${yarnId}
+          AND "colorId" = ${colorId}
+          AND "uomId" = ${uomId}
+        `;
 
-  console.log(
-    "itemTypePOID",
-    itemType == "Accessory",
-    colorId,
-    uomId,
-    sizeId,
-    accessoryId,
-    storeId,
-  );
-
-  if (itemType == "Accessory") {
-    sql = `select sum(qty) as stockQty, sum(noOfRolls) as stockRolls  from stock
-        where colorId=${colorId} and uomId=${uomId}  and sizeId=${sizeId} and accessoryId=${accessoryId} and  storeId=${storeId}; 
-                `;
-  } else {
-    sql = `select sum(qty) as stockQty,sum(noOfRolls) as stockRolls  from stock
-        where yarnId=${yarnId} and colorId=${colorId} and uomId=${uomId} ;`;
-  }
-
-  console.log(sql, "sqlstock");
-
-  const stockData = await prisma.$queryRawUnsafe(sql);
+  const stockData = await prisma.$queryRaw`
+    SELECT
+      COALESCE(SUM(qty), 0) AS "stockQty",
+      COALESCE(SUM("noOfRolls"), 0) AS "stockRolls"
+    FROM "Stock"
+    WHERE ${conditions}
+  `;
   return stockData[0];
 }
 
@@ -506,24 +512,33 @@ async function getStockQtyByLot(
   kDiaId,
   fDiaId,
 ) {
-  let sql;
+  const conditions =
+    itemType == "DyedFabric"
+      ? Prisma.sql`
+          "colorId" = ${colorId}
+          AND "uomId" = ${uomId}
+          AND "designId" = ${designId}
+          AND "gaugeId" = ${gaugeId}
+          AND "loopLengthId" = ${loopLengthId}
+          AND "gsmId" = ${gsmId}
+          AND "fabricId" = ${fabricId}
+          AND "kDiaId" = ${kDiaId}
+          AND "fDiaId" = ${fDiaId}
+        `
+      : Prisma.sql`
+          "colorId" = ${colorId}
+          AND "uomId" = ${uomId}
+          AND "sizeId" = ${sizeId}
+          AND "accessoryId" = ${accessoryId}
+        `;
 
-  if (itemType == "DyedFabric") {
-    sql = `select sum(qty) as stockQty,sum(noOfRolls) as stockRolls  from stock
-        where colorId=${colorId} and uomId=${uomId} and designId=${designId} and gaugeId=${gaugeId} and loopLengthId=${loopLengthId}
-         and gsmId=${gsmId}  and 
-        fabricId=${fabricId} and   kDiaId=${kDiaId} and fDiaId=${fDiaId} 
-
-                `;
-  } else {
-    sql = `select sum(qty) as stockQty,sum(noOfRolls) as stockRolls  from stock
-        where colorId=${colorId} and uomId=${uomId} 
-       and sizeId=${sizeId} and 
-        accessoryId=${accessoryId}  ;
-                `;
-  }
-
-  const stockData = await prisma.$queryRawUnsafe(sql);
+  const stockData = await prisma.$queryRaw`
+    SELECT
+      COALESCE(SUM(qty), 0) AS "stockQty",
+      COALESCE(SUM("noOfRolls"), 0) AS "stockRolls"
+    FROM "Stock"
+    WHERE ${conditions}
+  `;
   return stockData[0];
 }
 

@@ -250,7 +250,7 @@ const PurchaseOrderFormReport = ({
 
     return (
       <span
-        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+        className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
           colorMap[approvalStatus.color] ?? colorMap.gray
         }`}
       >
