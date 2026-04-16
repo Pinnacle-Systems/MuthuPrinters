@@ -72,6 +72,7 @@ const PurchaseOrderForm = ({
   colorList,
   branchData,
   gsmList,
+  userData,
 }) => {
   const today = new Date();
   const [pendingAction, setPendingAction] = useState(null);
@@ -100,7 +101,6 @@ const PurchaseOrderForm = ({
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [isNewVersion, setIsNewVersion] = useState(false);
   const [quoteVersion, setQuoteVersion] = useState("");
-  const [submitApproval, setSubmitApproval] = useState(false);
   const supplierRef = useRef(null);
   const termsRef = useRef(null);
   const [dispatchInvalidate] = useInvalidateTags();
@@ -113,6 +113,7 @@ const PurchaseOrderForm = ({
     skip: !supplierId,
   });
   const openTabs = useSelector((state) => state.openTabs);
+  const isAdmin = userData?.role?.name === "ADMIN";
 
   const activeTab = openTabs.tabs.find((tab) => tab.active);
   const { data: pageData } = useGetPagesQuery({});
@@ -316,7 +317,7 @@ const PurchaseOrderForm = ({
   };
 
   const saveData = (nextProcess, options = {}) => {
-    const submitApprovalFlag = options.submitApprovalOverride ?? submitApproval;
+    const submitApprovalFlag = !!options.submitApprovalOverride;
     const payload = getPurchaseOrderPayload({
       supplierId,
       dueDate,
@@ -370,10 +371,6 @@ const PurchaseOrderForm = ({
       handleSubmitCustom(updateData, payload, "Updated", nextProcess);
     } else {
       handleSubmitCustom(addData, payload, "Added", nextProcess);
-    }
-
-    if (submitApproval || submitApprovalFlag) {
-      setSubmitApproval(false);
     }
   };
 
@@ -571,68 +568,74 @@ const PurchaseOrderForm = ({
   const actionIconPairClass = "flex items-center gap-1";
 
   const leftActions = [
-    {
-      key: "save-close",
-      icon: (
-        <span className={actionIconPairClass}>
-          <FiSave className="h-4 w-4" />
-          <HiX className="h-4 w-4" />
-        </span>
-      ),
-      hoverLabel: "Save & Close",
-      iconOnly: true,
-      onClick: () => saveData("close"),
-      onKeyDown: (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          saveData("close");
-          e.stopPropagation();
-        }
-      },
-      disabled: readOnly,
-      className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
-    },
-    {
-      key: "save-new",
-      icon: (
-        <span className={actionIconPairClass}>
-          <FiSave className="h-4 w-4" />
-          <HiOutlineRefresh className="h-4 w-4" />
-        </span>
-      ),
-      hoverLabel: "Save & New",
-      iconOnly: true,
-      onClick: () => saveData("new"),
-      onKeyDown: (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          e.stopPropagation();
-          saveData("new");
-        }
-      },
-      disabled: readOnly,
-      className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
-    },
-    {
-      key: "submit-approval",
-      icon: <FiSend className="h-4 w-4" />,
-      hoverLabel: "Submit Approval",
-      iconOnly: true,
-      onClick: () => {
-        setSubmitApproval(true);
-        saveData("new", { submitApprovalOverride: true });
-      },
-      onKeyDown: (e) => {
-        if (e.key === "Enter") {
-          setSubmitApproval(true);
-          e.preventDefault();
-          e.stopPropagation();
-          saveData("new", { submitApprovalOverride: true });
-        }
-      },
-      disabled: readOnly,
-      className: `bg-green-700 hover:bg-green-800 ${actionButtonClass}`,
-    },
+    ...(readOnly
+      ? []
+      : [
+          {
+            key: "save-close",
+            icon: (
+              <span className={actionIconPairClass}>
+                <FiSave className="h-4 w-4" />
+                <HiX className="h-4 w-4" />
+              </span>
+            ),
+            hoverLabel: "Save & Close",
+            iconOnly: true,
+            onClick: () => saveData("close"),
+            onKeyDown: (e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                saveData("close");
+                e.stopPropagation();
+              }
+            },
+            disabled: readOnly,
+            className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
+          },
+          {
+            key: "save-new",
+            icon: (
+              <span className={actionIconPairClass}>
+                <FiSave className="h-4 w-4" />
+                <HiOutlineRefresh className="h-4 w-4" />
+              </span>
+            ),
+            hoverLabel: "Save & New",
+            iconOnly: true,
+            onClick: () => saveData("new"),
+            onKeyDown: (e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                saveData("new");
+              }
+            },
+            disabled: readOnly,
+            className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
+          },
+        ]),
+    ...(!id || isAdmin || status === "PENDING"
+      ? []
+      : [
+          {
+            key: "submit-approval",
+            icon: <FiSend className="h-4 w-4" />,
+            hoverLabel: "Submit Approval",
+            iconOnly: true,
+            onClick: () => {
+              saveData("new", { submitApprovalOverride: true });
+            },
+            onKeyDown: (e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                saveData("new", { submitApprovalOverride: true });
+              }
+            },
+            disabled: readOnly,
+            className: `bg-green-700 hover:bg-green-800 ${actionButtonClass}`,
+          },
+        ]),
   ];
 
   const rightActions = [

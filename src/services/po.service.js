@@ -169,9 +169,9 @@ async function get(req) {
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-        finYearDate?.startDateStartTime,
-        finYearDate?.endDateEndTime,
-      )
+      finYearDate?.startDateStartTime,
+      finYearDate?.endDateEndTime,
+    )
     : "";
   let data = await prisma.po.findMany({
     where: {
@@ -179,34 +179,34 @@ async function get(req) {
         {
           AND: finYearDate
             ? [
-                {
-                  createdAt: {
-                    gte: finYearDate.startDateStartTime,
-                  },
+              {
+                createdAt: {
+                  gte: finYearDate.startDateStartTime,
                 },
-                {
-                  createdAt: {
-                    lte: finYearDate.endDateEndTime,
-                  },
+              },
+              {
+                createdAt: {
+                  lte: finYearDate.endDateEndTime,
                 },
-              ]
+              },
+            ]
             : undefined,
         },
         {
           AND:
             startDate && endDate
               ? [
-                  {
-                    createdAt: {
-                      gte: startDateStartTime,
-                    },
+                {
+                  createdAt: {
+                    gte: startDateStartTime,
                   },
-                  {
-                    createdAt: {
-                      lte: endDateEndTime,
-                    },
+                },
+                {
+                  createdAt: {
+                    lte: endDateEndTime,
                   },
-                ]
+                },
+              ]
               : undefined,
         },
       ],
@@ -215,23 +215,23 @@ async function get(req) {
       // poType: Boolean(searchPoType) ? { contains: searchPoType } : undefined,
       docId: Boolean(serachDocNo)
         ? {
-            contains: serachDocNo,
-          }
+          contains: serachDocNo,
+        }
         : undefined,
       OR:
         supplierId || Boolean(filterParties)
           ? [
-              {
-                supplierId: supplierId ? parseInt(supplierId) : undefined,
-              },
-              {
-                supplierId: Boolean(filterParties)
-                  ? {
-                      in: filterParties.split(",").map((i) => parseInt(i)),
-                    }
-                  : undefined,
-              },
-            ]
+            {
+              supplierId: supplierId ? parseInt(supplierId) : undefined,
+            },
+            {
+              supplierId: Boolean(filterParties)
+                ? {
+                  in: filterParties.split(",").map((i) => parseInt(i)),
+                }
+                : undefined,
+            },
+          ]
           : undefined,
       Supplier: {
         aliasName: Boolean(searchSupplierAliasName)
@@ -309,11 +309,11 @@ async function get(req) {
   const totalCount = data.length;
   let docId = finYearDate
     ? await getNextDocId(
-        branchId,
-        shortCode,
-        finYearDate?.startDateStartTime,
-        finYearDate?.endDateEndTime,
-      )
+      branchId,
+      shortCode,
+      finYearDate?.startDateStartTime,
+      finYearDate?.endDateEndTime,
+    )
     : "";
   return {
     statusCode: 0,
@@ -560,9 +560,9 @@ async function create(body) {
     let finYearDate = await getFinYearStartTimeEndTime(finYearId);
     const shortCode = finYearDate
       ? getYearShortCodeForFinYear(
-          finYearDate?.startDateStartTime,
-          finYearDate?.endDateEndTime,
-        )
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
       : "";
     let newDocId = await getNextDocId(
       branchId,
@@ -614,18 +614,6 @@ async function create(body) {
         },
       });
       await createPoItems(tx, poItems, data, userId, branchId);
-      await createApprovalLog(
-        tx,
-        branchId,
-        pageId,
-        data.id,
-        "PURCHASE ORDER",
-        {
-          totalNetAmount: totalNetAmount,
-        },
-        data?.docId,
-        userId,
-      );
     });
     return { statusCode: 0, data };
   } catch (err) {
@@ -775,10 +763,10 @@ async function update(id, body) {
           : parseInt(quoteVersion),
         quoteVersions: isNewVersion
           ? {
-              create: {
-                quoteVersion: currentQuoteVersion + 1,
-              },
-            }
+            create: {
+              quoteVersion: currentQuoteVersion + 1,
+            },
+          }
           : undefined,
         termsId: termsId ? parseInt(termsId) : null,
         payTermId: payTermId ? parseInt(payTermId) : null,
@@ -1100,8 +1088,8 @@ async function getPoItems(req) {
         Po: {
           docId: Boolean(searchDocId)
             ? {
-                contains: searchDocId,
-              }
+              contains: searchDocId,
+            }
             : undefined,
           supplierId: supplierId ? parseInt(supplierId) : undefined,
         },
