@@ -19,7 +19,8 @@
     "test:all": "pnpm -r --if-present run test",
     "prisma:format": "prisma format",
     "prisma:validate": "prisma validate",
-    "prisma:validate:postgres": "prisma validate --schema src/models/schema.postgresql.prisma",
+    "prisma:validate:mysql": "prisma validate --schema src/models/schema.mysql.prisma",
+
     "prisma:generate": "prisma generate",
     "prisma:setup": "pnpm prisma:format && pnpm prisma:validate && pnpm prisma:generate",
     "prisma:migrate:dev": "prisma migrate dev && pnpm prisma:generate",
@@ -29,7 +30,9 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
     "prisma:seed:extract": "node src/models/extractSeedData.js",
-    "prisma:migrate:squash": "mkdir -p ./src/models/migrations-postgresql/000000000000_squashed_migrations && prisma migrate diff --from-empty --to-schema ./src/models/schema.postgresql.prisma --script > ./src/models/migrations-postgresql/000000000000_squashed_migrations/migration.sql",
+    "prisma:migrate:squash": "mkdir -p ./src/models/migrations/000000000000_squashed_migrations && prisma migrate diff --from-empty --to-schema ./src/models/schema.prisma --script > ./src/models/migrations/000000000000_squashed_migrations/migration.sql",
+
+
     "prisma:migrate:squash:resolve": "prisma migrate resolve --applied 000000000000_squashed_migrations",
     "migrate": "pnpm run prisma:migrate:dev",
     "studio": "pnpm run prisma:studio",

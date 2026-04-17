@@ -7,6 +7,7 @@ import PoApi from "../uniformService/PoServices";
 import store from "../store";
 import { purchaseReportApi } from "../services";
 import { purchaseBillEntryApi } from "../uniformService";
+import approvalMasterApi from "../uniformService/ApprovalMasterServices";
 
 export const invalidatePurchaseModule = () => {
   store.dispatch(
@@ -19,4 +20,5 @@ export const invalidatePurchaseModule = () => {
   store.dispatch(
     purchaseBillEntryApi.util.invalidateTags(["PurchaseBillEntry"]),
   );
+  store.dispatch(approvalMasterApi.util.invalidateTags(["Approval"]));
 };

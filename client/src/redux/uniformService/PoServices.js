@@ -19,7 +19,7 @@ const PoApi = createApi({
             headers: {
               "Content-type": "application/json; charset=UTF-8",
             },
-            params
+            params,
           };
         }
         return {
@@ -28,7 +28,7 @@ const PoApi = createApi({
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
-          params
+          params,
         };
       },
       providesTags: ["po"],
@@ -41,13 +41,20 @@ const PoApi = createApi({
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
-          params
+          params,
         };
       },
       providesTags: ["po"],
     }),
     getPoItemById: builder.query({
-      query: ({ id, purchaseInwardId, stockId, storeId, billEntryId, poType }) => {
+      query: ({
+        id,
+        purchaseInwardId,
+        stockId,
+        storeId,
+        billEntryId,
+        poType,
+      }) => {
         return {
           url: `${PO_API}/getPoItems/${id}/${purchaseInwardId ? purchaseInwardId : null}/${stockId ? stockId : null}/${storeId ? storeId : null}/${billEntryId ? billEntryId : null}/${poType ? poType : null}`,
           method: "GET",
@@ -73,6 +80,14 @@ const PoApi = createApi({
     addPo: builder.mutation({
       query: (payload) => ({
         url: PO_API,
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["po"],
+    }),
+    addApprovalStaus: builder.mutation({
+      query: (payload) => ({
+        url: `${PO_API}/approval`,
         method: "POST",
         body: payload,
       }),
@@ -105,6 +120,7 @@ export const {
   useGetPoItemsQuery,
   useGetPoItemByIdQuery,
   useAddPoMutation,
+  useAddApprovalStausMutation,
   useUpdatePoMutation,
   useDeletePoMutation,
 } = PoApi;

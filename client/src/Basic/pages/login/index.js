@@ -85,11 +85,14 @@ const Login = () => {
                 const subscriptions =
                   result.data.userInfo.role?.company?.Subscription ?? [];
                 const latestSubscription = subscriptions[0] ?? null;
-                const currentPlanActive =
-                  subscriptions.some((sub) => sub.planStatus);
+                const currentPlanActive = subscriptions.some(
+                  (sub) => sub.planStatus,
+                );
 
                 if (!latestSubscription?.expireAt) {
-                  toast.error("No subscription is configured for this company.");
+                  toast.error(
+                    "No subscription is configured for this company.",
+                  );
                   setLoading(false);
                   return;
                 }

@@ -49,9 +49,7 @@ export default function PurchaseReport() {
   //   () => (apiData?.data || []).map(computePORow),
   //   [apiData],
   // );
-
   const allData = useMemo(() => dummyData.map(computePORow), []);
-
   const [colOrder, setColOrder] = useState(() => COLUMNS.map((c) => c.key));
   const [groupKeys, setGroupKeys] = useState([]);
   const [groupDirs, setGroupDirs] = useState({});

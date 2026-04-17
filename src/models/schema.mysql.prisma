@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
 }
 
 model Page {
@@ -194,6 +194,7 @@ model User {
   approvalLogsRejectedBy         ApprovalLog[]          @relation(name: "rejectedBy")
   approvalLevelUsers             ApprovalLevelUser[]
   approvalLevelLogs              ApprovalLevelLog[]
+  approvalLogsRaisedBy           ApprovalLog[]          @relation(name: "raisedBy")
 }
 
 model Employee {
@@ -230,7 +231,7 @@ model Employee {
   permCityId         Int?
   permPincode        Int?
   active             Boolean?          @default(true)
-  image              Bytes?            @db.ByteA
+  image              Bytes?            @db.LongBlob
   Branch             Branch?           @relation(fields: [branchId], references: [id])
   branchId           Int?
   EmployeeCategory   EmployeeCategory? @relation(fields: [employeeCategoryId], references: [id])
@@ -1238,7 +1239,7 @@ model PoItems {
 
 model TermsAndConditions {
   id                    Int                    @id @default(autoincrement())
-  description           String?                @db.Text
+  description           String?                @db.LongText
   name                  String?
   active                Boolean?               @default(true)
   Company               Company?               @relation(fields: [companyId], references: [id])
@@ -1279,7 +1280,7 @@ model PurchaseInward {
   supplierId             Int?
   active                 Boolean                  @default(true)
   vehicleNo              String?
-  remarks                String?                  @db.Text
+  remarks                String?                  @db.LongText
   inwardItems            InwardItems[]
   inwardType             String?
   Store                  Location?                @relation(fields: [storeId], references: [id])
@@ -1369,7 +1370,7 @@ model PurchaseInwardReturn {
   termsAndCondition   String?
   Terms               TermsAndConditions?   @relation(fields: [termsId], references: [id])
   termsId             Int?
-  remarks             String?               @db.Text
+  remarks             String?               @db.LongText
   returnType          String?
   Store               Location?             @relation(fields: [storeId], references: [id])
   storeId             Int?
@@ -1426,7 +1427,7 @@ model PurchaseCancel {
   termsAndCondition   String?
   Terms               TermsAndConditions?   @relation(fields: [termsId], references: [id])
   termsId             Int?
-  remarks             String?               @db.Text
+  remarks             String?               @db.LongText
   poType              String?
   Store               Location?             @relation(fields: [storeId], references: [id])
   storeId             Int?
@@ -1480,7 +1481,7 @@ model PurchaseBillEntry {
   supplierId             Int?
   Company                Company?                 @relation(fields: [companyId], references: [id])
   companyId              Int?
-  remarks                String?                  @db.Text
+  remarks                String?                  @db.LongText
   user                   User?                    @relation(fields: [userId], references: [id])
   userId                 Int?
   netBillValue           Float?
@@ -1537,7 +1538,7 @@ model PurchaseLedger {
   supplierId          Int?
   docId               String?
   docDate             DateTime?
-  remarks             String?            @db.Text
+  remarks             String?            @db.LongText
 }
 
 model Size {
@@ -1653,7 +1654,9 @@ model ApprovalLog {
   approvalConfigId Int?
   referenceId      Int
   referencePage    String
+  referenceDocId   String?
   status           String?
+  isRead           Boolean            @default(false)
   approvedById     Int?
   approvedAt       DateTime?
   currentLevel     Int                @default(1)
@@ -1665,6 +1668,8 @@ model ApprovalLog {
   ApprovedBy       User?              @relation("approvedBy", fields: [approvedById], references: [id])
   RejectedBy       User?              @relation("rejectedBy", fields: [rejectedById], references: [id])
   LevelLogs        ApprovalLevelLog[]
+  RaisedBy         User?              @relation("raisedBy", fields: [raisedById], references: [id])
+  raisedById       Int?
 }
 
 model ApprovalLevelLog {

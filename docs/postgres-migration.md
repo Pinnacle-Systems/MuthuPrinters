@@ -8,9 +8,10 @@
 
 ### Stage 2: Prisma datasource switch
 
-- Validate the PostgreSQL-ready schema copy at `src/models/schema.postgresql.prisma`.
-- Keep `src/models/schema.prisma` on MySQL until cutover day.
-- On cutover, replace the live schema provider with PostgreSQL or swap the PostgreSQL schema into place.
+- The primary schema is now located at `src/models/schema.prisma` (PostgreSQL).
+- The legacy MySQL schema is preserved at `src/models/schema.mysql.prisma`.
+- Successfully swapped the PostgreSQL schema into place.
+
 - Reset the Prisma migration baseline for PostgreSQL.
 - Update `DATABASE_URL` to a PostgreSQL URL.
 

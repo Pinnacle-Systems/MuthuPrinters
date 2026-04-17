@@ -744,6 +744,10 @@ async function create(body) {
     draftSave,
   );
   let data;
+  const safeNetBillValue =
+    netBillValue && !isNaN(Number(netBillValue))
+      ? parseFloat(netBillValue)
+      : null;
   await prisma.$transaction(async (tx) => {
     data = await tx.purchaseInward.create({
       data: {
@@ -764,7 +768,7 @@ async function create(body) {
         taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
         discountType,
         discountValue: discountValue ? parseFloat(discountValue) : null,
-        netBillValue: netBillValue ? parseFloat(netBillValue) : null,
+        netBillValue: safeNetBillValue,
         attachments:
           JSON.parse(attachments)?.length > 0
             ? {

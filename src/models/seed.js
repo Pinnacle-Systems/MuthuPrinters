@@ -58,10 +58,52 @@ async function main() {
   await seedStyleItems();
 }
 
+async function refreshSequences() {
+  console.log("Refreshing database sequences...");
+  try {
+    await prisma.$executeRaw`
+      DO $$
+      DECLARE
+        seq_name TEXT;
+        table_name TEXT;
+        column_name TEXT;
+        max_id BIGINT;
+      BEGIN
+        FOR seq_name, table_name, column_name IN
+          SELECT
+            quote_ident(n.nspname) || '.' || quote_ident(s.relname) AS sequence_name,
+            quote_ident(n.nspname) || '.' || quote_ident(t.relname) AS table_name,
+            quote_ident(a.attname) AS column_name
+          FROM pg_class s
+          JOIN pg_namespace n ON n.oid = s.relnamespace
+          JOIN pg_depend d ON d.objid = s.oid
+          JOIN pg_class t ON t.oid = d.refobjid
+          JOIN pg_attribute a ON a.attrelid = d.refobjid AND a.attnum = d.refobjsubid
+          WHERE s.relkind = 'S' AND d.deptype = 'a'
+          AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+        LOOP
+          EXECUTE format('SELECT COALESCE(MAX(%s), 0) FROM %s', column_name, table_name) INTO max_id;
+          IF max_id > 0 THEN
+            EXECUTE format('SELECT setval(%L, %s, true)', seq_name, max_id);
+          ELSE
+            EXECUTE format('SELECT setval(%L, 1, false)', seq_name);
+          END IF;
+        END LOOP;
+      END $$;
+    `;
+    console.log("Database sequences refreshed successfully.");
+  } catch (error) {
+    console.error("Error refreshing sequences:", error);
+  }
+}
+
+
 main()
   .then(async () => {
+    await refreshSequences();
     await prisma.$disconnect();
   })
+
   .catch(async (error) => {
     console.error(error);
     await prisma.$disconnect();

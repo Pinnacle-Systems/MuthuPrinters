@@ -6,11 +6,14 @@ import {
   create,
   update,
   remove,
+  getPendingApproval,
 } from "../controllers/approvalConfig.controller.js";
 
 router.post("/", create);
 
 router.get("/", get);
+
+router.get("/getPendingApproval", getPendingApproval);
 
 router.get("/:id", getOne);
 

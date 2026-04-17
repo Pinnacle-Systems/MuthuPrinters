@@ -3694,7 +3694,6 @@ export const customSelectStyles = {
     margin: 0,
     fontSize: "12px",
     padding: 0,
-    fontFamily: "Poppins",
     color: state.isDisabled ? "#6b7280" : "black",
   }),
   singleValue: (base, state) => ({

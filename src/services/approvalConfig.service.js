@@ -1,7 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 
 import { NoRecordFound } from "../configs/Responses.js";
-import { exclude } from "../utils/helper.js";
 
 async function get(req) {
   const { branchId } = req.query;
@@ -35,6 +34,81 @@ async function get(req) {
       ...item,
       childRecord: item._count.approvalLogs,
     })),
+  };
+}
+
+async function getPendingApproval(req) {
+  const { userId } = req.query;
+
+  // Find all PENDING logs where the current level includes this user
+  const logs = await prisma.approvalLog.findMany({
+    where: {
+      status: "PENDING",
+      ApprovalConfig: {
+        approvalLevels: {
+          some: {
+            // levelNo: { equals: prisma.approvalLog.fields.currentLevel }, // ← see note below
+            LevelUsers: { some: { userId: parseInt(userId) } },
+          },
+        },
+      },
+    },
+    include: {
+      ApprovalConfig: {
+        include: {
+          approvalLevels: {
+            include: { LevelUsers: true },
+            orderBy: { levelNo: "asc" },
+          },
+        },
+      },
+      RaisedBy: {
+        select: {
+          username: true,
+        },
+      },
+      LevelLogs: { orderBy: { createdAt: "desc" }, take: 1 },
+    },
+  });
+
+  // Prisma can't do a field-to-field comparison in where, so filter in JS:
+  const filteredLogs = logs.filter((log) => {
+    const level = log.ApprovalConfig?.approvalLevels.find(
+      (l) => l.levelNo === log.currentLevel,
+    );
+
+    return level?.LevelUsers.some((lu) => lu.userId === parseInt(userId));
+  });
+  // Logs raised by this user — so they can track status
+  const raisedByLogs = await prisma.approvalLog.findMany({
+    where: {
+      raisedById: parseInt(userId),
+      status: { in: ["PENDING", "APPROVED", "REJECTED"] },
+      isRead: false, // only unread updates
+    },
+    include: {
+      ApprovalConfig: {
+        include: {
+          approvalLevels: {
+            include: { LevelUsers: true },
+            orderBy: { levelNo: "asc" },
+          },
+        },
+      },
+      RaisedBy: { select: { username: true } },
+      LevelLogs: { orderBy: { createdAt: "desc" }, take: 1 },
+    },
+  });
+
+  // Merge, deduplicate by id
+  const allLogs = [
+    ...filteredLogs,
+    ...raisedByLogs.filter((r) => !filteredLogs.some((a) => a.id === r.id)),
+  ];
+
+  return {
+    statusCode: 0,
+    data: allLogs,
   };
 }
 
@@ -165,4 +239,40 @@ async function remove(id) {
   return { statusCode: 0, data };
 }
 
-export { get, getOne, getSearch, create, update, remove };
+async function markApprovalRead(id) {
+  const data = await prisma.approvalLog.update({
+    where: { id: parseInt(id) },
+    data: { isRead: true },
+  });
+  return { statusCode: 0, data };
+}
+
+// Frontend — update Notification.jsx to show type label and mark as read on view:
+// jsxfunction openRecord(log) {
+//   const tabName = PAGE_ROUTE_MAP[log.referencePage] ?? log.referencePage;
+//   dispatch(push({ name: tabName, previewId: log.referenceId }));
+//   // Mark as read so it disappears from raised-by list
+//   if (log.isRead === false) {
+//     markRead(log.id); // add useMarkApprovalReadMutation below
+//   }
+//   setOpen(false);
+// }
+
+// markApprovalRead: builder.mutation({
+//   query: (id) => ({
+//     url: `${APPROVAL_API}/markRead/${id}`,
+//     method: "PUT",
+//   }),
+//   invalidatesTags: ["Approval"],
+// }),
+
+export {
+  get,
+  getOne,
+  getSearch,
+  create,
+  update,
+  remove,
+  getPendingApproval,
+  markApprovalRead,
+};

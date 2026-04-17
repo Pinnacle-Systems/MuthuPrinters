@@ -1,4 +1,3 @@
-import { Prisma } from "../lib/prisma.js";
 import { prisma } from "../lib/prisma.js";
 
 import { NoRecordFound } from "../configs/Responses.js";
@@ -11,9 +10,11 @@ import {
 } from "../utils/helper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
-import { poUpdateValidator } from "../validators/po.validator.js";
-import { createApprovalLog } from "../utils/approvalHelper.js";
-// import { getTotalQty } from '../utils/poHelpers/getTotalQuantity.js';
+import {
+  approveRecord,
+  createApprovalLog,
+  rejectRecord,
+} from "../utils/approvalHelper.js";
 
 async function getNextDocId(branchId, shortCode, startTime, endTime) {
   let lastObject = await prisma.po.findFirst({
@@ -87,9 +88,18 @@ function getPOStatus(po) {
   return "Pending";
 }
 
-function getPOApprovalStatus(log) {
+function getPOApprovalStatus(log, isApprovalConfigured = false) {
   // No approval log = not configured
   if (!log) {
+    if (isApprovalConfigured) {
+      return {
+        status: "NOTAPPROVED",
+        label: "Not Approved",
+        color: "orange",
+        currentLevel: 1,
+        levelLogs: [],
+      };
+    }
     return {
       status: "NOT_CONFIGURED",
       label: "No Approval",
@@ -102,6 +112,7 @@ function getPOApprovalStatus(log) {
   const base = {
     currentLevel: log.currentLevel,
     levelLogs: log.LevelLogs ?? [],
+    remarks: log.remarks,
   };
 
   switch (log.status) {
@@ -113,8 +124,15 @@ function getPOApprovalStatus(log) {
       return {
         ...base,
         status: "PENDING",
-        label: `Pending L${log.currentLevel}`,
-        color: "yellow",
+        label: `PENDING`,
+        color: "orange",
+      };
+    case "NOTAPPROVED":
+      return {
+        ...base,
+        status: "NOTAPPROVED",
+        label: "Not Approved",
+        color: "orange",
       };
     default:
       return { ...base, status: "UNKNOWN", label: "Unknown", color: "gray" };
@@ -144,6 +162,7 @@ async function get(req) {
     searchClientName,
     searchDate,
     searchMaterial,
+    pageId,
   } = req.query;
   const { startTime: startDateStartTime } = getDateTimeRange(startDate);
   const { endTime: endDateEndTime } = getDateTimeRange(endDate);
@@ -249,6 +268,17 @@ async function get(req) {
   });
   data = manualFilterSearchData(searchDate, searchDueDate, searchPoType, data);
   const poIds = data.map((po) => po.id);
+  const approvalConfig = await prisma.approvalConfig.findUnique({
+    where: {
+      branchId_pageId: {
+        branchId: parseInt(branchId),
+        pageId: parseInt(pageId), // 80
+      },
+    },
+    select: { id: true, active: true },
+  });
+
+  const isApprovalConfigured = approvalConfig?.active === true;
   const approvalLogs = await prisma.approvalLog.findMany({
     where: {
       referencePage: "PURCHASE ORDER",
@@ -258,6 +288,7 @@ async function get(req) {
       id: true,
       referenceId: true,
       status: true,
+      remarks: true,
       currentLevel: true,
       LevelLogs: {
         select: {
@@ -291,7 +322,7 @@ async function get(req) {
       return {
         ...po,
         status: getPOStatus(po),
-        approvalStatus: getPOApprovalStatus(log),
+        approvalStatus: getPOApprovalStatus(log, isApprovalConfigured),
         childRecord: po._count.inwardItems + po._count.purchaseCancelItems,
       };
     }),
@@ -354,65 +385,82 @@ async function getOne(id) {
 
   // Assign updated PoItems back to PO object
   po.poItems = updatedItems;
-  const childRecordInward = await prisma.inwardItems.count({
+  const PO_PAGE = await prisma.page.findFirst({
     where: {
-      poId: po.id,
-    },
-  });
-  const childRecordCancel = await prisma.purchaseCancelItems.count({
-    where: {
-      poId: po.id,
-    },
-  });
-  const approvalLog = await prisma.approvalLog.findFirst({
-    where: {
-      referenceId: parseInt(id),
-      referencePage: "PURCHASE ORDER",
+      name: "PURCHASE ORDER",
     },
     select: {
       id: true,
-      status: true,
-      currentLevel: true,
-      ApprovalConfig: {
+    },
+  });
+  const PO_PAGE_ID = PO_PAGE?.id;
+  const [childRecordInward, childRecordCancel, approvalLog, approvalConfig] =
+    await Promise.all([
+      prisma.inwardItems.count({ where: { poId: po.id } }),
+      prisma.purchaseCancelItems.count({ where: { poId: po.id } }),
+      prisma.approvalLog.findFirst({
+        where: {
+          referenceId: parseInt(id),
+          referencePage: "PURCHASE ORDER",
+        },
+        orderBy: {
+          createdAt: "desc", // ✅ always latest
+        },
         select: {
-          approvalLevels: {
-            orderBy: { levelNo: "asc" },
+          id: true,
+          status: true,
+          currentLevel: true,
+          ApprovalConfig: {
             select: {
-              id: true,
-              levelNo: true,
-              approveType: true,
-              condition: true,
-              LevelUsers: {
+              approvalLevels: {
+                orderBy: { levelNo: "asc" },
                 select: {
-                  userId: true,
-                  User: { select: { id: true, username: true } },
+                  id: true,
+                  levelNo: true,
+                  approveType: true,
+                  condition: true,
+                  LevelUsers: {
+                    select: {
+                      userId: true,
+                      User: { select: { id: true, username: true } },
+                    },
+                  },
                 },
               },
             },
           },
+          LevelLogs: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              id: true,
+              levelNo: true,
+              action: true,
+              remarks: true,
+              createdAt: true,
+              User: { select: { id: true, username: true } },
+            },
+          },
         },
-      },
-      LevelLogs: {
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          levelNo: true,
-          action: true,
-          remarks: true,
-          createdAt: true,
-          User: { select: { id: true, username: true } },
+      }),
+      prisma.approvalConfig.findFirst({
+        where: {
+          pageId: PO_PAGE_ID, // 80
+          branchId: po.branchId, // use branchId from the fetched po
+          active: true,
         },
-      },
-    },
-  });
+        select: { id: true },
+      }),
+    ]);
+
+  const isApprovalConfigured = !!approvalConfig;
 
   return {
     statusCode: 0,
     data: {
       ...po,
-      childRecordInward: childRecordInward,
-      childRecordCancel: childRecordCancel,
-      approvalStatus: getPOApprovalStatus(approvalLog), // ✅ simple status badge
+      childRecordInward,
+      childRecordCancel,
+      approvalStatus: getPOApprovalStatus(approvalLog, isApprovalConfigured),
       approvalLog: approvalLog ?? null,
     },
   };
@@ -437,130 +485,6 @@ async function getSearch(req) {
     },
   });
   return { statusCode: 0, data: data };
-}
-
-async function getLotWiseReturnRolls(lotNo, poItemsId) {
-  const alreadyReturnData = await prisma.$queryRaw`
-    SELECT
-      COALESCE(SUM("ReturnLotDetails".qty), 0) AS "lotQty",
-      COALESCE(SUM("ReturnLotDetails"."noOfRolls"), 0) AS "lotRolls"
-    FROM "directReturnItems"
-    LEFT JOIN "DirectReturnOrPoReturn"
-      ON "DirectReturnOrPoReturn".id = "directReturnItems"."directReturnOrPoReturnId"
-    LEFT JOIN "ReturnLotDetails"
-      ON "ReturnLotDetails"."directReturnItemsId" = "directReturnItems".id
-    WHERE "directReturnItems"."poItemsId" = ${poItemsId}
-      AND "DirectReturnOrPoReturn"."poInwardOrDirectInward" = 'PurchaseReturn'
-  `;
-  return alreadyReturnData[0];
-}
-
-async function getStockQty(
-  storeId,
-  itemType,
-  accessoryId,
-  colorId,
-  uomId,
-  designId,
-  gaugeId,
-  loopLengthId,
-  gsmId,
-  sizeId,
-  fabricId,
-  kDiaId,
-  fDiaId,
-  yarnId,
-) {
-  const conditions =
-    itemType == "Accessory"
-      ? Prisma.sql`
-          "colorId" = ${colorId}
-          AND "uomId" = ${uomId}
-          AND "sizeId" = ${sizeId}
-          AND "accessoryId" = ${accessoryId}
-          AND "storeId" = ${storeId}
-        `
-      : Prisma.sql`
-          "yarnId" = ${yarnId}
-          AND "colorId" = ${colorId}
-          AND "uomId" = ${uomId}
-        `;
-
-  const stockData = await prisma.$queryRaw`
-    SELECT
-      COALESCE(SUM(qty), 0) AS "stockQty",
-      COALESCE(SUM("noOfRolls"), 0) AS "stockRolls"
-    FROM "Stock"
-    WHERE ${conditions}
-  `;
-  return stockData[0];
-}
-
-async function getStockQtyByLot(
-  lotNo,
-  storeId,
-  itemType,
-  accessoryId,
-  colorId,
-  uomId,
-  designId,
-  gaugeId,
-  loopLengthId,
-  gsmId,
-  sizeId,
-  fabricId,
-  kDiaId,
-  fDiaId,
-) {
-  const conditions =
-    itemType == "DyedFabric"
-      ? Prisma.sql`
-          "colorId" = ${colorId}
-          AND "uomId" = ${uomId}
-          AND "designId" = ${designId}
-          AND "gaugeId" = ${gaugeId}
-          AND "loopLengthId" = ${loopLengthId}
-          AND "gsmId" = ${gsmId}
-          AND "fabricId" = ${fabricId}
-          AND "kDiaId" = ${kDiaId}
-          AND "fDiaId" = ${fDiaId}
-        `
-      : Prisma.sql`
-          "colorId" = ${colorId}
-          AND "uomId" = ${uomId}
-          AND "sizeId" = ${sizeId}
-          AND "accessoryId" = ${accessoryId}
-        `;
-
-  const stockData = await prisma.$queryRaw`
-    SELECT
-      COALESCE(SUM(qty), 0) AS "stockQty",
-      COALESCE(SUM("noOfRolls"), 0) AS "stockRolls"
-    FROM "Stock"
-    WHERE ${conditions}
-  `;
-  return stockData[0];
-}
-
-function getStockObject(transType, item) {
-  let newItem = {};
-  if (transType === "GreyYarn" || transType === "DyedYarn") {
-    newItem["yarnId"] = parseInt(item["yarnId"]);
-  } else if (transType === "GreyFabric" || transType === "DyedFabric") {
-    newItem["fabricId"] = parseInt(item["fabricId"]);
-    newItem["designId"] = parseInt(item["designId"]);
-    newItem["gaugeId"] = parseInt(item["gaugeId"]);
-    newItem["loopLengthId"] = parseInt(item["loopLengthId"]);
-    newItem["gsmId"] = parseInt(item["gsmId"]);
-    newItem["kDiaId"] = parseInt(item["kDiaId"]);
-    newItem["fDiaId"] = parseInt(item["fDiaId"]);
-  } else if (transType === "Accessory") {
-    newItem["accessoryId"] = parseInt(item["accessoryId"]);
-    newItem["sizeId"] = item["sizeId"] ? parseInt(item["sizeId"]) : undefined;
-  }
-  newItem["uomId"] = parseInt(item["uomId"]);
-  newItem["colorId"] = parseInt(item["colorId"]);
-  return newItem;
 }
 
 export function getPoItemObject(poMaterial, item) {
@@ -693,9 +617,6 @@ async function create(body) {
         },
       });
       await createPoItems(tx, poItems, data, userId, branchId);
-      await createApprovalLog(tx, branchId, pageId, data.id, "PURCHASE ORDER", {
-        totalNetAmount: totalNetAmount,
-      });
     });
     return { statusCode: 0, data };
   } catch (err) {
@@ -772,10 +693,12 @@ async function update(id, body) {
     discountType,
     discountValue,
     taxPercent,
-    isNewVersion,
-    quoteVersion,
     termsId,
     payTermId,
+    isNewVersion,
+    quoteVersion,
+    submitApproval,
+    pageId,
   } = await body;
   let data;
   const dataFound = await prisma.po.findUnique({
@@ -849,46 +772,84 @@ async function update(id, body) {
           : undefined,
         termsId: termsId ? parseInt(termsId) : null,
         payTermId: payTermId ? parseInt(payTermId) : null,
-        poItems: {
-          createMany: {
-            data: poItems
-              .filter((i) => i["quoteVersion"] == "New")
-              .map((temp) => {
-                let newItem = {};
-                newItem["styleItemId"] = parseInt(temp["styleItemId"]);
-                newItem["uomId"] = temp["uomId"];
-                newItem["hsnId"] = temp["hsnId"]
-                  ? parseInt(temp["hsnId"])
-                  : null;
-                newItem["qty"] = parseFloat(temp["qty"]);
-                newItem["price"] = parseFloat(temp["price"]);
-                newItem["discountType"] = temp["discountType"];
-                newItem["discountValue"] = parseFloat(
-                  temp["discountValue"] || 0,
-                );
-                newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
-                newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
-                newItem["itemGroupId"] = temp["itemGroupId"]
-                  ? parseInt(temp["itemGroupId"])
-                  : null;
-                newItem["sizeId"] = temp["sizeId"]
-                  ? parseInt(temp["sizeId"])
-                  : null;
-                newItem["colorId"] = temp["colorId"]
-                  ? parseInt(temp["colorId"])
-                  : null;
-                return newItem;
-              }),
-          },
-        },
+        // poItems: {
+        //   createMany: {
+        //     data: poItems
+        //       .filter((i) => i["quoteVersion"] == "New")
+        //       .map((temp) => {
+        //         let newItem = {};
+        //         newItem["styleItemId"] = parseInt(temp["styleItemId"]);
+        //         newItem["uomId"] = temp["uomId"];
+        //         newItem["hsnId"] = temp["hsnId"]
+        //           ? parseInt(temp["hsnId"])
+        //           : null;
+        //         newItem["qty"] = parseFloat(temp["qty"]);
+        //         newItem["price"] = parseFloat(temp["price"]);
+        //         newItem["discountType"] = temp["discountType"];
+        //         newItem["discountValue"] = parseFloat(
+        //           temp["discountValue"] || 0,
+        //         );
+        //         newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
+        //         newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
+        //         newItem["itemGroupId"] = temp["itemGroupId"]
+        //           ? parseInt(temp["itemGroupId"])
+        //           : null;
+        //         newItem["sizeId"] = temp["sizeId"]
+        //           ? parseInt(temp["sizeId"])
+        //           : null;
+        //         newItem["colorId"] = temp["colorId"]
+        //           ? parseInt(temp["colorId"])
+        //           : null;
+        //         return newItem;
+        //       }),
+        //   },
+        // },
       },
     });
-    // await updatePoItems(tx, poItems, data, userId, branchId, nextQuoteVersion);
+    if (isNewVersion) {
+      await createNewVersionItems(
+        tx,
+        poItems,
+        data.id,
+        currentQuoteVersion + 1,
+      );
+    } else {
+      await updatePoItems(
+        tx,
+        poItems,
+        data,
+        quoteVersion,
+        currentQuoteVersion,
+        isNewVersion,
+      );
+    }
+
+    if (submitApproval) {
+      await createApprovalLog(
+        tx,
+        branchId,
+        pageId,
+        data.id,
+        "PURCHASE ORDER",
+        {
+          true: true,
+        },
+        data?.docId,
+        userId,
+      );
+    }
   });
   return { statusCode: 0, data };
 }
 
-async function updatePoItems(tx, poItems, po, userId, branchId, quoteVersion) {
+async function updatePoItems(
+  tx,
+  poItems,
+  po,
+  quoteVersion,
+  currentQuoteVersion,
+  isNewVersion,
+) {
   const promises = poItems.map(async (itemDetails) => {
     const qty = itemDetails?.qty
       ? Math.round(parseFloat(itemDetails.qty))
@@ -914,8 +875,15 @@ async function updatePoItems(tx, poItems, po, userId, branchId, quoteVersion) {
           taxPercent: itemDetails?.taxPercent
             ? parseInt(itemDetails.taxPercent)
             : null,
+          itemGroupId: itemDetails?.itemGroupId
+            ? parseInt(itemDetails.itemGroupId)
+            : null,
+          sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
+          colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
           gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
-          quoteVersion,
+          quoteVersion: isNewVersion
+            ? currentQuoteVersion + 1
+            : parseInt(quoteVersion),
         },
       });
 
@@ -939,7 +907,14 @@ async function updatePoItems(tx, poItems, po, userId, branchId, quoteVersion) {
           taxPercent: itemDetails?.taxPercent
             ? parseInt(itemDetails.taxPercent)
             : null,
-          quoteVersion,
+          quoteVersion: isNewVersion
+            ? currentQuoteVersion + 1
+            : parseInt(quoteVersion),
+          itemGroupId: itemDetails?.itemGroupId
+            ? parseInt(itemDetails.itemGroupId)
+            : null,
+          sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
+          colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
           gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
         },
       });
@@ -951,13 +926,50 @@ async function updatePoItems(tx, poItems, po, userId, branchId, quoteVersion) {
   return Promise.all(promises);
 }
 
-async function remove(id) {
-  const data = await prisma.po.delete({
-    where: {
-      id: parseInt(id),
-    },
+async function createNewVersionItems(tx, poItems, poId, version) {
+  return await tx.poItems.createMany({
+    data: poItems
+      .filter((i) => i["quoteVersion"] === "New")
+      .map((temp) => ({
+        poId,
+        styleItemId: temp.styleItemId ? parseInt(temp.styleItemId) : null,
+        uomId: temp.uomId ? parseInt(temp.uomId) : null,
+        hsnId: temp.hsnId ? parseInt(temp.hsnId) : null,
+        qty: parseFloat(temp.qty),
+        price: parseFloat(temp.price),
+        discountType: temp.discountType,
+        discountValue: parseFloat(temp.discountValue || 0),
+        taxPercent: parseFloat(temp.taxPercent || 0),
+        quoteVersion: version,
+        itemGroupId: temp.itemGroupId ? parseInt(temp.itemGroupId) : null,
+        sizeId: temp.sizeId ? parseInt(temp.sizeId) : null,
+        colorId: temp.colorId ? parseInt(temp.colorId) : null,
+        gsmId: temp.gsmId ? parseInt(temp.gsmId) : null,
+      })),
   });
-  return { statusCode: 0, data };
+}
+
+async function remove(id) {
+  const poId = parseInt(id);
+
+  return await prisma.$transaction(async (tx) => {
+    // 1. Delete related approval logs
+    await tx.approvalLog.deleteMany({
+      where: {
+        referencePage: "PURCHASE ORDER",
+        referenceId: poId,
+      },
+    });
+
+    // 2. Delete PO
+    const data = await tx.po.delete({
+      where: {
+        id: poId,
+      },
+    });
+
+    return { statusCode: 0, data };
+  });
 }
 
 function manualFilterSearchDataPoItems(
@@ -1010,7 +1022,7 @@ async function getPoItemById(id) {
   const data = await prisma.poItems.findUnique({
     where: { id: parseInt(id) },
     include: {
-      Po: { select: { docId: true, dueDate: true, docDate: true } },
+      Po: { select: { docId: true, dueDate: true, docDate: true, id: true } },
       Uom: { select: { name: true } },
       StyleItem: { select: { name: true } },
       Hsn: { select: { name: true } },
@@ -1134,6 +1146,7 @@ async function getPoItems(req) {
       include: {
         Po: {
           select: {
+            id: true,
             supplierId: true,
             docDate: true,
             dueDate: true,
@@ -1158,6 +1171,59 @@ async function getPoItems(req) {
     data = data?.filter((i) => i.Po.supplierId == supplierId);
 
     data = await getAllDataPoItems(data);
+    // ✅ STEP 1: Get unique PO ids from filtered items
+    const poIds = [...new Set(data.map((item) => item.Po.id))];
+    const PO_PAGE = await prisma.page.findFirst({
+      where: {
+        name: "PURCHASE ORDER",
+      },
+      select: {
+        id: true,
+      },
+    });
+    const PO_PAGE_ID = PO_PAGE?.id;
+    const [approvalLogs, approvalConfig] = await Promise.all([
+      prisma.approvalLog.findMany({
+        where: {
+          referencePage: "PURCHASE ORDER",
+          referenceId: { in: poIds },
+        },
+        select: {
+          referenceId: true,
+          status: true,
+          currentLevel: true,
+        },
+      }),
+      prisma.approvalConfig.findFirst({
+        where: {
+          pageId: PO_PAGE_ID, // 80
+          branchId: parseInt(branchId),
+          active: true,
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    const isApprovalConfigured = !!approvalConfig;
+
+    const approvalLogMap = approvalLogs.reduce((acc, log) => {
+      acc[log.referenceId] = log;
+      return acc;
+    }, {});
+
+    data = data.map((item) => {
+      const log = approvalLogMap[item.Po.id] ?? null;
+      return {
+        ...item,
+        approvalStatus: getPOApprovalStatus(log, isApprovalConfigured),
+      };
+    });
+
+    // If approval is configured: only let APPROVED items through
+    // If not configured at all: let everything through
+    data = data.filter((item) =>
+      isApprovalConfigured ? item.approvalStatus.status === "APPROVED" : true,
+    );
   } else {
     data = await prisma.poItems.findMany({
       where: {
@@ -1166,7 +1232,87 @@ async function getPoItems(req) {
       },
     });
   }
+  totalCount = data.length;
   return { statusCode: 0, data, totalCount };
 }
 
-export { get, getOne, getSearch, create, update, remove, getPoItems };
+async function createApproveStatus(body) {
+  try {
+    const {
+      userId,
+      remarks,
+      recordData,
+      referencePage,
+      referenceId,
+      actionType,
+    } = body;
+    if (!userId) {
+      return res.json({ statusCode: 1, message: "userId is required" });
+    }
+    if (actionType === "REJECT" && !remarks?.trim()) {
+      return { statusCode: 1, message: "Remarks required for rejection" };
+    }
+    let result;
+    if (actionType === "APPROVE") {
+      result = await approveRecord(
+        referenceId,
+        referencePage,
+        userId,
+        remarks,
+        recordData ?? { true: true },
+      );
+    } else {
+      result = await rejectRecord(referenceId, referencePage, userId, remarks);
+    }
+    return result;
+  } catch (err) {
+    return {
+      statusCode: 400,
+      message: err.message,
+    };
+  }
+}
+
+export {
+  get,
+  getOne,
+  getSearch,
+  create,
+  update,
+  remove,
+  getPoItems,
+  createApproveStatus,
+};
+
+//  poItems: {
+//       createMany: {
+//         data: poItems
+//           .filter((i) => i["quoteVersion"] == "New")
+//           .map((temp) => {
+//             let newItem = {};
+//             newItem["styleItemId"] = parseInt(temp["styleItemId"]);
+//             newItem["uomId"] = temp["uomId"];
+//             newItem["hsnId"] = temp["hsnId"]
+//               ? parseInt(temp["hsnId"])
+//               : null;
+//             newItem["qty"] = parseFloat(temp["qty"]);
+//             newItem["price"] = parseFloat(temp["price"]);
+//             newItem["discountType"] = temp["discountType"];
+//             newItem["discountValue"] = parseFloat(
+//               temp["discountValue"] || 0,
+//             );
+//             newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
+//             newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
+//             newItem["itemGroupId"] = temp["itemGroupId"]
+//               ? parseInt(temp["itemGroupId"])
+//               : null;
+//             newItem["sizeId"] = temp["sizeId"]
+//               ? parseInt(temp["sizeId"])
+//               : null;
+//             newItem["colorId"] = temp["colorId"]
+//               ? parseInt(temp["colorId"])
+//               : null;
+//             return newItem;
+//           }),
+//       },
+//     },
