@@ -8,6 +8,7 @@ import store from "../store";
 import { purchaseReportApi } from "../services";
 import { purchaseBillEntryApi } from "../uniformService";
 import approvalMasterApi from "../uniformService/ApprovalMasterServices";
+import stockApi from "../services/StockService";
 
 export const invalidatePurchaseModule = () => {
   store.dispatch(
@@ -21,4 +22,5 @@ export const invalidatePurchaseModule = () => {
     purchaseBillEntryApi.util.invalidateTags(["PurchaseBillEntry"]),
   );
   store.dispatch(approvalMasterApi.util.invalidateTags(["Approval"]));
+  store.dispatch(stockApi.util.invalidateTags(["Stock"]));
 };

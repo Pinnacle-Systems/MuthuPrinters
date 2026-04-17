@@ -84,6 +84,7 @@ export default defineConfig(({ mode }) => {
       outDir: "dist",
     },
     server: {
+      host: "0.0.0.0",
       proxy: Object.fromEntries(
         apiRoutes.map((route) => [
           route,

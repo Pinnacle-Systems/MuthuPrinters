@@ -67,6 +67,7 @@ import {
   SizeTemplate,
   PurchaseReport,
   ApprovalMaster,
+  StockReport,
 } from "../../../HostelStore/Components";
 
 const ActiveTabList = () => {
@@ -138,6 +139,7 @@ const ActiveTabList = () => {
     "SIZE TEMPLATE MASTER": <SizeTemplate />,
     "PURCHASE REPORT": <PurchaseReport />,
     "APPROVAL CONFIGURATION": <ApprovalMaster />,
+    "STOCK REPORT": <StockReport />,
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

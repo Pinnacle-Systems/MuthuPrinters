@@ -44,3 +44,4 @@ export { default as Size } from "./SizeMaster";
 export { default as SizeTemplate } from "./SizeTemplateMaster";
 export { default as PurchaseReport } from "./PurchaseReport/Report/PurchaseReport";
 export { default as ApprovalMaster } from "./ApprovalMaster";
+export { default as StockReport } from "./StockReport/StockReport";

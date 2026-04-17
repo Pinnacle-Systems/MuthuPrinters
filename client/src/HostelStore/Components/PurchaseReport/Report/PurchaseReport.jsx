@@ -45,11 +45,11 @@ export default function PurchaseReport() {
     isError,
   } = useGetPurchaseReportQuery(queryParams);
 
-  // const allData = useMemo(
-  //   () => (apiData?.data || []).map(computePORow),
-  //   [apiData],
-  // );
-  const allData = useMemo(() => dummyData.map(computePORow), []);
+  const allData = useMemo(
+    () => (apiData?.data || []).map(computePORow),
+    [apiData],
+  );
+  // const allData = useMemo(() => dummyData.map(computePORow), []);
   const [colOrder, setColOrder] = useState(() => COLUMNS.map((c) => c.key));
   const [groupKeys, setGroupKeys] = useState([]);
   const [groupDirs, setGroupDirs] = useState({});
@@ -969,7 +969,10 @@ export default function PurchaseReport() {
   }
 `}</style>
 
-      <div className="p-4 space-y-3 purchase-report-print">
+      <div
+        className="p-4 space-y-3 purchase-report-print overflow-y-auto"
+        style={{ height: "90vh" }}
+      >
         {/* top bar */}
         <div className="flex items-center justify-between flex-wrap gap-3 bg-white py-0.5 px-2 rounded-lg no-print">
           <h2 className="text-base font-medium text-gray-800">

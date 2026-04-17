@@ -19,7 +19,7 @@ const stockApi = createApi({
             headers: {
               "Content-type": "application/json; charset=UTF-8",
             },
-            params
+            params,
           };
         }
         return {
@@ -28,7 +28,7 @@ const stockApi = createApi({
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
-          params
+          params,
         };
       },
       providesTags: ["Stock"],
@@ -41,7 +41,7 @@ const stockApi = createApi({
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
-          params
+          params,
         };
       },
       providesTags: ["Stock"],
@@ -54,7 +54,7 @@ const stockApi = createApi({
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
-          params
+          params,
         };
       },
       providesTags: ["Stock"],
@@ -88,6 +88,19 @@ const stockApi = createApi({
       }),
       invalidatesTags: ["Stock"],
     }),
+    getStockReport: builder.query({
+      query: ({ params }) => {
+        return {
+          url: STOCK_API + "/getStockReport",
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+          params,
+        };
+      },
+      providesTags: ["Stock"],
+    }),
   }),
 });
 
@@ -97,7 +110,8 @@ export const {
   useAddStockMutation,
   useUpdateStockMutation,
   useDeleteStockMutation,
-  useGetPcsStockQuery
+  useGetPcsStockQuery,
+  useGetStockReportQuery,
 } = stockApi;
 
 export default stockApi;
