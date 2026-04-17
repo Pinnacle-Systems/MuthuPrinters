@@ -444,11 +444,12 @@ const PurchaseOrderPrintFormat = ({
   uomList,
   sizeList,
   styleItemList,
+  quoteVersion
 }) => {
   if (!singleData) return null;
 
   const poNumber = singleData?.docId || "";
-  const quoteVersion = singleData?.quoteVersion || "";
+  // const quoteVersion = singleData?.quoteVersion || "";
   const poDate = singleData?.docDate || "";
   const dueDate = singleData?.dueDate || "";
   const remarks = singleData?.remarks || "";

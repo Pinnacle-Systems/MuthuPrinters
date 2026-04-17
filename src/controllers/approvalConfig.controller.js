@@ -7,6 +7,7 @@ import {
   create as _create,
   update as _update,
   remove as _remove,
+  markApprovalRead as _markApprovalRead,
 } from "../services/approvalConfig.service.js";
 
 async function get(req, res, next) {
@@ -24,6 +25,19 @@ async function getPendingApproval(req, res, next) {
     console.log(res.statusCode);
   } catch (err) {
     console.error(`Error `, err.message);
+  }
+}
+
+async function markApprovalRead(req, res, next) {
+  try {
+    res.json(await _markApprovalRead(req.params.id));
+    console.log(res.statusCode);
+  } catch (error) {
+    if (error.code === "P2025") {
+      res.statusCode = 200;
+      res.json({ statusCode: 1, message: `Record Not Found` });
+      console.log(res.statusCode);
+    }
   }
 }
 
@@ -100,4 +114,12 @@ async function remove(req, res, next) {
   }
 }
 
-export { get, getOne, create, update, remove, getPendingApproval };
+export {
+  get,
+  getOne,
+  create,
+  update,
+  remove,
+  getPendingApproval,
+  markApprovalRead,
+};

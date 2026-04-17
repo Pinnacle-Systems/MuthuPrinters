@@ -328,14 +328,6 @@ async function markApprovalRead(id) {
 //   setOpen(false);
 // }
 
-// markApprovalRead: builder.mutation({
-//   query: (id) => ({
-//     url: `${APPROVAL_API}/markRead/${id}`,
-//     method: "PUT",
-//   }),
-//   invalidatesTags: ["Approval"],
-// }),
-
 export {
   get,
   getOne,

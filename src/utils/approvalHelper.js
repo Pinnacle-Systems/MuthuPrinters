@@ -346,6 +346,7 @@ async function advanceApproval(
       approvedById: parseInt(userId),
       approvedAt: new Date(),
       remarks: remarks || null,
+      isRead: false,
     },
   });
 
@@ -524,6 +525,7 @@ export async function rejectRecord(
         rejectedById: parseInt(userId),
         rejectedAt: new Date(),
         remarks: remarks || null,
+        isRead: false,
       },
     });
 

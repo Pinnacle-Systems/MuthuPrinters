@@ -1,26 +1,39 @@
-import { useCallback, useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, LayoutDashboard, PanelLeftClose, PanelRightClose, Settings, Table, UserRoundPen, FileChartColumn } from 'lucide-react';
-import './Sidebar.css';
-import secureLocalStorage from 'react-secure-storage';
-import { toast } from 'react-toastify';
-import { PAGES_API, ROLES_API } from '../../../Api';
+import { useCallback, useEffect, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  LayoutDashboard,
+  PanelLeftClose,
+  PanelRightClose,
+  Settings,
+  Table,
+  UserRoundPen,
+  FileChartColumn,
+} from "lucide-react";
+import "./Sidebar.css";
+import secureLocalStorage from "react-secure-storage";
+import { toast } from "react-toastify";
+import { PAGES_API, ROLES_API } from "../../../Api";
 import { ArrowRightCircle, ArrowLeftCircle } from "lucide-react";
-import axios from 'axios';
-import { useGetPageGroupQuery } from '../../../redux/services/PageGroupMasterServices';
+import axios from "axios";
+import { useGetPageGroupQuery } from "../../../redux/services/PageGroupMasterServices";
 // import MultiLevelDropDown from '../MultiSelectDropDown';
-import SidebarComponent from './SidebarComponent';
+import SidebarComponent from "./SidebarComponent";
 // import logo from "../../assets/pinnacle.png";
-import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { push } from '../../../redux/features/opentabs';
-import Swal from 'sweetalert2';
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { push } from "../../../redux/features/opentabs";
+import Swal from "sweetalert2";
 
 const BASE_URL = process.env.REACT_APP_SERVER_URL;
 
-
-const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen }) => {
-
-  const navigate = useNavigate()
+const Sidebar = ({
+  isOpen,
+  setIsOpen,
+  isMainDropdownOpen,
+  setIsMainDropdownOpen,
+}) => {
+  const navigate = useNavigate();
 
   const [name, setName] = useState("");
 
@@ -32,8 +45,7 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
 
   const [allowedPages, setAllowedPages] = useState([]);
 
-  const { data: pageGroup } = useGetPageGroupQuery({ searchParams: "" })
-
+  const { data: pageGroup } = useGetPageGroupQuery({ searchParams: "" });
 
   const toggleNavMenu = () => {
     sethideNavBar(!hideNavBar);
@@ -49,8 +61,8 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
     if (
       JSON.parse(
         secureLocalStorage.getItem(
-          sessionStorage.getItem("sessionId") + "defaultAdmin"
-        )
+          sessionStorage.getItem("sessionId") + "defaultAdmin",
+        ),
       )
     ) {
       axios({
@@ -66,9 +78,8 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
           Swal.fire({
             title: "Server Down",
             icon: "error",
-
           });
-        }
+        },
       );
     } else {
       axios({
@@ -77,7 +88,7 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
           BASE_URL +
           ROLES_API +
           `/${secureLocalStorage.getItem(
-            sessionStorage.getItem("sessionId") + "userRoleId"
+            sessionStorage.getItem("sessionId") + "userRoleId",
           )}`,
       }).then(
         (result) => {
@@ -85,16 +96,16 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
             if (result.data.statusCode === 0) {
               setAllowedPages(
                 result.data.data.RoleOnPage.filter(
-                  (page) => page.page.active && page.read
+                  (page) => page.page.active && page.read,
                 ).map((page) => {
                   return {
                     name: page.page.name,
                     type: page.page.type,
                     link: page.page.link,
                     id: page.page.id,
-                    pageGroupId: page.page.pageGroupId
+                    pageGroupId: page.page.pageGroupId,
                   };
-                })
+                }),
               );
             }
           } else {
@@ -106,9 +117,8 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
           Swal.fire({
             title: "Server Down",
             icon: "error",
-
           });
-        }
+        },
       );
     }
   }, []);
@@ -120,18 +130,39 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
   };
 
   function findElement(id, arr) {
-    if (!arr) return ""
-    let data = arr.find(item => parseInt(item.id) === parseInt(id))
-    return data ? data.name : ""
+    if (!arr) return "";
+    let data = arr.find((item) => parseInt(item.id) === parseInt(id));
+    return data ? data.name : "";
   }
 
-  const masters = allowedPages.filter((page) => page.type === "Masters")
-  const mastersGroup = [...new Set(masters.map(page => page.pageGroupId))].map(pageId => { return { id: pageId, name: findElement(pageId, pageGroup?.data) , type : "Masters" } })
-  const transactions = allowedPages.filter((page) => page.type === "Transactions")
-  const transactionsGroup = [...new Set(transactions.map(page => page.pageGroupId))].map(pageId => { return { id: pageId, name: findElement(pageId, pageGroup?.data) ,type : "Modules" } })
-  const reports = allowedPages.filter((page) => page.type === "Reports")
-  const reportGroups = [...new Set(reports.map(page => page.pageGroupId))].map(pageId => { return { id: pageId, name: findElement(pageId, pageGroup?.data) } })
-
+  const masters = allowedPages.filter((page) => page.type === "Masters");
+  const mastersGroup = [
+    ...new Set(masters.map((page) => page.pageGroupId)),
+  ].map((pageId) => {
+    return {
+      id: pageId,
+      name: findElement(pageId, pageGroup?.data),
+      type: "Masters",
+    };
+  });
+  const transactions = allowedPages.filter(
+    (page) => page.type === "Transactions",
+  );
+  const transactionsGroup = [
+    ...new Set(transactions.map((page) => page.pageGroupId)),
+  ].map((pageId) => {
+    return {
+      id: pageId,
+      name: findElement(pageId, pageGroup?.data),
+      type: "Modules",
+    };
+  });
+  const reports = allowedPages.filter((page) => page.type === "Reports");
+  const reportGroups = [
+    ...new Set(reports.map((page) => page.pageGroupId)),
+  ].map((pageId) => {
+    return { id: pageId, name: findElement(pageId, pageGroup?.data) };
+  });
 
   const order = [
     "ORDER",
@@ -144,31 +175,30 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
     "SAMPLE",
   ];
 
-  const sorted = order.map(name => transactionsGroup?.find(item => item.name === name))
+  const sorted = order
+    .map((name) => transactionsGroup?.find((item) => item.name === name))
     .filter(Boolean);
 
-
   const headers = [
-
     {
-      heading: 'Masters',
+      heading: "Masters",
       logo: <Table size={24} />,
       groups: mastersGroup,
-      pages: masters
+      pages: masters,
     },
     {
-      heading: 'Transactions',
+      heading: "Transactions",
       logo: <PanelLeftClose size={24} />,
       groups: transactionsGroup,
-      pages: transactions
+      pages: transactions,
     },
     {
-      heading: 'Reports',
+      heading: "Reports",
       logo: <FileChartColumn size={24} />,
       groups: reportGroups,
-      pages: reports
+      pages: reports,
     },
-  ]
+  ];
 
   const dispatch = useDispatch();
 
@@ -186,17 +216,23 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
         className="fixed z-[99] top-[33.5%] left-0 bg-gradient-to-r from-gray-700 to-gray-600 text-white w-8 h-12 flex items-center justify-center rounded-r-xl shadow-xl cursor-pointer transition-all duration-300 hover:from-gray-800 hover:to-gray-700 hover:scale-105"
       >
         {isOpen ? (
-          <ArrowLeftCircle size={22} className="text-white transition-all duration-300" />
+          <ArrowLeftCircle
+            size={22}
+            className="text-white transition-all duration-300"
+          />
         ) : (
-          <ArrowRightCircle size={22} className="text-white transition-all duration-300" />
+          <ArrowRightCircle
+            size={22}
+            className="text-white transition-all duration-300"
+          />
         )}
       </div>
 
-
       {isOpen && (
         <div
-          className={`fixed z-[999] top-[20.5%] left-[1.5rem] bg-[#343a40] text-white w-[72px] ${isMainDropdownOpen ? "h-[450px]" : "h-auto"
-            } rounded-lg py-4 flex flex-col items-center shadow-xl transition-all duration-300`}
+          className={`fixed z-[999] top-[20.5%] left-[1.5rem] bg-[#343a40] text-white w-[72px] ${
+            isMainDropdownOpen ? "h-[450px]" : "h-auto"
+          } rounded-lg py-4 flex flex-col items-center shadow-xl transition-all duration-300`}
         >
           {/* Dashboard Link */}
           {/* <div
@@ -226,37 +262,42 @@ const Sidebar = ({ isOpen, setIsOpen, isMainDropdownOpen, setIsMainDropdownOpen 
               className="hover:text-gray-300 cursor-pointer my-3 flex flex-col items-center transition"
             >
               {ele.logo}
-              <span className="text-[11px] text-center mt-1">{ele.heading}</span>
+              <span className="text-[11px] text-center mt-1">
+                {ele.heading}
+              </span>
             </div>
           ))}
         </div>
       )}
 
       <div className="my-0 ">
-
-        <ul className='my-0 flex flex-col '>
-
-
+        <ul className="my-0 flex flex-col ">
           {headers.map((ele, index) => {
             return (
               <div key={index}>
-                <li >
-                  {name === ele.heading && <SidebarComponent setIsOpen={setIsOpen} heading={ele.heading} logo={ele.logo} groups={ele.groups} pages={ele.pages} isMainDropdownOpen={isMainDropdownOpen} setIsMainDropdownOpen={setIsMainDropdownOpen} />}
+                <li>
+                  {name === ele.heading && (
+                    <SidebarComponent
+                      setIsOpen={setIsOpen}
+                      heading={ele.heading}
+                      logo={ele.logo}
+                      groups={ele.groups}
+                      pages={ele.pages}
+                      isMainDropdownOpen={isMainDropdownOpen}
+                      setIsMainDropdownOpen={setIsMainDropdownOpen}
+                    />
+                  )}
 
                   {/* <a className='relative group' href={ele.path} type="button" >{ele.logo}</a> */}
                   {/* Tooltip */}
                 </li>
               </div>
-            )
+            );
           })}
-
         </ul>
-
       </div>
-
     </>
+  );
+};
 
-  )
-}
-
-export default Sidebar
+export default Sidebar;

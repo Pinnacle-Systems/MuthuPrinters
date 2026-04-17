@@ -89,6 +89,13 @@ const approvalMasterApi = createApi({
       }),
       invalidatesTags: ["Approval"],
     }),
+    markApprovalRead: builder.mutation({
+      query: (id) => ({
+        url: `${APPROVAL_API}/markRead/${id}`,
+        method: "PUT",
+      }),
+      invalidatesTags: ["Approval"],
+    }),
     updateApproval: builder.mutation({
       query: (payload) => {
         const { id, ...body } = payload;

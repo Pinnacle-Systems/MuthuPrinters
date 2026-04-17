@@ -756,7 +756,7 @@ async function update(id, body) {
           taxPercent === "" || taxPercent == null ? null : Number(taxPercent),
         quoteVersion: isNewVersion
           ? currentQuoteVersion + 1
-          : parseInt(quoteVersion),
+          : currentQuoteVersion,
         quoteVersions: isNewVersion
           ? { create: { quoteVersion: currentQuoteVersion + 1 } }
           : undefined,
@@ -770,6 +770,7 @@ async function update(id, body) {
         poItems,
         data.id,
         currentQuoteVersion + 1,
+        currentQuoteVersion,
       );
     } else {
       await updatePoItems(
@@ -897,10 +898,16 @@ async function updatePoItems(
   );
 }
 
-async function createNewVersionItems(tx, poItems, poId, version) {
+async function createNewVersionItems(
+  tx,
+  poItems,
+  poId,
+  version,
+  currentQuoteVersion,
+) {
   return await tx.poItems.createMany({
     data: poItems
-      .filter((i) => i["quoteVersion"] === "New")
+      .filter((i) => i["quoteVersion"] === currentQuoteVersion)
       .map((temp) => ({
         poId,
         styleItemId: temp.styleItemId ? parseInt(temp.styleItemId) : null,
