@@ -113,6 +113,7 @@ model Branch {
   purchaseCancels       PurchaseCancel[]
   purchaseBillEntries   PurchaseBillEntry[]
   approvalConfigs       ApprovalConfig[]
+  orderEntries          OrderEntry[]
 }
 
 model UserOnBranch {
@@ -194,8 +195,9 @@ model User {
   approvalLevelUsers             ApprovalLevelUser[]
   approvalLevelLogs              ApprovalLevelLog[]
   approvalLogsRaisedBy           ApprovalLog[]          @relation(name: "raisedBy")
+  orderEntriesCreatedBy          OrderEntry[]           @relation(name: "createdBy")
+  orderEntriesUpdatedBy          OrderEntry[]           @relation(name: "updatedBy")
 }
-
 
 model Employee {
   id                 Int               @id @default(autoincrement())
@@ -445,6 +447,7 @@ model Party {
   purchaseCancels       PurchaseCancel[]
   purchaseBillEntries   PurchaseBillEntry[]
   purchaseLedgers       PurchaseLedger[]
+  orderEntries          OrderEntry[]
 }
 
 model PartyBranch {
@@ -514,6 +517,8 @@ model attachments {
   filePath         String?
   PurchaseInward   PurchaseInward? @relation(fields: [purchaseInwardId], references: [id], onDelete: Cascade)
   purchaseInwardId Int?
+  OrderEntry       OrderEntry?     @relation(fields: [orderEntryId], references: [id], onDelete: Cascade)
+  orderEntryId     Int?
 }
 
 model Branchattachments {
@@ -1247,6 +1252,7 @@ model TermsAndConditions {
   pos                   Po[]
   purchaseInwardReturns PurchaseInwardReturn[]
   purchaseCancels       PurchaseCancel[]
+  orderEntries          OrderEntry[]
 }
 
 model PayTerm {
@@ -1726,7 +1732,6 @@ model ApprovalLog {
   @@index([referenceId, referencePage])
 }
 
-
 model ApprovalLevelLog {
   id              Int            @id @default(autoincrement())
   approvalLogId   Int?
@@ -1739,4 +1744,30 @@ model ApprovalLevelLog {
   ApprovalLog     ApprovalLog?   @relation(fields: [approvalLogId], references: [id], onDelete: Cascade)
   ApprovalLevel   ApprovalLevel? @relation(fields: [approvalLevelId], references: [id], onDelete: Cascade)
   User            User?          @relation(fields: [userId], references: [id])
+}
+
+model OrderEntry {
+  id                Int                 @id @default(autoincrement())
+  docId             String
+  docDate           DateTime?
+  deliveryDate      DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  createdBy         User?               @relation("createdBy", fields: [createdById], references: [id])
+  createdById       Int?
+  updatedBy         User?               @relation("updatedBy", fields: [updatedById], references: [id])
+  updatedById       Int?
+  Branch            Branch?             @relation(fields: [branchId], references: [id])
+  branchId          Int?
+  customer          Party?              @relation(fields: [customerId], references: [id])
+  customerId        Int?
+  orderType         String?
+  orderQty          Int?
+  qrCode            String?
+  requirements      String?
+  remarks           String?
+  termsAndCondition String?
+  Terms             TermsAndConditions? @relation(fields: [termsId], references: [id])
+  termsId           Int?
+  attachments       attachments[]
 }

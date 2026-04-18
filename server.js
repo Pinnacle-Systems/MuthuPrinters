@@ -58,6 +58,7 @@ import {
   purchaseReport,
   approvalConfig,
   approvalMasterData,
+  orderEntry,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -148,6 +149,7 @@ app.use("/sizeTemplate", Sizetemplate);
 app.use("/purchaseReport", purchaseReport);
 app.use("/approval", approvalConfig);
 app.use("/approvalMasterData", approvalMasterData);
+app.use("/orderEntry", orderEntry);
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;

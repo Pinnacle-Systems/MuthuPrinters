@@ -602,13 +602,16 @@ const PurchaseCancelForm = ({
           showTermSelect={true}
           termValue={termsId}
           onTermChange={(value) => setTermsId(value)}
-          termOptions={(
-            id ? termsData?.data : termsData?.data?.filter((item) => item?.active)
-          )?.map((item) => ({
-            value: item?.id,
-            label: item?.name,
-            templateText: item?.description || "",
-          })) || []}
+          termOptions={
+            (id
+              ? termsData?.data
+              : termsData?.data?.filter((item) => item?.active)
+            )?.map((item) => ({
+              value: item?.id,
+              label: item?.name,
+              templateText: item?.description || "",
+            })) || []
+          }
           totalsRows={[
             {
               key: "totalCancelQty",
