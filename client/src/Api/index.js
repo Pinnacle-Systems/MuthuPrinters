@@ -55,3 +55,5 @@ export const PAY_TERM_API = "payTerm";
 export const PURCHASE_BILL_ENTRY_API = "purchaseBillEntry";
 export const PURCHASE_REPORT_API = "purchaseReport";
 export const ORDER_ENTRY_API = "orderEntry";
+export const PROCESS_API = "process";
+export const PROCESS_GROUP_API = "processGroup";

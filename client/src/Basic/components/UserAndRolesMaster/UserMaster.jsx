@@ -200,7 +200,7 @@ export default function Form() {
                             <fieldset className='frame my-1'>
                                 <legend className='sub-heading'>User Info</legend>
                                 <form className='grid grid-cols-1 my-2' autoComplete="chrome-off">
-                                    <TextInput name="Username" type="text" value={name} setValue={setName} required={true} readOnly={readOnly} />
+                                    <TextInput name="Username" type="normal" value={name} setValue={setName} required={true} readOnly={readOnly} />
                                     {!id
                                         ?
                                         <TextInput name="Password" type="password" value={password} setValue={setPassword} required={true} readOnly={readOnly} />

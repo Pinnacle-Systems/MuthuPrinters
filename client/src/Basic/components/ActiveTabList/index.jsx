@@ -72,6 +72,7 @@ import {
   ApprovalMaster,
   StockReport,
   OrderEntry,
+  ProcessMaster,
 } from "../../../HostelStore/Components";
 
 const ActiveTabList = () => {
@@ -148,6 +149,7 @@ const ActiveTabList = () => {
     "APPROVAL RULE FIELD": <ApprovalRuleField />,
     "APPROVAL RULE MODULE": <ApprovalRuleModule />,
     "ORDER ENTRY": <OrderEntry />,
+    "PROCESS MASTER": <ProcessMaster />,
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

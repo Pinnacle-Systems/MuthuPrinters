@@ -40,6 +40,8 @@ import {
   GsmMasterApi,
   SizetemplateMasterApi,
   purchaseReportApi,
+  ProcessMasterApi,
+  ProcessGroupMasterApi,
 } from "./services";
 import paymentApi from "./services/PaymentService";
 import StyleMasterApi from "./services/StyleMasterService";
@@ -111,6 +113,8 @@ const commonReducers = {
   purchaseReport: purchaseReportApi.reducer,
   approvalMaster: ApprovalMasterApi.reducer,
   orderEntry: OrderEntryApi.reducer,
+  process: ProcessMasterApi.reducer,
+  processGroup: ProcessGroupMasterApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -165,6 +169,8 @@ const commonMiddleware = [
   purchaseReportApi.middleware,
   ApprovalMasterApi.middleware,
   OrderEntryApi.middleware,
+  ProcessMasterApi.middleware,
+  ProcessGroupMasterApi.middleware,
 ];
 
 const store = configureStore({

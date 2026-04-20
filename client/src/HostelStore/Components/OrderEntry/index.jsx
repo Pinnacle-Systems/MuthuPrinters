@@ -144,7 +144,7 @@ const index = () => {
                         customerList={customerList}
                         branchList={branchList}
                         userData={userData?.data}
-                        termsData={termsData?.data}
+                        termsData={termsData}
                     />
                 </div>
             )}

@@ -46,3 +46,4 @@ export { default as PurchaseReport } from "./PurchaseReport/Report/PurchaseRepor
 export { default as ApprovalMaster } from "./ApprovalMaster";
 export { default as StockReport } from "./StockReport/StockReport";
 export { default as OrderEntry } from "./OrderEntry";
+export { default as ProcessMaster } from "./ProcessMaster";

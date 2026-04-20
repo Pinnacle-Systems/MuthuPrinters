@@ -62,6 +62,8 @@ model Company {
   gsms                Gsm[]
   itemGroups          ItemGroup[]
   sizeTemplates       SizeTemplate[]
+  processes           Process[]
+  processGroups       ProcessGroup[]
 }
 
 model Subscription {
@@ -1770,4 +1772,30 @@ model OrderEntry {
   Terms             TermsAndConditions? @relation(fields: [termsId], references: [id])
   termsId           Int?
   attachments       attachments[]
+}
+
+model Process {
+  id               Int                @id @default(autoincrement())
+  name             String?
+  active           Boolean?           @default(true)
+  Company          Company?           @relation(fields: [companyId], references: [id])
+  companyId        Int?
+  processGroupList ProcessGroupList[]
+}
+
+model ProcessGroup {
+  id               Int                @id @default(autoincrement())
+  name             String?
+  Company          Company?           @relation(fields: [companyId], references: [id])
+  companyId        Int?
+  active           Boolean?           @default(true)
+  processGroupList ProcessGroupList[]
+}
+
+model ProcessGroupList {
+  id             Int           @id @default(autoincrement())
+  processGroup   ProcessGroup? @relation(fields: [processGroupId], references: [id], onDelete: Cascade)
+  processGroupId Int?
+  Process        Process?      @relation(fields: [processId], references: [id])
+  processId      Int?
 }

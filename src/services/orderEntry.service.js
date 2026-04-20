@@ -242,6 +242,8 @@ async function create(body) {
     orderQty,
     attachments,
     draftSave,
+    termsAndCondition,
+    termsId,
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
@@ -273,6 +275,8 @@ async function create(body) {
         remarks,
         requirements,
         orderQty: safeorderQty,
+        termsId: termsId ? parseInt(termsId) : null,
+        termsAndCondition,
         attachments:
           JSON.parse(attachments)?.length > 0
             ? {
@@ -303,6 +307,8 @@ async function update(id, body, files) {
     requirements,
     orderQty,
     attachments,
+    termsId,
+    termsAndCondition,
   } = await body;
 
   const safeorderQty =
@@ -371,6 +377,8 @@ async function update(id, body, files) {
         remarks,
         requirements,
         orderQty: safeorderQty,
+        termsAndCondition,
+        termsId: termsId ? parseInt(termsId) : null,
         attachments: {
           deleteMany: {
             ...(incomingIds.length > 0 && {
@@ -421,14 +429,13 @@ async function remove(id) {
     include: { attachments: { select: { filePath: true } } },
   });
 
-  // ✅ Unlink all attachment files
-  //   dataFound?.attachments?.forEach((att) => {
-  //     if (!att.filePath) return;
-  //     const fullPath = path.join("./uploads", att.filePath);
-  //     fs.unlink(fullPath, (err) => {
-  //       if (err) console.warn(`Could not delete: ${fullPath}`, err.message);
-  //     });
-  //   });
+  dataFound?.attachments?.forEach((att) => {
+    if (!att.filePath) return;
+    const fullPath = path.join("./uploads", att.filePath);
+    fs.unlink(fullPath, (err) => {
+      if (err) console.warn(`Could not delete: ${fullPath}`, err.message);
+    });
+  });
   const data = await prisma.orderEntry.delete({
     where: {
       id: parseInt(id),
