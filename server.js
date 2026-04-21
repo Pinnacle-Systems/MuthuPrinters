@@ -57,8 +57,9 @@ import {
   Sizetemplate,
   purchaseReport,
   approvalConfig,
+  approvalMasterData,
 } from "./src/routes/index.js";
-
+import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
 
 const app = express();
@@ -146,6 +147,7 @@ app.use("/purchaseBillEntry", purchaseBillEntry);
 app.use("/sizeTemplate", Sizetemplate);
 app.use("/purchaseReport", purchaseReport);
 app.use("/approval", approvalConfig);
+app.use("/approvalMasterData", approvalMasterData);
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;
@@ -153,13 +155,13 @@ app.get("/retreiveFile/:fileName", (req, res) => {
 });
 
 const httpServer = createServer(app);
-const io = new Server(httpServer, {
+export const io = new Server(httpServer, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
   },
 });
-
+setIo(io);
 io.on("connection", socketMain);
 
 const PORT = process.env.PORT || 8080;

@@ -45,6 +45,20 @@ function getTableValue(expression, dataObj) {
       return dataObj?.role?.name;
     case "dataObj?.EmployeeCategory?.name":
       return dataObj?.EmployeeCategory?.name;
+    case "dataObj.operator":
+      return dataObj.operator;
+    case "dataObj.label":
+      return dataObj.label;
+    case "dataObj.pageId":
+      return dataObj.pageId;
+    case "dataObj.type":
+      return dataObj.type;
+    case "dataObj.Module.name":
+      return dataObj.Module?.name;
+    case "dataObj.parentRelation":
+      return dataObj.parentRelation;
+    case "dataObj.fieldPath":
+      return dataObj.fieldPath;
     case "dataObj.active ? ACTIVE : INACTIVE":
       return dataObj.active ? ACTIVE : INACTIVE;
     case "MOMENT.utc(dataObj.from).format('DD-MM-YYYY')":

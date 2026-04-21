@@ -1,88 +1,277 @@
 import { prisma } from "../lib/prisma.js";
+import { notifyLevelUsers } from "./notificationHelper.js";
 
-// ── Condition evaluator ─────────────────────────────────────────────────────
-// Safely evaluates simple expressions like "totalNetAmount > 10000"
-// or "true" (always apply). Returns boolean.
-// Condition = "totalNetAmount > 100000"   recordData = { totalNetAmount: 150000 }
-//      ↓
-// new Function("totalNetAmount", "return !!(totalNetAmount > 100000)")(150000)
-//      ↓
-// 150000 > 100000 = true ✅
-//      ↓
-// ApprovalLog created → PENDING
+// ═══════════════════════════════════════════════════════════════════════════
+// VALUE RESOLVER — handles flat fields, single relations, and array aggregation
+// ═══════════════════════════════════════════════════════════════════════════
+export function getValueByPath(record, field) {
+  if (!record || !field) return undefined;
 
-function evaluateCondition(condition, record) {
-  if (!condition || condition.trim() === "" || condition.trim() === "true") {
+  const { name, parentRelation, fieldPath, aggregation } = field;
+
+  // ── CASE 1: Flat field (e.g. po.poType, po.netBillValue) ────────────────────
+  if (!parentRelation) {
+    // Support dotted fieldPath on the flat record too (e.g. "Address.City")
+    if (fieldPath) return walkPath(record, fieldPath);
+    return record[name];
+  }
+
+  // ── CASE 2: Resolve relation (handle Prisma casing quirks) ──────────────────
+  const related = resolveRelation(record, parentRelation);
+  if (related === undefined || related === null) return undefined;
+
+  const pathKey = fieldPath || name;
+
+  // ── CASE 2a: Array relation (e.g. po.poItems) ───────────────────────────────
+  if (Array.isArray(related)) {
+    const values = related
+      .map((item) => walkPath(item, pathKey))
+      .filter((v) => v !== undefined && v !== null);
+
+    switch (aggregation) {
+      case "SUM":
+        return values.reduce((a, b) => (Number(a) || 0) + (Number(b) || 0), 0);
+      case "COUNT":
+        return values.length;
+      case "MAX": {
+        const nums = values.map(Number).filter((n) => !isNaN(n));
+        return nums.length ? Math.max(...nums) : 0;
+      }
+      case "MIN": {
+        const nums = values.map(Number).filter((n) => !isNaN(n));
+        return nums.length ? Math.min(...nums) : 0;
+      }
+      case "AVG": {
+        const nums = values.map(Number).filter((n) => !isNaN(n));
+        return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+      }
+      default:
+        // No aggregation set — return raw array so IN/ANY can match
+        return values;
+    }
+  }
+
+  // ── CASE 2b: Single relation object (e.g. po.Supplier) ──────────────────────
+  return walkPath(related, pathKey);
+}
+
+// Walk dot-notation paths like "City.name"
+function walkPath(obj, path) {
+  if (!obj || !path) return undefined;
+  return path.split(".").reduce((acc, key) => acc?.[key], obj);
+}
+
+// Handle capitalization quirks between schema and loaded record
+function resolveRelation(record, relationName) {
+  if (record[relationName] !== undefined) return record[relationName];
+  const cap = relationName.charAt(0).toUpperCase() + relationName.slice(1);
+  if (record[cap] !== undefined) return record[cap];
+  const low = relationName.charAt(0).toLowerCase() + relationName.slice(1);
+  if (record[low] !== undefined) return record[low];
+  return undefined;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RULE EVALUATION
+// ═══════════════════════════════════════════════════════════════════════════
+export function applyOperator(op, a, b) {
+  const n1 = isNaN(a) ? a : Number(a);
+  const n2 = isNaN(b) ? b : Number(b);
+  switch (op) {
+    case "=":
+      return n1 == n2;
+    case "!=":
+      return n1 != n2;
+    case ">":
+      return n1 > n2;
+    case "<":
+      return n1 < n2;
+    case ">=":
+      return n1 >= n2;
+    case "<=":
+      return n1 <= n2;
+    case "IN":
+      return (b || "")
+        .split(",")
+        .map((s) => s.trim())
+        .includes(String(a));
+    default:
+      return false;
+  }
+}
+
+export function evaluateRuleCondition(cond, recordData) {
+  const sourceVal = getValueByPath(recordData, cond.Field);
+  const compareVal =
+    cond.valueType === "DYNAMIC"
+      ? getValueByPath(recordData, cond.CompareField)
+      : cond.value;
+
+  // Non-aggregated arrays — ANY element matches
+  if (Array.isArray(sourceVal)) {
+    return sourceVal.some((v) =>
+      applyOperator(cond.Operator?.operator, v, compareVal),
+    );
+  }
+  return applyOperator(cond.Operator?.operator, sourceVal, compareVal);
+}
+
+export function evaluateConfigTrigger(config, recordData) {
+  if (!config.ConfigConditions || config.ConfigConditions.length === 0)
     return true;
-  }
-  try {
-    // Build a sandboxed function with the record's fields as variables
-    const keys = Object.keys(record);
-    const values = keys.map((k) => record[k]);
-    // eslint-disable-next-line no-new-func
-    return new Function(...keys, `return !!(${condition})`)(...values);
-  } catch {
-    return false; // if condition fails to parse, skip level
-  }
+  const results = config.ConfigConditions.map((c) =>
+    evaluateRuleCondition(c, recordData),
+  );
+  return config.ruleLogicalOperator === "OR"
+    ? results.some(Boolean)
+    : results.every(Boolean);
 }
 
-// ── 1. Check if approval is ON ──────────────────────────────────────────────
-export async function isApprovalEnabled(branchId, pageId) {
-  const config = await prisma.approvalConfig.findUnique({
-    where: { branchId_pageId: { branchId: +branchId, pageId: +pageId } },
-  });
-  return { enabled: config?.active === true, config };
-}
-
-// ── 2. Create PENDING log + resolve which levels apply based on record data ─
-export async function createApprovalLog(
-  tx,
+// ═══════════════════════════════════════════════════════════════════════════
+// TRIGGERED CONFIG LOOKUP
+// ═══════════════════════════════════════════════════════════════════════════
+// approvalHelper.js
+export async function getTriggeredConfig(
   branchId,
-  pageId,
-  referenceId,
-  referencePage,
-  recordData = {},
-  referenceDocId,
-  userId,
+  moduleId,
+  recordData,
+  db = prisma,
 ) {
-  const config = await tx.approvalConfig.findUnique({
+  const configs = await db.approvalConfig.findMany({
     where: {
-      branchId_pageId: {
-        branchId: parseInt(branchId),
-        pageId: parseInt(pageId),
-      },
+      branchId: parseInt(branchId),
+      moduleId: parseInt(moduleId),
+      active: true,
     },
+    orderBy: { priority: "asc" },
     include: {
+      ConfigConditions: {
+        include: { Field: true, Operator: true, CompareField: true },
+      },
       approvalLevels: {
         include: { LevelUsers: true },
         orderBy: { levelNo: "asc" },
       },
     },
   });
-  if (!config?.active) return null;
-  // Filter levels whose condition is met
-  const applicableLevels = config.approvalLevels.filter((lvl) =>
-    evaluateCondition(lvl.condition, recordData),
+
+  if (!configs.length) return null;
+
+  // ✅ Only consider configs that have at least one level with users
+  const validConfigs = configs.filter(
+    (c) =>
+      c.approvalLevels?.length > 0 &&
+      c.approvalLevels.some((l) => l.LevelUsers?.length > 0),
   );
-  if (applicableLevels.length === 0) return null; // no levels apply → auto-pass
+
+  for (const config of validConfigs) {
+    if (evaluateConfigTrigger(config, recordData)) {
+      return config;
+    }
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODULE SETUP CHECK
+// ═══════════════════════════════════════════════════════════════════════════
+export async function isApprovalEnabled(branchId, moduleId) {
+  const configs = await prisma.approvalConfig.findMany({
+    where: { branchId: +branchId, moduleId: +moduleId, active: true },
+    orderBy: { priority: "asc" },
+  });
+  return { enabled: configs.length > 0, configs };
+}
+
+export async function getModuleApprovalSetup(referencePage, branchId) {
+  const module = await prisma.approvalRuleModule.findUnique({
+    where: { name: referencePage },
+    select: { id: true, name: true },
+  });
+  if (!module) return { module: null, hasApproval: false };
+
+  const activeConfig = await prisma.approvalConfig.findFirst({
+    where: { moduleId: module.id, branchId: parseInt(branchId), active: true },
+    select: { id: true },
+  });
+  return { module, hasApproval: !!activeConfig };
+}
+// approvalHelper.js — add this helper
+export async function buildIncludeForModule(moduleId) {
+  const fields = await prisma.approvalRuleField.findMany({
+    where: { moduleId: parseInt(moduleId), active: true },
+    select: { parentRelation: true },
+  });
+
+  const relations = [
+    ...new Set(fields.map((f) => f.parentRelation).filter(Boolean)),
+  ];
+
+  return relations.reduce((acc, rel) => {
+    acc[rel] = true;
+    return acc;
+  }, {});
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// CREATE APPROVAL LOG
+// ═══════════════════════════════════════════════════════════════════════════
+export async function createApprovalLog(
+  tx,
+  branchId,
+  moduleId,
+  referenceId,
+  referencePage,
+  recordData = {},
+  referenceDocId,
+  userId,
+) {
+  // ✅ Pass tx so lookup runs inside the transaction
+  const triggeredConfig = await getTriggeredConfig(
+    branchId,
+    moduleId,
+    recordData,
+    tx,
+  );
+
+  if (!triggeredConfig || triggeredConfig.approvalLevels.length === 0) {
+    return null;
+  }
+
+  const firstLevel = triggeredConfig.approvalLevels[0];
+
   const log = await tx.approvalLog.create({
     data: {
-      approvalConfigId: config.id,
-      referenceId: +referenceId,
+      approvalConfigId: triggeredConfig.id,
+      referenceId: parseInt(referenceId),
       referencePage,
       status: "PENDING",
-      currentLevel: applicableLevels[0].levelNo,
-      referenceDocId: referenceDocId,
+      currentLevel: firstLevel.levelNo,
+      referenceDocId,
       raisedById: parseInt(userId),
     },
   });
-  return { log, applicableLevels };
+
+  // Notify first-level approvers
+  notifyLevelUsers(firstLevel.LevelUsers, {
+    type: "APPROVAL_REQUIRED",
+    module: referencePage,
+    docId: referenceDocId,
+    referenceId: parseInt(referenceId),
+    levelNo: firstLevel.levelNo,
+    configName: triggeredConfig.name,
+    message: `Approval required for ${referencePage} - ${referenceDocId ?? referenceId} (Level ${firstLevel.levelNo})`,
+  });
+
+  return { log, triggeredConfig };
 }
 
-// ── 3. Get full approval status of a record ─────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// GET APPROVAL LOG
+// ═══════════════════════════════════════════════════════════════════════════
 export async function getApprovalLog(referenceId, referencePage) {
   return await prisma.approvalLog.findFirst({
-    where: { referenceId: +referenceId, referencePage },
+    where: { referenceId: parseInt(referenceId), referencePage },
+    orderBy: { createdAt: "desc" },
     include: {
       ApprovalConfig: {
         include: {
@@ -100,39 +289,57 @@ export async function getApprovalLog(referenceId, referencePage) {
   });
 }
 
-// ── 4. Can this user act on the current level? ──────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// AUTH CHECK
+// ═══════════════════════════════════════════════════════════════════════════
 export async function canUserActOnLevel(approvalLog, userId) {
   const config = approvalLog.ApprovalConfig;
   if (!config) return false;
 
-  const currentLevel = config.ApprovalLevels.find(
+  const currentLevel = config.approvalLevels.find(
     (l) => l.levelNo === approvalLog.currentLevel,
   );
   if (!currentLevel) return false;
 
-  return currentLevel.LevelUsers.some((lu) => lu.userId === +userId);
+  return currentLevel.LevelUsers.some((lu) => lu.userId === parseInt(userId));
 }
 
-// ── 5. Advance or complete approval ────────────────────────────────────────
-// Call this after a user approves one level.
+// ═══════════════════════════════════════════════════════════════════════════
+// ADVANCE APPROVAL — moves to next level or marks APPROVED
+// ═══════════════════════════════════════════════════════════════════════════
 async function advanceApproval(
   tx,
   approvalLog,
-  applicableLevelNos,
+  applicableLevels,
   userId,
   remarks,
 ) {
-  const nextLevel = applicableLevelNos.find(
-    (n) => n > approvalLog.currentLevel,
-  );
-  if (nextLevel) {
-    return await tx.approvalLog.update({
+  const nextLevelNo = applicableLevels
+    .map((l) => l.levelNo)
+    .find((n) => n > approvalLog.currentLevel);
+
+  if (nextLevelNo) {
+    const updated = await tx.approvalLog.update({
       where: { id: approvalLog.id },
-      data: { currentLevel: nextLevel },
+      data: { currentLevel: nextLevelNo },
     });
+
+    const nextLevel = applicableLevels.find((l) => l.levelNo === nextLevelNo);
+    if (nextLevel?.LevelUsers?.length) {
+      notifyLevelUsers(nextLevel.LevelUsers, {
+        type: "APPROVAL_REQUIRED",
+        module: approvalLog.referencePage,
+        docId: approvalLog.referenceDocId,
+        referenceId: approvalLog.referenceId,
+        levelNo: nextLevelNo,
+        message: `Approval required for ${approvalLog.referencePage} - ${approvalLog.referenceDocId ?? approvalLog.referenceId} (Level ${nextLevelNo})`,
+      });
+    }
+    return updated;
   }
+
   // All levels done → fully APPROVED
-  return await tx.approvalLog.update({
+  const updated = await tx.approvalLog.update({
     where: { id: approvalLog.id },
     data: {
       status: "APPROVED",
@@ -141,22 +348,33 @@ async function advanceApproval(
       remarks: remarks || null,
     },
   });
+
+  // Notify the raiser
+  if (approvalLog.raisedById) {
+    notifyLevelUsers([{ userId: approvalLog.raisedById }], {
+      type: "APPROVED",
+      module: approvalLog.referencePage,
+      docId: approvalLog.referenceDocId,
+      referenceId: approvalLog.referenceId,
+      message: `${approvalLog.referencePage} - ${approvalLog.referenceDocId ?? approvalLog.referenceId} has been fully approved!`,
+    });
+  }
+  return updated;
 }
 
-// ── 6. Approve action ───────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// APPROVE
+// ═══════════════════════════════════════════════════════════════════════════
 export async function approveRecord(
   referenceId,
   referencePage,
   userId,
   remarks,
-  recordData = {},
 ) {
   return await prisma.$transaction(async (tx) => {
     const log = await tx.approvalLog.findFirst({
       where: { referenceId: parseInt(referenceId), referencePage },
-      orderBy: {
-        createdAt: "desc", // ✅ always latest
-      },
+      orderBy: { createdAt: "desc" },
       include: {
         ApprovalConfig: {
           include: {
@@ -169,6 +387,7 @@ export async function approveRecord(
         LevelLogs: true,
       },
     });
+
     if (!log) return { statusCode: 1, message: "Approval log not found" };
     if (log.status === "APPROVED")
       return { statusCode: 1, message: "Already approved" };
@@ -176,9 +395,7 @@ export async function approveRecord(
       return { statusCode: 1, message: "Already rejected" };
 
     const config = log.ApprovalConfig;
-    const applicableLevels = config.approvalLevels.filter((lvl) =>
-      evaluateCondition(lvl.condition, recordData),
-    );
+    const applicableLevels = config.approvalLevels;
     const currentLevel = applicableLevels.find(
       (l) => l.levelNo === log.currentLevel,
     );
@@ -189,10 +406,22 @@ export async function approveRecord(
     const isAuthorised = currentLevel.LevelUsers.some(
       (lu) => lu.userId === parseInt(userId),
     );
-    if (!isAuthorised)
+    if (!isAuthorised) {
       return { statusCode: 1, message: "Not authorised to approve this level" };
+    }
 
-    // Record this user's approval for the level
+    // ✅ Prevent double-approval at same level by same user
+    const alreadyActed = log.LevelLogs.some(
+      (ll) =>
+        ll.approvalLevelId === currentLevel.id &&
+        ll.userId === parseInt(userId) &&
+        ll.action === "APPROVED",
+    );
+    if (alreadyActed) {
+      return { statusCode: 1, message: "You have already approved this level" };
+    }
+
+    // Record this user's approval
     await tx.approvalLevelLog.create({
       data: {
         approvalLogId: log.id,
@@ -204,21 +433,19 @@ export async function approveRecord(
       },
     });
 
-    // Check if level is satisfied
-    const levelApprovals = [
-      ...log.LevelLogs.filter(
-        (ll) =>
-          ll.approvalLevelId === currentLevel.id && ll.action === "APPROVED",
-      ),
-      { userId: parseInt(userId) }, // optimistically include current action
-    ];
+    // Check if level is satisfied (OR = 1 approver, AND = all)
+    const existingApprovers = log.LevelLogs.filter(
+      (ll) =>
+        ll.approvalLevelId === currentLevel.id && ll.action === "APPROVED",
+    ).map((ll) => ll.userId);
 
-    const uniqueApprovers = new Set(levelApprovals.map((l) => l.userId));
+    const uniqueApprovers = new Set([...existingApprovers, parseInt(userId)]);
     const requiredCount = currentLevel.LevelUsers.length;
+
     const levelSatisfied =
       currentLevel.approveType === "OR"
         ? uniqueApprovers.size >= 1
-        : uniqueApprovers.size >= requiredCount; // AND: all users must approve
+        : uniqueApprovers.size >= requiredCount;
 
     if (!levelSatisfied) {
       return {
@@ -228,12 +455,12 @@ export async function approveRecord(
       };
     }
 
-    // Level satisfied → advance
-    const applicableLevelNos = applicableLevels.map((l) => l.levelNo);
+    // Level satisfied → advance to next or mark APPROVED
+    // ✅ Removed erroneous REJECTED notification that was here
     const updated = await advanceApproval(
       tx,
       log,
-      applicableLevelNos,
+      applicableLevels,
       userId,
       remarks,
     );
@@ -241,7 +468,9 @@ export async function approveRecord(
   });
 }
 
-// ── 7. Reject action ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// REJECT
+// ═══════════════════════════════════════════════════════════════════════════
 export async function rejectRecord(
   referenceId,
   referencePage,
@@ -251,9 +480,7 @@ export async function rejectRecord(
   return await prisma.$transaction(async (tx) => {
     const log = await tx.approvalLog.findFirst({
       where: { referenceId: parseInt(referenceId), referencePage },
-      orderBy: {
-        createdAt: "desc", // ✅ always latest
-      },
+      orderBy: { createdAt: "desc" },
       include: {
         ApprovalConfig: {
           include: { approvalLevels: { include: { LevelUsers: true } } },
@@ -261,12 +488,14 @@ export async function rejectRecord(
         LevelLogs: true,
       },
     });
+
     if (!log) return { statusCode: 1, message: "Approval log not found" };
-    if (log.status !== "PENDING")
+    if (log.status !== "PENDING") {
       return {
         statusCode: 1,
-        message: `Cannot reject status is ${log.status}`,
+        message: `Cannot reject — status is ${log.status}`,
       };
+    }
 
     const currentLevel = log.ApprovalConfig.approvalLevels.find(
       (l) => l.levelNo === log.currentLevel,
@@ -274,8 +503,9 @@ export async function rejectRecord(
     const isAuthorised = currentLevel?.LevelUsers.some(
       (lu) => lu.userId === parseInt(userId),
     );
-    if (!isAuthorised)
+    if (!isAuthorised) {
       return { statusCode: 1, message: "Not authorised to reject this level" };
+    }
 
     await tx.approvalLevelLog.create({
       data: {
@@ -297,75 +527,18 @@ export async function rejectRecord(
         remarks: remarks || null,
       },
     });
-    return { statusCode: 0, data: updated };
-  });
-}
 
-async function create(body) {
-  const { branchId, userId, ...rest } = body;
-  const PO_PAGE_ID = 80;
-
-  let data;
-  await prisma.$transaction(async (tx) => {
-    data = await tx.po.create({
-      data: { branchId: +branchId, createdById: +userId, ...rest },
-    });
-
-    // Build the record snapshot for condition evaluation
-    const recordData = {
-      // totalNetAmount: data.totalNetAmount ?? 0,
-      // ← compute this from poItems if needed
-      supplierId: data.supplierId,
-      poType: data.poType,
-      branchId: data.branchId,
-    };
-
-    await createApprovalLog(
-      tx,
-      branchId,
-      PO_PAGE_ID,
-      data.id,
-      "PURCHASE ORDER",
-      recordData,
-    );
-  });
-
-  return { statusCode: 0, data };
-}
-
-export async function saveApprovalConfig(branchId, pageId, body) {
-  const { active, approvalLevelItems } = body; // items from the frontend table
-
-  return await prisma.$transaction(async (tx) => {
-    const config = await tx.approvalConfig.upsert({
-      where: { branchId_pageId: { branchId: +branchId, pageId: +pageId } },
-      create: { branchId: +branchId, pageId: +pageId, active: active ?? false },
-      update: { active: active ?? false },
-    });
-
-    // Delete old levels and recreate (simplest for a table-based UI)
-    await tx.approvalLevel.deleteMany({
-      where: { approvalConfigId: config.id },
-    });
-
-    for (const item of approvalLevelItems ?? []) {
-      const level = await tx.approvalLevel.create({
-        data: {
-          approvalConfigId: config.id,
-          levelNo: item.levelNo,
-          approverLogic: item.approveType ?? "OR",
-          condition: item.condition ?? "",
-        },
+    // ✅ Notify the raiser about rejection (this was missing)
+    if (log.raisedById) {
+      notifyLevelUsers([{ userId: log.raisedById }], {
+        type: "REJECTED",
+        module: log.referencePage,
+        docId: log.referenceDocId,
+        referenceId: log.referenceId,
+        message: `${log.referencePage} - ${log.referenceDocId ?? log.referenceId} was rejected. Remarks: ${remarks || "None"}`,
       });
-
-      // item.users = [{ value: userId, label: "..." }, ...]
-      for (const user of item.users ?? []) {
-        await tx.approvalLevelUser.create({
-          data: { approvalLevelId: level.id, userId: +user.value },
-        });
-      }
     }
 
-    return { statusCode: 0, data: config };
+    return { statusCode: 0, data: updated };
   });
 }

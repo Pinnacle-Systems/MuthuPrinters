@@ -16,6 +16,9 @@ const SuperAdminHeader = ({ setLogout }) => {
     { id: 1, name: "PAGE MASTER" },
     { id: 2, name: "COMPANY MASTER" },
     { id: 3, name: "PAGE GROUP MASTER" },
+    { id: 4, name: "APPROVAL RULE OPERATOR" },
+    { id: 5, name: "APPROVAL RULE FIELD" },
+    { id: 6, name: "APPROVAL RULE MODULE" },
   ];
 
   return (

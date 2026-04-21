@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { APPROVAL_API } from "../../Api";
+import { APPROVAL_API, APPROVAL_MASTER_DATA_API } from "../../Api";
 
 const BASE_URL = process.env.REACT_APP_SERVER_URL;
 
@@ -8,7 +8,7 @@ const approvalMasterApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: BASE_URL,
   }),
-  tagTypes: ["Approval"],
+  tagTypes: ["Approval", "ApprovalField", "ApprovalModule"],
   endpoints: (builder) => ({
     getApproval: builder.query({
       query: ({ params, searchParams }) => {
@@ -107,6 +107,105 @@ const approvalMasterApi = createApi({
       }),
       invalidatesTags: ["Approval"],
     }),
+    getApprovalFields: builder.query({
+      query: (moduleId) => ({
+        url: `${APPROVAL_MASTER_DATA_API}/fields${moduleId ? `?moduleId=${moduleId}` : ""}`,
+        method: "GET",
+      }),
+      providesTags: ["ApprovalField"],
+    }),
+    getApprovalOperators: builder.query({
+      query: () => ({
+        url: `${APPROVAL_MASTER_DATA_API}/operators`,
+        method: "GET",
+      }),
+      providesTags: ["ApprovalField"],
+    }),
+    addApprovalField: builder.mutation({
+      query: (payload) => ({
+        url: `${APPROVAL_MASTER_DATA_API}/fields`,
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["ApprovalField"],
+    }),
+    updateApprovalField: builder.mutation({
+      query: (payload) => {
+        const { id, ...body } = payload;
+        return {
+          url: `${APPROVAL_MASTER_DATA_API}/fields/${id}`,
+          method: "PUT",
+          body,
+        };
+      },
+      invalidatesTags: ["ApprovalField"],
+    }),
+    deleteApprovalField: builder.mutation({
+      query: (id) => ({
+        url: `${APPROVAL_MASTER_DATA_API}/fields/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["ApprovalField"],
+    }),
+    addApprovalOperator: builder.mutation({
+      query: (payload) => ({
+        url: `${APPROVAL_MASTER_DATA_API}/operators`,
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["ApprovalField"],
+    }),
+    updateApprovalOperator: builder.mutation({
+      query: (payload) => {
+        const { id, ...body } = payload;
+        return {
+          url: `${APPROVAL_MASTER_DATA_API}/operators/${id}`,
+          method: "PUT",
+          body,
+        };
+      },
+      invalidatesTags: ["ApprovalField"],
+    }),
+    deleteApprovalOperator: builder.mutation({
+      query: (id) => ({
+        url: `${APPROVAL_MASTER_DATA_API}/operators/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["ApprovalField"],
+    }),
+    getApprovalModules: builder.query({
+      query: () => ({
+        url: `${APPROVAL_MASTER_DATA_API}/modules`,
+        method: "GET",
+      }),
+      providesTags: ["ApprovalModule"],
+    }),
+    addApprovalModule: builder.mutation({
+      query: (payload) => ({
+        url: `${APPROVAL_MASTER_DATA_API}/modules`,
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["ApprovalModule"],
+    }),
+    updateApprovalModule: builder.mutation({
+      query: (payload) => {
+        const { id, ...body } = payload;
+        return {
+          url: `${APPROVAL_MASTER_DATA_API}/modules/${id}`,
+          method: "PUT",
+          body,
+        };
+      },
+      invalidatesTags: ["ApprovalModule"],
+    }),
+    deleteApprovalModule: builder.mutation({
+      query: (id) => ({
+        url: `${APPROVAL_MASTER_DATA_API}/modules/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["ApprovalModule"],
+    }),
   }),
 });
 
@@ -119,6 +218,18 @@ export const {
   useAddApprovalMutation,
   useUpdateApprovalMutation,
   useDeleteApprovalMutation,
+  useGetApprovalFieldsQuery,
+  useGetApprovalOperatorsQuery,
+  useAddApprovalFieldMutation,
+  useUpdateApprovalFieldMutation,
+  useDeleteApprovalFieldMutation,
+  useAddApprovalOperatorMutation,
+  useUpdateApprovalOperatorMutation,
+  useDeleteApprovalOperatorMutation,
+  useGetApprovalModulesQuery,
+  useAddApprovalModuleMutation,
+  useUpdateApprovalModuleMutation,
+  useDeleteApprovalModuleMutation,
 } = approvalMasterApi;
 
 export default approvalMasterApi;

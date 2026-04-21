@@ -17,6 +17,9 @@ import {
   TermsAndCondition,
   PayTermMaster,
   LocationMaster,
+  ApprovalRuleOperator,
+  ApprovalRuleField,
+  ApprovalRuleModule,
 } from "..";
 
 import { CLOSE_ICON, DOUBLE_NEXT_ICON } from "../../../icons";
@@ -140,6 +143,9 @@ const ActiveTabList = () => {
     "PURCHASE REPORT": <PurchaseReport />,
     "APPROVAL CONFIGURATION": <ApprovalMaster />,
     "STOCK REPORT": <StockReport />,
+    "APPROVAL RULE OPERATOR": <ApprovalRuleOperator />,
+    "APPROVAL RULE FIELD": <ApprovalRuleField />,
+    "APPROVAL RULE MODULE": <ApprovalRuleModule />,
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

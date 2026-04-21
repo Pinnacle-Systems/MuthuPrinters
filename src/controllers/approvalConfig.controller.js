@@ -41,26 +41,14 @@ async function create(req, res, next) {
     res.json(await _create(req.body));
     console.log(res.statusCode);
   } catch (error) {
-    console.error(
-      `Error`,
-      error?.message?.match(/message: "(.*?)"/)?.[1] || error?.message,
-    );
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === "P2002") {
-        res.statusCode = 200;
-        res.json({
-          statusCode: 1,
-          message: `${error.meta.target.split("_")[1].toUpperCase()} Already exists`,
-        });
-        console.log(res.statusCode);
-      }
-    } else {
-      res.json({
-        statusCode: 1,
-        message:
-          error?.message?.match(/message: "(.*?)"/)?.[1] || error?.message,
-      });
-    }
+    console.error(`Error`, error?.message);
+    res.json({
+      statusCode: 1,
+      message:
+        error?.message?.match(/message: "(.*?)"/)?.[1] ||
+        error?.message ||
+        "Something went wrong",
+    });
   }
 }
 

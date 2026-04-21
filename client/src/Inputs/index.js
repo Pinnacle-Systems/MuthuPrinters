@@ -133,7 +133,94 @@ export const MultiSelectDropdown = ({
     </div>
   );
 };
-
+export const MultiSelectDropdownWithoutBorder = ({
+  name,
+  selected,
+  labelName,
+  setSelected,
+  options,
+  readOnly = false,
+  tabIndex = null,
+  className = "",
+  inputClass,
+  disabled = false,
+}) => {
+  return (
+    <div className={`data ${className}`}>
+      {name && (
+        <label
+          className={`md:text-start block text-[11px] font-bold text-slate-700 mb-1 ${labelName}`}
+        >
+          {name}
+        </label>
+      )}
+      <MultiSelect
+        menuPortalTarget={document.body}
+        options={options}
+        value={selected}
+        onChange={readOnly ? () => {} : setSelected}
+        labelledBy="Select"
+        hasSelectAll={false}
+        styles={{
+          menuPortal: (base) => ({ ...base, zIndex: 99999 }),
+          container: (base) => ({
+            ...base,
+            fontSize: "12px",
+            minHeight: "28px",
+            border: "none",
+            outline: "none",
+            boxShadow: "none",
+            margin: 0,
+            padding: 0,
+            background: "transparent", // ← transparent so tr color shows
+          }),
+          control: (base) => ({
+            ...base,
+            padding: "2px",
+            backgroundColor: "transparent", // ← transparent
+            border: "none",
+            outline: "none",
+            boxShadow: "none",
+            borderRadius: 0,
+            minHeight: "28px",
+            margin: 0,
+          }),
+          valueContainer: (base) => ({
+            ...base,
+            padding: "0 6px",
+            border: "none",
+            background: "transparent", // ← transparent
+          }),
+          // Hide the built-in dropdown arrow
+          dropdownButton: (base) => ({
+            ...base,
+            display: "none", // ← hide default arrow
+          }),
+          option: (base, state) => ({
+            ...base,
+            fontSize: "12px",
+            backgroundColor: state.isSelected ? "#e0e7ff" : "#fff",
+            padding: "4px 8px",
+          }),
+          chips: (base) => ({
+            ...base,
+            fontSize: "12px",
+            padding: "2px 4px",
+          }),
+          searchBox: (base) => ({
+            ...base,
+            fontSize: "12px",
+            padding: "2px",
+            border: "none",
+            outline: "none",
+          }),
+        }}
+        className="custom-multiselectBorderNo"
+        disabled={readOnly || disabled}
+      />
+    </div>
+  );
+};
 export const TextInput = forwardRef(
   (
     {
@@ -1347,7 +1434,7 @@ export const DropdownInputNew = forwardRef(
     return (
       <div className={`mb-1 ${width}`}>
         {name && (
-          <label className="block text-xs font-bold text-slate-700 mb-1">
+          <label className="block text-[11px] font-bold text-gray-600 mb-1">
             {required ? <RequiredLabel name={name} /> : name}
           </label>
         )}
@@ -2823,7 +2910,7 @@ export const DateInputNew = forwardRef(
           disabled={disabled}
           required={required}
           min={isToday ? today : undefined}
-        className={`h-7 w-full px-2 py-0 border border-slate-300 rounded-md 
+          className={`h-7 w-full px-2 py-0 border border-slate-300 rounded-md 
           focus:border-indigo-300 focus:outline-none transition-all duration-200
           hover:border-slate-400 ${readOnly || disabled ? "bg-slate-100" : ""} ${FORM_INPUT_TEXT_CLASS} ${className}`}
           id="id"
@@ -3668,10 +3755,10 @@ export const customSelectStyles = {
     ...base,
     minHeight: "13px",
     height: "13px",
-    padding: "12px 4px",
+    padding: "14px 4px",
     fontSize: "12px",
     borderRadius: "8px",
-    fontFamily: "Poppins",
+    // fontFamily: "Poppins",
     color: state.isDisabled ? "#6b7280" : "black",
     backgroundColor: state.isDisabled ? "#f3f4f6" : "white", // bg-gray-100 vs bg-white
     cursor: state.isDisabled ? "not-allowed" : "default",
@@ -3686,7 +3773,7 @@ export const customSelectStyles = {
     padding: "0 3px",
     marginTop: "-8px",
     fontSize: "12px",
-    fontFamily: "Poppins",
+    // fontFamily: "Poppins",
     color: state.isDisabled ? "#6b7280" : "black",
   }),
   input: (base, state) => ({
@@ -3698,19 +3785,19 @@ export const customSelectStyles = {
   }),
   singleValue: (base, state) => ({
     ...base,
-    fontFamily: "Poppins",
+    // fontFamily: "Poppins",
     fontSize: "12px",
     color: state.isDisabled ? "#6b7280" : "black",
   }),
   placeholder: (base) => ({
     ...base,
-    fontFamily: "Poppins",
+    // fontFamily: "Poppins",
     color: "black",
     fontSize: "12px",
   }),
   menu: (base, state) => ({
     ...base,
-    fontFamily: "Poppins",
+    // fontFamily: "Poppins",
     maxHeight: 150,
     // overflowY: "auto",
     fontSize: "12px",
@@ -3719,7 +3806,7 @@ export const customSelectStyles = {
   }),
   option: (base, state) => ({
     ...base,
-    fontFamily: "Poppins",
+    // fontFamily: "Poppins",
     fontSize: "12px",
     color: state.isSelected ? "white" : "black",
     backgroundColor: state.isSelected ? "#047857" : base.backgroundColor,
@@ -3783,7 +3870,7 @@ export const DropdownNew = forwardRef(
     return (
       <div className={`${name ? "mb-2" : "mb-0"} w-${width}`}>
         {name && (
-          <label className="block text-xs font-bold text-slate-700 mb-1">
+          <label className="block text-[11px] font-bold text-gray-600 mb-1">
             {required ? (
               <span className="">
                 {name} <span className="text-red-500">*</span>

@@ -503,22 +503,20 @@ const PurchaseOrderFormReport = ({
                   >
                     <div>Approval Status</div>
                   </th>
-                  {!isAdmin && (
-                    <th
-                      className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
-                      rowSpan={2}
-                    >
-                      <div> Remarks</div>
-                    </th>
-                  )}
-                  {isAdmin && (
-                    <th
-                      className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
-                      rowSpan={2}
-                    >
-                      <div>Approval Actions</div>
-                    </th>
-                  )}
+
+                  <th
+                    className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
+                    rowSpan={2}
+                  >
+                    <div> Remarks</div>
+                  </th>
+
+                  <th
+                    className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
+                    rowSpan={2}
+                  >
+                    <div>Approval Actions</div>
+                  </th>
 
                   <th
                     className="w-14   px-3  font-medium text-[13px]  text-gray-900  text-center "
@@ -660,66 +658,65 @@ const PurchaseOrderFormReport = ({
                               approvalStatus={dataObj?.approvalStatus}
                             />
                           </td>
-                          {!isAdmin && (
-                            <td className="px-2 py-1">
-                              <div className="flex items-center justify-center gap-1.5 text-orange-700">
-                                {dataObj?.approvalStatus?.remarks || "-"}
-                              </div>
-                            </td>
-                          )}
-                          {isAdmin && (
-                            <td className="px-2 py-1">
-                              <div className="flex items-center justify-center gap-1.5">
-                                {/* ↩️ Send Back — show when PENDING or APPROVED */}
-                                {["PENDING"].includes(
-                                  dataObj?.approvalStatus?.status,
-                                ) && (
-                                  <Tooltip title="Send Back for Review" arrow>
-                                    <button
-                                      onClick={() =>
-                                        handleApprovalAction(dataObj, "REJECT")
-                                      }
-                                      // disabled={dataObj?.approvalStatus?.status === "PENDING"}
-                                      className="p-1.5 rounded-md bg-blue-200 text-blue-700 hover:bg-blue-300 transition"
-                                    >
-                                      <MdKeyboardDoubleArrowLeft size={16} />
-                                    </button>
-                                  </Tooltip>
-                                )}
 
-                                {/* ✅ Approve — show only when PENDING */}
-                                {dataObj?.approvalStatus?.status ===
-                                  "PENDING" && (
-                                  <Tooltip title="Approve" arrow>
-                                    <button
-                                      onClick={() =>
-                                        handleApprovalAction(dataObj, "APPROVE")
-                                      }
-                                      className="p-1.5 rounded-md bg-green-200 text-green-700 hover:bg-green-300 transition"
-                                    >
-                                      <FiCheck size={16} />
-                                    </button>
-                                  </Tooltip>
-                                )}
+                          <td className="px-2 py-1">
+                            <div className="flex items-center justify-center gap-1.5 text-orange-700">
+                              {dataObj?.approvalStatus?.remarks || "-"}
+                            </div>
+                          </td>
 
-                                {/* Already approved */}
-                                {/* {dataObj?.approvalStatus?.status ===
+                          <td className="px-2 py-1">
+                            <div className="flex items-center justify-center gap-1.5">
+                              {/* ↩️ Send Back — show when PENDING or APPROVED */}
+                              {["PENDING"].includes(
+                                dataObj?.approvalStatus?.status,
+                              ) && (
+                                <Tooltip title="Send Back for Review" arrow>
+                                  <button
+                                    onClick={() =>
+                                      handleApprovalAction(dataObj, "REJECT")
+                                    }
+                                    // disabled={dataObj?.approvalStatus?.status === "PENDING"}
+                                    className="p-1.5 rounded-md bg-blue-200 text-blue-700 hover:bg-blue-300 transition"
+                                  >
+                                    <MdKeyboardDoubleArrowLeft size={16} />
+                                  </button>
+                                </Tooltip>
+                              )}
+
+                              {/* ✅ Approve — show only when PENDING */}
+                              {dataObj?.approvalStatus?.status ===
+                                "PENDING" && (
+                                <Tooltip title="Approve" arrow>
+                                  <button
+                                    onClick={() =>
+                                      handleApprovalAction(dataObj, "APPROVE")
+                                    }
+                                    className="p-1.5 rounded-md bg-green-200 text-green-700 hover:bg-green-300 transition"
+                                  >
+                                    <FiCheck size={16} />
+                                  </button>
+                                </Tooltip>
+                              )}
+
+                              {/* Already approved */}
+                              {/* {dataObj?.approvalStatus?.status ===
                                   "APPROVED" && (
                                   <span className="text-[10px] text-green-600 font-semibold px-1">
                                     ✅ Approved
                                   </span>
                                 )} */}
 
-                                {/* Not configured — no approval setup */}
-                                {dataObj?.approvalStatus?.status ===
-                                  "NOT_CONFIGURED" && (
-                                  <span className="text-[10px] text-gray-400 italic">
-                                    —
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                          )}
+                              {/* Not configured — no approval setup */}
+                              {dataObj?.approvalStatus?.status ===
+                                "NOT_CONFIGURED" && (
+                                <span className="text-[10px] text-gray-400 italic">
+                                  —
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
                           {rowActions && (
                             <td className="px-2 py-1">
                               <div className="flex items-center justify-center">

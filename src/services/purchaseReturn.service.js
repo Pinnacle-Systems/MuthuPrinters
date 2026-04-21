@@ -1,8 +1,6 @@
 import { prisma } from "../lib/prisma.js";
-
 import { NoRecordFound } from "../configs/Responses.js";
 import {
-  exclude,
   getDateFromDateTime,
   getYearShortCodeForFinYear,
   getYearShortCode,
@@ -10,118 +8,57 @@ import {
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 
-async function getNextDocId(
-  branchId,
-  shortCode,
-  startTime,
-  endTime,
-  saveType,
-  docId,
-  isUpdate,
-) {
-  // Case 1: Draft save
-  if (saveType) {
-    return "Draft Save";
-  } else if (isUpdate === "drift") {
-    lastObject = await prisma.purchaseInwardReturn.findFirst({
-      where: {
-        branchId: parseInt(branchId),
-        draftSave: false,
-        AND: [
-          { createdAt: { gte: startTime } },
-          { createdAt: { lte: endTime } },
-        ],
-      },
-      orderBy: { id: "desc" },
-    });
-    const branchObj = await getTableRecordWithId(branchId, "branch");
-    let newDocId = `${branchObj.branchCode}${getYearShortCode(
-      new Date(),
-    )}/PR/1`;
+const REFERENCE_PAGE = "PURCHASE RETURN";
 
-    if (lastObject) {
-      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PR/${
-        parseInt(lastObject.docId.split("/").at(-1)) + 1
-      }`;
+// ── Doc ID ────────────────────────────────────────────────────────────────────
+async function getNextDocId(branchId, shortCode, startTime, endTime, saveType) {
+  if (saveType) return "Draft Save";
+
+  let lastObject = await prisma.purchaseInwardReturn.findFirst({
+    where: {
+      branchId: parseInt(branchId),
+      AND: [{ createdAt: { gte: startTime } }, { createdAt: { lte: endTime } }],
+    },
+    orderBy: { id: "desc" },
+  });
+
+  const branchObj = await getTableRecordWithId(branchId, "branch");
+  let newDocId = `${branchObj.branchCode}/${shortCode}/PR/1`;
+
+  if (lastObject) {
+    if (lastObject.docId === "Draft Save") {
+      const records = await prisma.purchaseInwardReturn.findMany({
+        select: { docId: true },
+        where: {
+          branchId: parseInt(branchId),
+          AND: [
+            { createdAt: { gte: startTime } },
+            { createdAt: { lte: endTime } },
+          ],
+        },
+      });
+      const maxDocId = records.reduce((max, current) => {
+        const currentNo = Number(current.docId.split("/").pop());
+        const maxNo = max ? Number(max.split("/").pop()) : 0;
+        return currentNo > maxNo ? current.docId : max;
+      }, null);
+      newDocId = `${branchObj.branchCode}/${shortCode}/PR/${parseInt(maxDocId.split("/").at(-1)) + 1}`;
+    } else {
+      newDocId = `${branchObj.branchCode}/${shortCode}/PR/${parseInt(lastObject.docId.split("/").at(-1)) + 1}`;
     }
-
-    return newDocId;
-  } else {
-    let lastObject = await prisma.purchaseInwardReturn.findFirst({
-      where: {
-        branchId: parseInt(branchId),
-        AND: [
-          {
-            createdAt: {
-              gte: startTime,
-            },
-          },
-          {
-            createdAt: {
-              lte: endTime,
-            },
-          },
-        ],
-      },
-      orderBy: {
-        id: "desc",
-      },
-    });
-
-    const branchObj = await getTableRecordWithId(branchId, "branch");
-    let newDocId = `${branchObj.branchCode}/${shortCode}/PR/1`;
-    if (lastObject) {
-      if (lastObject.docId === "Draft Save") {
-        const records = await prisma.purchaseInwardReturn.findMany({
-          select: {
-            docId: true,
-          },
-          where: {
-            branchId: parseInt(branchId),
-            AND: [
-              {
-                createdAt: {
-                  gte: startTime,
-                },
-              },
-              {
-                createdAt: {
-                  lte: endTime,
-                },
-              },
-            ],
-          },
-        });
-        const maxDocId = records.reduce((max, current) => {
-          const currentNo = Number(current.docId.split("/").pop());
-          const maxNo = max ? Number(max.split("/").pop()) : 0;
-
-          return currentNo > maxNo ? current.docId : max;
-        }, null);
-        newDocId = `${branchObj.branchCode}/${shortCode}/PR/${
-          parseInt(maxDocId.split("/").at(-1)) + 1
-        }`;
-      } else {
-        newDocId = `${branchObj.branchCode}/${shortCode}/PR/${
-          parseInt(lastObject.docId.split("/").at(-1)) + 1
-        }`;
-      }
-    }
-    return newDocId;
   }
+  return newDocId;
 }
 
 function manualFilterSearchData(searchDocDate, data) {
-  return data.filter(
-    (item) =>
-      searchDocDate
-        ? String(getDateFromDateTime(item.docDate)).includes(searchDocDate)
-        : true,
-    // (searchSupplierDcDate ? String(getDateFromDateTime(item.dueDate)).includes(searchSupplierDcDate) : true)
-    // (searchPurchaseBillNo ?String(item.purchaseBillId).includes(searchPurchaseBillNo) : true)
+  return data.filter((item) =>
+    searchDocDate
+      ? String(getDateFromDateTime(item.docDate)).includes(searchDocDate)
+      : true,
   );
 }
 
+// ── GET LIST ──────────────────────────────────────────────────────────────────
 async function get(req) {
   const {
     branchId,
@@ -133,32 +70,22 @@ async function get(req) {
     searchDocDate,
     searchSupplier,
   } = req.query;
+
   let data = await prisma.purchaseInwardReturn.findMany({
     where: {
       branchId: branchId ? parseInt(branchId) : undefined,
       active: active ? Boolean(active) : undefined,
-      docId: Boolean(serachDocNo)
-        ? {
-            contains: serachDocNo,
-          }
-        : undefined,
+      docId: Boolean(serachDocNo) ? { contains: serachDocNo } : undefined,
       supplier: {
         name: Boolean(searchSupplier)
           ? { contains: searchSupplier }
           : undefined,
       },
     },
-    include: {
-      supplier: {
-        select: {
-          name: true,
-        },
-      },
-    },
-    orderBy: {
-      docId: "desc",
-    },
+    include: { supplier: { select: { name: true } } },
+    orderBy: { docId: "desc" },
   });
+
   data = manualFilterSearchData(searchDocDate, data);
   const totalCount = data.length;
 
@@ -168,131 +95,96 @@ async function get(req) {
       pageNumber * dataPerPage,
     );
   }
-  let newDocId = await getNextDocId(branchId);
-  return { statusCode: 0, nextDocId: newDocId, data };
+
+  // getNextDocId needs shortCode — pass empty since no finYear context here
+  let newDocId = await getNextDocId(branchId, "", undefined, undefined);
+  return { statusCode: 0, nextDocId: newDocId, data, totalCount };
 }
 
+// ── GET ONE ───────────────────────────────────────────────────────────────────
 async function getOne(id) {
-  const childRecord = 0;
   const data = await prisma.purchaseInwardReturn.findUnique({
-    where: {
-      id: parseInt(id),
-    },
-    include: {
-      purchaseReturnItems: true,
-    },
+    where: { id: parseInt(id) },
+    include: { purchaseReturnItems: true },
   });
   if (!data) return NoRecordFound("purchaseReturn");
+
   const itemWithPoQty = await Promise.all(
     data.purchaseReturnItems.map(async (item) => {
-      const poQty = await prisma.poItems.findFirst({
-        where: {
-          styleItemId: item.styleItemId,
-          poId: item.poId,
-          uomId: item.uomId,
-          hsnId: item.hsnId,
-          itemGroupId: item.itemGroupId,
-          sizeId: item.sizeId,
-          colorId: item.colorId,
-        },
-        select: {
-          qty: true,
-        },
-      });
-      const returnItems = await prisma.purchaseReturnItems.findMany({
-        where: {
-          styleItemId: item.styleItemId,
-          purchaseInwardId: item.purchaseInwardId,
-          uomId: item.uomId,
-          hsnId: item.hsnId,
-        },
-        select: {
-          returnQty: true,
-        },
-      });
+      const [poQty, inwardAgg, returnAgg] = await Promise.all([
+        prisma.poItems.findFirst({
+          where: {
+            styleItemId: item.styleItemId,
+            poId: item.poId,
+            uomId: item.uomId,
+            hsnId: item.hsnId,
+            itemGroupId: item.itemGroupId,
+            sizeId: item.sizeId,
+            colorId: item.colorId,
+          },
+          select: { qty: true },
+        }),
+        prisma.inwardItems.aggregate({
+          where: {
+            styleItemId: item.styleItemId,
+            purchaseInwardId: item.purchaseInwardId,
+            uomId: item.uomId,
+            hsnId: item.hsnId,
+            itemGroupId: item.itemGroupId,
+            sizeId: item.sizeId,
+            colorId: item.colorId,
+          },
+          _sum: { inwardQty: true },
+        }),
+        prisma.purchaseReturnItems.aggregate({
+          where: {
+            styleItemId: item.styleItemId,
+            purchaseInwardId: item.purchaseInwardId,
+            uomId: item.uomId,
+            hsnId: item.hsnId,
+            itemGroupId: item.itemGroupId,
+            sizeId: item.sizeId,
+            colorId: item.colorId,
+            purchaseInwardReturnId: { not: data.id },
+          },
+          _sum: { returnQty: true },
+        }),
+      ]);
 
-      const returnQty = returnItems.reduce(
-        (sum, item) => sum + (item.returnQty ?? 0),
-        0,
-      );
-      const inwardQty = await prisma.inwardItems.findFirst({
-        where: {
-          purchaseInwardId: item.purchaseInwardId,
-          styleItemId: item.styleItemId,
-          uomId: item.uomId,
-          hsnId: item.hsnId,
-          invNo: item.invNo,
-        },
-        select: {
-          inwardQty: true,
-        },
-      });
-      const inwardAgg = await prisma.inwardItems.aggregate({
-        where: {
-          styleItemId: item.styleItemId,
-          purchaseInwardId: item.purchaseInwardId,
-          uomId: item.uomId,
-          hsnId: item.hsnId,
-          itemGroupId: item.itemGroupId,
-          sizeId: item.sizeId,
-          colorId: item.colorId,
-        },
-        _sum: { inwardQty: true },
-      });
       const alreadyInwardQty = inwardAgg?._sum?.inwardQty ?? 0;
-      const returnAgg = await prisma.purchaseReturnItems.aggregate({
-        where: {
-          styleItemId: item.styleItemId,
-          purchaseInwardId: item.purchaseInwardId,
-          uomId: item.uomId,
-          hsnId: item.hsnId,
-          itemGroupId: item.itemGroupId,
-          sizeId: item.sizeId,
-          colorId: item.colorId,
-          purchaseInwardReturnId: { not: data.id },
-        },
-        _sum: { returnQty: true },
-      });
       const alreadyReturnQty = returnAgg?._sum?.returnQty ?? 0;
+
       return {
         ...item,
-        // balQty: inwardQty?.inwardQty - returnQty + item.returnQty,
         balQty: alreadyInwardQty - alreadyReturnQty,
         poQty: poQty?.qty,
         inwardQty: alreadyInwardQty,
-        alreadyReturnQty: alreadyReturnQty,
+        alreadyReturnQty,
       };
     }),
   );
+
   return {
     statusCode: 0,
-    data: {
-      ...data,
-      purchaseReturnItems: itemWithPoQty,
-      ...{ childRecord },
-    },
+    data: { ...data, purchaseReturnItems: itemWithPoQty, childRecord: 0 },
   };
 }
 
+// ── GET SEARCH ────────────────────────────────────────────────────────────────
 async function getSearch(req) {
   const { searchKey } = req.params;
-  const { companyId, active } = req.query;
-  const data = await prisma.purchaseReturn.findMany({
+  const { active } = req.query;
+  // ✅ FIX: was querying wrong model (prisma.purchaseReturn doesn't exist)
+  const data = await prisma.purchaseInwardReturn.findMany({
     where: {
-      companyId: companyId ? parseInt(companyId) : undefined,
       active: active ? Boolean(active) : undefined,
-      OR: [
-        {
-          name: {
-            contains: searchKey,
-          },
-        },
-      ],
+      OR: [{ docId: { contains: searchKey } }],
     },
   });
-  return { statusCode: 0, data: data };
+  return { statusCode: 0, data };
 }
 
+// ── CREATE ────────────────────────────────────────────────────────────────────
 async function create(body) {
   const {
     userId,
@@ -312,6 +204,7 @@ async function create(body) {
     invNo,
     termsId,
   } = await body;
+
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
@@ -326,6 +219,7 @@ async function create(body) {
     finYearDate?.endDateEndTime,
     draftSave,
   );
+
   let data;
   await prisma.$transaction(async (tx) => {
     data = await tx.purchaseInwardReturn.create({
@@ -370,7 +264,7 @@ async function createReturnItems(
   returnType,
   invNo,
 ) {
-  const promises = returnItems?.map(async (stockDetail, index) => {
+  const promises = returnItems?.map(async (stockDetail) => {
     const createdItem = await tx.purchaseReturnItems.create({
       data: {
         purchaseInwardReturnId: parseInt(purchaseReturn.id),
@@ -382,12 +276,12 @@ async function createReturnItems(
         returnQty: stockDetail?.returnQty
           ? parseInt(stockDetail.returnQty)
           : null,
-        returnType: returnType ? returnType : "",
+        returnType: returnType || "",
         purchaseInwardId: stockDetail?.purchaseInwardId
           ? parseInt(stockDetail.purchaseInwardId)
           : null,
-        invNo: invNo ? invNo : null,
-        batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+        invNo: invNo || null,
+        batchNo: stockDetail?.batchNo || null,
         itemGroupId: stockDetail?.itemGroupId
           ? parseInt(stockDetail.itemGroupId)
           : null,
@@ -414,9 +308,8 @@ async function createReturnItems(
           stockDetail?.returnQty && !isNaN(parseFloat(stockDetail.returnQty))
             ? -Math.abs(parseInt(stockDetail.returnQty))
             : null,
-        // returnType: returnType ? returnType : "",
-        invNo: invNo ? invNo : null,
-        batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+        invNo: invNo || null,
+        batchNo: stockDetail?.batchNo || null,
         itemGroupId: stockDetail?.itemGroupId
           ? parseInt(stockDetail.itemGroupId)
           : null,
@@ -427,21 +320,19 @@ async function createReturnItems(
     });
     return createdItem;
   });
-
   return Promise.all(promises);
 }
 
 function findRemovedItems(dataFound, purchaseReturnItems) {
-  let removedItems = dataFound.purchaseReturnItems.filter((oldItem) => {
-    let result = purchaseReturnItems.find(
-      (newItem) => parseInt(newItem.id) === parseInt(oldItem.id),
-    );
-    if (result) return false;
-    return true;
-  });
-  return removedItems;
+  return dataFound.purchaseReturnItems.filter(
+    (oldItem) =>
+      !purchaseReturnItems.find(
+        (newItem) => parseInt(newItem.id) === parseInt(oldItem.id),
+      ),
+  );
 }
 
+// ── UPDATE ────────────────────────────────────────────────────────────────────
 async function update(id, body) {
   const {
     userId,
@@ -459,34 +350,26 @@ async function update(id, body) {
     returnItems,
     termsId,
   } = await body;
-  let data;
+
   const dataFound = await prisma.purchaseInwardReturn.findUnique({
-    where: {
-      id: parseInt(id),
-    },
-    include: {
-      purchaseReturnItems: {
-        select: {
-          id: true,
-        },
-      },
-    },
+    where: { id: parseInt(id) },
+    include: { purchaseReturnItems: { select: { id: true } } },
   });
   if (!dataFound) return NoRecordFound("Purchase Return");
 
-  let removedItems = findRemovedItems(dataFound, returnItems);
-  let removeItemsIds = removedItems.map((item) => parseInt(item.id));
+  const removedItems = findRemovedItems(dataFound, returnItems);
+  const removeItemsIds = removedItems.map((item) => parseInt(item.id));
+
+  let data;
   await prisma.$transaction(async (tx) => {
-    // await deleteItemsFromStock(tx, removeItemsIds);
     if (removeItemsIds.length > 0) {
       await tx.purchaseReturnItems.deleteMany({
         where: { id: { in: removeItemsIds } },
       });
     }
+
     data = await tx.purchaseInwardReturn.update({
-      where: {
-        id: parseInt(id),
-      },
+      where: { id: parseInt(id) },
       data: {
         docDate: docDate ? new Date(docDate) : null,
         updatedById: parseInt(userId),
@@ -530,10 +413,8 @@ async function updateReturnGoods(
 ) {
   const promises = returnItems.map(async (stockDetail) => {
     if (stockDetail.id) {
-      // Update existing purchaseReturnItem
       const updatedItem = await tx.purchaseReturnItems.update({
         where: { id: parseInt(stockDetail.id) },
-
         data: {
           purchaseInwardReturnId: parseInt(purchaseReturn.id),
           styleItemId: stockDetail?.styleItemId
@@ -544,12 +425,12 @@ async function updateReturnGoods(
           returnQty: stockDetail?.returnQty
             ? parseInt(stockDetail.returnQty)
             : null,
-          returnType: returnType ? returnType : "",
+          returnType: returnType || "",
           purchaseInwardId: stockDetail?.purchaseInwardId
             ? parseInt(stockDetail.purchaseInwardId)
             : null,
-          invNo: invNo ? invNo : null,
-          batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+          invNo: invNo || null,
+          batchNo: stockDetail?.batchNo || null,
           itemGroupId: stockDetail?.itemGroupId
             ? parseInt(stockDetail.itemGroupId)
             : null,
@@ -560,11 +441,9 @@ async function updateReturnGoods(
         },
       });
 
-      // Update or create Stock row
       const existingStock = await tx.stock.findFirst({
         where: { purchaseReturnItemsId: updatedItem.id },
       });
-
       if (existingStock) {
         await tx.stock.update({
           where: { id: existingStock.id },
@@ -582,9 +461,8 @@ async function updateReturnGoods(
               !isNaN(parseFloat(stockDetail.returnQty))
                 ? -Math.abs(parseInt(stockDetail.returnQty))
                 : null,
-            // returnType: returnType ? returnType : "",
-            invNo: invNo ? invNo : null,
-            batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+            invNo: invNo || null,
+            batchNo: stockDetail?.batchNo || null,
             itemGroupId: stockDetail?.itemGroupId
               ? parseInt(stockDetail.itemGroupId)
               : null,
@@ -596,6 +474,7 @@ async function updateReturnGoods(
           },
         });
       } else {
+        // ✅ FIX: was using `createdItem.id` — doesn't exist in update branch, use `updatedItem.id`
         await tx.stock.create({
           data: {
             inOrOut: "Out",
@@ -603,7 +482,7 @@ async function updateReturnGoods(
             createdById: parseInt(userId),
             branchId: parseInt(locationId),
             storeId: parseInt(storeId),
-            purchaseReturnItemsId: createdItem.id,
+            purchaseReturnItemsId: updatedItem.id, // ← was createdItem.id (crash)
             styleItemId: stockDetail?.styleItemId
               ? parseInt(stockDetail.styleItemId)
               : null,
@@ -614,9 +493,8 @@ async function updateReturnGoods(
               !isNaN(parseFloat(stockDetail.returnQty))
                 ? -Math.abs(parseInt(stockDetail.returnQty))
                 : null,
-            // returnType: returnType ? returnType : "",
-            invNo: invNo ? invNo : null,
-            batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+            invNo: invNo || null,
+            batchNo: stockDetail?.batchNo || null,
             itemGroupId: stockDetail?.itemGroupId
               ? parseInt(stockDetail.itemGroupId)
               : null,
@@ -628,10 +506,8 @@ async function updateReturnGoods(
           },
         });
       }
-
       return updatedItem;
     } else {
-      // Create new purchaseReturnItem
       const createdItem = await tx.purchaseReturnItems.create({
         data: {
           purchaseInwardReturnId: parseInt(purchaseReturn.id),
@@ -643,12 +519,12 @@ async function updateReturnGoods(
           returnQty: stockDetail?.returnQty
             ? parseInt(stockDetail.returnQty)
             : null,
-          returnType: returnType ? returnType : "",
+          returnType: returnType || "",
           purchaseInwardId: stockDetail?.purchaseInwardId
             ? parseInt(stockDetail.purchaseInwardId)
             : null,
-          invNo: invNo ? invNo : null,
-          batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+          invNo: invNo || null,
+          batchNo: stockDetail?.batchNo || null,
           itemGroupId: stockDetail?.itemGroupId
             ? parseInt(stockDetail.itemGroupId)
             : null,
@@ -658,8 +534,6 @@ async function updateReturnGoods(
           gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
-
-      // Create Stock row
       await tx.stock.create({
         data: {
           inOrOut: "Out",
@@ -677,9 +551,8 @@ async function updateReturnGoods(
             stockDetail?.returnQty && !isNaN(parseFloat(stockDetail.returnQty))
               ? -Math.abs(parseInt(stockDetail.returnQty))
               : null,
-          // returnType: returnType ? returnType : "",
-          invNo: invNo ? invNo : null,
-          batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
+          invNo: invNo || null,
+          batchNo: stockDetail?.batchNo || null,
           itemGroupId: stockDetail?.itemGroupId
             ? parseInt(stockDetail.itemGroupId)
             : null,
@@ -688,19 +561,16 @@ async function updateReturnGoods(
           gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
-
       return createdItem;
     }
   });
-
   return Promise.all(promises);
 }
 
+// ── REMOVE ────────────────────────────────────────────────────────────────────
 async function remove(id) {
   const data = await prisma.purchaseInwardReturn.delete({
-    where: {
-      id: parseInt(id),
-    },
+    where: { id: parseInt(id) },
   });
   return { statusCode: 0, data };
 }

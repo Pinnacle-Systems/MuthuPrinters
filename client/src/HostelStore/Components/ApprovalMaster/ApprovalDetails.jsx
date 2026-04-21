@@ -1,9 +1,196 @@
-import { Plus, Trash2 } from "lucide-react";
-import { MultiSelectDropdown } from "../../../Inputs";
-import { useEffect } from "react";
+// import React, { useEffect } from "react";
+// import { Plus, Trash2, MoreVertical } from "lucide-react";
+// import { MultiSelectDropdownWithoutBorder, DropdownInputNew } from "../../../Inputs";
 
-const PLUS = <Plus size={14} />;
-const DELETE = <Trash2 size={14} />;
+// export default function ApprovalDetails({
+//   approvalLevelItems,
+//   setApprovalLevelItems,
+//   userList,
+//   readOnly,
+// }) {
+//   // ── Handlers ──────────────────────────────────────────
+//   const addRow = () => {
+//     setApprovalLevelItems((prev) => [
+//       ...prev,
+//       {
+//         levelNo: prev.length + 1,
+//         approveType: "OR",
+//         users: [],
+//       },
+//     ]);
+//   };
+
+//   const removeRow = (index) => {
+//     setApprovalLevelItems((prev) =>
+//       prev
+//         .filter((_, i) => i !== index)
+//         .map((row, i) => ({ ...row, levelNo: i + 1 })),
+//     );
+//   };
+
+//   const updateRow = (index, field, value) => {
+//     setApprovalLevelItems((prev) => {
+//       const updated = [...prev];
+//       updated[index] = { ...updated[index], [field]: value };
+//       return updated;
+//     });
+//   };
+
+//   const userOptions =
+//     userList?.map((u) => ({
+//       label: u.username,
+//       value: u.id,
+//     })) || [];
+
+//   const approveTypeOptions = [
+//     { show: "OR (Any)", value: "OR" },
+//     { show: "AND (All)", value: "AND" },
+//   ];
+
+//   useEffect(() => {
+//     if (!approvalLevelItems || approvalLevelItems.length === 0) {
+//       const defaultRows = Array.from({ length: 4 }, (_, i) => ({
+//         levelNo: i + 1,
+//         approveType: "OR",
+//         users: [],
+//       }));
+//       setApprovalLevelItems(defaultRows);
+//     }
+//   }, []);
+
+//   return (
+//     <div className="w-full flex flex-col h-full">
+//       <div className="flex justify-between items-center mb-4">
+//         <label className="text-sm font-semibold text-slate-700">
+//           Approval Workflow Trigger Rules
+//         </label>
+//         {!readOnly && (
+//           <div className="mt-3 flex justify-start">
+//             <button
+//               type="button"
+//               onClick={addRow}
+//               className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 hover:text-blue-700 transition font-bold text-xs flex items-center gap-1.5"
+//             >
+//               <Plus size={14} /> Add Approval Level
+//             </button>
+//           </div>
+//         )}
+//       </div>
+//       <div className="flex-1 overflow-auto border border-slate-200 rounded-md shadow-sm bg-white">
+//         <table className="w-[50vw] border-collapse table-fixed">
+//           <thead className="bg-gray-100 text-slate-700 sticky top-0 z-20 border-b border-slate-200">
+//             <tr className="text-[11px] uppercase tracking-wider font-bold">
+//               <th className="w-8 px-2 py-2 text-center border-r">S.No</th>
+//               <th className="w-36 px-2 py-2 text-center border-r">
+//                 Approve Type
+//               </th>
+//               {/* <th className="px-2 py-2 text-center border-r">
+//                 Level Rules (Condition)
+//               </th> */}
+//               <th className="w-64 px-2 py-2 text-center border-r">
+//                 Authorized Approvers
+//               </th>
+//               {!readOnly && (
+//                 <th className="w-12 px-2 py-2 text-center">Actions</th>
+//               )}
+//             </tr>
+//           </thead>
+//           <tbody className="divide-y divide-slate-100">
+//             {approvalLevelItems.map((row, index) => (
+//               <tr
+//                 key={index}
+//                 className={`${index % 2 === 0 ? "bg-white" : "bg-slate-50/30"} hover:bg-indigo-50/20 transition-colors h-10`}
+//               >
+//                 {/* S.No */}
+//                 <td className="text-center font-bold text-slate-500 text-[11px] border-r">
+//                   {row.levelNo}
+//                 </td>
+
+//                 {/* Approve Type */}
+//                 <td className="px-1 border-r">
+//                   <div className="scale-90 origin-center">
+//                     <DropdownInputNew
+//                       options={approveTypeOptions}
+//                       value={row.approveType}
+//                       setValue={(val) => updateRow(index, "approveType", val)}
+//                       readOnly={readOnly}
+//                       className="text-xs"
+//                     />
+//                   </div>
+//                 </td>
+
+//                 {/* Condition Placeholder (Optional for future) */}
+//                 {/* <td className="px-2 border-r  text-[10px] text-slate-400 text-center">
+//                   {row.approveType === "AND"
+//                     ? "All Selected Users Must Approve"
+//                     : "Any One Selected User Can Approve"}
+//                 </td> */}
+
+//                 {/* Authorized Approvers */}
+//                 <td
+//                   className="px-1 border-r relative"
+//                   style={{ zIndex: (approvalLevelItems.length - index) * 10 }}
+//                 >
+//                   <div className="scale-90 origin-center">
+//                     <MultiSelectDropdownWithoutBorder
+//                       name=""
+//                       selected={row.users}
+//                       setSelected={(val) => updateRow(index, "users", val)}
+//                       options={userOptions}
+//                       readOnly={readOnly}
+//                       placeholder={readOnly ? "" : "Select Users..."}
+//                       className="text-[11px]"
+//                     />
+//                   </div>
+//                 </td>
+
+//                 {/* Actions */}
+//                 {!readOnly && (
+//                   <td className="text-center">
+//                     <button
+//                       type="button"
+//                       onClick={() => removeRow(index)}
+//                       className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+//                       title="Remove Level"
+//                     >
+//                       <Trash2 size={14} />
+//                     </button>
+//                   </td>
+//                 )}
+//               </tr>
+//             ))}
+//           </tbody>
+//         </table>
+//       </div>
+//     </div>
+//   );
+// }
+import React, { useEffect } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import { MultiSelectDropdownWithoutBorder } from "../../../Inputs";
+
+function DropdownPortal({ triggerRef, children, isOpen }) {
+  const [style, setStyle] = useState({});
+
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setStyle({
+        position: "fixed",
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+        zIndex: 99999,
+      });
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+  return ReactDOM.createPortal(
+    <div style={style}>{children}</div>,
+    document.body,
+  );
+}
 
 export default function ApprovalDetails({
   approvalLevelItems,
@@ -11,15 +198,10 @@ export default function ApprovalDetails({
   userList,
   readOnly,
 }) {
-  // ── Handlers ──────────────────────────────────────────
   const addRow = () => {
     setApprovalLevelItems((prev) => [
       ...prev,
-      {
-        levelNo: prev.length + 1,
-        approveType: "OR",
-        users: [], // [{ label: "ADMIN", value: 10 }, ...]
-      },
+      { levelNo: prev.length + 1, approveType: "OR", users: [] },
     ]);
   };
 
@@ -39,179 +221,179 @@ export default function ApprovalDetails({
     });
   };
 
-  const userOptions =
-    userList?.map((u) => ({
-      label: u.username,
-      value: u.id,
-    })) || [];
-
-  const handleInputChange = (event, index, field) => {
-    const value = event.target.value;
-    const newBlend = structuredClone(approvalLevelItems);
-    newBlend[index][field] = value;
-    setApprovalLevelItems(newBlend);
+  // For multi-select: toggle a user id in the users array
+  const toggleUser = (index, userId) => {
+    setApprovalLevelItems((prev) => {
+      const updated = [...prev];
+      const currentUsers = updated[index].users || [];
+      const exists = currentUsers.includes(userId);
+      updated[index] = {
+        ...updated[index],
+        users: exists
+          ? currentUsers.filter((u) => u !== userId)
+          : [...currentUsers, userId],
+      };
+      return updated;
+    });
   };
+
+  const userOptions =
+    userList?.map((u) => ({ label: u.username, value: u.id })) || [];
+
+  const approveTypeOptions = [
+    { show: "OR (Any)", value: "OR" },
+    { show: "AND (All)", value: "AND" },
+  ];
 
   useEffect(() => {
     if (!approvalLevelItems || approvalLevelItems.length === 0) {
-      const defaultRows = Array.from({ length: 4 }, (_, i) => ({
-        levelNo: i + 1,
-        approveType: "OR",
-        users: [],
-        conditionField: "",
-        conditionOperator: ">",
-        conditionValue: "",
-      }));
-
-      setApprovalLevelItems(defaultRows);
+      setApprovalLevelItems(
+        Array.from({ length: 2 }, (_, i) => ({
+          levelNo: i + 1,
+          approveType: "OR",
+          users: [],
+        })),
+      );
     }
   }, []);
 
   return (
-    <>
-      <div className="w-full overflow-y-auto">
-        <table className="border-collapse border border-slate-300 text-xs table-auto w-full rounded-sm shadow-sm bg-white">
-          {/* ── HEAD ─────────────────────────────── */}
-          <thead className="bg-slate-100 text-slate-700 top-0">
-            <tr>
-              <th className="border border-slate-300 w-10 py-1.5 font-semibold text-center">
-                Level
+    <div className="w-full flex flex-col h-full overflow-visible">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <label className="text-sm font-semibold text-slate-700">
+          Approval Workflow Approval Levels
+        </label>
+
+        <button
+          type="button"
+          onClick={addRow}
+          disabled={readOnly}
+          className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 hover:text-blue-700 transition font-bold text-xs flex items-center gap-1.5"
+        >
+          <Plus size={14} /> Add Approval Level
+        </button>
+      </div>
+
+      {/* Table */}
+      {/* Table wrapper — NO overflow clipping */}
+      <div className="flex-1 border border-slate-200 rounded-md shadow-sm bg-white overflow-visible">
+        <table className="w-[55vw] border-collapse table-fixed">
+          <thead className="bg-gray-100 text-slate-700 border-b border-slate-200">
+            {/* thead — remove sticky since overflow:visible breaks sticky */}
+            <tr className="text-[11px] uppercase tracking-wider font-bold">
+              <th className="w-8 px-2 py-2 text-center border-r border-slate-200">
+                S.No
               </th>
-              <th className="border border-slate-300 w-28 py-1.5 font-semibold text-center">
-                Approve Type
-                <div className="text-[9px] font-normal text-slate-400">
-                  AND / OR
-                </div>
+              <th className="w-24 px-2 py-2 text-center border-r border-slate-200">
+                Level Title
               </th>
-              <th className="border border-slate-300 font-semibold text-center">
-                Users
-                <div className="text-[9px] font-normal text-slate-400">
-                  Multi Select
-                </div>
+              <th className="w-32  py-2 text-center border-r border-slate-200">
+                Approval Condition
               </th>
-              <th className="border border-slate-300 py-1.5 font-semibold text-center">
-                Rules
+              <th className="w-64 px-2 py-2 text-center border-r border-slate-200">
+                Approvers
               </th>
-              <th
-                className={`border border-slate-300 ${readOnly ? "hidden" : "w-10"}`}
-              >
-                {!readOnly && (
-                  <div
-                    onClick={addRow}
-                    className="hover:cursor-pointer mx-auto w-6 h-6 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-sm shadow-sm transition-colors"
-                    title="Add Row"
-                  >
-                    {PLUS}
-                  </div>
-                )}
-              </th>
+              <th className="w-12 px-2 py-2 text-center">Actions</th>
             </tr>
           </thead>
-
-          {/* ── BODY ─────────────────────────────── */}
-          <tbody>
-            {approvalLevelItems.map((row, rowIndex) => (
+          <tbody className="divide-y divide-slate-100">
+            {approvalLevelItems.map((row, index) => (
               <tr
-                key={rowIndex}
-                className={`border-t border-slate-200 align-middle ${
-                  rowIndex % 2 === 0 ? "bg-white" : "bg-slate-50"
-                }`}
+                key={index}
+                className={`${
+                  index % 2 === 0 ? "bg-white" : "bg-[#f5f6fa]"
+                } hover:bg-indigo-50/20 transition-colors`}
+                style={{ height: "34px" }}
               >
-                {/* Level No */}
-                <td className="border border-slate-300 text-center py-2 align-middle">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-indigo-700 font-bold text-xs">
-                    {row.levelNo}
-                  </span>
+                {/* S.No */}
+                <td className="text-center  text-black text-[11px] border-r border-slate-200 ">
+                  {row.levelNo}
+                </td>
+                <td className="text-right pr-2  text-black text-[11px] border-r border-slate-200 ">
+                  Level {row.levelNo} Approval
+                </td>
+                {/* Approve Type */}
+                <td className="border-r border-slate-200 p-0 relative">
+                  <select
+                    value={row.approveType}
+                    onChange={(e) =>
+                      updateRow(index, "approveType", e.target.value)
+                    }
+                    disabled={readOnly}
+                    className="absolute inset-0 w-full h-full text-[11px] text-black bg-transparent border-none outline-none pl-2 pr-6 cursor-pointer"
+                  >
+                    {approveTypeOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.show}
+                      </option>
+                    ))}
+                  </select>
                 </td>
 
-                {/* ── Approve Type AND / OR ───────── */}
-                <td className="border border-slate-300 align-middle">
-                  <div className="flex flex-col items-center gap-1">
-                    {/* Toggle */}
-                    <div className="flex rounded overflow-hidden border border-slate-300">
-                      <button
-                        type="button"
-                        disabled={readOnly}
-                        onClick={() => updateRow(rowIndex, "approveType", "OR")}
-                        className={`px-2 py-1 text-[11px] font-medium transition ${
-                          row.approveType === "OR"
-                            ? "bg-indigo-600 text-white"
-                            : "bg-white text-slate-500 hover:bg-slate-100"
-                        }`}
-                      >
-                        OR
-                      </button>
-                      <button
-                        type="button"
-                        disabled={readOnly}
-                        onClick={() =>
-                          updateRow(rowIndex, "approveType", "AND")
-                        }
-                        className={`px-2 py-1 text-[11px] font-medium transition ${
-                          row.approveType === "AND"
-                            ? "bg-indigo-600 text-white"
-                            : "bg-white text-slate-500 hover:bg-slate-100"
-                        }`}
-                      >
-                        AND
-                      </button>
+                {/* Authorized Approvers — position:static + overflow:visible */}
+                <td
+                  className={`border-r border-slate-200 p-0 ${
+                    index % 2 === 0 ? "bg-white" : "bg-[#f5f6fa]"
+                  }`}
+                  style={{
+                    position: "static", // ← no containing block
+                    overflow: "visible", // ← don't clip dropdown
+                    zIndex: (approvalLevelItems.length - index) * 10,
+                  }}
+                >
+                  <div
+                    className={`relative flex items-center w-full h-full min-h-[34px] ${
+                      index % 2 === 0 ? "bg-white" : "bg-[#f5f6fa]"
+                    }`}
+                  >
+                    {/* The multiselect — hide its default arrow via CSS */}
+                    <div className="flex-1 overflow-visible [&_.dropdown-container]:border-none [&_.dropdown-container]:shadow-none [&_.dropdown-container:focus-within]:border-none [&_.dropdown-container:focus-within]:shadow-none">
+                      <MultiSelectDropdownWithoutBorder
+                        name=""
+                        selected={row.users}
+                        setSelected={(val) => updateRow(index, "users", val)}
+                        options={userOptions}
+                        readOnly={readOnly}
+                        placeholder="Select Users..."
+                        className="text-[11px] border-none outline-none w-full"
+                      />
                     </div>
-                    {/* Description */}
-                    <span className="text-[9px] text-slate-400 text-center leading-tight">
-                      {row.approveType === "AND"
-                        ? "All users must approve"
-                        : "Any one user enough"}
+
+                    {/* Custom chevron matching Approve Type column */}
+                    {/* Custom chevron matching native select arrow */}
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-600 z-10">
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
                     </span>
                   </div>
                 </td>
 
-                {/* ── Users Multi Select ──────────── */}
-                <td className="border border-slate-300 w-60 ">
-                  <MultiSelectDropdown
-                    name=""
-                    selected={row.users}
-                    setSelected={(val) => updateRow(rowIndex, "users", val)}
-                    options={userOptions}
-                    readOnly={readOnly}
+                {/* Actions */}
+                <td className="text-center w-12">
+                  <button
+                    type="button"
+                    onClick={() => removeRow(index)}
                     disabled={readOnly}
-                  />
-                </td>
-
-                {/* ── Conditions ──────────────────── */}
-                <td className="border border-slate-300 p-0 px-0.5">
-                  <input
-                    type="text"
-                    className="w-full h-10 border border-slate-300 text-center rounded-sm 
-      focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 
-      disabled:bg-slate-100 transition-all font-medium text-slate-700 bg-white"
-                    value={row.condition}
-                    disabled={readOnly}
-                    onChange={(event) =>
-                      handleInputChange(event, rowIndex, "condition")
-                    }
-                  />
-                </td>
-
-                {/* ── Delete Row ──────────────────── */}
-                <td
-                  className={`border border-slate-300 text-center align-middle ${readOnly ? "hidden" : ""}`}
-                >
-                  {!readOnly && (
-                    <button
-                      type="button"
-                      onClick={() => removeRow(rowIndex)}
-                      className="mx-auto flex items-center justify-center w-6 h-6 bg-red-50 hover:bg-red-100 text-red-600 rounded-sm"
-                      title="Remove Level"
-                    >
-                      {DELETE}
-                    </button>
-                  )}
+                    className="p-1.5 text-red-600 rounded-md transition-colors disabled:opacity-30"
+                    title="Remove Level"
+                  >
+                    <Trash2 size={13} strokeWidth={2} />
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   );
 }

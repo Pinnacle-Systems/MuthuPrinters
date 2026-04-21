@@ -673,7 +673,7 @@ const PurchaseOrderForm = ({
             className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
           },
         ]),
-    ...(!id || isAdmin || status === "PENDING"
+    ...(!id || status === "PENDING"
       ? []
       : [
           {
@@ -694,7 +694,7 @@ const PurchaseOrderForm = ({
             className: `bg-green-700 hover:bg-green-800 ${actionButtonClass}`,
           },
         ]),
-    ...(id && isAdmin && status === "PENDING"
+    ...(id && status === "PENDING"
       ? [
           {
             key: "send-back",

@@ -1,12 +1,9 @@
 import { prisma } from "../lib/prisma.js";
-
 import { NoRecordFound } from "../configs/Responses.js";
 import {
   getDateFromDateTime,
   getDateTimeRange,
-  getYearShortCode,
   getYearShortCodeForFinYear,
-  substract,
 } from "../utils/helper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
@@ -14,28 +11,24 @@ import {
   approveRecord,
   createApprovalLog,
   rejectRecord,
+  evaluateConfigTrigger,
+  getTriggeredConfig,
+  getModuleApprovalSetup,
+  applyOperator,
+  getValueByPath,
+  buildIncludeForModule, // ✅ single universal helper
 } from "../utils/approvalHelper.js";
 
+const REFERENCE_PAGE = "PURCHASE ORDER";
+
+// ── Doc ID ────────────────────────────────────────────────────────────────────
 async function getNextDocId(branchId, shortCode, startTime, endTime) {
   let lastObject = await prisma.po.findFirst({
     where: {
       branchId: parseInt(branchId),
-      AND: [
-        {
-          createdAt: {
-            gte: startTime,
-          },
-        },
-        {
-          createdAt: {
-            lte: endTime,
-          },
-        },
-      ],
+      AND: [{ createdAt: { gte: startTime } }, { createdAt: { lte: endTime } }],
     },
-    orderBy: {
-      id: "desc",
-    },
+    orderBy: { id: "desc" },
   });
   const branchObj = await getTableRecordWithId(branchId, "branch");
   let newDocId = `${branchObj.branchCode}/${shortCode}/PO/1`;
@@ -45,6 +38,7 @@ async function getNextDocId(branchId, shortCode, startTime, endTime) {
   return newDocId;
 }
 
+// ── Filters ───────────────────────────────────────────────────────────────────
 function manualFilterSearchData(
   searchPoDate,
   searchDueDate,
@@ -65,6 +59,26 @@ function manualFilterSearchData(
   );
 }
 
+function manualFilterSearchDataPoItems(
+  searchDocDate,
+  searchDueDate,
+  poType,
+  data,
+) {
+  const inwardTypeKey = poType ? poType.split(" ")[0].toUpperCase() : "";
+  return data.filter(
+    (item) =>
+      (searchDocDate
+        ? String(getDateFromDateTime(item.Po.docDate)).includes(searchDocDate)
+        : true) &&
+      (searchDueDate
+        ? String(getDateFromDateTime(item.Po.dueDate)).includes(searchDueDate)
+        : true) &&
+      (inwardTypeKey ? item.Po.poType.toUpperCase() === inwardTypeKey : true),
+  );
+}
+
+// ── PO Status ─────────────────────────────────────────────────────────────────
 function getPOStatus(po) {
   const poItems = po.poItems || [];
   const totalPoQty = poItems.reduce((sum, item) => sum + (item.qty || 0), 0);
@@ -88,68 +102,79 @@ function getPOStatus(po) {
   return "Pending";
 }
 
+// ── Approval Status ───────────────────────────────────────────────────────────
 function getPOApprovalStatus(log, isApprovalConfigured = false) {
-  // No approval log = not configured
   if (!log) {
-    if (isApprovalConfigured) {
-      return {
-        status: "NOTAPPROVED",
-        label: "Not Approved",
-        color: "orange",
-        currentLevel: 1,
-        levelLogs: [],
-      };
-    }
-    return {
-      status: "NOT_CONFIGURED",
-      label: "No Approval",
-      color: "gray",
-      currentLevel: null,
-      levelLogs: [],
-    };
+    return isApprovalConfigured
+      ? {
+          status: "NOTAPPROVED",
+          label: "Not Approved",
+          color: "orange",
+          currentLevel: 1,
+          levelLogs: [],
+        }
+      : {
+          status: "NOT_CONFIGURED",
+          label: "No Approval",
+          color: "gray",
+          currentLevel: null,
+          levelLogs: [],
+        };
   }
-
   const base = {
     currentLevel: log.currentLevel,
     levelLogs: log.LevelLogs ?? [],
     remarks: log.remarks,
   };
-
-  switch (log.status) {
-    case "APPROVED":
-      return { ...base, status: "APPROVED", label: "Approved", color: "green" };
-    case "REJECTED":
-      return { ...base, status: "REJECTED", label: "Rejected", color: "red" };
-    case "PENDING":
-      return {
-        ...base,
-        status: "PENDING",
-        label: `PENDING`,
-        color: "orange",
-      };
-    case "NOTAPPROVED":
-      return {
-        ...base,
-        status: "NOTAPPROVED",
-        label: "Not Approved",
-        color: "orange",
-      };
-    default:
-      return { ...base, status: "UNKNOWN", label: "Unknown", color: "gray" };
-  }
+  const map = {
+    APPROVED: {
+      ...base,
+      status: "APPROVED",
+      label: "Approved",
+      color: "green",
+    },
+    REJECTED: { ...base, status: "REJECTED", label: "Rejected", color: "red" },
+    PENDING: { ...base, status: "PENDING", label: "Pending", color: "orange" },
+    NOTAPPROVED: {
+      ...base,
+      status: "NOTAPPROVED",
+      label: "Not Approved",
+      color: "orange",
+    },
+  };
+  return (
+    map[log.status] ?? {
+      ...base,
+      status: "UNKNOWN",
+      label: "Unknown",
+      color: "gray",
+    }
+  );
 }
 
+// ── In-memory config evaluator (avoids N DB calls in list) ────────────────────
+function evaluateConfigs(activeConfigs, record) {
+  if (!activeConfigs?.length) return false;
+
+  // ✅ Only valid configs with levels + users, sorted by priority
+  const valid = activeConfigs
+    .filter(
+      (c) =>
+        c.approvalLevels?.length > 0 &&
+        c.approvalLevels.some((l) => l.LevelUsers?.length > 0),
+    )
+    .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+
+  // ✅ Use shared evaluator — same logic as getTriggeredConfig for consistency
+  return valid.some((config) => evaluateConfigTrigger(config, record));
+}
+
+// ── GET LIST ──────────────────────────────────────────────────────────────────
 async function get(req) {
   const {
     branchId,
     active,
-    pagination,
-    pageNumber,
-    dataPerPage,
     finYearId,
-    searchDocId,
-    searchPoDate,
-    searchSupplierAliasName,
     searchPoType,
     searchDueDate,
     supplierId,
@@ -157,13 +182,11 @@ async function get(req) {
     endDate,
     filterParties,
     supplier,
-    filterPoTypes,
+    searchSupplierAliasName,
     serachDocNo,
-    searchClientName,
     searchDate,
-    searchMaterial,
-    pageId,
   } = req.query;
+
   const { startTime: startDateStartTime } = getDateTimeRange(startDate);
   const { endTime: endDateEndTime } = getDateTimeRange(endDate);
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -173,22 +196,15 @@ async function get(req) {
         finYearDate?.endDateEndTime,
       )
     : "";
+
   let data = await prisma.po.findMany({
     where: {
       AND: [
         {
           AND: finYearDate
             ? [
-                {
-                  createdAt: {
-                    gte: finYearDate.startDateStartTime,
-                  },
-                },
-                {
-                  createdAt: {
-                    lte: finYearDate.endDateEndTime,
-                  },
-                },
+                { createdAt: { gte: finYearDate.startDateStartTime } },
+                { createdAt: { lte: finYearDate.endDateEndTime } },
               ]
             : undefined,
         },
@@ -196,39 +212,22 @@ async function get(req) {
           AND:
             startDate && endDate
               ? [
-                  {
-                    createdAt: {
-                      gte: startDateStartTime,
-                    },
-                  },
-                  {
-                    createdAt: {
-                      lte: endDateEndTime,
-                    },
-                  },
+                  { createdAt: { gte: startDateStartTime } },
+                  { createdAt: { lte: endDateEndTime } },
                 ]
               : undefined,
         },
       ],
       branchId: branchId ? parseInt(branchId) : undefined,
       active: active ? Boolean(active) : undefined,
-      // poType: Boolean(searchPoType) ? { contains: searchPoType } : undefined,
-      docId: Boolean(serachDocNo)
-        ? {
-            contains: serachDocNo,
-          }
-        : undefined,
+      docId: Boolean(serachDocNo) ? { contains: serachDocNo } : undefined,
       OR:
         supplierId || Boolean(filterParties)
           ? [
-              {
-                supplierId: supplierId ? parseInt(supplierId) : undefined,
-              },
+              { supplierId: supplierId ? parseInt(supplierId) : undefined },
               {
                 supplierId: Boolean(filterParties)
-                  ? {
-                      in: filterParties.split(",").map((i) => parseInt(i)),
-                    }
+                  ? { in: filterParties.split(",").map((i) => parseInt(i)) }
                   : undefined,
               },
             ]
@@ -241,49 +240,26 @@ async function get(req) {
       },
     },
     include: {
-      Supplier: {
-        select: {
-          aliasName: true,
-          name: true,
-        },
-      },
-
-      poItems: {
-        select: {
-          qty: true,
-        },
-      },
-      _count: {
-        select: {
-          inwardItems: true,
-          purchaseCancelItems: true,
-        },
-      },
+      Supplier: { select: { aliasName: true, name: true } },
+      poItems: true,
+      _count: { select: { inwardItems: true, purchaseCancelItems: true } },
       inwardItems: { select: { inwardQty: true } },
       purchaseCancelItems: { select: { cancelQty: true } },
     },
-    orderBy: {
-      docId: "desc",
-    },
-  });
-  data = manualFilterSearchData(searchDate, searchDueDate, searchPoType, data);
-  const poIds = data.map((po) => po.id);
-  const approvalConfig = await prisma.approvalConfig.findUnique({
-    where: {
-      branchId_pageId: {
-        branchId: parseInt(branchId),
-        pageId: parseInt(pageId), // 80
-      },
-    },
-    select: { id: true, active: true },
+    orderBy: { docId: "desc" },
   });
 
-  const isApprovalConfigured = approvalConfig?.active === true;
+  data = manualFilterSearchData(searchDate, searchDueDate, searchPoType, data);
+  const poIds = data.map((po) => po.id);
+
+  // ✅ Universal setup check — works whether PO has rules or not
+  const { module, hasApproval } = await getModuleApprovalSetup(
+    REFERENCE_PAGE,
+    branchId,
+  );
+
   const approvalLogs = await prisma.approvalLog.findMany({
-    where: {
-      referencePage: "PURCHASE ORDER",
-      referenceId: { in: poIds },
-    },
+    where: { referencePage: REFERENCE_PAGE, referenceId: { in: poIds } },
     select: {
       id: true,
       referenceId: true,
@@ -302,12 +278,35 @@ async function get(req) {
       },
     },
   });
+
   const approvalLogMap = approvalLogs.reduce((acc, log) => {
     acc[log.referenceId] = log;
     return acc;
   }, {});
-  const totalCount = data.length;
-  let docId = finYearDate
+
+  // ✅ Only fetch configs if approval is set up for this form
+  const activeConfigs =
+    hasApproval && module
+      ? await prisma.approvalConfig.findMany({
+          where: {
+            moduleId: module.id,
+            branchId: parseInt(branchId),
+            active: true,
+          },
+          include: {
+            ConfigConditions: {
+              include: { Field: true, Operator: true, CompareField: true },
+            },
+            approvalLevels: {
+              include: { LevelUsers: true },
+              orderBy: { levelNo: "asc" },
+            },
+          },
+          // orderBy: { priority: "asc" },
+        })
+      : [];
+
+  const nextDocId = finYearDate
     ? await getNextDocId(
         branchId,
         shortCode,
@@ -315,26 +314,37 @@ async function get(req) {
         finYearDate?.endDateEndTime,
       )
     : "";
+
+  // purchaseOrder.service.js — FIX in get()
+  const resolvedData = data.map((po) => {
+    const log = approvalLogMap[po.id] ?? null;
+
+    // ✅ PRIORITY: If log exists → use log.status (single source of truth)
+    // Only evaluate configs if NO log exists yet (to decide if rule would trigger)
+    let shouldTrigger = false;
+    if (!log && hasApproval && activeConfigs.length > 0) {
+      shouldTrigger = evaluateConfigs(activeConfigs, po);
+    }
+
+    return {
+      ...po,
+      status: getPOStatus(po),
+      // If log exists → derive from log; otherwise from shouldTrigger
+      approvalStatus: getPOApprovalStatus(log, !!log || shouldTrigger),
+      childRecord: po._count.inwardItems + po._count.purchaseCancelItems,
+    };
+  });
+
   return {
     statusCode: 0,
-    data: data.map((po) => {
-      const log = approvalLogMap[po.id] ?? null;
-      return {
-        ...po,
-        status: getPOStatus(po),
-        approvalStatus: getPOApprovalStatus(log, isApprovalConfigured),
-        childRecord: po._count.inwardItems + po._count.purchaseCancelItems,
-      };
-    }),
-    nextDocId: docId,
-    totalCount,
+    data: resolvedData,
+    nextDocId,
+    totalCount: data.length,
   };
 }
 
+// ── GET ONE ───────────────────────────────────────────────────────────────────
 async function getOne(id) {
-  const childRecord = 0;
-
-  // Fetch PO with relations
   let po = await prisma.po.findUnique({
     where: { id: parseInt(id) },
     include: {
@@ -346,70 +356,44 @@ async function getOne(id) {
           gstNo: true,
           address: true,
           pincode: true,
-          City: {
-            select: { name: true },
-          },
+          City: { select: { name: true } },
         },
       },
       DeliveryParty: {
-        select: {
-          name: true,
-          address: true,
-          contactPersonName: true,
-        },
+        select: { name: true, address: true, contactPersonName: true },
       },
       DeliveryBranch: {
-        select: {
-          branchName: true,
-          contactName: true,
-          address: true,
-        },
+        select: { branchName: true, contactName: true, address: true },
       },
     },
   });
-
   if (!po) return NoRecordFound("po");
 
-  // Compute PoItems with balanceQty
-  const updatedItems =
+  po.poItems =
     po.poItems?.map((item) => {
       const qty = parseFloat(item.qty) || 0;
       const req = parseFloat(item?.RequirementPlanningItems?.requiredQty) || 0;
-
-      return {
-        ...item,
-        balanceQty: Math.max(0, parseFloat(req) - parseFloat(qty)),
-        requiredQty: req,
-      };
+      return { ...item, balanceQty: Math.max(0, req - qty), requiredQty: req };
     }) || [];
 
-  // Assign updated PoItems back to PO object
-  po.poItems = updatedItems;
-  const PO_PAGE = await prisma.page.findFirst({
-    where: {
-      name: "PURCHASE ORDER",
-    },
-    select: {
-      id: true,
-    },
-  });
-  const PO_PAGE_ID = PO_PAGE?.id;
-  const [childRecordInward, childRecordCancel, approvalLog, approvalConfig] =
-    await Promise.all([
+  // ✅ Universal setup check
+  const { hasApproval, module } = await getModuleApprovalSetup(
+    REFERENCE_PAGE,
+    po.branchId,
+  );
+
+  const [childRecordInward, childRecordCancel, approvalLog] = await Promise.all(
+    [
       prisma.inwardItems.count({ where: { poId: po.id } }),
       prisma.purchaseCancelItems.count({ where: { poId: po.id } }),
       prisma.approvalLog.findFirst({
-        where: {
-          referenceId: parseInt(id),
-          referencePage: "PURCHASE ORDER",
-        },
-        orderBy: {
-          createdAt: "desc", // ✅ always latest
-        },
+        where: { referenceId: parseInt(id), referencePage: REFERENCE_PAGE },
+        orderBy: { createdAt: "desc" },
         select: {
           id: true,
           status: true,
           currentLevel: true,
+          remarks: true,
           ApprovalConfig: {
             select: {
               approvalLevels: {
@@ -418,7 +402,6 @@ async function getOne(id) {
                   id: true,
                   levelNo: true,
                   approveType: true,
-                  condition: true,
                   LevelUsers: {
                     select: {
                       userId: true,
@@ -442,17 +425,8 @@ async function getOne(id) {
           },
         },
       }),
-      prisma.approvalConfig.findFirst({
-        where: {
-          pageId: PO_PAGE_ID, // 80
-          branchId: po.branchId, // use branchId from the fetched po
-          active: true,
-        },
-        select: { id: true },
-      }),
-    ]);
-
-  const isApprovalConfigured = !!approvalConfig;
+    ],
+  );
 
   return {
     statusCode: 0,
@@ -460,36 +434,26 @@ async function getOne(id) {
       ...po,
       childRecordInward,
       childRecordCancel,
-      approvalStatus: getPOApprovalStatus(approvalLog, isApprovalConfigured),
+      // ✅ isApprovalConfigured = hasApproval from universal check
+      approvalStatus: getPOApprovalStatus(approvalLog, hasApproval),
       approvalLog: approvalLog ?? null,
     },
   };
 }
 
 async function getSearch(req) {
-  const { companyId, active } = req.query;
+  const { active } = req.query;
   const { searchKey } = req.params;
   const data = await prisma.po.findMany({
     where: {
-      country: {
-        companyId: companyId ? parseInt(companyId) : undefined,
-      },
       active: active ? Boolean(active) : undefined,
-      OR: [
-        {
-          name: {
-            contains: searchKey,
-          },
-        },
-      ],
+      OR: [{ docId: { contains: searchKey } }],
     },
   });
-  return { statusCode: 0, data: data };
+  return { statusCode: 0, data };
 }
 
 export function getPoItemObject(poMaterial, item) {
-  console.log(item, "item");
-
   let newItem = {};
   if (poMaterial === "GreyYarn" || poMaterial === "DyedYarn") {
     newItem.yarnId = parseInt(item.yarnId);
@@ -517,15 +481,14 @@ export function getPoItemObject(poMaterial, item) {
     newItem.accessoryGroupId = parseInt(item.accessoryGroupId);
     newItem.accessoryItemId = parseInt(item.accessoryItemId);
   }
-
-  ((newItem.requirementPlanningItemsId = item?.RequirementPlanningItemsId
-    ? parseInt(item?.RequirementPlanningItemsId)
-    : undefined),
-    (newItem.orderId = item?.orderId ? parseInt(item?.orderId) : undefined),
-    (newItem.orderDetailsId = item?.orderDetailsId
-      ? parseInt(item?.orderDetailsId)
-      : undefined),
-    (newItem.uomId = item.uomId ? parseInt(item.uomId) : null));
+  newItem.requirementPlanningItemsId = item?.RequirementPlanningItemsId
+    ? parseInt(item.RequirementPlanningItemsId)
+    : undefined;
+  newItem.orderId = item?.orderId ? parseInt(item.orderId) : undefined;
+  newItem.orderDetailsId = item?.orderDetailsId
+    ? parseInt(item.orderDetailsId)
+    : undefined;
+  newItem.uomId = item.uomId ? parseInt(item.uomId) : null;
   newItem.colorId = item.colorId ? parseInt(item.colorId) : undefined;
   newItem.qty = parseFloat(item.qty);
   newItem.price = parseFloat(item.price);
@@ -536,6 +499,7 @@ export function getPoItemObject(poMaterial, item) {
   return newItem;
 }
 
+// ── CREATE ────────────────────────────────────────────────────────────────────
 async function create(body) {
   try {
     const {
@@ -557,9 +521,8 @@ async function create(body) {
       taxPercent,
       termsId,
       payTermId,
-      pageId,
-      totalNetAmount,
     } = await body;
+
     let finYearDate = await getFinYearStartTimeEndTime(finYearId);
     const shortCode = finYearDate
       ? getYearShortCodeForFinYear(
@@ -573,6 +536,13 @@ async function create(body) {
       finYearDate?.startDateStartTime,
       finYearDate?.endDateEndTime,
     );
+
+    // ✅ Single universal check OUTSIDE transaction — covers all 3 scenarios
+    const { module, hasApproval } = await getModuleApprovalSetup(
+      REFERENCE_PAGE,
+      branchId,
+    );
+
     let data;
     await prisma.$transaction(async (tx) => {
       data = await tx.po.create({
@@ -607,75 +577,87 @@ async function create(body) {
               : Number(discountValue),
           taxPercent:
             taxPercent === "" || taxPercent == null ? null : Number(taxPercent),
-          quoteVersions: {
-            create: {
-              quoteVersion: 1,
-            },
-          },
+          quoteVersions: { create: { quoteVersion: 1 } },
           termsId: termsId ? parseInt(termsId) : null,
           payTermId: payTermId ? parseInt(payTermId) : null,
         },
       });
-      await createPoItems(tx, poItems, data, userId, branchId);
+
+      await createPoItems(tx, poItems, data);
+
+      // ✅ Only runs if: module exists AND active config exists for this branch
+      // If PO has no rules configured → hasApproval=false → skipped, form saves normally
+      if (hasApproval && module) {
+        // ✅ Dynamic include — pulls every relation any Field master references
+        const includeClause = await buildIncludeForModule(module.id);
+
+        const fullRecord = await tx.po.findUnique({
+          where: { id: data.id },
+          include: includeClause, // ← { Supplier: true, poItems: true, inwardItems: true, ... }
+        });
+
+        await createApprovalLog(
+          tx,
+          branchId,
+          module.id,
+          data.id,
+          REFERENCE_PAGE,
+          fullRecord,
+          data.docId,
+          userId,
+        );
+      }
     });
+
     return { statusCode: 0, data };
   } catch (err) {
-    return {
-      statusCode: 400,
-      message: err.message,
-    };
+    return { statusCode: 400, message: err.message };
   }
 }
 
 async function createPoItems(tx, poItems, po) {
-  const promises = poItems.map(async (itemDetails, index) => {
-    const qty = itemDetails?.qty
-      ? Math.round(parseFloat(itemDetails.qty))
-      : null;
-
-    const createdItem = await tx.poItems.create({
-      data: {
-        poId: parseInt(po.id),
-        styleItemId: itemDetails?.styleItemId
-          ? parseInt(itemDetails.styleItemId)
-          : null,
-        uomId: itemDetails?.uomId ? parseInt(itemDetails.uomId) : null,
-        hsnId: itemDetails?.hsnId ? parseInt(itemDetails.hsnId) : null,
-        qty,
-        price: itemDetails?.price ? parseInt(itemDetails.price) : null,
-        discountType: itemDetails?.discountType ?? undefined,
-        discountValue: itemDetails?.discountValue
-          ? parseInt(itemDetails.discountValue)
-          : null,
-        taxPercent: itemDetails?.taxPercent
-          ? parseInt(itemDetails.taxPercent)
-          : null,
-        itemGroupId: itemDetails?.itemGroupId
-          ? parseInt(itemDetails.itemGroupId)
-          : null,
-        sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
-        colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
-        gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
-      },
-    });
-
-    return createdItem;
-  });
-
-  return Promise.all(promises);
+  return Promise.all(
+    poItems.map(async (itemDetails) => {
+      const qty = itemDetails?.qty
+        ? Math.round(parseFloat(itemDetails.qty))
+        : null;
+      return await tx.poItems.create({
+        data: {
+          poId: parseInt(po.id),
+          styleItemId: itemDetails?.styleItemId
+            ? parseInt(itemDetails.styleItemId)
+            : null,
+          uomId: itemDetails?.uomId ? parseInt(itemDetails.uomId) : null,
+          hsnId: itemDetails?.hsnId ? parseInt(itemDetails.hsnId) : null,
+          qty,
+          price: itemDetails?.price ? parseInt(itemDetails.price) : null,
+          discountType: itemDetails?.discountType ?? undefined,
+          discountValue: itemDetails?.discountValue
+            ? parseInt(itemDetails.discountValue)
+            : null,
+          taxPercent: itemDetails?.taxPercent
+            ? parseInt(itemDetails.taxPercent)
+            : null,
+          itemGroupId: itemDetails?.itemGroupId
+            ? parseInt(itemDetails.itemGroupId)
+            : null,
+          sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
+          colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
+          gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
+        },
+      });
+    }),
+  );
 }
 
 function findRemovedItems(dataFound, poItems) {
-  let removedItems = dataFound.poItems.filter((oldItem) => {
-    let result = poItems.find(
-      (newItem) => parseInt(newItem.id) === parseInt(oldItem.id),
-    );
-    if (result) return false;
-    return true;
-  });
-  return removedItems;
+  return dataFound.poItems.filter(
+    (oldItem) =>
+      !poItems.find((newItem) => parseInt(newItem.id) === parseInt(oldItem.id)),
+  );
 }
 
+// ── UPDATE ────────────────────────────────────────────────────────────────────
 async function update(id, body) {
   const {
     userId,
@@ -698,19 +680,14 @@ async function update(id, body) {
     isNewVersion,
     quoteVersion,
     submitApproval,
-    pageId,
   } = await body;
-  let data;
+
   const dataFound = await prisma.po.findUnique({
-    where: {
-      id: parseInt(id),
-    },
-    include: {
-      poItems: true,
-      quoteVersions: true,
-    },
+    where: { id: parseInt(id) },
+    include: { poItems: true, quoteVersions: true },
   });
   if (!dataFound) return NoRecordFound("PO");
+
   const currentQuoteVersion = Math.max(
     ...new Set(
       dataFound?.poItems
@@ -718,18 +695,23 @@ async function update(id, body) {
         .map((i) => parseInt(i.quoteVersion)),
     ),
   );
+
   let removedItems = findRemovedItems(dataFound, poItems);
   let removeItemsIds = removedItems.map((item) => parseInt(item.id));
+
+  // ✅ Universal check — only when resubmitting, skip otherwise
+  const { module, hasApproval } = submitApproval
+    ? await getModuleApprovalSetup(REFERENCE_PAGE, branchId)
+    : { module: null, hasApproval: false };
+
+  let data;
   await prisma.$transaction(async (tx) => {
     if (removeItemsIds.length > 0) {
-      await tx.poItems.deleteMany({
-        where: { id: { in: removeItemsIds } },
-      });
+      await tx.poItems.deleteMany({ where: { id: { in: removeItemsIds } } });
     }
+
     data = await tx.po.update({
-      where: {
-        id: parseInt(id),
-      },
+      where: { id: parseInt(id) },
       data: {
         docDate: docDate ? new Date(docDate) : null,
         dueDate: dueDate ? new Date(dueDate) : null,
@@ -764,48 +746,13 @@ async function update(id, body) {
           ? currentQuoteVersion + 1
           : parseInt(quoteVersion),
         quoteVersions: isNewVersion
-          ? {
-              create: {
-                quoteVersion: currentQuoteVersion + 1,
-              },
-            }
+          ? { create: { quoteVersion: currentQuoteVersion + 1 } }
           : undefined,
         termsId: termsId ? parseInt(termsId) : null,
         payTermId: payTermId ? parseInt(payTermId) : null,
-        // poItems: {
-        //   createMany: {
-        //     data: poItems
-        //       .filter((i) => i["quoteVersion"] == "New")
-        //       .map((temp) => {
-        //         let newItem = {};
-        //         newItem["styleItemId"] = parseInt(temp["styleItemId"]);
-        //         newItem["uomId"] = temp["uomId"];
-        //         newItem["hsnId"] = temp["hsnId"]
-        //           ? parseInt(temp["hsnId"])
-        //           : null;
-        //         newItem["qty"] = parseFloat(temp["qty"]);
-        //         newItem["price"] = parseFloat(temp["price"]);
-        //         newItem["discountType"] = temp["discountType"];
-        //         newItem["discountValue"] = parseFloat(
-        //           temp["discountValue"] || 0,
-        //         );
-        //         newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
-        //         newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
-        //         newItem["itemGroupId"] = temp["itemGroupId"]
-        //           ? parseInt(temp["itemGroupId"])
-        //           : null;
-        //         newItem["sizeId"] = temp["sizeId"]
-        //           ? parseInt(temp["sizeId"])
-        //           : null;
-        //         newItem["colorId"] = temp["colorId"]
-        //           ? parseInt(temp["colorId"])
-        //           : null;
-        //         return newItem;
-        //       }),
-        //   },
-        // },
       },
     });
+
     if (isNewVersion) {
       await createNewVersionItems(
         tx,
@@ -824,21 +771,37 @@ async function update(id, body) {
       );
     }
 
-    if (submitApproval) {
+    // ✅ Only runs if resubmitting AND approval is configured for this form
+    if (submitApproval && hasApproval && module) {
+      // Clear old rejected/notapproved log so user can resubmit cleanly
+      await tx.approvalLog.deleteMany({
+        where: {
+          referenceId: parseInt(id),
+          referencePage: REFERENCE_PAGE,
+          status: { in: ["REJECTED", "NOTAPPROVED"] },
+        },
+      });
+
+      const includeClause = await buildIncludeForModule(module.id);
+
+      const fullRecord = await tx.po.findUnique({
+        where: { id: data.id },
+        include: includeClause, // ← { Supplier: true, poItems: true, inwardItems: true, ... }
+      });
+
       await createApprovalLog(
         tx,
         branchId,
-        pageId,
+        module.id,
         data.id,
-        "PURCHASE ORDER",
-        {
-          true: true,
-        },
-        data?.docId,
+        REFERENCE_PAGE,
+        fullRecord,
+        data.docId,
         userId,
       );
     }
   });
+
   return { statusCode: 0, data };
 }
 
@@ -850,80 +813,77 @@ async function updatePoItems(
   currentQuoteVersion,
   isNewVersion,
 ) {
-  const promises = poItems.map(async (itemDetails) => {
-    const qty = itemDetails?.qty
-      ? Math.round(parseFloat(itemDetails.qty))
-      : null;
-
-    if (itemDetails.id) {
-      // Update existing poItem
-      const updatedItem = await tx.poItems.update({
-        where: { id: parseInt(itemDetails.id) },
-        data: {
-          poId: parseInt(po.id),
-          styleItemId: itemDetails?.styleItemId
-            ? parseInt(itemDetails.styleItemId)
-            : null,
-          uomId: itemDetails?.uomId ? parseInt(itemDetails.uomId) : null,
-          hsnId: itemDetails?.hsnId ? parseInt(itemDetails.hsnId) : null,
-          qty,
-          price: itemDetails?.price ? parseInt(itemDetails.price) : null,
-          discountType: itemDetails?.discountType ?? undefined,
-          discountValue: itemDetails?.discountValue
-            ? parseInt(itemDetails.discountValue)
-            : null,
-          taxPercent: itemDetails?.taxPercent
-            ? parseInt(itemDetails.taxPercent)
-            : null,
-          itemGroupId: itemDetails?.itemGroupId
-            ? parseInt(itemDetails.itemGroupId)
-            : null,
-          sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
-          colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
-          gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
-          quoteVersion: isNewVersion
-            ? currentQuoteVersion + 1
-            : parseInt(quoteVersion),
-        },
-      });
-
-      return updatedItem;
-    } else {
-      // Create new poItem
-      const createdItem = await tx.poItems.create({
-        data: {
-          poId: parseInt(po.id),
-          styleItemId: itemDetails?.styleItemId
-            ? parseInt(itemDetails.styleItemId)
-            : null,
-          uomId: itemDetails?.uomId ? parseInt(itemDetails.uomId) : null,
-          hsnId: itemDetails?.hsnId ? parseInt(itemDetails.hsnId) : null,
-          qty,
-          price: itemDetails?.price ? parseInt(itemDetails.price) : null,
-          discountType: itemDetails?.discountType ?? undefined,
-          discountValue: itemDetails?.discountValue
-            ? parseInt(itemDetails.discountValue)
-            : null,
-          taxPercent: itemDetails?.taxPercent
-            ? parseInt(itemDetails.taxPercent)
-            : null,
-          quoteVersion: isNewVersion
-            ? currentQuoteVersion + 1
-            : parseInt(quoteVersion),
-          itemGroupId: itemDetails?.itemGroupId
-            ? parseInt(itemDetails.itemGroupId)
-            : null,
-          sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
-          colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
-          gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
-        },
-      });
-
-      return createdItem;
-    }
-  });
-
-  return Promise.all(promises);
+  return Promise.all(
+    poItems.map(async (itemDetails) => {
+      const qty = itemDetails?.qty
+        ? Math.round(parseFloat(itemDetails.qty))
+        : null;
+      if (itemDetails.id) {
+        return await tx.poItems.update({
+          where: { id: parseInt(itemDetails.id) },
+          data: {
+            poId: parseInt(po.id),
+            styleItemId: itemDetails?.styleItemId
+              ? parseInt(itemDetails.styleItemId)
+              : null,
+            uomId: itemDetails?.uomId ? parseInt(itemDetails.uomId) : null,
+            hsnId: itemDetails?.hsnId ? parseInt(itemDetails.hsnId) : null,
+            qty,
+            price: itemDetails?.price ? parseInt(itemDetails.price) : null,
+            discountType: itemDetails?.discountType ?? undefined,
+            discountValue: itemDetails?.discountValue
+              ? parseInt(itemDetails.discountValue)
+              : null,
+            taxPercent: itemDetails?.taxPercent
+              ? parseInt(itemDetails.taxPercent)
+              : null,
+            itemGroupId: itemDetails?.itemGroupId
+              ? parseInt(itemDetails.itemGroupId)
+              : null,
+            sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
+            colorId: itemDetails?.colorId
+              ? parseInt(itemDetails.colorId)
+              : null,
+            gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
+            quoteVersion: isNewVersion
+              ? currentQuoteVersion + 1
+              : parseInt(quoteVersion),
+          },
+        });
+      } else {
+        return await tx.poItems.create({
+          data: {
+            poId: parseInt(po.id),
+            styleItemId: itemDetails?.styleItemId
+              ? parseInt(itemDetails.styleItemId)
+              : null,
+            uomId: itemDetails?.uomId ? parseInt(itemDetails.uomId) : null,
+            hsnId: itemDetails?.hsnId ? parseInt(itemDetails.hsnId) : null,
+            qty,
+            price: itemDetails?.price ? parseInt(itemDetails.price) : null,
+            discountType: itemDetails?.discountType ?? undefined,
+            discountValue: itemDetails?.discountValue
+              ? parseInt(itemDetails.discountValue)
+              : null,
+            taxPercent: itemDetails?.taxPercent
+              ? parseInt(itemDetails.taxPercent)
+              : null,
+            quoteVersion: isNewVersion
+              ? currentQuoteVersion + 1
+              : parseInt(quoteVersion),
+            itemGroupId: itemDetails?.itemGroupId
+              ? parseInt(itemDetails.itemGroupId)
+              : null,
+            sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
+            colorId: itemDetails?.colorId
+              ? parseInt(itemDetails.colorId)
+              : null,
+            gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
+          },
+        });
+      }
+    }),
+  );
 }
 
 async function createNewVersionItems(tx, poItems, poId, version) {
@@ -949,48 +909,20 @@ async function createNewVersionItems(tx, poItems, poId, version) {
   });
 }
 
+// ── REMOVE ────────────────────────────────────────────────────────────────────
 async function remove(id) {
   const poId = parseInt(id);
-
   return await prisma.$transaction(async (tx) => {
-    // 1. Delete related approval logs
+    // Safe even if no approval logs exist
     await tx.approvalLog.deleteMany({
-      where: {
-        referencePage: "PURCHASE ORDER",
-        referenceId: poId,
-      },
+      where: { referencePage: REFERENCE_PAGE, referenceId: poId },
     });
-
-    // 2. Delete PO
-    const data = await tx.po.delete({
-      where: {
-        id: poId,
-      },
-    });
-
+    const data = await tx.po.delete({ where: { id: poId } });
     return { statusCode: 0, data };
   });
 }
 
-function manualFilterSearchDataPoItems(
-  searchDocDate,
-  searchDueDate,
-  poType,
-  data,
-) {
-  const inwardTypeKey = poType ? poType.split(" ")[0].toUpperCase() : "";
-  return data.filter(
-    (item) =>
-      (searchDocDate
-        ? String(getDateFromDateTime(item.Po.docDate)).includes(searchDocDate)
-        : true) &&
-      (searchDueDate
-        ? String(getDateFromDateTime(item.Po.dueDate)).includes(searchDueDate)
-        : true) &&
-      (inwardTypeKey ? item.Po.poType.toUpperCase() === inwardTypeKey : true),
-  );
-}
-
+// ── GET PO ITEMS (for inward selection) ───────────────────────────────────────
 async function getAllDataPoItems(data) {
   const results = await Promise.all(
     data?.map(async (item) => {
@@ -998,24 +930,17 @@ async function getAllDataPoItems(data) {
       return res.data;
     }),
   );
-
-  // 1️⃣ Find max quoteVersion per poId
   const maxVersionByPo = {};
-
   for (const item of results) {
     const poId = item.poId;
     if (!maxVersionByPo[poId] || item.quoteVersion > maxVersionByPo[poId]) {
       maxVersionByPo[poId] = item.quoteVersion;
     }
   }
-
-  // 2️⃣ Keep only rows of max version AND balQty > 0
-  const finalResult = results.filter(
+  return results.filter(
     (item) =>
       item.quoteVersion === maxVersionByPo[item.poId] && item.balQty > 0,
   );
-
-  return finalResult;
 }
 
 async function getPoItemById(id) {
@@ -1031,57 +956,48 @@ async function getPoItemById(id) {
       Gsm: { select: { name: true } },
     },
   });
-
   if (!data) return NoRecordFound("Purchase Order");
-  // 1️⃣ All inward rows
-  const inwardItems = await prisma.inwardItems.findMany({
-    where: {
-      styleItemId: data.styleItemId,
-      poId: data.poId,
-      uomId: data.uomId,
-      hsnId: data.hsnId,
-      itemGroupId: data.itemGroupId,
-      sizeId: data.sizeId,
-      colorId: data.colorId,
-      gsmId: data.gsmId,
-    },
-    select: {
-      purchaseInwardId: true,
-      inwardQty: true,
-    },
-  });
+
+  const [inwardItems, cancelItems] = await Promise.all([
+    prisma.inwardItems.findMany({
+      where: {
+        styleItemId: data.styleItemId,
+        poId: data.poId,
+        uomId: data.uomId,
+        hsnId: data.hsnId,
+        itemGroupId: data.itemGroupId,
+        sizeId: data.sizeId,
+        colorId: data.colorId,
+        gsmId: data.gsmId,
+      },
+      select: { purchaseInwardId: true, inwardQty: true },
+    }),
+    prisma.purchaseCancelItems.findMany({
+      where: {
+        styleItemId: data.styleItemId,
+        poId: data.poId,
+        uomId: data.uomId,
+        hsnId: data.hsnId,
+        itemGroupId: data.itemGroupId,
+        sizeId: data.sizeId,
+        colorId: data.colorId,
+        gsmId: data.gsmId,
+      },
+      select: { cancelQty: true },
+    }),
+  ]);
 
   const inwardQty = inwardItems.reduce(
     (sum, item) => sum + (item.inwardQty ?? 0),
     0,
   );
-
-  const cancelItems = await prisma.purchaseCancelItems.findMany({
-    where: {
-      styleItemId: data.styleItemId,
-      poId: data.poId,
-      uomId: data.uomId,
-      hsnId: data.hsnId,
-      itemGroupId: data.itemGroupId,
-      sizeId: data.sizeId,
-      colorId: data.colorId,
-      gsmId: data.gsmId,
-    },
-    select: {
-      cancelQty: true,
-    },
-  });
-
   const cancelQty = cancelItems.reduce(
     (sum, item) => sum + (item.cancelQty ?? 0),
     0,
   );
-
-  // 2️⃣ Return qty using purchaseInwardId
   const inwardIds = inwardItems.map((i) => i.purchaseInwardId).filter(Boolean);
 
   let returnQty = 0;
-
   if (inwardIds.length > 0) {
     const returnAgg = await prisma.purchaseReturnItems.aggregate({
       where: {
@@ -1096,7 +1012,6 @@ async function getPoItemById(id) {
       },
       _sum: { returnQty: true },
     });
-
     returnQty = returnAgg._sum.returnQty ?? 0;
   }
 
@@ -1119,27 +1034,21 @@ async function getPoItems(req) {
     branchId,
     active,
     supplierId,
-    inwardType,
     pagination,
-    dataPerPage,
     searchDocId,
     searchDocDate,
-    searchInwardType,
     searchDueDate,
     poType,
   } = req.query;
 
   let data;
   let totalCount;
+
   if (pagination) {
     data = await prisma.poItems.findMany({
       where: {
         Po: {
-          docId: Boolean(searchDocId)
-            ? {
-                contains: searchDocId,
-              }
-            : undefined,
+          docId: Boolean(searchDocId) ? { contains: searchDocId } : undefined,
           supplierId: supplierId ? parseInt(supplierId) : undefined,
         },
       },
@@ -1153,76 +1062,51 @@ async function getPoItems(req) {
             poType: true,
           },
         },
-
-        Uom: {
-          select: {
-            name: true,
-          },
-        },
+        Uom: { select: { name: true } },
       },
     });
+
     data = manualFilterSearchDataPoItems(
       searchDocDate,
       searchDueDate,
       poType,
       data,
     );
-
     data = data?.filter((i) => i.Po.supplierId == supplierId);
-
     data = await getAllDataPoItems(data);
-    // ✅ STEP 1: Get unique PO ids from filtered items
-    const poIds = [...new Set(data.map((item) => item.Po.id))];
-    const PO_PAGE = await prisma.page.findFirst({
-      where: {
-        name: "PURCHASE ORDER",
-      },
-      select: {
-        id: true,
-      },
-    });
-    const PO_PAGE_ID = PO_PAGE?.id;
-    const [approvalLogs, approvalConfig] = await Promise.all([
-      prisma.approvalLog.findMany({
-        where: {
-          referencePage: "PURCHASE ORDER",
-          referenceId: { in: poIds },
-        },
-        select: {
-          referenceId: true,
-          status: true,
-          currentLevel: true,
-        },
-      }),
-      prisma.approvalConfig.findFirst({
-        where: {
-          pageId: PO_PAGE_ID, // 80
-          branchId: parseInt(branchId),
-          active: true,
-        },
-        select: { id: true },
-      }),
-    ]);
 
-    const isApprovalConfigured = !!approvalConfig;
+    const poIds = [...new Set(data.map((item) => item.Po.id))];
+
+    // ✅ Universal check — if PO has no approval config, all items pass through
+    const { module, hasApproval } = await getModuleApprovalSetup(
+      REFERENCE_PAGE,
+      branchId,
+    );
+
+    const approvalLogs = hasApproval
+      ? await prisma.approvalLog.findMany({
+          where: { referencePage: REFERENCE_PAGE, referenceId: { in: poIds } },
+          select: { referenceId: true, status: true, currentLevel: true },
+        })
+      : [];
 
     const approvalLogMap = approvalLogs.reduce((acc, log) => {
       acc[log.referenceId] = log;
       return acc;
     }, {});
 
-    data = data.map((item) => {
-      const log = approvalLogMap[item.Po.id] ?? null;
-      return {
-        ...item,
-        approvalStatus: getPOApprovalStatus(log, isApprovalConfigured),
-      };
-    });
+    data = data.map((item) => ({
+      ...item,
+      approvalStatus: getPOApprovalStatus(
+        approvalLogMap[item.Po.id] ?? null,
+        hasApproval,
+      ),
+    }));
 
-    // If approval is configured: only let APPROVED items through
-    // If not configured at all: let everything through
+    // ✅ If approval not configured for PO → let ALL items through
+    // If configured → only APPROVED items pass to inward
     data = data.filter((item) =>
-      isApprovalConfigured ? item.approvalStatus.status === "APPROVED" : true,
+      hasApproval ? item.approvalStatus.status === "APPROVED" : true,
     );
   } else {
     data = await prisma.poItems.findMany({
@@ -1232,10 +1116,12 @@ async function getPoItems(req) {
       },
     });
   }
+
   totalCount = data.length;
   return { statusCode: 0, data, totalCount };
 }
 
+// ── APPROVE / REJECT ──────────────────────────────────────────────────────────
 async function createApproveStatus(body) {
   try {
     const {
@@ -1246,30 +1132,27 @@ async function createApproveStatus(body) {
       referenceId,
       actionType,
     } = body;
-    if (!userId) {
-      return res.json({ statusCode: 1, message: "userId is required" });
-    }
+
+    if (!userId) return { statusCode: 1, message: "userId is required" };
     if (actionType === "REJECT" && !remarks?.trim()) {
       return { statusCode: 1, message: "Remarks required for rejection" };
     }
-    let result;
+
     if (actionType === "APPROVE") {
-      result = await approveRecord(
+      return await approveRecord(
         referenceId,
         referencePage,
         userId,
         remarks,
-        recordData ?? { true: true },
+        recordData ?? {},
       );
-    } else {
-      result = await rejectRecord(referenceId, referencePage, userId, remarks);
+    } else if (actionType === "REJECT") {
+      return await rejectRecord(referenceId, referencePage, userId, remarks);
     }
-    return result;
+
+    return { statusCode: 1, message: "Invalid action type" };
   } catch (err) {
-    return {
-      statusCode: 400,
-      message: err.message,
-    };
+    return { statusCode: 400, message: err.message };
   }
 }
 
@@ -1283,36 +1166,3 @@ export {
   getPoItems,
   createApproveStatus,
 };
-
-//  poItems: {
-//       createMany: {
-//         data: poItems
-//           .filter((i) => i["quoteVersion"] == "New")
-//           .map((temp) => {
-//             let newItem = {};
-//             newItem["styleItemId"] = parseInt(temp["styleItemId"]);
-//             newItem["uomId"] = temp["uomId"];
-//             newItem["hsnId"] = temp["hsnId"]
-//               ? parseInt(temp["hsnId"])
-//               : null;
-//             newItem["qty"] = parseFloat(temp["qty"]);
-//             newItem["price"] = parseFloat(temp["price"]);
-//             newItem["discountType"] = temp["discountType"];
-//             newItem["discountValue"] = parseFloat(
-//               temp["discountValue"] || 0,
-//             );
-//             newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
-//             newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
-//             newItem["itemGroupId"] = temp["itemGroupId"]
-//               ? parseInt(temp["itemGroupId"])
-//               : null;
-//             newItem["sizeId"] = temp["sizeId"]
-//               ? parseInt(temp["sizeId"])
-//               : null;
-//             newItem["colorId"] = temp["colorId"]
-//               ? parseInt(temp["colorId"])
-//               : null;
-//             return newItem;
-//           }),
-//       },
-//     },

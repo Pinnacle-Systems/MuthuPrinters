@@ -300,3 +300,36 @@ label {
   background: #4f46e5 !important;
   height: 3px !important;
 }
+/* Remove all borders/outlines from react-multiselect-checkboxes */
+.custom-multiselectBorderNo .dropdown-container {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.custom-multiselectBorderNo .dropdown-container:focus-within {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Hide react-multiselect-checkboxes default arrow & clear button */
+.custom-multiselectBorderNo .dropdown-heading-dropdown-arrow {
+  display: none !important;
+}
+.custom-multiselectBorderNo .clear-selected-button {
+  display: none !important;
+}
+.custom-multiselectBorderNo .dropdown-container {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.custom-multiselect .dropdown-container:focus-within {
+  border: none !important;
+  box-shadow: none !important;
+}
+.custom-multiselectBorderNo .dropdown-heading {
+  background: transparent !important;
+  padding: 0 6px !important;
+}

@@ -6,10 +6,18 @@ import { getCommonParams } from "../Utils/helper";
 
 const BASE_URL = process.env.REACT_APP_SERVER_URL;
 
-const socket = io.connect(BASE_URL);
+// Shared singleton socket connection
+export const socket = io.connect(BASE_URL);
 
 export const loginSocket = (userId) => {
     socket.emit(`login`, { userId });
+}
+
+// Join the per-user notification room
+// Call this whenever you have a userId (login, page refresh)
+export const joinNotificationRoom = (userId) => {
+    if (!userId) return;
+    socket.emit("join", { userId });
 }
 
 export const useLogout = () => {
@@ -18,7 +26,11 @@ export const useLogout = () => {
     let navigate = useNavigate();
     useEffect(() => {
         socket.on('connect', () => {
-            console.log("connected")
+            console.log("connected");
+            // Re-join the room whenever socket reconnects (page refresh, reconnect etc.)
+            if (userId) {
+                socket.emit("join", { userId });
+            }
         });
 
         socket.on('disconnect', () => {

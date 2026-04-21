@@ -10,7 +10,7 @@ async function get(req) {
       branchId: branchId ? parseInt(branchId) : undefined,
     },
     include: {
-      Page: true,
+      Module: true,
       ApproverRole: true,
       ApproverUser: true,
       approvalLevels: {
@@ -39,83 +39,100 @@ async function get(req) {
 
 async function getPendingApproval(req) {
   const { userId } = req.query;
+  const uid = parseInt(userId);
 
-  // Find all PENDING logs where the current level includes this user
-  const logs = await prisma.approvalLog.findMany({
+  // ── 1. Logs where this user is an approver at the CURRENT level ──────────
+  // Prisma can't do field-to-field comparison (currentLevel = levelNo) in where,
+  // so we fetch PENDING logs where user is in ANY level, then filter in JS.
+  const pendingLogs = await prisma.approvalLog.findMany({
     where: {
       status: "PENDING",
       ApprovalConfig: {
         approvalLevels: {
           some: {
-            // levelNo: { equals: prisma.approvalLog.fields.currentLevel }, // ← see note below
-            LevelUsers: { some: { userId: parseInt(userId) } },
+            LevelUsers: { some: { userId: uid } },
           },
         },
       },
     },
+    orderBy: { createdAt: "desc" },
     include: {
       ApprovalConfig: {
         include: {
           approvalLevels: {
-            include: { LevelUsers: true },
             orderBy: { levelNo: "asc" },
+            include: {
+              LevelUsers: true,
+            },
           },
         },
       },
-      RaisedBy: {
-        select: {
-          username: true,
-        },
-      },
+      RaisedBy: { select: { id: true, username: true } },
       LevelLogs: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
 
-  // Prisma can't do a field-to-field comparison in where, so filter in JS:
-  const filteredLogs = logs.filter((log) => {
-    const level = log.ApprovalConfig?.approvalLevels.find(
+  // Filter to only logs where user is in the CURRENT active level
+  const approverLogs = pendingLogs.filter((log) => {
+    const currentLevel = log.ApprovalConfig?.approvalLevels.find(
       (l) => l.levelNo === log.currentLevel,
     );
-
-    return level?.LevelUsers.some((lu) => lu.userId === parseInt(userId));
+    return currentLevel?.LevelUsers.some((lu) => lu.userId === uid);
   });
-  // Logs raised by this user — so they can track status
+
+  // ── 2. Logs raised BY this user that have unread status updates ──────────
   const raisedByLogs = await prisma.approvalLog.findMany({
     where: {
-      raisedById: parseInt(userId),
-      status: { in: ["PENDING", "APPROVED", "REJECTED"] },
-      isRead: false, // only unread updates
+      raisedById: uid,
+      isRead: false,
+      // Only show terminal or active states — skip PENDING raised-by
+      // since those will already appear in approverLogs if user is also approver
+      status: { in: ["APPROVED", "REJECTED"] },
     },
+    orderBy: { createdAt: "desc" },
+    take: 50, // cap — don't return entire history
     include: {
       ApprovalConfig: {
         include: {
           approvalLevels: {
-            include: { LevelUsers: true },
             orderBy: { levelNo: "asc" },
+            include: { LevelUsers: true },
           },
         },
       },
-      RaisedBy: { select: { username: true } },
+      RaisedBy: { select: { id: true, username: true } },
       LevelLogs: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
 
-  // Merge, deduplicate by id
-  const allLogs = [
-    ...filteredLogs,
-    ...raisedByLogs.filter((r) => !filteredLogs.some((a) => a.id === r.id)),
+  // ── 3. Merge, deduplicate by log id ──────────────────────────────────────
+  const seen = new Set(approverLogs.map((l) => l.id));
+  const merged = [
+    ...approverLogs,
+    ...raisedByLogs.filter((r) => !seen.has(r.id)),
   ];
 
-  return {
-    statusCode: 0,
-    data: allLogs,
-  };
+  // ── 4. Sort merged: PENDING first, then by createdAt desc ────────────────
+  merged.sort((a, b) => {
+    if (a.status === "PENDING" && b.status !== "PENDING") return -1;
+    if (a.status !== "PENDING" && b.status === "PENDING") return 1;
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
+  return { statusCode: 0, data: merged };
 }
 
 async function getOne(id) {
   const data = await prisma.approvalConfig.findUnique({
     where: { id: parseInt(id) },
     include: {
+      ConfigConditions: {
+        include: {
+          Field: true,
+          Operator: true,
+          CompareField: true,
+        },
+      },
       approvalLevels: {
         orderBy: { levelNo: "asc" },
         include: {
@@ -126,6 +143,7 @@ async function getOne(id) {
       },
       ApproverRole: true,
       ApproverUser: true,
+      Module: true,
     },
   });
 
@@ -137,8 +155,7 @@ async function getOne(id) {
       ...data,
       approvalLevelItems: data.approvalLevels.map((lvl) => ({
         levelNo: lvl.levelNo,
-        approveType: lvl.approverLogic,
-        condition: lvl.condition,
+        approveType: lvl.approveType,
         users: lvl.LevelUsers.map((u) => ({
           label: u.User?.username,
           value: u.userId,
@@ -168,19 +185,45 @@ async function getSearch(req) {
 }
 
 async function create(body) {
-  const { branchId, pageId, active, approvalLevelItems } = await body;
+  const {
+    branchId,
+    moduleId,
+    active,
+    approvalLevelItems,
+    name,
+    priority,
+    ruleLogicalOperator,
+    ConfigConditions,
+  } = await body;
 
   const data = await prisma.approvalConfig.create({
     data: {
+      name,
       branchId: parseInt(branchId),
-      pageId: parseInt(pageId),
+      moduleId: parseInt(moduleId),
+      priority: parseInt(priority || 0),
       active,
+      ruleLogicalOperator: ruleLogicalOperator || "AND",
+
+      ConfigConditions: {
+        create:
+          ConfigConditions?.filter((cond) => cond.fieldId && cond.operatorId) // Skip empty/invalid rules
+            ?.map((cond) => ({
+              fieldId: parseInt(cond.fieldId),
+              operatorId: parseInt(cond.operatorId),
+              valueType: cond.valueType || "STATIC",
+              value: cond.valueType === "STATIC" ? cond.value : null,
+              compareFieldId:
+                cond.valueType === "DYNAMIC"
+                  ? parseInt(cond.compareFieldId)
+                  : null,
+            })) || [],
+      },
 
       approvalLevels: {
         create: approvalLevelItems.map((lvl, index) => ({
           levelNo: index + 1,
           approveType: lvl.approveType,
-          condition: lvl.condition,
 
           LevelUsers: {
             create: lvl.users.map((u) => ({
@@ -196,7 +239,16 @@ async function create(body) {
 }
 
 async function update(id, body) {
-  const { branchId, pageId, active, approvalLevelItems } = await body;
+  const {
+    branchId,
+    moduleId,
+    active,
+    approvalLevelItems,
+    name,
+    priority,
+    ruleLogicalOperator,
+    ConfigConditions,
+  } = await body;
 
   const existing = await prisma.approvalConfig.findUnique({
     where: { id: parseInt(id) },
@@ -207,16 +259,34 @@ async function update(id, body) {
   const data = await prisma.approvalConfig.update({
     where: { id: parseInt(id) },
     data: {
+      name,
       branchId: parseInt(branchId),
-      pageId: parseInt(pageId),
+      moduleId: parseInt(moduleId),
+      priority: parseInt(priority || 0),
       active,
+      ruleLogicalOperator: ruleLogicalOperator || "AND",
+
+      ConfigConditions: {
+        deleteMany: {}, // Clear old rules
+        create:
+          ConfigConditions?.filter((cond) => cond.fieldId && cond.operatorId) // Skip empty/invalid rules
+            ?.map((cond) => ({
+              fieldId: parseInt(cond.fieldId),
+              operatorId: parseInt(cond.operatorId),
+              valueType: cond.valueType || "STATIC",
+              value: cond.valueType === "STATIC" ? cond.value : null,
+              compareFieldId:
+                cond.valueType === "DYNAMIC"
+                  ? parseInt(cond.compareFieldId)
+                  : null,
+            })) || [],
+      },
 
       approvalLevels: {
         deleteMany: {}, // 🔥 clear old
         create: approvalLevelItems.map((lvl, index) => ({
           levelNo: index + 1,
           approveType: lvl.approveType,
-          condition: lvl.condition,
 
           LevelUsers: {
             create: lvl.users.map((u) => ({

@@ -1,8 +1,6 @@
 import { prisma } from "../lib/prisma.js";
-
 import { NoRecordFound } from "../configs/Responses.js";
 import {
-  exclude,
   getDateFromDateTime,
   getYearShortCodeForFinYear,
   getYearShortCode,
@@ -10,115 +8,52 @@ import {
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 
-async function getNextDocId(
-  branchId,
-  shortCode,
-  startTime,
-  endTime,
-  saveType,
-  docId,
-  isUpdate,
-) {
-  // Case 1: Draft save
-  if (saveType) {
-    return "Draft Save";
-  } else if (isUpdate === "drift") {
-    lastObject = await prisma.purchaseCancel.findFirst({
-      where: {
-        branchId: parseInt(branchId),
-        draftSave: false,
-        AND: [
-          { createdAt: { gte: startTime } },
-          { createdAt: { lte: endTime } },
-        ],
-      },
-      orderBy: { id: "desc" },
-    });
-    const branchObj = await getTableRecordWithId(branchId, "branch");
-    let newDocId = `${branchObj.branchCode}${getYearShortCode(
-      new Date(),
-    )}/PC/1`;
+const REFERENCE_PAGE = "PURCHASE CANCEL";
 
-    if (lastObject) {
-      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PC/${
-        parseInt(lastObject.docId.split("/").at(-1)) + 1
-      }`;
+async function getNextDocId(branchId, shortCode, startTime, endTime, saveType) {
+  if (saveType) return "Draft Save";
+
+  let lastObject = await prisma.purchaseCancel.findFirst({
+    where: {
+      branchId: parseInt(branchId),
+      AND: [{ createdAt: { gte: startTime } }, { createdAt: { lte: endTime } }],
+    },
+    orderBy: { id: "desc" },
+  });
+
+  const branchObj = await getTableRecordWithId(branchId, "branch");
+  let newDocId = `${branchObj.branchCode}/${shortCode}/PC/1`;
+
+  if (lastObject) {
+    if (lastObject.docId === "Draft Save") {
+      const records = await prisma.purchaseCancel.findMany({
+        select: { docId: true },
+        where: {
+          branchId: parseInt(branchId),
+          AND: [
+            { createdAt: { gte: startTime } },
+            { createdAt: { lte: endTime } },
+          ],
+        },
+      });
+      const maxDocId = records.reduce((max, current) => {
+        const currentNo = Number(current.docId.split("/").pop());
+        const maxNo = max ? Number(max.split("/").pop()) : 0;
+        return currentNo > maxNo ? current.docId : max;
+      }, null);
+      newDocId = `${branchObj.branchCode}/${shortCode}/PC/${parseInt(maxDocId.split("/").at(-1)) + 1}`;
+    } else {
+      newDocId = `${branchObj.branchCode}/${shortCode}/PC/${parseInt(lastObject.docId.split("/").at(-1)) + 1}`;
     }
-
-    return newDocId;
-  } else {
-    let lastObject = await prisma.purchaseCancel.findFirst({
-      where: {
-        branchId: parseInt(branchId),
-        AND: [
-          {
-            createdAt: {
-              gte: startTime,
-            },
-          },
-          {
-            createdAt: {
-              lte: endTime,
-            },
-          },
-        ],
-      },
-      orderBy: {
-        id: "desc",
-      },
-    });
-
-    const branchObj = await getTableRecordWithId(branchId, "branch");
-    let newDocId = `${branchObj.branchCode}/${shortCode}/PC/1`;
-    if (lastObject) {
-      if (lastObject.docId === "Draft Save") {
-        const records = await prisma.purchaseCancel.findMany({
-          select: {
-            docId: true,
-          },
-          where: {
-            branchId: parseInt(branchId),
-            AND: [
-              {
-                createdAt: {
-                  gte: startTime,
-                },
-              },
-              {
-                createdAt: {
-                  lte: endTime,
-                },
-              },
-            ],
-          },
-        });
-        const maxDocId = records.reduce((max, current) => {
-          const currentNo = Number(current.docId.split("/").pop());
-          const maxNo = max ? Number(max.split("/").pop()) : 0;
-
-          return currentNo > maxNo ? current.docId : max;
-        }, null);
-        newDocId = `${branchObj.branchCode}/${shortCode}/PC/${
-          parseInt(maxDocId.split("/").at(-1)) + 1
-        }`;
-      } else {
-        newDocId = `${branchObj.branchCode}/${shortCode}/PC/${
-          parseInt(lastObject.docId.split("/").at(-1)) + 1
-        }`;
-      }
-    }
-    return newDocId;
   }
+  return newDocId;
 }
 
 function manualFilterSearchData(searchDocDate, data) {
-  return data.filter(
-    (item) =>
-      searchDocDate
-        ? String(getDateFromDateTime(item.docDate)).includes(searchDocDate)
-        : true,
-    // (searchSupplierDcDate ? String(getDateFromDateTime(item.dueDate)).includes(searchSupplierDcDate) : true)
-    // (searchPurchaseBillNo ?String(item.purchaseBillId).includes(searchPurchaseBillNo) : true)
+  return data.filter((item) =>
+    searchDocDate
+      ? String(getDateFromDateTime(item.docDate)).includes(searchDocDate)
+      : true,
   );
 }
 
@@ -133,32 +68,22 @@ async function get(req) {
     searchDocDate,
     searchSupplier,
   } = req.query;
+
   let data = await prisma.purchaseCancel.findMany({
     where: {
       branchId: branchId ? parseInt(branchId) : undefined,
       active: active ? Boolean(active) : undefined,
-      docId: Boolean(serachDocNo)
-        ? {
-            contains: serachDocNo,
-          }
-        : undefined,
+      docId: Boolean(serachDocNo) ? { contains: serachDocNo } : undefined,
       supplier: {
         name: Boolean(searchSupplier)
           ? { contains: searchSupplier }
           : undefined,
       },
     },
-    include: {
-      supplier: {
-        select: {
-          name: true,
-        },
-      },
-    },
-    orderBy: {
-      docId: "desc",
-    },
+    include: { supplier: { select: { name: true } } },
+    orderBy: { docId: "desc" },
   });
+
   data = manualFilterSearchData(searchDocDate, data);
   const totalCount = data.length;
 
@@ -168,63 +93,73 @@ async function get(req) {
       pageNumber * dataPerPage,
     );
   }
-  let newDocId = await getNextDocId(branchId);
-  return { statusCode: 0, nextDocId: newDocId, data };
+
+  let newDocId = await getNextDocId(branchId, "", undefined, undefined);
+  return { statusCode: 0, nextDocId: newDocId, data, totalCount };
 }
 
 async function getOne(id) {
-  const childRecord = 0;
   const data = await prisma.purchaseCancel.findUnique({
-    where: {
-      id: parseInt(id),
-    },
-    include: {
-      purchaseCancelItems: true,
-    },
+    where: { id: parseInt(id) },
+    include: { purchaseCancelItems: true },
   });
-  if (!data) return NoRecordFound("purchaseReturn");
+  if (!data) return NoRecordFound("purchaseCancel");
+
   const itemWithPoQty = await Promise.all(
     data.purchaseCancelItems.map(async (item) => {
-      const poQty = await prisma.poItems.findFirst({
-        where: {
-          styleItemId: item.styleItemId,
-          poId: item.poId,
-          uomId: item.uomId,
-          hsnId: item.hsnId,
-          itemGroupId: item.itemGroupId,
-          sizeId: item.sizeId,
-          colorId: item.colorId,
-          gsmId: item.gsmId,
-        },
-        select: {
-          qty: true,
-        },
-      });
-      const inwardItems = await prisma.inwardItems.findMany({
-        where: {
-          styleItemId: item.styleItemId,
-          poId: item.poId,
-          uomId: item.uomId,
-          hsnId: item.hsnId,
-          itemGroupId: item.itemGroupId,
-          sizeId: item.sizeId,
-          gsmId: item.gsmId,
-          colorId: item.colorId,
-        },
-        select: {
-          inwardQty: true,
-          purchaseInwardId: true,
-        },
-      });
+      const [poQty, inwardItems, cancelAgg] = await Promise.all([
+        prisma.poItems.findFirst({
+          where: {
+            styleItemId: item.styleItemId,
+            poId: item.poId,
+            uomId: item.uomId,
+            hsnId: item.hsnId,
+            itemGroupId: item.itemGroupId,
+            sizeId: item.sizeId,
+            colorId: item.colorId,
+            gsmId: item.gsmId,
+          },
+          select: { qty: true },
+        }),
+        prisma.inwardItems.findMany({
+          where: {
+            styleItemId: item.styleItemId,
+            poId: item.poId,
+            uomId: item.uomId,
+            hsnId: item.hsnId,
+            itemGroupId: item.itemGroupId,
+            sizeId: item.sizeId,
+            gsmId: item.gsmId,
+            colorId: item.colorId,
+          },
+          select: { inwardQty: true, purchaseInwardId: true },
+        }),
+        prisma.purchaseCancelItems.aggregate({
+          where: {
+            styleItemId: item.styleItemId,
+            poId: item.poId,
+            uomId: item.uomId,
+            hsnId: item.hsnId,
+            itemGroupId: item.itemGroupId,
+            sizeId: item.sizeId,
+            colorId: item.colorId,
+            gsmId: item.gsmId,
+            purchaseCancelId: { not: data.id },
+          },
+          _sum: { cancelQty: true },
+        }),
+      ]);
+
       const inwardQty = inwardItems.reduce(
-        (sum, item) => sum + (item.inwardQty ?? 0),
+        (sum, i) => sum + (i.inwardQty ?? 0),
         0,
       );
       const inwardIds = inwardItems
         .map((i) => i.purchaseInwardId)
         .filter(Boolean);
-      let returnQty = 0;
+      const alreadyCancelQty = cancelAgg?._sum?.cancelQty ?? 0;
 
+      let returnQty = 0;
       if (inwardIds.length > 0) {
         const returnAgg = await prisma.purchaseReturnItems.aggregate({
           where: {
@@ -239,29 +174,12 @@ async function getOne(id) {
           },
           _sum: { returnQty: true },
         });
-
         returnQty = returnAgg._sum.returnQty ?? 0;
       }
 
-      const cancelAgg = await prisma.purchaseCancelItems.aggregate({
-        where: {
-          styleItemId: item.styleItemId,
-          poId: item.poId,
-          uomId: item.uomId,
-          hsnId: item.hsnId,
-          itemGroupId: item.itemGroupId,
-          sizeId: item.sizeId,
-          colorId: item.colorId,
-          gsmId: item.gsmId,
-          purchaseCancelId: { not: data.id },
-        },
-        _sum: { cancelQty: true },
-      });
-      const alreadyCancelQty = cancelAgg?._sum?.cancelQty ?? 0;
-
       return {
         ...item,
-        poQty: poQty.qty ?? 0,
+        poQty: poQty?.qty ?? 0,
         alreadyInwardQty: inwardQty,
         alreadyReturnQty: returnQty,
         alreadyCancelQty,
@@ -269,33 +187,24 @@ async function getOne(id) {
       };
     }),
   );
+
   return {
     statusCode: 0,
-    data: {
-      ...data,
-      purchaseCancelItems: itemWithPoQty,
-      ...{ childRecord },
-    },
+    data: { ...data, purchaseCancelItems: itemWithPoQty, childRecord: 0 },
   };
 }
 
+// ✅ FIX: was prisma.purchaseReturn (wrong model)
 async function getSearch(req) {
   const { searchKey } = req.params;
-  const { companyId, active } = req.query;
-  const data = await prisma.purchaseReturn.findMany({
+  const { active } = req.query;
+  const data = await prisma.purchaseCancel.findMany({
     where: {
-      companyId: companyId ? parseInt(companyId) : undefined,
       active: active ? Boolean(active) : undefined,
-      OR: [
-        {
-          name: {
-            contains: searchKey,
-          },
-        },
-      ],
+      OR: [{ docId: { contains: searchKey } }],
     },
   });
-  return { statusCode: 0, data: data };
+  return { statusCode: 0, data };
 }
 
 async function create(body) {
@@ -314,6 +223,7 @@ async function create(body) {
     locationId,
     termsId,
   } = await body;
+
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
@@ -328,6 +238,7 @@ async function create(body) {
     finYearDate?.endDateEndTime,
     draftSave,
   );
+
   let data;
   await prisma.$transaction(async (tx) => {
     data = await tx.purchaseCancel.create({
@@ -336,7 +247,6 @@ async function create(body) {
         docDate: docDate ? new Date(docDate) : null,
         createdById: parseInt(userId),
         branchId: parseInt(branchId),
-        // storeId: parseInt(storeId),
         supplierId: parseInt(supplierId),
         poType,
         remarks,
@@ -367,8 +277,8 @@ async function createCancelItems(
   storeId,
   poType,
 ) {
-  const promises = cancelItems?.map(async (stockDetail, index) => {
-    const createdItem = await tx.purchaseCancelItems.create({
+  const promises = cancelItems?.map(async (stockDetail) => {
+    return await tx.purchaseCancelItems.create({
       data: {
         purchaseCancelId: parseInt(purchaseReturn.id),
         styleItemId: stockDetail?.styleItemId
@@ -379,10 +289,10 @@ async function createCancelItems(
         cancelQty: stockDetail?.cancelQty
           ? parseInt(stockDetail.cancelQty)
           : null,
-        poType: poType ? poType : "",
+        poType: poType || "",
         poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
-        batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
-        poDocId: stockDetail?.poDocId ? stockDetail?.poDocId : null,
+        batchNo: stockDetail?.batchNo || null,
+        poDocId: stockDetail?.poDocId || null,
         itemGroupId: stockDetail?.itemGroupId
           ? parseInt(stockDetail.itemGroupId)
           : null,
@@ -391,21 +301,17 @@ async function createCancelItems(
         gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
       },
     });
-    return createdItem;
   });
-
   return Promise.all(promises);
 }
 
 function findRemovedItems(dataFound, purchaseCancelItems) {
-  let removedItems = dataFound.purchaseCancelItems.filter((oldItem) => {
-    let result = purchaseCancelItems.find(
-      (newItem) => parseInt(newItem.id) === parseInt(oldItem.id),
-    );
-    if (result) return false;
-    return true;
-  });
-  return removedItems;
+  return dataFound.purchaseCancelItems.filter(
+    (oldItem) =>
+      !purchaseCancelItems.find(
+        (newItem) => parseInt(newItem.id) === parseInt(oldItem.id),
+      ),
+  );
 }
 
 async function update(id, body) {
@@ -417,45 +323,33 @@ async function update(id, body) {
     docDate,
     supplierId,
     poType,
-    dcNo,
-    dcDate,
     remarks,
     termsAndCondition,
     cancelItems,
     termsId,
   } = await body;
-  let data;
-  const dataFound = await prisma.purchaseCancel.findUnique({
-    where: {
-      id: parseInt(id),
-    },
-    include: {
-      purchaseCancelItems: {
-        select: {
-          id: true,
-        },
-      },
-    },
-  });
-  if (!dataFound) return NoRecordFound("Purchase Return");
 
-  let removedItems = findRemovedItems(dataFound, cancelItems);
-  let removeItemsIds = removedItems.map((item) => parseInt(item.id));
+  const dataFound = await prisma.purchaseCancel.findUnique({
+    where: { id: parseInt(id) },
+    include: { purchaseCancelItems: { select: { id: true } } },
+  });
+  if (!dataFound) return NoRecordFound("Purchase Cancel");
+
+  const removedItems = findRemovedItems(dataFound, cancelItems);
+  const removeItemsIds = removedItems.map((item) => parseInt(item.id));
+
+  let data;
   await prisma.$transaction(async (tx) => {
-    // await deleteItemsFromStock(tx, removeItemsIds);
     if (removeItemsIds.length > 0) {
       await tx.purchaseCancelItems.deleteMany({
         where: { id: { in: removeItemsIds } },
       });
     }
     data = await tx.purchaseCancel.update({
-      where: {
-        id: parseInt(id),
-      },
+      where: { id: parseInt(id) },
       data: {
         docDate: docDate ? new Date(docDate) : null,
         updatedById: parseInt(userId),
-        // storeId: parseInt(storeId),
         branchId: parseInt(branchId),
         locationId: parseInt(locationId),
         supplierId: parseInt(supplierId),
@@ -465,7 +359,6 @@ async function update(id, body) {
         termsId: termsId ? parseInt(termsId) : null,
       },
     });
-
     await updateCancelGoods(
       tx,
       cancelItems,
@@ -490,10 +383,8 @@ async function updateCancelGoods(
 ) {
   const promises = cancelItems.map(async (stockDetail) => {
     if (stockDetail.id) {
-      // Update existing purchaseReturnItem
-      const updatedItem = await tx.purchaseCancelItems.update({
+      return await tx.purchaseCancelItems.update({
         where: { id: parseInt(stockDetail.id) },
-
         data: {
           purchaseCancelId: parseInt(purchaseReturn.id),
           styleItemId: stockDetail?.styleItemId
@@ -504,10 +395,10 @@ async function updateCancelGoods(
           cancelQty: stockDetail?.cancelQty
             ? parseInt(stockDetail.cancelQty)
             : null,
-          poType: poType ? poType : "",
+          poType: poType || "",
           poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
-          batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
-          poDocId: stockDetail?.poDocId ? stockDetail?.poDocId : null,
+          batchNo: stockDetail?.batchNo || null,
+          poDocId: stockDetail?.poDocId || null,
           itemGroupId: stockDetail?.itemGroupId
             ? parseInt(stockDetail.itemGroupId)
             : null,
@@ -516,11 +407,8 @@ async function updateCancelGoods(
           gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
-
-      return updatedItem;
     } else {
-      // Create new purchaseReturnItem
-      const createdItem = await tx.purchaseCancelItems.create({
+      return await tx.purchaseCancelItems.create({
         data: {
           purchaseCancelId: parseInt(purchaseReturn.id),
           styleItemId: stockDetail?.styleItemId
@@ -531,10 +419,10 @@ async function updateCancelGoods(
           cancelQty: stockDetail?.cancelQty
             ? parseInt(stockDetail.cancelQty)
             : null,
-          poType: poType ? poType : "",
+          poType: poType || "",
           poId: stockDetail?.poId ? parseInt(stockDetail.poId) : null,
-          batchNo: stockDetail?.batchNo ? stockDetail?.batchNo : null,
-          poDocId: stockDetail?.poDocId ? stockDetail?.poDocId : null,
+          batchNo: stockDetail?.batchNo || null,
+          poDocId: stockDetail?.poDocId || null,
           itemGroupId: stockDetail?.itemGroupId
             ? parseInt(stockDetail.itemGroupId)
             : null,
@@ -543,19 +431,14 @@ async function updateCancelGoods(
           gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
         },
       });
-
-      return createdItem;
     }
   });
-
   return Promise.all(promises);
 }
 
 async function remove(id) {
   const data = await prisma.purchaseCancel.delete({
-    where: {
-      id: parseInt(id),
-    },
+    where: { id: parseInt(id) },
   });
   return { statusCode: 0, data };
 }

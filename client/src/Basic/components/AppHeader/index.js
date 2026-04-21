@@ -12,7 +12,7 @@ import { latestExpireDateWithinNDays } from "../../../Utils/helper";
 import { GLOBE_ICON } from "../../../icons";
 import { useGetPageGroupQuery } from "../../../redux/services/PageGroupMasterServices";
 import MultiLevelDropDown from "../../../UiComponents/MultiSelectDropDown";
-import useLogout from "../../../CustomHooks/useLogout";
+import useLogout, { socket } from "../../../CustomHooks/useLogout";
 
 import Anugraha from "../../../assets/fish.png";
 import { Dropdown } from "react-multi-select-component";
@@ -23,6 +23,26 @@ const BASE_URL = process.env.REACT_APP_SERVER_URL;
 const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
   useLogout();
   const [hideNavBar, sethideNavBar] = useState(true);
+
+  // Real-time approval notifications
+  useEffect(() => {
+    const handleApprovalNotification = (data) => {
+      const msg = data.message || "Approval notification received";
+      if (data.type === "APPROVAL_REQUIRED") {
+        toast.info("\uD83D\uDD14 " + msg, { autoClose: 8000, position: "top-right" });
+      } else if (data.type === "APPROVED") {
+        toast.success("\u2705 " + msg, { autoClose: 6000, position: "top-right" });
+      } else if (data.type === "REJECTED") {
+        toast.error("\u274C " + msg, { autoClose: 6000, position: "top-right" });
+      } else {
+        toast.info(msg, { autoClose: 5000 });
+      }
+    };
+    socket.on("approval_notification", handleApprovalNotification);
+    return () => {
+      socket.off("approval_notification", handleApprovalNotification);
+    };
+  }, []);
 
   const navBatItemsStyle = hideNavBar ? "hidden" : "";
 

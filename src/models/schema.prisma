@@ -10,15 +10,14 @@ datasource db {
 }
 
 model Page {
-  id              Int              @id @default(autoincrement())
-  name            String
-  link            String?
-  type            PageType
-  RoleOnPage      RoleOnPage[]
-  active          Boolean          @default(true)
-  PageGroup       PageGroup?       @relation(fields: [pageGroupId], references: [id])
-  pageGroupId     Int?
-  approvalConfigs ApprovalConfig[]
+  id          Int          @id @default(autoincrement())
+  name        String
+  link        String?
+  type        PageType
+  RoleOnPage  RoleOnPage[]
+  active      Boolean      @default(true)
+  PageGroup   PageGroup?   @relation(fields: [pageGroupId], references: [id])
+  pageGroupId Int?
 }
 
 model Company {
@@ -196,7 +195,6 @@ model User {
   approvalLevelLogs              ApprovalLevelLog[]
   approvalLogsRaisedBy           ApprovalLog[]          @relation(name: "raisedBy")
 }
-
 
 model Employee {
   id                 Int               @id @default(autoincrement())
@@ -1608,23 +1606,76 @@ model SizeTemplateList {
   sizeId         Int?
 }
 
-model ApprovalConfig {
-  id             Int             @id @default(autoincrement())
-  branchId       Int
-  pageId         Int
-  active         Boolean         @default(false)
-  approvalLogs   ApprovalLog[]
-  Branch         Branch          @relation(fields: [branchId], references: [id])
-  Page           Page            @relation(fields: [pageId], references: [id])
-  // Who can approve
-  approverType   String? // ROLE or USER
-  approverRoleId Int?
-  approverUserId Int?
-  ApproverRole   Role?           @relation(fields: [approverRoleId], references: [id])
-  ApproverUser   User?           @relation(fields: [approverUserId], references: [id])
-  approvalLevels ApprovalLevel[]
+model ApprovalRuleModule {
+  id                 Int                 @id @default(autoincrement())
+  name               String              @unique
+  active             Boolean             @default(true)
+  approvalRuleFields ApprovalRuleField[]
+  approvalConfigs    ApprovalConfig[]
+}
 
-  @@unique([branchId, pageId])
+model ApprovalRuleField {
+  id                        Int                       @id @default(autoincrement())
+  moduleId                  Int
+  Module                    ApprovalRuleModule        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  name                      String
+  label                     String
+  type                      String                    @default("number") // number, text, array
+  parentRelation            String?
+  fieldPath                 String?
+  aggregation               String?
+  active                    Boolean                   @default(true)
+  ApprovalConfigConditions  ApprovalConfigCondition[] @relation("sourceField")
+  ApprovalConfigComparisons ApprovalConfigCondition[] @relation("compareField")
+  Operators                 ApprovalRuleOperator[]
+}
+
+model ApprovalRuleOperator {
+  id                       Int                       @id @default(autoincrement())
+  operator                 String                    @unique
+  label                    String
+  active                   Boolean                   @default(true)
+  ApprovalConfigConditions ApprovalConfigCondition[]
+  Fields                   ApprovalRuleField[]
+}
+
+model ApprovalConfigCondition {
+  id               Int               @id @default(autoincrement())
+  approvalConfigId Int
+  ApprovalConfig   ApprovalConfig    @relation(fields: [approvalConfigId], references: [id], onDelete: Cascade)
+  fieldId          Int
+  Field            ApprovalRuleField @relation("sourceField", fields: [fieldId], references: [id])
+
+  operatorId Int
+  Operator   ApprovalRuleOperator @relation(fields: [operatorId], references: [id])
+
+  valueType String @default("STATIC") // 'STATIC' or 'DYNAMIC'
+
+  value String?
+
+  compareFieldId Int?
+  CompareField   ApprovalRuleField? @relation("compareField", fields: [compareFieldId], references: [id])
+}
+
+model ApprovalConfig {
+  id                  Int                       @id @default(autoincrement())
+  name                String?
+  branchId            Int
+  moduleId            Int
+  priority            Int                       @default(0)
+  active              Boolean                   @default(false)
+  approvalLogs        ApprovalLog[]
+  Branch              Branch                    @relation(fields: [branchId], references: [id])
+  Module              ApprovalRuleModule        @relation(fields: [moduleId], references: [id])
+  // Who can approve
+  approverType        String? // ROLE or USER
+  approverRoleId      Int?
+  approverUserId      Int?
+  ApproverRole        Role?                     @relation(fields: [approverRoleId], references: [id])
+  ApproverUser        User?                     @relation(fields: [approverUserId], references: [id])
+  approvalLevels      ApprovalLevel[]
+  ruleLogicalOperator String                    @default("AND")
+  ConfigConditions    ApprovalConfigCondition[]
 }
 
 model ApprovalLevel {
@@ -1632,7 +1683,6 @@ model ApprovalLevel {
   approvalConfigId Int?
   levelNo          Int?
   approveType      String              @default("OR")
-  condition        String?
   ApprovalConfig   ApprovalConfig?     @relation(fields: [approvalConfigId], references: [id], onDelete: Cascade)
   LevelUsers       ApprovalLevelUser[]
   LevelLogs        ApprovalLevelLog[]
@@ -1671,8 +1721,9 @@ model ApprovalLog {
   LevelLogs        ApprovalLevelLog[]
   RaisedBy         User?              @relation("raisedBy", fields: [raisedById], references: [id])
   raisedById       Int?
-}
 
+  @@index([referenceId, referencePage])
+}
 
 model ApprovalLevelLog {
   id              Int            @id @default(autoincrement())
