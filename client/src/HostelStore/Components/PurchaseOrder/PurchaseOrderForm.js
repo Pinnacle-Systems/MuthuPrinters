@@ -158,11 +158,6 @@ const PurchaseOrderForm = ({
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
 
-      setPoItems(
-        data?.poItems
-          ? data?.poItems
-          : createPurchaseOrderRows(DEFAULT_PURCHASE_ORDER_ROWS, quoteVersion),
-      );
       setDocId(data?.docId ? data?.docId : "New");
       setDiscountType(data?.discountType || "Percentage");
       setTaxPercent(data?.taxPercent ? data?.taxPercent : "");
@@ -185,7 +180,19 @@ const PurchaseOrderForm = ({
       setTermsAndCondtion(data?.termsAndCondtion ? data?.termsAndCondtion : "");
       setTermsId(data?.termsId ? data?.termsId : "");
       setIsNewVersion(false);
-      setQuoteVersion(data?.quoteVersion || "");
+      // ✅ Set quoteVersion BEFORE poItems so isVisibleRow works correctly on first render
+      const resolvedQuoteVersion = data?.quoteVersion || "";
+      setQuoteVersion(resolvedQuoteVersion);
+
+      // ✅ Pass quoteVersion directly to filter correctly
+      setPoItems(
+        data?.poItems
+          ? data.poItems // ← use raw DB items, isVisibleRow will filter by quoteVersion
+          : createPurchaseOrderRows(
+              DEFAULT_PURCHASE_ORDER_ROWS,
+              resolvedQuoteVersion,
+            ),
+      );
       setPayTermId(data?.payTermId ? data?.payTermId : "");
     },
     [id],
@@ -200,113 +207,113 @@ const PurchaseOrderForm = ({
     }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
+  // PurchaseOrderForm.jsx — handleSubmitCustom
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
-      let returnData;
-      if (text === "Updated") {
-        returnData = await callback(data).unwrap();
-      } else {
-        returnData = await callback(data).unwrap();
-      }
+      const returnData = await callback(data).unwrap();
+
       if (returnData.statusCode === 1) {
         toast.error(returnData.message);
-      } else {
-        Swal.fire({
-          icon: "success",
-          title: `${text || "Saved"} Successfully`,
-          showConfirmButton: false,
-          timer: 2000,
-          didClose: () => {
-            // ✅ Runs after Swal completely closes
-            invalidatePurchaseModule();
-            dispatchInvalidate();
-
-            if (returnData.statusCode === 0) {
-              // ✅ Show print confirmation only for new entries
-              if (!id) {
-                Swal.fire({
-                  icon: "question",
-                  title: "Do You Want to Print?",
-                  showCancelButton: true,
-                  confirmButtonText: "Yes, Print",
-                  cancelButtonText: "No, Thanks [Esc]",
-                  confirmButtonColor: "#3085d6",
-                  cancelButtonColor: "#6b7280",
-                  focusConfirm: true, // ✅ Auto-focus confirm button
-                  allowEnterKey: true, // ✅ Allow Enter to confirm
-                  allowEscapeKey: true, // ✅ Allow Escape to cancel
-                  didOpen: () => {
-                    // ✅ Ensure confirm button is focused when modal opens
-                    const confirmButton = Swal.getConfirmButton();
-                    const cancelButton = Swal.getCancelButton();
-
-                    if (confirmButton) {
-                      confirmButton.focus();
-
-                      // ✅ Add keyboard navigation
-                      confirmButton.addEventListener("keydown", (e) => {
-                        if (e.key === "Tab" && !e.shiftKey) {
-                          e.preventDefault();
-                          cancelButton?.focus();
-                        }
-                      });
-                    }
-
-                    if (cancelButton) {
-                      cancelButton.addEventListener("keydown", (e) => {
-                        if (e.key === "Tab" && e.shiftKey) {
-                          e.preventDefault();
-                          confirmButton?.focus();
-                        }
-                      });
-                    }
-                  },
-                }).then((result) => {
-                  if (result.isConfirmed) {
-                    // ✅ User clicked "Yes, Print"
-                    setPrintModalOpen(true);
-                    // Set the ID so the print modal can access the saved data
-                    if (returnData?.data?.id) {
-                      setId(returnData.data.id);
-                    }
-                    setPendingAction(nextProcess);
-                  } else {
-                    // ✅ User clicked "No, Thanks" - proceed with normal flow
-                    if (nextProcess === "new") {
-                      syncFormWithDb(undefined);
-                      setId("");
-                      setDocId("New");
-
-                      setTimeout(() => {
-                        supplierRef.current?.focus();
-                      }, 300);
-                    }
-                    if (nextProcess === "close") {
-                      onClose();
-                    }
-                  }
-                });
-              } else {
-                // ✅ For updates, proceed normally without print prompt
-                if (nextProcess === "new") {
-                  setId("");
-                  setDocId("New");
-                  syncFormWithDb(undefined);
-
-                  setTimeout(() => {
-                    supplierRef.current?.focus();
-                  }, 100);
-                }
-                if (nextProcess === "close") {
-                  onClose();
-                }
-              }
-            } else {
-              toast.error(returnData?.message);
-            }
-          },
-        });
+        return;
       }
+      // ✅ Sync quoteVersion immediately from the response
+      if (returnData?.data?.quoteVersion) {
+        setQuoteVersion(returnData.data.quoteVersion);
+      }
+      // ✅ Show re-approval message if backend sent one
+      const successMessage = returnData.message || `${text} Successfully`;
+      const isReApproval = returnData.message?.includes("Re-approval");
+
+      Swal.fire({
+        icon: isReApproval ? "warning" : "success",
+        title: isReApproval
+          ? "⚠️ Re-approval Required"
+          : `${text} Successfully`,
+        text: isReApproval ? returnData.message : undefined,
+        showConfirmButton: isReApproval, // ✅ user must acknowledge re-approval
+        confirmButtonText: "OK, I understand",
+        timer: isReApproval ? undefined : 2000, // no auto-close for re-approval
+        didClose: () => {
+          invalidatePurchaseModule();
+          dispatchInvalidate();
+
+          if (returnData.statusCode === 0) {
+            if (!id) {
+              Swal.fire({
+                icon: "question",
+                title: "Do You Want to Print?",
+                showCancelButton: true,
+                confirmButtonText: "Yes, Print",
+                cancelButtonText: "No, Thanks [Esc]",
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#6b7280",
+                focusConfirm: true, // ✅ Auto-focus confirm button
+                allowEnterKey: true, // ✅ Allow Enter to confirm
+                allowEscapeKey: true, // ✅ Allow Escape to cancel
+                didOpen: () => {
+                  // ✅ Ensure confirm button is focused when modal opens
+                  const confirmButton = Swal.getConfirmButton();
+                  const cancelButton = Swal.getCancelButton();
+
+                  if (confirmButton) {
+                    confirmButton.focus();
+
+                    // ✅ Add keyboard navigation
+                    confirmButton.addEventListener("keydown", (e) => {
+                      if (e.key === "Tab" && !e.shiftKey) {
+                        e.preventDefault();
+                        cancelButton?.focus();
+                      }
+                    });
+                  }
+
+                  if (cancelButton) {
+                    cancelButton.addEventListener("keydown", (e) => {
+                      if (e.key === "Tab" && e.shiftKey) {
+                        e.preventDefault();
+                        confirmButton?.focus();
+                      }
+                    });
+                  }
+                },
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  // ✅ User clicked "Yes, Print"
+                  setPrintModalOpen(true);
+                  // Set the ID so the print modal can access the saved data
+                  if (returnData?.data?.id) {
+                    setId(returnData.data.id);
+                  }
+                  setPendingAction(nextProcess);
+                } else {
+                  // ✅ User clicked "No, Thanks" - proceed with normal flow
+                  if (nextProcess === "new") {
+                    syncFormWithDb(undefined);
+                    setId("");
+                    setDocId("New");
+
+                    setTimeout(() => {
+                      supplierRef.current?.focus();
+                    }, 300);
+                  }
+                  if (nextProcess === "close") {
+                    onClose();
+                  }
+                }
+              });
+            } else {
+              if (nextProcess === "new") {
+                setId("");
+                setDocId("New");
+                syncFormWithDb(undefined);
+              }
+              if (nextProcess === "close") {
+                onClose();
+              }
+            }
+          }
+        },
+      });
     } catch (error) {
       console.log("handle", error);
     }
@@ -543,6 +550,44 @@ const PurchaseOrderForm = ({
         .filter((n) => n > 0),
     ),
   ].sort((a, b) => a - b);
+  const versionDropdown = (
+    <div className="flex items-center gap-2 ml-2">
+      <span className="text-xs text-gray-500 mt-1">Version</span>
+
+      <div className="relative">
+        <select
+          value={quoteVersion}
+          onChange={(e) => setQuoteVersion(Number(e.target.value))}
+          className="appearance-none bg-white border border-gray-300 text-gray-700 text-xs rounded-md pl-2 pr-6 py-1 
+                   focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 
+                   hover:border-gray-400 transition"
+        >
+          {quoteVersionOptions.map((v, index) => (
+            <option key={v} value={v}>
+              {index === quoteVersionOptions.length - 1 ? "Latest" : `V${v}`}
+            </option>
+          ))}
+        </select>
+
+        {/* Custom arrow */}
+        <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-gray-400">
+          <svg
+            className="w-3 h-3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
 
   const handleKeyDown = (event) => {
     let charCode = String.fromCharCode(event.which).toLowerCase();
@@ -633,7 +678,7 @@ const PurchaseOrderForm = ({
   const actionIconPairClass = "flex items-center gap-1";
 
   const leftActions = [
-    ...(readOnly
+    ...(readOnly || status === "APPROVED"
       ? []
       : [
           {
@@ -679,7 +724,10 @@ const PurchaseOrderForm = ({
             className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
           },
         ]),
-    ...(!id || status === "PENDING"
+    ...(!id ||
+    status === "PENDING" ||
+    status === "SUPERSEDED" ||
+    status === "NOT_CONFIGURED"
       ? []
       : [
           {
@@ -700,7 +748,7 @@ const PurchaseOrderForm = ({
             className: `bg-green-700 hover:bg-green-800 ${actionButtonClass}`,
           },
         ]),
-    ...(id && status === "PENDING"
+    ...((id && status === "PENDING") || status === "SUPERSEDED"
       ? [
           {
             key: "send-back",
@@ -737,7 +785,7 @@ const PurchaseOrderForm = ({
   ];
 
   const rightActions = [
-    ...(!id || !readOnly || status === "PENDING"
+    ...(!id || !readOnly || status === "PENDING" || status === "SUPERSEDED"
       ? []
       : [
           {
@@ -1239,9 +1287,39 @@ const PurchaseOrderForm = ({
       </div>
     </div>
   );
-
+  // Add this just before the headerContent definition
+  const approvalWarningBanner = (() => {
+    if (status === "APPROVED" && !readOnly) {
+      return (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 px-3 py-2 rounded text-xs flex items-center gap-2">
+          ⚠️{" "}
+          <span>
+            <strong>This PO is approved.</strong> Editing approval-relevant
+            fields (supplier, items, amounts) will automatically invalidate the
+            current approval and trigger re-approval.
+          </span>
+        </div>
+      );
+    }
+    if (status === "SUPERSEDED") {
+      return (
+        <div className="bg-orange-50 border-l-4 border-orange-400 text-orange-800 px-3 py-2 rounded text-xs flex items-center gap-2">
+          🔄{" "}
+          <span>
+            <strong>Re-approval Required.</strong> This PO was edited after
+            approval — it is now pending re-approval.
+          </span>
+        </div>
+      );
+    }
+    return null;
+  })();
   const headerContent = (
     <div className="grid grid-cols-1 gap-1 xl:grid-cols-[minmax(0,5fr)_minmax(0,3.6fr)_minmax(0,3.4fr)]">
+      {/* ✅ Add warning banner above the form sections */}
+      {approvalWarningBanner && (
+        <div className="xl:col-span-3">{approvalWarningBanner}</div>
+      )}
       {basicDetailsCompactSection}
       {supplierDetailsCompactSection}
       {deliveryDetailsCompactSection}
@@ -1475,10 +1553,16 @@ const PurchaseOrderForm = ({
                     ? "bg-green-100 text-green-700"
                     : status === "REJECTED"
                       ? "bg-red-100 text-red-700"
-                      : "bg-orange-100 text-orange-700"
+                      : status === "SUPERSEDED"
+                        ? "bg-orange-100 text-orange-700" // ✅ NEW
+                        : "bg-orange-100 text-orange-700"
                 }`}
               >
-                {status === "PENDING" ? "Waiting For Approval" : status}
+                {status === "PENDING"
+                  ? "Waiting For Approval"
+                  : status === "SUPERSEDED"
+                    ? "Re-approval Required" // ✅ NEW
+                    : status}
               </span>
             </div>
           </div>
@@ -1622,6 +1706,7 @@ const PurchaseOrderForm = ({
             styleItemList={styleItemList}
             discountType={discountType}
             sizeList={sizeList}
+            quoteVersion={quoteVersion}
             discountValue={discountValue}
           />
         </PDFViewer>
@@ -1648,9 +1733,15 @@ const PurchaseOrderForm = ({
             poItems={poItems}
             enrichedPoItems={enrichedPoItems}
             setPoItems={setPoItems}
-            readOnly={readOnly}
             uomList={uomList}
             hsnList={hsnList}
+            readOnly={
+              readOnly ||
+              (quoteVersionOptions.length > 0 &&
+                Number(quoteVersion) !==
+                  quoteVersionOptions[quoteVersionOptions.length - 1]) ||
+              childRecordCount > 0
+            }
             styleItemList={styleItemList}
             taxTemplateId={taxTemplateId}
             isNewVersion={isNewVersion}
@@ -1663,6 +1754,7 @@ const PurchaseOrderForm = ({
           />
         }
         footer={footerContent}
+        versionDropdown={id ? versionDropdown : null}
       />
     </>
   );

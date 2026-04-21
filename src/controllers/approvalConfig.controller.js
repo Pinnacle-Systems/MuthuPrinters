@@ -28,15 +28,17 @@ async function getPendingApproval(req, res, next) {
   }
 }
 
+// ✅ FIX: removed duplicate — just delegates to service like all other functions
 async function markApprovalRead(req, res, next) {
   try {
-    res.json(await _markApprovalRead(req.params.id));
-    console.log(res.statusCode);
+    const { id } = req.params;
+    const { userId } = req.body;
+    res.json(await _markApprovalRead(id, userId));
   } catch (error) {
     if (error.code === "P2025") {
-      res.statusCode = 200;
-      res.json({ statusCode: 1, message: `Record Not Found` });
-      console.log(res.statusCode);
+      res.json({ statusCode: 1, message: "Record Not Found" });
+    } else {
+      res.json({ statusCode: 400, message: error.message });
     }
   }
 }
@@ -65,6 +67,7 @@ async function create(req, res, next) {
     });
   }
 }
+// approvalConfig.controller.js — add this function
 
 async function update(req, res, next) {
   try {
