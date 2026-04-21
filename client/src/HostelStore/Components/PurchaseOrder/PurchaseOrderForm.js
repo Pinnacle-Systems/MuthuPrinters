@@ -536,50 +536,13 @@ const PurchaseOrderForm = ({
   const quoteVersionOptions = [
     ...new Set(
       poItems
-        .filter((i) => i?.styleItemId && i?.quoteVersion)
+        .filter(
+          (i) => i?.styleItemId && i?.quoteVersion && i?.quoteVersion !== "New",
+        )
         .map((i) => Number(i.quoteVersion))
         .filter((n) => n > 0),
     ),
   ].sort((a, b) => a - b);
-
-  const versionDropdown = (
-    <div className="flex items-center gap-2 ml-2">
-      <span className="text-xs text-gray-500 mt-1">Version</span>
-
-      <div className="relative">
-        <select
-          value={quoteVersion}
-          onChange={(e) => setQuoteVersion(Number(e.target.value))}
-          className="appearance-none bg-white border border-gray-300 text-gray-700 text-xs rounded-md pl-2 pr-6 py-1 
-                   focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 
-                   hover:border-gray-400 transition"
-        >
-          {quoteVersionOptions.map((v, index) => (
-            <option key={v} value={v}>
-              {index === quoteVersionOptions.length - 1 ? "Latest" : `V${v}`}
-            </option>
-          ))}
-        </select>
-
-        {/* Custom arrow */}
-        <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-gray-400">
-          <svg
-            className="w-3 h-3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </div>
-      </div>
-    </div>
-  );
 
   const handleKeyDown = (event) => {
     let charCode = String.fromCharCode(event.which).toLowerCase();
@@ -670,7 +633,7 @@ const PurchaseOrderForm = ({
   const actionIconPairClass = "flex items-center gap-1";
 
   const leftActions = [
-    ...(readOnly || status === "APPROVED"
+    ...(readOnly
       ? []
       : [
           {
@@ -1615,13 +1578,7 @@ const PurchaseOrderForm = ({
           setDiscountValue={setDiscountValue}
           poItems={poItems}
           taxTypeId={taxTemplateId}
-          readOnly={
-            readOnly ||
-            (quoteVersionOptions.length > 0 &&
-              Number(quoteVersion) !==
-                quoteVersionOptions[quoteVersionOptions.length - 1]) ||
-            childRecordCount > 0
-          }
+          readOnly={readOnly}
           // isSupplierOutside={isSupplierOutside()}
           isNewVersion={isNewVersion}
           quoteVersion={quoteVersion}
@@ -1665,7 +1622,6 @@ const PurchaseOrderForm = ({
             styleItemList={styleItemList}
             discountType={discountType}
             sizeList={sizeList}
-            quoteVersion={quoteVersion}
             discountValue={discountValue}
           />
         </PDFViewer>
@@ -1692,13 +1648,7 @@ const PurchaseOrderForm = ({
             poItems={poItems}
             enrichedPoItems={enrichedPoItems}
             setPoItems={setPoItems}
-            readOnly={
-              readOnly ||
-              (quoteVersionOptions.length > 0 &&
-                Number(quoteVersion) !==
-                  quoteVersionOptions[quoteVersionOptions.length - 1]) ||
-              childRecordCount > 0
-            }
+            readOnly={readOnly}
             uomList={uomList}
             hsnList={hsnList}
             styleItemList={styleItemList}
@@ -1713,7 +1663,6 @@ const PurchaseOrderForm = ({
           />
         }
         footer={footerContent}
-        versionDropdown={id ? versionDropdown : null}
       />
     </>
   );
