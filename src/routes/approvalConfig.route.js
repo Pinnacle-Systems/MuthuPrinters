@@ -7,6 +7,7 @@ import {
   update,
   remove,
   getPendingApproval,
+  markApprovalRead,
 } from "../controllers/approvalConfig.controller.js";
 
 router.post("/", create);
@@ -14,6 +15,8 @@ router.post("/", create);
 router.get("/", get);
 
 router.get("/getPendingApproval", getPendingApproval);
+
+router.put("/markRead/:id", markApprovalRead);
 
 router.get("/:id", getOne);
 

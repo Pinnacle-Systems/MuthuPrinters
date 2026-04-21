@@ -346,6 +346,7 @@ async function advanceApproval(
       approvedById: parseInt(userId),
       approvedAt: new Date(),
       remarks: remarks || null,
+      isRead: false,
     },
   });
 
@@ -387,7 +388,6 @@ export async function approveRecord(
         LevelLogs: true,
       },
     });
-
     if (!log) return { statusCode: 1, message: "Approval log not found" };
     if (log.status === "APPROVED")
       return { statusCode: 1, message: "Already approved" };
@@ -493,7 +493,7 @@ export async function rejectRecord(
     if (log.status !== "PENDING") {
       return {
         statusCode: 1,
-        message: `Cannot reject — status is ${log.status}`,
+        message: `Cannot reject status is ${log.status}`,
       };
     }
 
@@ -525,6 +525,7 @@ export async function rejectRecord(
         rejectedById: parseInt(userId),
         rejectedAt: new Date(),
         remarks: remarks || null,
+        isRead: false,
       },
     });
 

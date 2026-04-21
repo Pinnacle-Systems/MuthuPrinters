@@ -78,10 +78,49 @@ export const MultiSelectDropdown = ({
   className = "",
   inputClass,
   disabled = false,
+  onBlur,
+  onFocus,
+  containerRef,
+  onTabFromLastItem,
 }) => {
+  const wrapperRef = useRef(null);
+  const resolvedRef = containerRef || wrapperRef;
+
+  useEffect(() => {
+    if (!onTabFromLastItem) return;
+
+    const handleGlobalKeyDown = (e) => {
+      if (e.key !== "Tab" || e.shiftKey) return;
+
+      const wrapper = resolvedRef.current;
+      if (!wrapper) return;
+
+      const active = document.activeElement;
+
+      const isInsideWrapper = wrapper.contains(active);
+
+      // Find any open portal menu in the document body
+      // react-multiselect-checkboxes renders with class "dropdown-content" inside ".rmsc"
+      const portalMenu = document.querySelector(".rmsc .dropdown-content");
+      const isInsidePortal = portalMenu && portalMenu.contains(active);
+
+      if (isInsideWrapper || isInsidePortal) {
+        e.preventDefault();
+        e.stopPropagation();
+        onTabFromLastItem();
+      }
+    };
+
+    document.addEventListener("keydown", handleGlobalKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleGlobalKeyDown, true);
+    };
+  }, [onTabFromLastItem, resolvedRef]);
+
   return (
     <div
-      className={`m-0.5  md:grid-cols-2 items-center z-0 data  ${className}`}
+      ref={resolvedRef}
+      className={`m-0.5 md:grid-cols-2 items-center z-0 data ${className}`}
     >
       <label
         className={`md:text-start block text-[11px] font-bold text-slate-700 mb-1${labelName}`}
@@ -129,6 +168,8 @@ export const MultiSelectDropdown = ({
         }}
         className="custom-multiselect"
         disabled={readOnly || disabled}
+        onBlur={onBlur}
+        onFocus={onFocus}
       />
     </div>
   );
@@ -279,7 +320,7 @@ export const TextInput = forwardRef(
           disabled={disabled}
           tabIndex={tabIndex ?? undefined}
           className={`h-7 w-full px-3 py-0 border border-gray-300 rounded-lg
-          focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+          outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm
           ${
             readOnly || disabled
@@ -472,7 +513,7 @@ export const DropdownInput = forwardRef(
             defaultValue={defaultValue}
             required={required}
             className={`h-7 w-full px-3 py-0 border border-gray-300 rounded-lg
-    focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+    outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
     transition-all duration-150 shadow-sm
     ${readOnly || disabled ? "bg-slate-100 cursor-not-allowed" : "bg-white cursor-pointer"}
     ${!value || value === "" ? "text-gray-500" : "text-gray-800"}
@@ -888,7 +929,7 @@ export function ReusableInput({
         onKeyDown={onKeyDown}
         disabled={disabled}
         className={`h-7 w-full px-2 py-0 border border-slate-300 rounded-md 
-          focus:border-indigo-300 focus:outline-none transition-all duration-200
+          focus:border-indigo-300 outline-none transition-all duration-200
           hover:border-slate-400 ${
             readOnly || disabled ? "bg-slate-100" : ""
           } ${FORM_INPUT_TEXT_CLASS} ${className}`}
@@ -1386,7 +1427,7 @@ export const TextInputNew = forwardRef(
           max={max ? String(max) : undefined}
           className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
-          transition-all duration-150 shadow-sm 
+          transition-all duration-150 shadow-sm outline-none
           ${readOnly || disabled ? "bg-slate-100" : ""}
           ${className}`}
         />

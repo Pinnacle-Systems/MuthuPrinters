@@ -274,7 +274,7 @@ const CancelItems = ({
               onClick={() => {
                 if (!supplierId) {
                   Swal.fire({
-                    icon: "success",
+                    icon: "warning",
                     title: ` Choose Supplier`,
                     showConfirmButton: false,
                     timer: 2000,

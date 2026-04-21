@@ -72,6 +72,7 @@ export function useAdaptiveLayout(headerRef, footerRef, containerRef, gap = 8) {
 export const TransactionScreen = ({
   title,
   badge,
+  versionDropdown,
   closeIcon,
   onClose,
   onKeyDown,
@@ -120,11 +121,11 @@ export const TransactionScreen = ({
   const hasSidebarSections = sidebarDetailsSections.length > 0;
   const summaryContent = Array.isArray(detailsSummary)
     ? detailsSummary.filter(Boolean).map((item, index) => (
-        <span key={index}>
-          {index > 0 ? " | " : ""}
-          {item}
-        </span>
-      ))
+      <span key={index}>
+        {index > 0 ? " | " : ""}
+        {item}
+      </span>
+    ))
     : detailsSummary;
 
   useEffect(() => {
@@ -171,11 +172,10 @@ export const TransactionScreen = ({
               key={layoutOption}
               type="button"
               onClick={() => setActiveDetailsLayout(layoutOption)}
-              className={`rounded px-2 py-1 text-[11px] font-medium transition ${
-                isActive
+              className={`rounded px-2 py-1 text-[11px] font-medium transition ${isActive
                   ? "bg-slate-700 text-white shadow-sm"
                   : "text-slate-600 hover:bg-white"
-              }`}
+                }`}
             >
               {label}
             </button>
@@ -346,6 +346,7 @@ export const TransactionScreen = ({
                 <h1 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                   {title}
                   {badge}
+                  {versionDropdown}
                 </h1>
                 <div className="flex items-center gap-2">
                   {renderDetailsLayoutSwitch()}

@@ -160,3 +160,14 @@ export const partyType = [
     value: "supplier",
   },
 ];
+
+export const orderTypes = [
+  { show: "Sample", value: "Sample" },
+  { show: "Bulk", value: "Bulk" },
+];
+
+export const jobTypes = [
+  { show: "Internal", value: "Internal" },
+  { show: "External", value: "External" },
+  { show: "Both", value: "Both" },
+];

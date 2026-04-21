@@ -61,7 +61,7 @@ const CommonFormFooter = ({
   readOnly = false,
   showTermSelect = false,
   termValue = "",
-  onTermChange = () => {},
+  onTermChange = () => { },
   termOptions = [],
   totalsRows,
   extraTotalsContent = null,
@@ -71,6 +71,7 @@ const CommonFormFooter = ({
   remarksPlaceholder = "Additional notes...",
   termsPlaceholder = "Select or type Terms & Conditions...",
   stacked = false,
+  hasSummaryTitle = false,
 }) => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -329,7 +330,7 @@ const CommonFormFooter = ({
             <textarea
               ref={termsTextareaRef}
               disabled={readOnly}
-              className="min-h-[2.5rem] flex-1 w-full overflow-auto rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
+              className="min-h-[2.5rem] flex-1 w-full overflow-auto focus:outline-none rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
               value={terms || ""}
               onChange={(e) => setTerms(e.target.value)}
               placeholder={termsPlaceholder}
@@ -340,7 +341,7 @@ const CommonFormFooter = ({
         <div
           className={[
             "flex h-full flex-col rounded-md border border-slate-200 bg-white p-1.5 shadow-sm",
-            stacked ? "" : "md:col-span-2",
+            stacked ? "" : "md:col-span-4",
           ]
             .filter(Boolean)
             .join(" ")}
@@ -350,7 +351,7 @@ const CommonFormFooter = ({
             readOnly={readOnly}
             value={remarks || ""}
             onChange={(e) => setRemarks(e.target.value)}
-            className="min-h-[2.5rem] flex-1 w-full overflow-auto rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
+            className="min-h-[2.5rem] focus:outline-none flex-1 w-full overflow-auto rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
             placeholder={remarksPlaceholder}
           />
         </div>
@@ -358,7 +359,7 @@ const CommonFormFooter = ({
         <div
           className={[
             "grid grid-cols-1 gap-2",
-            stacked ? "" : "md:col-span-6",
+            stacked ? "" : "md:col-span-4",
             stacked
               ? ""
               : hasLeftSummaryContent && hasRightSummaryContent
@@ -370,6 +371,7 @@ const CommonFormFooter = ({
         >
           {hasLeftSummaryContent ? (
             <div className="rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              {hasSummaryTitle && <h2 className="mb-1 text-[12px] font-bold text-slate-700">{hasSummaryTitle}</h2>}
               {renderSummaryRows(leftSummaryRows)}
               {extraTotalsContent && extraTotalsContentColumn === "left" ? (
                 <div className="pt-0.5">{extraTotalsContent}</div>

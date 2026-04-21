@@ -113,7 +113,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     if (!validateData(data)) {
       Swal.fire({
         title: "Please fill all required fields...!",
-        icon: "success",
+        icon: "error",
         didClose: () => {
           countryNameRef?.current?.focus();
         }

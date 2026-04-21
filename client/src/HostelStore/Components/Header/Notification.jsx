@@ -4,8 +4,9 @@ import { Bell } from "lucide-react";
 import { getCommonParams } from "../../../Utils/helper";
 import { push } from "../../../redux/features/opentabs";
 import useOutsideClick from "../../../CustomHooks/handleOutsideClick";
-import { useGetPendingApprovalQuery } from "../../../redux/uniformService/ApprovalMasterServices";
-import { VIEW } from "../../../icons";
+import { useGetPendingApprovalQuery, useMarkApprovalReadMutation } from "../../../redux/uniformService/ApprovalMasterServices";
+import { TICK_ICON, VIEW } from "../../../icons";
+import { useGetUserByIdQuery } from "../../../redux/services/UsersMasterService";
 
 // Status display config — add new statuses here if needed
 const STATUS_DISPLAY = {

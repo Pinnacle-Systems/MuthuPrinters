@@ -46,6 +46,7 @@ export default function Form({
   const childRecord = useRef(0);
   const [errors, setErrors] = useState({});
   const [dispatchInvalidate] = useInvalidateTags();
+  const multiSelectRef = useRef(null);
 
   const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
   const {
@@ -378,6 +379,10 @@ export default function Form({
                   readOnly={readOnly}
                   disabled={childRecord.current > 0}
                   className="size-multiselect"
+                  containerRef={multiSelectRef}
+                  onTabFromLastItem={() => {
+                    toggleButtonRef?.current?.focus();
+                  }}
                 />
               </div>
               <div className="mt-5">

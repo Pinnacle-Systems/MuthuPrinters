@@ -40,6 +40,8 @@ import {
   GsmMasterApi,
   SizetemplateMasterApi,
   purchaseReportApi,
+  ProcessMasterApi,
+  ProcessGroupMasterApi,
 } from "./services";
 import paymentApi from "./services/PaymentService";
 import StyleMasterApi from "./services/StyleMasterService";
@@ -54,7 +56,9 @@ import {
   purchaseCancelApi,
   purchaseBillEntryApi,
   ApprovalMasterApi,
+  JobCardApi,
 } from "./uniformService";
+import OrderEntryApi from "./uniformService/OrderEntryService";
 
 const commonReducers = {
   openTabs,
@@ -109,6 +113,10 @@ const commonReducers = {
   SizeTemplate: SizetemplateMasterApi.reducer,
   purchaseReport: purchaseReportApi.reducer,
   approvalMaster: ApprovalMasterApi.reducer,
+  orderEntry: OrderEntryApi.reducer,
+  process: ProcessMasterApi.reducer,
+  processGroup: ProcessGroupMasterApi.reducer,
+  jobCard: JobCardApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -162,6 +170,10 @@ const commonMiddleware = [
   SizetemplateMasterApi.middleware,
   purchaseReportApi.middleware,
   ApprovalMasterApi.middleware,
+  OrderEntryApi.middleware,
+  ProcessMasterApi.middleware,
+  ProcessGroupMasterApi.middleware,
+  JobCardApi.middleware,
 ];
 
 const store = configureStore({
