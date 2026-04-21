@@ -57,3 +57,4 @@ export const PURCHASE_REPORT_API = "purchaseReport";
 export const ORDER_ENTRY_API = "orderEntry";
 export const PROCESS_API = "process";
 export const PROCESS_GROUP_API = "processGroup";
+export const JOB_CARD_API = "jobCard";

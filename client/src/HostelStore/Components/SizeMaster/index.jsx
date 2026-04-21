@@ -118,7 +118,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
 
       Swal.fire({
         title: "Please fill all required fields...!",
-        icon: "success",
+        icon: "error",
         didClose: () => {
           countryNameRef?.current?.focus();
         }

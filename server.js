@@ -60,6 +60,7 @@ import {
   approvalMasterData,
   orderEntry,
   processMaster,
+  processGroup,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -152,7 +153,7 @@ app.use("/approval", approvalConfig);
 app.use("/approvalMasterData", approvalMasterData);
 app.use("/orderEntry", orderEntry);
 app.use("/process", processMaster);
-// app.use("/processGroup", processGroup);
+app.use("/processGroup", processGroup);
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;

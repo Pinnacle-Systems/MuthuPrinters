@@ -352,7 +352,8 @@ const PurchaseOrderForm = ({
       termsAndCondtion,
       termsId,
       isNewVersion:
-        status === "APPROVED" && !isAdmin
+        (status === "APPROVED" && !isAdmin) ||
+        (status === "REJECTED" && !isAdmin)
           ? true
           : isNewVersion || (status === "PENDING" && isAdmin)
             ? true

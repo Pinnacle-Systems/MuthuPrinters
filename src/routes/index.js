@@ -57,3 +57,4 @@ export { default as approvalConfig } from "./approvalConfig.route.js";
 export { default as approvalMasterData } from "./approvalMasterData.route.js";
 export { default as orderEntry } from "./orderEntry.route.js";
 export { default as processMaster } from "./process.route.js";
+export { default as processGroup } from "./processGroup.route.js";

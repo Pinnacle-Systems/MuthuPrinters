@@ -218,7 +218,7 @@ export default function Form({
     if (!validateData(data)) {
       Swal.fire({
         title: "Please fill all required fields...!",
-        icon: "success",
+        icon: "error",
         timer: 1000,
         didClose: () => {
           branchRef?.current?.focus();

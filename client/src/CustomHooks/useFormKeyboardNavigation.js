@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback } from "react";
 
 /**
  * Reusable hook for form keyboard navigation
@@ -15,7 +15,7 @@ export const useFormKeyboardNavigation = () => {
 
   // Handler for last input field (moves to toggle button on Enter)
   const handleLastInputKeyDown = useCallback((e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       toggleButtonRef.current?.focus();
     }
@@ -23,29 +23,35 @@ export const useFormKeyboardNavigation = () => {
 
   // Handler for toggle button (moves to Save & Close on Tab)
   const handleToggleKeyDown = useCallback((e) => {
-    if (e.key === 'Tab' && !e.shiftKey) {
+    if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
       saveCloseButtonRef.current?.focus();
     }
   }, []);
 
   // Handler for Save & Close button
-  const handleSaveCloseKeyDown = useCallback((saveDataFn) => (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.stopPropagation();
-      saveDataFn("close");
-    }
-  }, []);
+  const handleSaveCloseKeyDown = useCallback(
+    (saveDataFn) => (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        saveDataFn("close");
+      }
+    },
+    [],
+  );
 
   // Handler for Save & New button
-  const handleSaveNewKeyDown = useCallback((saveDataFn) => (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.stopPropagation();
-      saveDataFn("new");
-    }
-  }, []);
+  const handleSaveNewKeyDown = useCallback(
+    (saveDataFn) => (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        saveDataFn("new");
+      }
+    },
+    [],
+  );
 
   // Focus first input (useful for onNew)
   const focusFirstInput = useCallback(() => {
