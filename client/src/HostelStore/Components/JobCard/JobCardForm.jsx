@@ -198,6 +198,37 @@ const JobCardForm = ({
 
     const customerRef = useRef(null);
     const { userId, finYearId, branchId } = getCommonParams();
+    // const params = {
+    //     companyId: secureLocalStorage.getItem(
+    //         sessionStorage.getItem("sessionId") + "userCompanyId"
+    //     ),
+    // };
+    // const {
+    //     data: processList,
+    //     isLoading: isProcessLoading,
+    //     isFetching: isProcessFetching,
+    // } = useGetProcessMasterQuery({ params });
+
+    // const {
+    //     data: processGroupList,
+    //     isLoading: isProcessGroupLoading,
+    //     isFetching: isProcessGroupFetching,
+    // } = useGetProcessGroupMasterQuery({ params });
+
+    // const boardIds = processGroupList?.data?.find((item) => item.name === "BOARD QUALITY")?.processGroupList?.map((item) => item.id);
+    // const boardList = processList?.data?.filter((item) => boardIds?.includes(item.id));
+
+    // const defaultIds = processGroupList?.data?.find((item) => item.name === "DEFAULT")?.processGroupList?.map((item) => item.id);
+    // const defaultList = processList?.data?.filter((item) => defaultIds?.includes(item.id));
+
+    // const laminationIds = processGroupList?.data?.find((item) => item.name === "LAMINATION")?.processGroupList?.map((item) => item.id);
+    // const laminationList = processList?.data?.filter((item) => laminationIds?.includes(item.id));
+
+    // const varnishIds = processGroupList?.data?.find((item) => item.name === "VARNISH")?.processGroupList?.map((item) => item.id);
+    // const varnishList = processList?.data?.filter((item) => varnishIds?.includes(item.id));
+
+    // const machineIds = processGroupList?.data?.find((item) => item.name === "MACHINE")?.processGroupList?.map((item) => item.id);
+    // const machineList = processList?.data?.filter((item) => machineIds?.includes(item.id));
 
     const params = {
         companyId: secureLocalStorage.getItem(
@@ -400,11 +431,11 @@ const JobCardForm = ({
                 widthClass={"w-[90%] h-[90%]"}
             >
                 <PDFViewer style={tw("w-full h-full")}>
-                    {/* <JobCardPrintFormat
+                    <JobCardPrintFormat
                         singleData={singleData?.data}
                         // branchData={branchData}
                         customerList={customerList}
-                    /> */}
+                    />
                 </PDFViewer>
             </Modal>
             <div className="flex flex-col" onKeyDown={handleKeyDown}>
@@ -774,7 +805,7 @@ const JobCardForm = ({
                         </button>
                     </div>
                 </div>
-            </div>
+            </div >
         </>
     );
 };
