@@ -1,7 +1,6 @@
 import { IoArrowBackCircleSharp } from "react-icons/io5";
-
 import {
-    DateInputNew,
+    CheckBox,
     DropdownInput,
     ReusableInput,
     TextInput,
@@ -13,22 +12,19 @@ import {
     findFromList,
     getCommonParams,
     ModeChip,
-    renameFile,
 } from "../../../Utils/helper";
 import { toast } from "react-toastify";
 import { FiEdit2, FiSave } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { dropDownListObject } from "../../../Utils/contructObject";
-import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { PartyMaster } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
-import Modal from "../../../UiComponents/Modal/index.js";
-import { getImageUrlPath } from "../../../Constants/index.js";
-import { Plus } from "lucide-react";
-import { QRCodeCanvas } from "qrcode.react";
-import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFooter.jsx";
 import { useAddJobCardMutation, useGetJobCardByIdQuery, useUpdateJobCardMutation } from "../../../redux/uniformService/JobCardService.js";
+import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
+import { useGetProcessGroupMasterQuery } from "../../../redux/services/ProcessGroupMaster.service.js";
+import secureLocalStorage from "react-secure-storage";
+
 const JobCardForm = ({
     onClose,
     id,
@@ -36,7 +32,7 @@ const JobCardForm = ({
     readOnly,
     setReadOnly,
     customerList,
-    termsData,
+    gsmList,
 }) => {
     const today = new Date();
 
@@ -60,9 +56,60 @@ const JobCardForm = ({
     const [termsAndCondition, setTermsAndCondition] = useState("");
     const [termsId, setTermsId] = useState("");
     const customerRef = useRef(null);
-    const [dispatchInvalidate] = useInvalidateTags();
+    const [gsm, setGsm] = useState("");
+    const [otherBoard, setOtherBoard] = useState("");
+    const [fullBoard, setFullBoard] = useState("");
+    const [noOfPockets, setNoOfPockets] = useState("");
+    const [cuttingSize, setCuttingSize] = useState("");
+    const [runningQty, setRunningQty] = useState("");
+    const [isFourColor, setIsFourColor] = useState(false);
+    const [isCutColor, setIsCutColor] = useState(false);
+    const [isFront, setIsFront] = useState(false);
+    const [isFrontAndBack, setIsFrontAndBack] = useState(false);
+    const [isCMYK, setIsCMYK] = useState(false);
+    const [isCutColMachine, setIsCutColMachine] = useState(false);
+    const [isFrontMachine, setIsFrontMachine] = useState(false);
+    const [isFrontBackMachine, setIsFrontBackMachine] = useState(false);
+    const [boardItems, setBoardItems] = useState([]);
+    const [selectedProcesses, setSelectedProcesses] = useState([]);
+    const [selectedMachines, setSelectedMachines] = useState([]);
+    const [laminations, setLaminations] = useState([]);
+    const [varnishes, setVarnishes] = useState([]);
+    const [plates, setPlates] = useState([]);
+    const [dies, setDies] = useState([]);
 
     const { userId, finYearId, branchId } = getCommonParams();
+    const params = {
+        companyId: secureLocalStorage.getItem(
+            sessionStorage.getItem("sessionId") + "userCompanyId"
+        ),
+    };
+    const {
+        data: processList,
+        isLoading: isProcessLoading,
+        isFetching: isProcessFetching,
+    } = useGetProcessMasterQuery({ params });
+
+    const {
+        data: processGroupList,
+        isLoading: isProcessGroupLoading,
+        isFetching: isProcessGroupFetching,
+    } = useGetProcessGroupMasterQuery({ params });
+
+    const boardIds = processGroupList?.data?.find((item) => item.name === "BOARD QUALITY")?.processGroupList?.map((item) => item.id);
+    const boardList = processList?.data?.filter((item) => boardIds?.includes(item.id));
+
+    const defaultIds = processGroupList?.data?.find((item) => item.name === "DEFAULT")?.processGroupList?.map((item) => item.id);
+    const defaultList = processList?.data?.filter((item) => defaultIds?.includes(item.id));
+
+    const laminationIds = processGroupList?.data?.find((item) => item.name === "LAMINATION")?.processGroupList?.map((item) => item.id);
+    const laminationList = processList?.data?.filter((item) => laminationIds?.includes(item.id));
+
+    const varnishIds = processGroupList?.data?.find((item) => item.name === "VARNISH")?.processGroupList?.map((item) => item.id);
+    const varnishList = processList?.data?.filter((item) => varnishIds?.includes(item.id));
+
+    const machineIds = processGroupList?.data?.find((item) => item.name === "MACHINE")?.processGroupList?.map((item) => item.id);
+    const machineList = processList?.data?.filter((item) => machineIds?.includes(item.id));
 
     const {
         data: singleData,
@@ -72,11 +119,6 @@ const JobCardForm = ({
 
     const [addData] = useAddJobCardMutation();
     const [updateData] = useUpdateJobCardMutation();
-
-    const searchFields = {
-        searchDocId,
-        searchDocDate,
-    };
 
     const syncFormWithDb = useCallback(
         (data) => {
@@ -200,13 +242,6 @@ const JobCardForm = ({
         }
     };
 
-    const findDuplicates = (items) => {
-        const seen = new Map(); // key -> first index
-        const duplicates = [];
-
-        return duplicates; // empty array = no duplicates
-    };
-
     const validateData = (data) => {
         const items = data?.inwardItems || [];
         const checks = [
@@ -270,60 +305,92 @@ const JobCardForm = ({
         }
     };
 
-    useEffect(() => {
-        customerRef.current?.focus();
-    }, []);
-
-    useEffect(() => {
-        if (attachments?.length >= 4) return;
-        setAttachments((prev) => {
-            let newArray = Array.from({ length: 4 - prev?.length }, () => {
-                return { date: today, filePath: "", log: "", name: "" };
-            });
-            return [...prev, ...newArray];
-        });
-    }, [setAttachments, attachments]);
-
-    function handleInputChange(value, index, field) {
-        const newBlend = structuredClone(attachments);
-        newBlend[index][field] = value;
-        setAttachments(newBlend);
-    }
-
-    function openPreview(filePath) {
-        window.open(
-            filePath instanceof File
-                ? URL.createObjectURL(filePath)
-                : getImageUrlPath(filePath),
+    const handleBoardQualityChange = (boardId) => {
+        setBoardItems((prev) =>
+            prev.includes(boardId)
+                ? prev.filter((id) => id !== boardId)
+                : [...prev, boardId]
         );
-    }
+    };
 
-    function addNewComments() {
-        setAttachments((prev) => [...prev, { log: "", date: today, filePath: "" }]);
-    }
+    const handleProcessChange = (boardId) => {
+        setSelectedProcesses((prev) =>
+            prev.includes(boardId)
+                ? prev.filter((id) => id !== boardId)
+                : [...prev, boardId]
+        );
+    };
 
-    function deleteRow(index) {
-        setAttachments((prev) => prev.filter((_, i) => i !== index));
-    }
+    const handleMachineChange = (boardId) => {
+        setSelectedMachines((prev) =>
+            prev.includes(boardId)
+                ? prev.filter((id) => id !== boardId)
+                : [...prev, boardId]
+        );
+    };
+
+    const handleMainCheck = (id) => {
+        setLaminations((prev) => {
+            const exists = prev.find((l) => l.processId === id);
+
+            if (exists) {
+                return prev.filter((l) => l.processId !== id);
+            } else {
+                return [...prev, { processId: id, isSelected: true, isFront: false, isFrontAndBack: false }];
+            }
+        });
+    };
+
+    const handleFrontCheck = (id) => {
+        setLaminations((prev) =>
+            prev.map((l) =>
+                l.processId === id ? { ...l, isFront: !l.isFront } : l
+            )
+        );
+    };
+
+    const handleFrontBackCheck = (id) => {
+        setLaminations((prev) =>
+            prev.map((l) =>
+                l.processId === id ? { ...l, isFrontAndBack: !l.isFrontAndBack } : l
+            )
+        );
+    };
+
+    const handleMainCheckVarnish = (id) => {
+        setVarnishes((prev) => {
+            const exists = prev.find((l) => l.processId === id);
+
+            if (exists) {
+                return prev.filter((l) => l.processId !== id);
+            } else {
+                return [...prev, { processId: id, isSelected: true, isFront: false, isFrontAndBack: false }];
+            }
+        });
+    };
+
+    const handleFrontVarnishCheck = (id) => {
+        setVarnishes((prev) =>
+            prev.map((l) =>
+                l.processId === id ? { ...l, isFront: !l.isFront } : l
+            )
+        );
+    };
+
+    const handleFrontBackVarnishCheck = (id) => {
+        setVarnishes((prev) =>
+            prev.map((l) =>
+                l.processId === id ? { ...l, isFrontAndBack: !l.isFrontAndBack } : l
+            )
+        );
+    };
 
     return (
         <>
-            {attachmentModal && (
-                <Modal
-                    isOpen={attachmentModal}
-                    onClose={() => {
-                        setAttachmentModal(false);
-                        setSelectedAttachmentIndex(null);
-                    }}
-                    widthClass="p-4 w-[600px] h-[420px]"
-                >
-
-                </Modal>
-            )}
             <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
                 <div className="flex justify-between items-center">
                     <h1 className="text-lg font-bold flex items-center gap-2">
-                        Order Entry
+                        Job Card
                         <ModeChip id={id} readOnly={readOnly} />
                     </h1>
                     <button
@@ -337,11 +404,11 @@ const JobCardForm = ({
                     </button>
                 </div>
             </div>
-            <div className="space-y-2 py-2" onKeyDown={handleKeyDown}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <div className="space-y-1.5 py-2" onKeyDown={handleKeyDown}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
                         <h2 className="font-medium text-slate-700 mb-1 text-xs">Basic Details</h2>
-                        <div className="grid grid-cols-2 gap-1">
+                        <div className="grid grid-cols-4 gap-1">
                             <ReusableInput
                                 label="Order Entry No"
                                 readOnly
@@ -355,13 +422,6 @@ const JobCardForm = ({
                                 readOnly={true}
                                 disabled
                             />
-
-                        </div>
-                    </div>
-
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">Order Details</h2>
-                        <div className="grid grid-cols-3 gap-1 ">
                             <DropdownInput
                                 name="Order Type"
                                 options={orderTypes}
@@ -394,16 +454,6 @@ const JobCardForm = ({
                                     className={"text-right"}
                                 />
                             </div>
-                            <div className="w-28">
-                                <DateInputNew
-                                    name="Delivery Date"
-                                    value={deliveryDate}
-                                    setValue={setDeliveryDate}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    type={"date"}
-                                />
-                            </div>
                         </div>
                     </div>
 
@@ -411,7 +461,7 @@ const JobCardForm = ({
                         <h2 className="font-medium text-slate-700 mb-1 text-xs">
                             Customer Details
                         </h2>
-                        <div className="grid grid-cols-2 gap-1">
+                        <div className="grid grid-cols-4 gap-1">
                             <div className="col-span-2">
                                 <DropdownWithModal
                                     name="Customer"
@@ -458,375 +508,266 @@ const JobCardForm = ({
                             />
                         </div>
                     </div>
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">QR Code</h2>
-                        <div className="flex flex-col items-center justify-center gap-2">
-                            {docId && docId !== "New" ? (
-                                <>
-                                    <QRCodeCanvas
-                                        value={JSON.stringify({ id, docId })}
-                                        size={96}
-                                        className="border border-slate-200 rounded"
-                                    />
-                                    <span className="text-xs text-slate-400">Scan to identify order</span>
-                                </>
-                            ) : (
-                                <div className="w-24 h-24 flex items-center justify-center border border-dashed border-slate-300 rounded text-slate-400 text-xs text-center px-2">
-                                    QR appears after save
-                                </div>
-                            )}
-                        </div>
-                    </div>
                 </div>
-                <div className="border border-slate-200 p-2 py-3 bg-white rounded-md shadow-sm gap-x-4 flex">
-                    <div className="w-1/2 px-2">
-                        <fieldset className="">
-                            <legend className="font-medium text-slate-700 mb-2 text-xs">Customer Requirements</legend>
-                            <textarea
-                                readOnly={readOnly}
-                                value={requirements}
-                                onChange={(e) => {
-                                    setRequirements(e.target.value);
-                                }}
-                                className="w-full overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md 
-focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"                            placeholder="Requirements..."
-                                onKeyDown={(e) => {
-                                    if (e.ctrlKey && e.key === "Enter") {
-                                        e.preventDefault();
+                <div className="border border-slate-200 p-2 py-3 bg-white rounded-md shadow-sm gap-x-2 flex">
+                    <div className="w-1/2">
+                        <fieldset className="border border-gray-300 rounded-md pb-2">
+                            <legend className="font-medium text-slate-700 mb-2  bg-white text-xs px-1">Board Details</legend>
+                            <div className="grid grid-cols-5 gap-x-2">
+                                {boardList?.map((item) => (
+                                    // <label key={item.id} className="text-xs font-medium gap-2 flex text-slate-700">
+                                    //     <input
+                                    //         type="checkbox"
+                                    //         onClick={() => handleBoardQualityChange(item.id)}
+                                    //         checked={boardItems.includes(item.id)}
+                                    //         className={`px-2 py-1 rounded border ${boardList === item.id ? "bg-indigo-500 text-white" : "bg-white "
+                                    //             }`}
+                                    //     />
+                                    //     {item.name}
+                                    // </label>
+                                    <CheckBox
+                                        name={item.name}
+                                        value={boardItems.includes(item.id)}
+                                        setValue={() => handleBoardQualityChange(item.id)}
+                                        readOnly={readOnly}
+                                    />
+                                ))}
+                            </div>
+                            <div className="grid grid-cols-4 gap-x-2 mt-3 px-2">
+                                <DropdownWithModal
+                                    name="Gsm"
+                                    options={dropDownListObject(
+                                        id
+                                            ? gsmList?.data
+                                            : gsmList?.data?.filter(
+                                                (item) => item?.active,
+                                            ),
+                                        "name",
+                                        "id",
+                                    )}
+                                    value={gsm}
+                                    setValue={setGsm}
+                                    required={true}
+                                    readOnly={readOnly}
+                                    className={`w-[150px]`}
+                                    addNewLabel="+ Add New Gsm"
+                                    // childComponent={GsmMaster}
+                                    addNewModalWidth="w-[90%] h-[95%]"
+                                />
+                                <TextInput
+                                    name="Others / Board"
+                                    value={otherBoard}
+                                    setValue={setOtherBoard}
+                                    readOnly={readOnly}
+                                    type={"text"}
+                                // onFocus={(e) => {
+                                //     e.target.select();
+                                // }}
+                                />
+                                <TextInput
+                                    name="Full Board"
+                                    value={fullBoard}
+                                    setValue={setFullBoard}
+                                    readOnly={readOnly}
+                                    type={"text"}
+                                />
+                                <TextInput
+                                    name="No of Pocket"
+                                    value={noOfPockets}
+                                    setValue={setNoOfPockets}
+                                    readOnly={readOnly}
+                                    type={"text"}
+                                />
+                            </div>
+                            <div className="px-2 mt-3">
+                                <div className="flex gap-x-2 mt-2">
 
-                                        const textarea = e.target;
-                                        const start = textarea.selectionStart;
-                                        const end = textarea.selectionEnd;
+                                    <TextInput
+                                        name="Cutting Size"
+                                        value={cuttingSize}
+                                        setValue={setCuttingSize}
+                                        readOnly={readOnly}
+                                        type={"text"}
+                                    />
+                                    <TextInput
+                                        name="Running Qty"
+                                        value={runningQty}
+                                        setValue={setRunningQty}
+                                        readOnly={readOnly}
+                                        type={"text"}
+                                        className={"text-right"}
+                                    />
+                                    <div className="flex items-center gap-2 mt-2 mx-2">
+                                        <CheckBox
+                                            name="4 COLOR"
+                                            value={isFourColor}
+                                            setValue={setIsFourColor}
+                                            readOnly={readOnly}
+                                        />
+                                        <CheckBox
+                                            name="CUT COLOR"
+                                            value={isCutColor}
+                                            setValue={setIsCutColor}
+                                            readOnly={readOnly}
+                                        />
+                                        <CheckBox
+                                            name="FRONT"
+                                            value={isFront}
+                                            setValue={setIsFront}
+                                            readOnly={readOnly}
+                                        />
+                                        <CheckBox
+                                            name="FRONT & BACK"
+                                            value={isFrontAndBack}
+                                            setValue={setIsFrontAndBack}
+                                            readOnly={readOnly}
+                                        />
+                                    </div>
 
-                                        const newValue =
-                                            requirements.substring(0, start) + "\n" + requirements.substring(end);
+                                </div>
 
-                                        setRequirements(newValue);
 
-                                        // ✅ Restore focus + cursor properly
-                                        requestAnimationFrame(() => {
-                                            textarea.focus();
-                                            textarea.setSelectionRange(start + 1, start + 1);
-                                        });
-                                    }
-                                }}
-                                rows={9}
-                            />
+                            </div>
+                        </fieldset>
+                        <fieldset className="border border-gray-300 rounded-md pb-2 mt-2">
+                            <legend className="font-medium text-slate-700 mb-2 bg-white text-xs px-1">
+                                Varnish  Details
+                            </legend>
+
+                            <div className="flex flex-col gap-2">
+                                {varnishList?.map((item) => {
+                                    const selected = varnishes.find(l => l.processId === item.id);
+
+                                    return (
+                                        <div key={item.id} className="grid grid-cols-3 gap-2">
+
+                                            {/* Main checkbox */}
+                                            <CheckBox
+                                                name={item.name}
+                                                value={!!selected}
+                                                setValue={() => handleMainCheckVarnish(item.id)}
+                                                readOnly={readOnly}
+                                            />
+
+                                            {/* FRONT */}
+                                            <CheckBox
+                                                name="FRONT"
+                                                value={selected?.isFront || false}
+                                                setValue={() => handleFrontVarnishCheck(item.id)}
+                                                readOnly={!selected}
+                                            />
+
+                                            {/* FRONT / BACK */}
+                                            <CheckBox
+                                                name="FRONT / BACK"
+                                                value={selected?.isFrontAndBack || false}
+                                                setValue={() => handleFrontBackVarnishCheck(item.id)}
+                                                readOnly={!selected}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </fieldset>
                     </div>
-                    <div className="w-1/2 space-y-2 px-2">
-                        <h2 className="text-xs font-medium text-slate-700">
-                            Attachments
-                        </h2>
-
-                        {/* Drag & Drop Zone */}
-                        {/* <div
-                            className="border-2 border-dashed border-indigo-300 rounded-lg p-4 text-center cursor-pointer hover:bg-indigo-50 transition"
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                                e.preventDefault();
-                                const file = e.dataTransfer.files[0];
-                                if (file && selectedAttachmentIndex !== null) {
-                                    handleInputChange(
-                                        renameFile(file),
-                                        selectedAttachmentIndex,
-                                        "filePath",
-                                    );
-                                }
-                            }}
-                            onClick={() =>
-                                document.getElementById("modal-file-upload")?.click()
-                            }
-                        >
-                            <p className="text-sm text-slate-500">
-                                Drag & drop here, or{" "}
-                                <span className="text-indigo-600 font-medium underline">
-                                    click to browse
-                                </span>
-                            </p>
-                            {selectedAttachmentIndex !== null ? (
-                                <p className="text-xs text-indigo-500 mt-1">
-                                    Uploading to row:{" "}
-                                    <strong>{selectedAttachmentIndex + 1}</strong>
-                                </p>
-                            ) : (
-                                <p className="text-xs text-slate-400 mt-1">
-                                    Select a row below first
-                                </p>
-                            )}
-                        </div> */}
-
-                        {/* Hidden file input for drag & drop zone */}
-                        <input
-                            type="file"
-                            id="modal-file-upload"
-                            className="hidden"
-                            onChange={(e) => {
-                                if (e.target.files[0] && selectedAttachmentIndex !== null) {
-                                    handleInputChange(
-                                        renameFile(e.target.files[0]),
-                                        selectedAttachmentIndex,
-                                        "filePath",
-                                    );
-                                    e.target.value = "";
-                                }
-                            }}
-                            disabled={readOnly}
-                        />
-
-                        {/* Attachments Table */}
-                        <div className="max-h-[170px] overflow-auto">
-                            <div className="border-collapse bg-[#F1F1F0] shadow-sm overflow-auto">
-                                <table className="bg-gray-200 text-gray-700 text-xs table-auto w-full">
-                                    <thead className="py-2 font-medium sticky top-0">
-                                        <tr>
-                                            <th className="py-2 text-xs w-10 text-center border-r border-white/50">
-                                                S.No
-                                            </th>
-                                            <th className="py-2 text-xs w-60 text-center border-r border-white/50">
-                                                Name
-                                            </th>
-                                            <th className="py-2 text-xs w-60 text-center border-r border-white/50">
-                                                File
-                                            </th>
-                                            <th className="py-2 text-xs w-10 text-center">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {attachments?.map((item, index) => (
-                                            <tr
-                                                key={index}
-                                                onClick={() => setSelectedAttachmentIndex(index)}
-                                                className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${index % 2 === 0
-                                                    ? "bg-white hover:bg-gray-50"
-                                                    : "bg-gray-100 hover:bg-gray-50"
-                                                    }`}
-                                            >
-                                                {/* S.No */}
-                                                <td className="border-r border-white/50 h-8 text-center">
-                                                    {index + 1}
-                                                </td>
-
-                                                {/* Name */}
-                                                <td className="border-r border-white/50 h-8">
-                                                    <input
-                                                        type="text"
-                                                        className="text-left rounded py-1 px-2 w-full focus:outline-none focus:ring focus:border-blue-300 bg-transparent"
-                                                        value={item?.name}
-                                                        onChange={(e) =>
-                                                            handleInputChange(e.target.value, index, "name")
-                                                        }
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        disabled={readOnly}
-                                                    />
-                                                </td>
-
-                                                {/* File */}
-                                                <td className="border-r border-white/50 h-8 px-2">
-                                                    <div className="flex items-center gap-2">
-                                                        {!readOnly && (
-                                                            <label
-                                                                htmlFor={`modal-row-upload-${index}`}
-                                                                className="cursor-pointer flex items-center justify-center p-1 bg-gray-100 rounded hover:bg-gray-200"
-                                                                title="Attach file"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                📎
-                                                                <input
-                                                                    type="file"
-                                                                    id={`modal-row-upload-${index}`}
-                                                                    className="hidden"
-                                                                    onChange={(e) => {
-                                                                        if (e.target.files[0]) {
-                                                                            handleInputChange(
-                                                                                renameFile(e.target.files[0]),
-                                                                                index,
-                                                                                "filePath",
-                                                                            );
-                                                                            e.target.value = "";
-                                                                        }
-                                                                    }}
-                                                                    disabled={readOnly}
-                                                                />
-                                                            </label>
-                                                        )}
-
-                                                        {item.filePath ? (
-                                                            <>
-                                                                <span className="truncate max-w-[120px] text-green-700 font-medium">
-                                                                    ✅ {item.filePath?.name ?? item.filePath}
-                                                                </span>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openPreview(item.filePath);
-                                                                    }}
-                                                                    className="text-blue-600 text-xs hover:underline"
-                                                                >
-                                                                    View
-                                                                </button>
-                                                                {!readOnly && (
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleInputChange("", index, "filePath");
-                                                                        }}
-                                                                        className="text-red-600 text-xs"
-                                                                        title="Remove file"
-                                                                        disabled={readOnly}
-                                                                    >
-                                                                        ✕
-                                                                    </button>
-                                                                )}
-                                                            </>
-                                                        ) : (
-                                                            <span className="text-gray-400 italic text-xs">
-                                                                No file
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-
-                                                {/* Actions */}
-                                                <td className="w-[30px] border-gray-200 h-8">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                addNewComments();
-                                                            }}
-                                                            disabled={readOnly}
-                                                            className="flex items-center px-1 bg-blue-50 rounded"
-                                                        >
-                                                            <Plus size={18} className="text-blue-800" />
-                                                        </button>
-                                                        <button
-                                                            className="flex items-center px-1 bg-red-50 rounded"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                deleteRow(index);
-                                                                if (selectedAttachmentIndex === index) {
-                                                                    setSelectedAttachmentIndex(null);
-                                                                }
-                                                            }}
-                                                            disabled={readOnly}
-                                                        >
-                                                            <svg
-                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                className="h-4 w-4 text-red-800"
-                                                                viewBox="0 0 20 20"
-                                                                fill="currentColor"
-                                                            >
-                                                                <path
-                                                                    fillRule="evenodd"
-                                                                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                                                    clipRule="evenodd"
-                                                                />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                    <div className="w-1/2">
+                        <fieldset className="border border-gray-300 rounded-md pb-2">
+                            <legend className="font-medium text-slate-700 mb-2  bg-white text-xs px-1">Process</legend>
+                            <div className="grid grid-cols-5 gap-x-2">
+                                {defaultList?.map((item) => (
+                                    <CheckBox
+                                        name={item.name}
+                                        value={selectedProcesses.includes(item.id)}
+                                        setValue={() => handleProcessChange(item.id)}
+                                        readOnly={readOnly}
+                                    />
+                                ))}
                             </div>
-                        </div>
+                        </fieldset>
+                        <fieldset className="border border-gray-300 rounded-md pb-2 mt-2">
+                            <legend className="font-medium text-slate-700 mb-2 bg-white text-xs px-1">
+                                Lamination Details
+                            </legend>
 
+                            <div className="flex flex-col gap-2">
+                                {laminationList?.map((item) => {
+                                    const selected = laminations.find(l => l.processId === item.id);
+
+                                    return (
+                                        <div key={item.id} className="grid grid-cols-3 gap-2">
+
+                                            {/* Main checkbox */}
+                                            <CheckBox
+                                                name={item.name}
+                                                value={!!selected}
+                                                setValue={() => handleMainCheck(item.id)}
+                                                readOnly={readOnly}
+                                            />
+
+                                            {/* FRONT */}
+                                            <CheckBox
+                                                name="FRONT"
+                                                value={selected?.isFront || false}
+                                                setValue={() => handleFrontCheck(item.id)}
+                                                readOnly={!selected}
+                                            />
+
+                                            {/* FRONT / BACK */}
+                                            <CheckBox
+                                                name="FRONT / BACK"
+                                                value={selected?.isFrontAndBack || false}
+                                                setValue={() => handleFrontBackCheck(item.id)}
+                                                readOnly={!selected}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </fieldset>
+                        <fieldset className="border border-gray-300 rounded-md pb-2">
+                            <legend className="font-medium text-slate-700 mb-2  bg-white text-xs px-1">Machine Details</legend>
+                            <div className="grid grid-cols-5 gap-x-2">
+                                {machineList?.map((item) => (
+                                    <CheckBox
+                                        name={item.name}
+                                        value={selectedMachines.includes(item.id)}
+                                        setValue={() => handleMachineChange(item.id)}
+                                        readOnly={readOnly}
+                                    />
+                                ))}
+
+                                <CheckBox
+                                    name="CMYK"
+                                    value={isCMYK}
+                                    setValue={setIsCMYK}
+                                    readOnly={readOnly}
+                                />
+                                <CheckBox
+                                    name="CUT COL"
+                                    value={isCutColMachine}
+                                    setValue={setIsCutColMachine}
+                                    readOnly={readOnly}
+                                />
+                                <CheckBox
+                                    name="FRONT"
+                                    value={isFrontMachine}
+                                    setValue={setIsFrontMachine}
+                                    readOnly={readOnly}
+                                />
+                                <CheckBox
+                                    name="FRONT & BACK"
+                                    value={isFrontBackMachine}
+                                    setValue={setIsFrontBackMachine}
+                                    readOnly={readOnly}
+                                />
+
+                            </div>
+                        </fieldset>
                     </div>
+
                 </div>
 
             </div>
-            <CommonFormFooter
-                remarks={remarks}
-                hasSummaryTitle={"Summary"}
-                setRemarks={setRemarks}
-                terms={termsAndCondition}
-                setTerms={setTermsAndCondition}
-                readOnly={readOnly}
-                showTermSelect={true}
-                termValue={termsId}
-                onTermChange={(value) => setTermsId(value)}
-                termOptions={(
-                    id ? termsData?.data : termsData?.data?.filter((item) => item?.active)
-                )?.map((item) => ({
-                    value: item?.id,
-                    label: item?.name,
-                    templateText: item?.description || "",
-                })) || []}
-                totalsRows={[
-                    {
-                        key: "orderType",
-                        label: "Order Type",
-                        value: orderType,
-                        summaryColumn: "left",
-                    },
-                    {
-                        key: "orderQty",
-                        label: "Order Qty",
-                        value: orderQty,
-                        summaryColumn: "left",
-                    },
-                ]}
-            />
-            {/* <div className="grid grid-cols-2 gap-3">
-                <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-                    <h2 className="font-medium text-slate-700 mb-2 text-xs">
-                        Remarks
-                    </h2>
-                    <textarea
-                        readOnly={readOnly}
-                        value={remarks}
-                        onChange={(e) => {
-                            setRemarks(e.target.value);
-                        }}
-                        className="w-full h-10 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md focus:outline-none   focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
-                        placeholder="Additional notes..."
-                        onKeyDown={(e) => {
-                            if (e.ctrlKey && e.key === "Enter") {
-                                e.preventDefault();
-
-                                const textarea = e.target;
-                                const start = textarea.selectionStart;
-                                const end = textarea.selectionEnd;
-
-                                const newValue =
-                                    remarks.substring(0, start) + "\n" + remarks.substring(end);
-
-                                setRemarks(newValue);
-
-                                // ✅ Restore focus + cursor properly
-                                requestAnimationFrame(() => {
-                                    textarea.focus();
-                                    textarea.setSelectionRange(start + 1, start + 1);
-                                });
-                            }
-                        }}
-                    />
-                </div>
-
-                <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm flex">
-                    <div className="w-1/2">
-
-                        <h2 className="font-medium text-slate-700 mb-2 text-base">
-                            Summary
-                        </h2>
-                        <div className="flex flex-col gap-1">
-                            <div className="flex justify-between">
-                                <span className="text-sm text-slate-600">Order Type:</span>
-                                <span className="text-sm text-slate-600">{orderType}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-slate-600">Order Quantity:</span>
-                                <span className="text-sm text-slate-600">{orderQty}</span>
-                            </div>
-
-                        </div>
-
-                    </div>
-                </div>
-
-            </div> */}
 
             <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
                 {/* Left Buttons */}

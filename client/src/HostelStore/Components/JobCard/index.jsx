@@ -9,6 +9,7 @@ import { FaPlus } from "react-icons/fa";
 import JobCardForm from "./JobCardForm.jsx";
 import JobCardReport from "./JobCardReport.jsx";
 import { useDeleteJobCardMutation } from "../../../redux/uniformService/JobCardService.js";
+import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -23,10 +24,10 @@ const index = () => {
         finYearId,
     };
     const {
-        data: termsData,
+        data: gsmList,
         isLoading,
         isFetching,
-    } = useGetTermsandCondtionsQuery({ params });
+    } = useGetGsmMasterQuery({ params });
 
     const { data: userData } = useGetUserByIdQuery(userId)
 
@@ -143,6 +144,7 @@ const index = () => {
                         customerList={customerList}
                         branchList={branchList}
                         userData={userData?.data}
+                        gsmList={gsmList}
                     />
                 </div>
             )}

@@ -786,20 +786,23 @@ export const CheckBox = ({
     setValue(!value);
   };
   return (
-    <div className="items-center md:my-1 md:px-1 data">
-      <label htmlFor="id" className={`md:text-start items-center ${className}`}>
+    <div className="flex justify-center items-center md:m-1">
+      <label
+        htmlFor="id"
+        className={`flex items-center justify-center w-full gap-2 text-xs font-medium text-slate-700 ${className}`}
+      >
         <input
           tabIndex={tabIndex ? tabIndex : undefined}
           type="checkbox"
           required={required}
-          className="mx-2 py-2"
+          className=""
           checked={value}
           onChange={(e) => {
             handleOnChange(e);
           }}
           disabled={readOnly || disabled}
         />
-        {name}
+        <span className="mt-1">{name}</span>
       </label>
     </div>
   );

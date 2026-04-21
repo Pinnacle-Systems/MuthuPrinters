@@ -396,7 +396,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                     onView={handleView}
                     onEdit={handleEdit}
                     onDelete={deleteData}
-                    itemsPerPage={15}
+                    itemsPerPage={10}
                 />
             </div>
 

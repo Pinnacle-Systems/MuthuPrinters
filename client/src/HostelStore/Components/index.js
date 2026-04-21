@@ -48,3 +48,4 @@ export { default as StockReport } from "./StockReport/StockReport";
 export { default as OrderEntry } from "./OrderEntry";
 export { default as ProcessMaster } from "./ProcessMaster";
 export { default as ProcessGroupMaster } from "./ProcessGroupMaster";
+export { default as JobCard } from "./JobCard";

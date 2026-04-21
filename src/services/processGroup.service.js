@@ -8,6 +8,9 @@ async function get(req) {
       companyId: companyId ? parseInt(companyId) : undefined,
       //   active: active ? Boolean(active) : undefined,
     },
+    include: {
+      processGroupList: true,
+    },
   });
   return { statusCode: 0, data };
 }

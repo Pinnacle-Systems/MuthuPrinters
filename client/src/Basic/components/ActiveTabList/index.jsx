@@ -74,6 +74,7 @@ import {
   OrderEntry,
   ProcessMaster,
   ProcessGroupMaster,
+  JobCard,
 } from "../../../HostelStore/Components";
 
 const ActiveTabList = () => {
@@ -152,6 +153,7 @@ const ActiveTabList = () => {
     "ORDER ENTRY": <OrderEntry />,
     "PROCESS MASTER": <ProcessMaster />,
     "PROCESS GROUP MASTER": <ProcessGroupMaster />,
+    "JOB CARD": <JobCard />,
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;
