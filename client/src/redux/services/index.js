@@ -41,3 +41,5 @@ export { default as SizetemplateMasterApi } from "./SizeTemplateMaster";
 export { default as purchaseReportApi } from "./purchaseReportApi";
 export { default as ProcessMasterApi } from "./ProcessMasterService";
 export { default as ProcessGroupMasterApi } from "./ProcessGroupMaster.service";
+export { default as PlateMasterApi } from "./PlateMasterService";
+export { default as DieMasterApi } from "./DieMasterService";

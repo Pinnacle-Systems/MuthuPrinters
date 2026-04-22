@@ -58,7 +58,7 @@ import { FiEdit2, FiSave } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { dropDownListObject } from "../../../Utils/contructObject";
-import { Gsm, PartyMaster } from "../index.js";
+import { BoardMaster, DieMaster, Gsm, PartyMaster, PlateMaster } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import {
     useAddJobCardMutation,
@@ -68,6 +68,7 @@ import {
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
 import { useGetProcessGroupMasterQuery } from "../../../redux/services/ProcessGroupMaster.service.js";
 import secureLocalStorage from "react-secure-storage";
+import { useGetBoardMasterQuery } from "../../../redux/services/boardService.js";
 
 // ── Small section heading ────────────────────────────────────
 const SectionTitle = ({ children }) => (
@@ -117,6 +118,8 @@ const JobCardForm = ({
     setReadOnly,
     customerList,
     gsmList,
+    plateList,
+    dieList,
 }) => {
     const today = new Date();
 
@@ -129,8 +132,8 @@ const JobCardForm = ({
     const [orderQty, setOrderQty] = useState("");
 
     // Board Details
-    const [gsm, setGsm] = useState("");
-    const [otherBoard, setOtherBoard] = useState("");
+    const [gsmId, setGsmId] = useState("");
+    const [boardId, setBoardId] = useState("");
     const [fullBoard, setFullBoard] = useState("");
     const [noOfPockets, setNoOfPockets] = useState("");
     const [cuttingSize, setCuttingSize] = useState("");
@@ -167,6 +170,8 @@ const JobCardForm = ({
 
     const { data: processList, isFetching: isProcessFetching } =
         useGetProcessMasterQuery({ params });
+    const { data: boardData, isFetching: isBoardListFetching } =
+        useGetBoardMasterQuery({ params });
     const { data: processGroupList, isFetching: isProcessGroupFetching } =
         useGetProcessGroupMasterQuery({ params });
 
@@ -180,7 +185,7 @@ const JobCardForm = ({
             getGroupIds(groupName).includes(p.id)
         ) || [];
 
-    const boardList = filterByGroup("BOARD QUALITY");
+    const boardList = boardData?.data || [];
     const defaultList = filterByGroup("DEFAULT");
     const laminationList = filterByGroup("LAMINATION");
     const varnishList = filterByGroup("VARNISH");
@@ -209,7 +214,7 @@ const JobCardForm = ({
         setDeliveryDate(
             data?.deliveryDate ? moment.utc(data.deliveryDate).format("YYYY-MM-DD") : ""
         );
-        setGsm(data?.gsmId || "");
+        setGsmId(data?.gsmId || "");
         setFullBoard(data?.fullBoard || "");
         setNoOfPockets(data?.noOfPockets || "");
         setCuttingSize(data?.cuttingSize || "");
@@ -269,18 +274,19 @@ const JobCardForm = ({
         );
 
     // ── Build form payload ───────────────────────────────────
-    const getFormData = () => ({
+    const data = {
         id,
         docDate,
         branchId,
         userId,
-        orderType,
-        customerId,
-        remarks,
         finYearId,
+        orderType,
         orderQty,
-        deliveryDate,
-        gsmId: gsm,
+        customerId,
+        boardItems,
+        gsmId,
+        boardId,
+        remarks,
         fullBoard,
         noOfPockets,
         cuttingSize,
@@ -296,28 +302,20 @@ const JobCardForm = ({
         plateId,
         dieId,
         totalPlateSet,
-        boardItems,
         selectedProcesses,
         laminations,
         varnishes,
         selectedMachines,
-    });
+    };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
         try {
-            const fd = new FormData();
-            for (let key in data) {
-                if (Array.isArray(data[key]) || (typeof data[key] === "object" && data[key] !== null)) {
-                    fd.append(key, JSON.stringify(data[key]));
-                } else {
-                    fd.append(key, data[key]);
-                }
+            let returnData;
+            if (text === "Updated") {
+                returnData = await callback(data).unwrap();
+            } else {
+                returnData = await callback(data).unwrap();
             }
-            const returnData =
-                text === "Updated"
-                    ? await callback({ id, body: fd }).unwrap()
-                    : await callback(fd).unwrap();
-
             if (returnData.statusCode === 1) {
                 toast.error(returnData.message);
             } else {
@@ -350,7 +348,6 @@ const JobCardForm = ({
         const checks = [
             { condition: !data.orderType, title: "Order Type is required!" },
             { condition: !data.orderQty, title: "Order Quantity is required!" },
-            { condition: !data.deliveryDate, title: "Delivery Date is required!" },
             { condition: !data.customerId, title: "Customer is required!" },
         ];
         const failed = checks.find((c) => c.condition);
@@ -362,7 +359,6 @@ const JobCardForm = ({
     };
 
     const saveData = (nextProcess) => {
-        const data = getFormData();
         if (!validateData(data)) return;
         if (id && !window.confirm("Are you sure you want to update the details?")) return;
         if (id) handleSubmitCustom(updateData, data, "Updated", nextProcess);
@@ -495,18 +491,26 @@ const JobCardForm = ({
                                         "name",
                                         "id"
                                     )}
-                                    value={gsm}
-                                    setValue={setGsm}
+                                    value={gsmId}
+                                    setValue={setGsmId}
                                     readOnly={readOnly}
                                     addNewLabel="+ Add New GSM"
                                     childComponent={Gsm}
                                     addNewModalWidth="w-[30%] h-[45%]"
                                 />
-                                <TextInput
+                                <DropdownWithModal
                                     name="Others / Board"
-                                    value={otherBoard}
-                                    setValue={setOtherBoard}
+                                    options={dropDownListObject(
+                                        id ? boardData?.data : boardData?.data?.filter((i) => i?.active),
+                                        "name",
+                                        "id"
+                                    )}
+                                    value={boardId}
+                                    setValue={setBoardId}
                                     readOnly={readOnly}
+                                    addNewLabel="+ Add New Board"
+                                    childComponent={BoardMaster}
+                                    addNewModalWidth="w-[30%] h-[45%]"
                                 />
                                 <TextInput
                                     name="Full Board"
@@ -654,7 +658,7 @@ const JobCardForm = ({
                                 <DropdownWithModal
                                     name="Plate Details"
                                     options={dropDownListObject(
-                                        id ? gsmList?.data : gsmList?.data?.filter((i) => i?.active),
+                                        id ? plateList?.data : plateList?.data?.filter((i) => i?.active),
                                         "name",
                                         "id"
                                     )}
@@ -662,7 +666,7 @@ const JobCardForm = ({
                                     setValue={setPlateId}
                                     readOnly={readOnly}
                                     addNewLabel="+ Add Plate"
-                                    childComponent={Gsm}
+                                    childComponent={PlateMaster}
                                     addNewModalWidth="w-[30%] h-[45%]"
                                 />
                                 <TextInput
@@ -676,7 +680,7 @@ const JobCardForm = ({
                                 <DropdownWithModal
                                     name="Die Details"
                                     options={dropDownListObject(
-                                        id ? gsmList?.data : gsmList?.data?.filter((i) => i?.active),
+                                        id ? dieList?.data : dieList?.data?.filter((i) => i?.active),
                                         "name",
                                         "id"
                                     )}
@@ -684,7 +688,7 @@ const JobCardForm = ({
                                     setValue={setDieId}
                                     readOnly={readOnly}
                                     addNewLabel="+ Add Die"
-                                    childComponent={Gsm}
+                                    childComponent={DieMaster}
                                     addNewModalWidth="w-[30%] h-[45%]"
                                 />
                             </div>

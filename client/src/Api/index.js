@@ -58,3 +58,6 @@ export const ORDER_ENTRY_API = "orderEntry";
 export const PROCESS_API = "process";
 export const PROCESS_GROUP_API = "processGroup";
 export const JOB_CARD_API = "jobCard";
+export const DIE_API = "die";
+export const PLATE_API = "plate";
+export const BOARD_API = "board";

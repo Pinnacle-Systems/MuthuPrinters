@@ -136,6 +136,32 @@ async function getOne(id) {
 }
 
 // ─────────────────────────────────────────────
+// SAFE ARRAY PARSER (NO JSON ERRORS)
+// ─────────────────────────────────────────────
+function safeArray(val) {
+  // already array
+  if (Array.isArray(val)) return val;
+
+  // null / undefined / empty
+  if (!val) return [];
+
+  // string "undefined"
+  if (val === "undefined") return [];
+
+  // ONLY parse if it's actually a string
+  if (typeof val === "string") {
+    try {
+      return JSON.parse(val);
+    } catch (err) {
+      console.warn("⚠️ JSON Parse Failed:", val);
+      return [];
+    }
+  }
+
+  // fallback
+  return [];
+}
+// ─────────────────────────────────────────────
 // CREATE
 // ─────────────────────────────────────────────
 async function create(body) {
@@ -170,19 +196,42 @@ async function create(body) {
       designerId,
       tagCardUps,
       jobRunTime,
-      // Arrays from UI
-      boardItems, // number[]  — selected board quality process IDs
-      selectedProcesses, // number[] — selected default process IDs
-      laminations, // { processId, isFront, isFrontAndBack }[]
-      varnishes, // { processId, isFront, isFrontAndBack }[]
-      selectedMachines, // number[] — selected machine process IDs
+
+      // Arrays
+      boardItems,
+      selectedProcesses,
+      laminations,
+      varnishes,
+      selectedMachines,
     } = body;
 
+    // ─────────────────────────────
+    // ✅ SAFE ARRAYS
+    // ─────────────────────────────
+    const safeBoardItems = safeArray(boardItems);
+    const safeProcesses = safeArray(selectedProcesses);
+    const safeLaminations = safeArray(laminations);
+    const safeVarnishes = safeArray(varnishes);
+    const safeMachines = safeArray(selectedMachines);
+
+    console.log("✅ SAFE ARRAYS:");
+    console.log({
+      safeBoardItems,
+      safeProcesses,
+      safeLaminations,
+      safeVarnishes,
+      safeMachines,
+    });
+
+    // ─────────────────────────────
+    // FIN YEAR + DOC ID
+    // ─────────────────────────────
     let finYearDate = await getFinYearStartTimeEndTime(finYearId);
+
     const shortCode = finYearDate
       ? getYearShortCodeForFinYear(
-          finYearDate?.startDateStartTime,
-          finYearDate?.endDateEndTime,
+          finYearDate.startDateStartTime,
+          finYearDate.endDateEndTime,
         )
       : "";
 
@@ -193,113 +242,118 @@ async function create(body) {
       finYearDate?.endDateEndTime,
     );
 
-    // Parse JSON strings sent via FormData
-    const parsedBoardItems = parseJsonField(boardItems, []);
-    const parsedProcesses = parseJsonField(selectedProcesses, []);
-    const parsedLaminations = parseJsonField(laminations, []);
-    const parsedVarnishes = parseJsonField(varnishes, []);
-    const parsedMachines = parseJsonField(selectedMachines, []);
+    console.log("📄 NEW DOC ID:", newDocId);
 
     let data;
+
     await prisma.$transaction(async (tx) => {
       data = await tx.jobCard.create({
         data: {
           docId: newDocId,
           docDate: docDate ? new Date(docDate) : null,
-          createdById: parseInt(userId),
-          branchId: parseInt(branchId),
-          orderEntryId: orderEntryId ? parseInt(orderEntryId) : null,
+
+          createdById: Number(userId),
+          branchId: Number(branchId),
+
+          orderEntryId: orderEntryId ? Number(orderEntryId) : null,
           orderType: orderType || null,
-          orderQty: orderQty ? parseInt(orderQty) : null,
-          customerId: customerId ? parseInt(customerId) : null,
-          gsmId: gsmId ? parseInt(gsmId) : null,
-          boardId: boardId ? parseInt(boardId) : null,
-          fullBoard: fullBoard ? parseInt(fullBoard) : null,
-          noOfPockets: noOfPockets ? parseInt(noOfPockets) : null,
+          orderQty: orderQty ? Number(orderQty) : null,
+          customerId: customerId ? Number(customerId) : null,
+
+          gsmId: gsmId ? Number(gsmId) : null,
+          boardId: boardId ? Number(boardId) : null,
+
+          fullBoard: fullBoard ? Number(fullBoard) : null,
+          noOfPockets: noOfPockets ? Number(noOfPockets) : null,
           cuttingSize: cuttingSize || null,
-          runningQty: runningQty ? parseInt(runningQty) : null,
-          isFourColor: Boolean(isFourColor),
-          isCutColor: Boolean(isCutColor),
-          isFront: Boolean(isFront),
-          isFrontAndBack: Boolean(isFrontAndBack),
-          isCMYK: Boolean(isCMYK),
-          isCutColMachine: Boolean(isCutColMachine),
-          isFrontMachine: Boolean(isFrontMachine),
-          isFrontBackMachine: Boolean(isFrontBackMachine),
-          plateId: plateId ? parseInt(plateId) : null,
-          dieId: dieId ? parseInt(dieId) : null,
-          totalPlateSet: totalPlateSet ? parseInt(totalPlateSet) : null,
+          runningQty: runningQty ? Number(runningQty) : null,
+
+          isFourColor: !!isFourColor,
+          isCutColor: !!isCutColor,
+          isFront: !!isFront,
+          isFrontAndBack: !!isFrontAndBack,
+
+          isCMYK: !!isCMYK,
+          isCutColMachine: !!isCutColMachine,
+          isFrontMachine: !!isFrontMachine,
+          isFrontBackMachine: !!isFrontBackMachine,
+
+          plateId: plateId ? Number(plateId) : null,
+          dieId: dieId ? Number(dieId) : null,
+          totalPlateSet: totalPlateSet ? Number(totalPlateSet) : null,
+
           remarks: remarks || null,
-          designerId: designerId ? parseInt(designerId) : null,
+          designerId: designerId ? Number(designerId) : null,
           tagCardUps: tagCardUps || null,
           jobRunTime: jobRunTime || null,
 
-          // Nested creates
-          boardQualities:
-            parsedBoardItems.length > 0
-              ? {
-                  createMany: {
-                    data: parsedBoardItems.map((bId) => ({
-                      boardId: parseInt(bId),
-                    })),
-                  },
-                }
-              : undefined,
+          // ─────────────────────────────
+          // RELATIONS
+          // ─────────────────────────────
 
-          processDetails:
-            parsedProcesses.length > 0
-              ? {
-                  createMany: {
-                    data: parsedProcesses.map((pId) => ({
-                      processId: parseInt(pId),
-                    })),
-                  },
-                }
-              : undefined,
+          boardQualities: safeBoardItems.length
+            ? {
+                createMany: {
+                  data: safeBoardItems.map((id) => ({
+                    boardId: Number(id),
+                  })),
+                },
+              }
+            : undefined,
 
-          laminationDetails:
-            parsedLaminations.length > 0
-              ? {
-                  createMany: {
-                    data: parsedLaminations.map((l) => ({
-                      laminationId: parseInt(l.processId),
-                      isFront: Boolean(l.isFront),
-                      isFrontAndBack: Boolean(l.isFrontAndBack),
-                    })),
-                  },
-                }
-              : undefined,
+          processDetails: safeProcesses.length
+            ? {
+                createMany: {
+                  data: safeProcesses.map((id) => ({
+                    processId: Number(id),
+                  })),
+                },
+              }
+            : undefined,
 
-          varnishDetails:
-            parsedVarnishes.length > 0
-              ? {
-                  createMany: {
-                    data: parsedVarnishes.map((v) => ({
-                      varnishId: parseInt(v.processId),
-                      isFront: Boolean(v.isFront),
-                      isFrontAndBack: Boolean(v.isFrontAndBack),
-                    })),
-                  },
-                }
-              : undefined,
+          laminationDetails: safeLaminations.length
+            ? {
+                createMany: {
+                  data: safeLaminations.map((l) => ({
+                    laminationId: Number(l.processId),
+                    isFront: !!l.isFront,
+                    isFrontAndBack: !!l.isFrontAndBack,
+                  })),
+                },
+              }
+            : undefined,
 
-          machineDetails:
-            parsedMachines.length > 0
-              ? {
-                  createMany: {
-                    data: parsedMachines.map((mId) => ({
-                      machineId: parseInt(mId),
-                    })),
-                  },
-                }
-              : undefined,
+          varnishDetails: safeVarnishes.length
+            ? {
+                createMany: {
+                  data: safeVarnishes.map((v) => ({
+                    varnishId: Number(v.processId),
+                    isFront: !!v.isFront,
+                    isFrontAndBack: !!v.isFrontAndBack,
+                  })),
+                },
+              }
+            : undefined,
+
+          machineDetails: safeMachines.length
+            ? {
+                createMany: {
+                  data: safeMachines.map((id) => ({
+                    machineId: Number(id),
+                  })),
+                },
+              }
+            : undefined,
         },
       });
     });
 
+    console.log("✅ CREATED SUCCESS:", data);
+
     return { statusCode: 0, data };
   } catch (err) {
-    return { statusCode: 400, message: err.message };
+    console.error("❌ SERVICE ERROR:", err);
+    return { statusCode: 1, message: err.message };
   }
 }
 
@@ -349,11 +403,11 @@ async function update(id, body) {
     });
     if (!dataFound) return NoRecordFound("Job Card");
 
-    const parsedBoardItems = parseJsonField(boardItems, []);
-    const parsedProcesses = parseJsonField(selectedProcesses, []);
-    const parsedLaminations = parseJsonField(laminations, []);
-    const parsedVarnishes = parseJsonField(varnishes, []);
-    const parsedMachines = parseJsonField(selectedMachines, []);
+    // const parsedBoardItems = parseJsonField(boardItems, []);
+    // const parsedProcesses = parseJsonField(selectedProcesses, []);
+    // const parsedLaminations = parseJsonField(laminations, []);
+    // const parsedVarnishes = parseJsonField(varnishes, []);
+    // const parsedMachines = parseJsonField(selectedMachines, []);
 
     let data;
     await prisma.$transaction(async (tx) => {
@@ -405,10 +459,10 @@ async function update(id, body) {
           jobRunTime: jobRunTime || null,
 
           boardQualities:
-            parsedBoardItems.length > 0
+            boardItems.length > 0
               ? {
                   createMany: {
-                    data: parsedBoardItems.map((bId) => ({
+                    data: boardItems.map((bId) => ({
                       boardId: parseInt(bId),
                     })),
                   },
@@ -416,10 +470,10 @@ async function update(id, body) {
               : undefined,
 
           processDetails:
-            parsedProcesses.length > 0
+            selectedProcesses.length > 0
               ? {
                   createMany: {
-                    data: parsedProcesses.map((pId) => ({
+                    data: selectedProcesses.map((pId) => ({
                       processId: parseInt(pId),
                     })),
                   },
@@ -427,10 +481,10 @@ async function update(id, body) {
               : undefined,
 
           laminationDetails:
-            parsedLaminations.length > 0
+            laminations.length > 0
               ? {
                   createMany: {
-                    data: parsedLaminations.map((l) => ({
+                    data: laminations.map((l) => ({
                       laminationId: parseInt(l.processId),
                       isFront: Boolean(l.isFront),
                       isFrontAndBack: Boolean(l.isFrontAndBack),
@@ -440,10 +494,10 @@ async function update(id, body) {
               : undefined,
 
           varnishDetails:
-            parsedVarnishes.length > 0
+            varnishes.length > 0
               ? {
                   createMany: {
-                    data: parsedVarnishes.map((v) => ({
+                    data: varnishes.map((v) => ({
                       varnishId: parseInt(v.processId),
                       isFront: Boolean(v.isFront),
                       isFrontAndBack: Boolean(v.isFrontAndBack),
@@ -453,10 +507,10 @@ async function update(id, body) {
               : undefined,
 
           machineDetails:
-            parsedMachines.length > 0
+            selectedMachines.length > 0
               ? {
                   createMany: {
-                    data: parsedMachines.map((mId) => ({
+                    data: selectedMachines.map((mId) => ({
                       machineId: parseInt(mId),
                     })),
                   },
@@ -496,14 +550,4 @@ async function remove(id) {
 // ─────────────────────────────────────────────
 // Helper
 // ─────────────────────────────────────────────
-function parseJsonField(value, fallback) {
-  if (!value) return fallback;
-  if (Array.isArray(value)) return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
-}
-
 export { get, getOne, create, update, remove };
