@@ -115,6 +115,9 @@ const PurchaseOrderForm = ({
   const [approvalRemarks, setApprovalRemarks] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [requirementId, setRequirementId] = useState("");
+  const [isPostApprovalLock, setIsPostApprovalLock] = useState(false);
+  const [isDeliveryThresholdPassed, setIsDeliveryThresholdPassed] =
+    useState(false);
 
   const supplierRef = useRef(null);
   const termsRef = useRef(null);
@@ -150,7 +153,20 @@ const PurchaseOrderForm = ({
   const syncFormWithDb = useCallback(
     (data) => {
       const status = data?.approvalStatus?.status;
-      setReadOnly((["PENDING"].includes(status) && !isAdmin) || readOnly);
+      const isAdminRole = userData?.role?.name === "ADMIN";
+
+      const deliveryDate = data?.dueDate;
+      const thresholdPassed =
+        deliveryDate && moment(deliveryDate).diff(moment(), "days", true) <= 2;
+
+      setIsPostApprovalLock(status === "APPROVED");
+      setIsDeliveryThresholdPassed(thresholdPassed);
+
+      setReadOnly(
+        (["PENDING"].includes(status) && !isAdminRole) ||
+          (status === "APPROVED" && thresholdPassed && !isAdminRole) ||
+          readOnly,
+      );
       setPoType(data?.poType ? data?.poType : "GENERAL");
       setDocDate(
         data?.docDate
@@ -358,13 +374,14 @@ const PurchaseOrderForm = ({
       taxTemplateId,
       termsAndCondtion,
       termsId,
-      isNewVersion:
-        (status === "APPROVED" && !isAdmin) ||
-        (status === "REJECTED" && !isAdmin)
-          ? true
-          : isNewVersion || (status === "PENDING" && isAdmin)
-            ? true
-            : isNewVersion,
+      // isNewVersion:
+      //   (status === "APPROVED" && !isAdmin) ||
+      //   (status === "REJECTED" && !isAdmin)
+      //     ? true
+      //     : isNewVersion || (status === "PENDING" && isAdmin)
+      //       ? true
+      //       : isNewVersion,
+      isNewVersion: id ? true : isNewVersion,
       quoteVersion,
       payTermId,
       pageId: currentPageId,
@@ -670,7 +687,9 @@ const PurchaseOrderForm = ({
     }
     return null;
   };
-
+  const isFullyLocked =
+    readOnly || (isPostApprovalLock && isDeliveryThresholdPassed);
+  const isCoreLocked = isFullyLocked || isPostApprovalLock;
   const chip = getModeChip();
 
   const actionButtonClass =
@@ -678,7 +697,7 @@ const PurchaseOrderForm = ({
   const actionIconPairClass = "flex items-center gap-1";
 
   const leftActions = [
-    ...(readOnly || status === "APPROVED"
+    ...(isFullyLocked
       ? []
       : [
           {
@@ -702,30 +721,35 @@ const PurchaseOrderForm = ({
             disabled: readOnly,
             className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
           },
-          {
-            key: "save-new",
-            icon: (
-              <span className={actionIconPairClass}>
-                <FiSave className="h-4 w-4" />
-                <HiOutlineRefresh className="h-4 w-4" />
-              </span>
-            ),
-            hoverLabel: "Save & New",
-            iconOnly: true,
-            onClick: () => saveData("new"),
-            onKeyDown: (e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                saveData("new");
-              }
-            },
-            disabled: readOnly,
-            className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
-          },
+          ...(status === "APPROVED"
+            ? []
+            : [
+                {
+                  key: "save-new",
+                  icon: (
+                    <span className={actionIconPairClass}>
+                      <FiSave className="h-4 w-4" />
+                      <HiOutlineRefresh className="h-4 w-4" />
+                    </span>
+                  ),
+                  hoverLabel: "Save & New",
+                  iconOnly: true,
+                  onClick: () => saveData("new"),
+                  onKeyDown: (e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      saveData("new");
+                    }
+                  },
+                  disabled: readOnly,
+                  className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
+                },
+              ]),
         ]),
     ...(!id ||
     status === "PENDING" ||
+    status === "APPROVED" ||
     status === "SUPERSEDED" ||
     status === "NOT_CONFIGURED"
       ? []
@@ -848,6 +872,32 @@ const PurchaseOrderForm = ({
     },
   ];
 
+  const approvalStatusBanner = (() => {
+    if (!isPostApprovalLock) return null;
+    return (
+      <div
+        className={`text-[11px] px-3 py-1.5 rounded border flex items-center gap-2 mb-2 ${
+          isDeliveryThresholdPassed
+            ? "bg-red-50 border-red-200 text-red-700"
+            : "bg-amber-50 border-amber-200 text-amber-700"
+        }`}
+      >
+        <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+        {isDeliveryThresholdPassed ? (
+          <span>
+            <strong>PO FULLY LOCKED:</strong> Approved & within 2-day delivery
+            window. No edits allowed.
+          </span>
+        ) : (
+          <span>
+            <strong>LIMITED EDIT MODE:</strong> Approved PO. Only{" "}
+            <strong>Remarks</strong> can be updated.
+          </span>
+        )}
+      </div>
+    );
+  })();
+
   const compactFieldClass = "px-2 py-1 text-[11px]";
   const compactModalFieldClass = "w-full px-2 py-1 text-[11px]";
   const compactCardClass =
@@ -896,8 +946,8 @@ const PurchaseOrderForm = ({
             setPoType(value);
           }}
           required={true}
-          readOnly={readOnly}
-          disabled={orderId || id}
+          readOnly={isCoreLocked}
+          disabled={orderId || id || isCoreLocked}
           ref={supplierRef}
           className={`${compactFieldClass} w-full max-w-none`}
         />
@@ -913,7 +963,7 @@ const PurchaseOrderForm = ({
           value={taxTemplateId}
           setValue={setTaxTemplateId}
           required={true}
-          readOnly={readOnly}
+          readOnly={isCoreLocked}
           className={`${compactFieldClass} w-full max-w-none`}
         />
       </div>
@@ -930,7 +980,7 @@ const PurchaseOrderForm = ({
           value={payTermId}
           setValue={setPayTermId}
           required={true}
-          readOnly={readOnly}
+          readOnly={isCoreLocked}
           className={`${compactModalFieldClass} w-full max-w-none`}
           dropdownMinWidth={240}
           addNewLabel="+ Add New Pay Term"
@@ -958,7 +1008,7 @@ const PurchaseOrderForm = ({
           value={supplierId}
           setValue={setSupplierId}
           required={true}
-          readOnly={readOnly}
+          readOnly={isCoreLocked}
           className={compactModalFieldClass}
           dropdownMinWidth={partyDropdownMinWidth}
           addNewLabel="+ Add New Supplier"
@@ -1003,7 +1053,7 @@ const PurchaseOrderForm = ({
           value={deliveryType}
           setValue={setDeliveryType}
           required={true}
-          readOnly={readOnly}
+          readOnly={isCoreLocked}
           className={`${compactFieldClass} ${fieldWidthShort}`}
         />
       </div>
@@ -1023,7 +1073,7 @@ const PurchaseOrderForm = ({
             value={deliveryToId}
             setValue={setDeliveryToId}
             required={true}
-            readOnly={readOnly}
+            readOnly={isCoreLocked}
             className={compactFieldClass}
           />
         ) : (
@@ -1039,7 +1089,7 @@ const PurchaseOrderForm = ({
             value={deliveryToId}
             setValue={setDeliveryToId}
             required={true}
-            readOnly={readOnly}
+            readOnly={isCoreLocked}
             className={compactModalFieldClass}
             dropdownMinWidth={partyDropdownMinWidth}
             addNewLabel="+ Add New Customer"
@@ -1055,7 +1105,7 @@ const PurchaseOrderForm = ({
           setValue={setDueDate}
           type={"date"}
           required={true}
-          readOnly={readOnly}
+          readOnly={isCoreLocked}
           className={`${compactFieldClass} ${fieldWidthDate}`}
         />
       </div>
@@ -1288,38 +1338,14 @@ const PurchaseOrderForm = ({
     </div>
   );
   // Add this just before the headerContent definition
-  const approvalWarningBanner = (() => {
-    if (status === "APPROVED" && !readOnly) {
-      return (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 px-3 py-2 rounded text-xs flex items-center gap-2">
-          ⚠️{" "}
-          <span>
-            <strong>This PO is approved.</strong> Editing approval-relevant
-            fields (supplier, items, amounts) will automatically invalidate the
-            current approval and trigger re-approval.
-          </span>
-        </div>
-      );
-    }
-    if (status === "SUPERSEDED") {
-      return (
-        <div className="bg-orange-50 border-l-4 border-orange-400 text-orange-800 px-3 py-2 rounded text-xs flex items-center gap-2">
-          🔄{" "}
-          <span>
-            <strong>Re-approval Required.</strong> This PO was edited after
-            approval — it is now pending re-approval.
-          </span>
-        </div>
-      );
-    }
-    return null;
-  })();
+
   const headerContent = (
     <div className="grid grid-cols-1 gap-1 xl:grid-cols-[minmax(0,5fr)_minmax(0,3.6fr)_minmax(0,3.4fr)]">
-      {/* ✅ Add warning banner above the form sections */}
-      {approvalWarningBanner && (
-        <div className="xl:col-span-3">{approvalWarningBanner}</div>
+      {/* ✅ Add lock warning banner */}
+      {approvalStatusBanner && (
+        <div className="xl:col-span-3">{approvalStatusBanner}</div>
       )}
+
       {basicDetailsCompactSection}
       {supplierDetailsCompactSection}
       {deliveryDetailsCompactSection}
@@ -1333,7 +1359,8 @@ const PurchaseOrderForm = ({
         setRemarks={setRemarks}
         terms={termsAndCondtion}
         setTerms={setTermsAndCondtion}
-        readOnly={readOnly}
+        readOnly={isCoreLocked}
+        remarksReadOnly={isFullyLocked}
         showTermSelect={true}
         termValue={termsId}
         onTermChange={(value) => setTermsId(value)}
@@ -1379,7 +1406,8 @@ const PurchaseOrderForm = ({
         setRemarks={setRemarks}
         terms={termsAndCondtion}
         setTerms={setTermsAndCondtion}
-        readOnly={readOnly}
+        readOnly={isCoreLocked}
+        remarksReadOnly={isFullyLocked}
         showTermSelect={true}
         termValue={termsId}
         onTermChange={(value) => setTermsId(value)}
@@ -1736,7 +1764,7 @@ const PurchaseOrderForm = ({
             uomList={uomList}
             hsnList={hsnList}
             readOnly={
-              readOnly ||
+              isCoreLocked ||
               (quoteVersionOptions.length > 0 &&
                 Number(quoteVersion) !==
                   quoteVersionOptions[quoteVersionOptions.length - 1]) ||

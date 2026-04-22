@@ -269,7 +269,7 @@ export default function ApprovalDetails({
           type="button"
           onClick={addRow}
           disabled={readOnly}
-          className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded border border-blue-200 hover:bg-blue-100 hover:text-blue-700 transition font-bold text-xs flex items-center gap-1.5"
+          className="px-3 py-1 bg-green-50 text-green-600 rounded border border-green-200 hover:bg-green-100 hover:text-green-700 transition font-bold text-xs flex items-center gap-1.5"
         >
           <Plus size={14} /> Add Approval Level
         </button>
@@ -301,8 +301,9 @@ export default function ApprovalDetails({
             {approvalLevelItems.map((row, index) => (
               <tr
                 key={index}
-                className={`${index % 2 === 0 ? "bg-white" : "bg-[#f5f6fa]"
-                  } hover:bg-indigo-50/20 transition-colors`}
+                className={`${
+                  index % 2 === 0 ? "bg-white" : "bg-[#f5f6fa]"
+                } hover:bg-indigo-50/20 transition-colors`}
                 style={{ height: "34px" }}
               >
                 {/* S.No */}
@@ -332,8 +333,9 @@ export default function ApprovalDetails({
 
                 {/* Authorized Approvers — position:static + overflow:visible */}
                 <td
-                  className={`border-r border-slate-200 p-0 ${index % 2 === 0 ? "bg-white" : "bg-[#f5f6fa]"
-                    }`}
+                  className={`border-r border-slate-200 p-0 ${
+                    index % 2 === 0 ? "bg-white" : "bg-[#f5f6fa]"
+                  }`}
                   style={{
                     position: "static", // ← no containing block
                     overflow: "visible", // ← don't clip dropdown
@@ -341,8 +343,9 @@ export default function ApprovalDetails({
                   }}
                 >
                   <div
-                    className={`relative flex items-center w-full h-full min-h-[34px] ${index % 2 === 0 ? "bg-white" : "bg-[#f5f6fa]"
-                      }`}
+                    className={`relative flex items-center w-full h-full min-h-[34px] ${
+                      index % 2 === 0 ? "bg-white" : "bg-[#f5f6fa]"
+                    }`}
                   >
                     {/* The multiselect — hide its default arrow via CSS */}
                     <div className="flex-1 overflow-visible [&_.dropdown-container]:border-none [&_.dropdown-container]:shadow-none [&_.dropdown-container:focus-within]:border-none [&_.dropdown-container:focus-within]:shadow-none">

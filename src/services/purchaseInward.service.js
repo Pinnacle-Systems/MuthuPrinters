@@ -14,7 +14,6 @@ import {
   getModuleApprovalSetup,
   evaluateConfigTrigger,
   getTriggeredConfig,
-  hasApprovalRelevantChanges,
   buildIncludeForModule,
 } from "../utils/approvalHelper.js";
 
@@ -814,29 +813,52 @@ async function update(id, body, files) {
     };
   }
 
+  // ✅ NEW: Approved Inward Locking (Core Fields vs Remarks/Attachments)
+  const isApproved = latestLog?.status === "APPROVED";
+
+  if (isApproved) {
+    const parsedItems = typeof rawInwardItems === "string" ? JSON.parse(rawInwardItems) : rawInwardItems;
+    
+    const coreFieldsChanged =
+      parseInt(dataFound.supplierId || 0) !== parseInt(supplierId || 0) ||
+      parseInt(dataFound.storeId || 0) !== parseInt(storeId || 0) ||
+      parseInt(dataFound.locationId || 0) !== parseInt(locationId || 0) ||
+      (dataFound.docDate && docDate && new Date(dataFound.docDate).toISOString().split('T')[0] !== new Date(docDate).toISOString().split('T')[0]) ||
+      (dataFound.dcDate && dcDate && new Date(dataFound.dcDate).toISOString().split('T')[0] !== new Date(dcDate).toISOString().split('T')[0]) ||
+      dataFound.inwardType !== inwardType ||
+      dataFound.dcNo !== dcNo ||
+      dataFound.invNo !== invNo ||
+      dataFound.receiptType !== receiptType ||
+      parseInt(dataFound.taxTemplateId || 0) !== parseInt(taxTemplateId || 0) ||
+      dataFound.discountType !== discountType ||
+      parseFloat(dataFound.discountValue || 0) !== parseFloat(discountValue || 0) ||
+      parseFloat(dataFound.netBillValue || 0) !== parseFloat(netBillValue || 0);
+
+    const oldItems = dataFound.inwardItems;
+    const itemsChanged =
+      parsedItems.length !== oldItems.length ||
+      parsedItems.some((newItem) => {
+        const oldItem = oldItems.find((o) => parseInt(o.id) === parseInt(newItem.id));
+        if (!oldItem) return true; // new item
+        return (
+          parseFloat(newItem.inwardQty || 0) !== parseFloat(oldItem.inwardQty || 0) ||
+          parseFloat(newItem.price || 0) !== parseFloat(oldItem.price || 0)
+        );
+      });
+
+    if (coreFieldsChanged || itemsChanged) {
+      return {
+        statusCode: 1,
+        message: "This Purchase Inward is Approved. Only remarks, vehicle number, and attachments can be modified.",
+      };
+    }
+  }
+
   // ✅ Determine approval action needed
-  let needsReApproval = false;
   let needsFirstApproval = false;
 
   if (hasApproval && module) {
-    if (latestLog?.status === "APPROVED") {
-      if (submitApproval) {
-        // User explicitly clicked Submit — always re-trigger
-        needsReApproval = true;
-      } else {
-        needsReApproval = await hasApprovalRelevantChanges(
-          REFERENCE_PAGE,
-          { ...dataFound, inwardItems: dataFound.inwardItems },
-          {
-            ...body,
-            inwardItems:
-              typeof body.inwardItems === "string"
-                ? JSON.parse(body.inwardItems)
-                : body.inwardItems,
-          },
-        );
-      }
-    } else if (!latestLog || latestLog?.status === "SUPERSEDED") {
+    if (!latestLog || latestLog?.status === "SUPERSEDED") {
       // Check if updated record now matches any config
       const prospectiveRecord = {
         ...dataFound,
@@ -981,35 +1003,8 @@ async function update(id, body, files) {
       }
     }
 
-    // ✅ CASE 1: APPROVED + relevant changes → supersede + re-trigger
-    if (needsReApproval && hasApproval && module && latestLog) {
-      await tx.approvalLog.update({
-        where: { id: latestLog.id },
-        data: { status: "SUPERSEDED" },
-      });
-      const fullRecord = await tx.purchaseInward.findUnique({
-        where: { id: parseInt(id) },
-        include: {
-          ...(await buildIncludeForModule(module.id)),
-          supplier: true,
-          Branch: true,
-          inwardItems: true,
-        },
-      });
-      await createApprovalLog(
-        tx,
-        branchId,
-        module.id,
-        data.id,
-        REFERENCE_PAGE,
-        fullRecord,
-        data.docId,
-        userId,
-      );
-    }
-
     // ✅ CASE 2: No log / SUPERSEDED → first-time approval triggered
-    else if (needsFirstApproval && hasApproval && module) {
+    if (needsFirstApproval && hasApproval && module) {
       const fullRecord = await tx.purchaseInward.findUnique({
         where: { id: parseInt(id) },
         include: {
@@ -1064,13 +1059,11 @@ async function update(id, body, files) {
     // ✅ CASE 4: APPROVED + no relevant changes → silent edit
   });
 
-  const message = needsReApproval
-    ? "Purchase Inward updated. Previous approval invalidated — re-approval required."
-    : needsFirstApproval
+  const message = needsFirstApproval
+    ? "Purchase Inward updated and submitted for approval."
+    : submitApproval
       ? "Purchase Inward updated and submitted for approval."
-      : submitApproval
-        ? "Purchase Inward updated and submitted for approval."
-        : "Purchase Inward updated successfully.";
+      : "Purchase Inward updated successfully.";
 
   return { statusCode: 0, data, message };
 }

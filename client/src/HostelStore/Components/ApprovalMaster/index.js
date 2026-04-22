@@ -179,7 +179,8 @@ export default function Form({
   };
 
   const validateData = (data) => {
-    const hasConditions = data.isAlwaysApproved || data.ConfigConditions.length > 0;
+    const hasConditions =
+      data.isAlwaysApproved || data.ConfigConditions.length > 0;
     return (
       data.moduleId &&
       data.approvalLevelItems.length > 0 &&
@@ -208,30 +209,39 @@ export default function Form({
 
   const saveData = (process) => {
     if (!data.name || !data.moduleId || data.approvalLevelItems.length === 0) {
-      toast.warning(
-        "Please fill required fields (Name, Module, and at least one Level).",
-      );
-      return;
-    }
-
-    if (!data.isAlwaysApproved && data.ConfigConditions.length === 0) {
       Swal.fire({
         icon: "error",
         title: "Validation Error",
-        text: "Please either provide approval rules (conditions) or enable 'Always Approved (No Conditions)'.",
+        text: "Please fill required fields (Name, Module, and at least one Level).",
         confirmButtonColor: "#4f46e5",
       });
       return;
     }
 
-    let foundItem = allData?.data
-      ?.filter((i) => (id ? i.id != id : true))
-      ?.some((item) => item.moduleId == moduleId && item.name === workflowName);
+    if (!data.isAlwaysApproved && data.ConfigConditions.length === 0) {
+      console.log(
+        data.isAlwaysApproved,
+        data.ConfigConditions,
+        "data.ConfigConditions",
+      );
 
-    if (foundItem) {
-      toast.warning("This configuration already exists.");
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        text: "Please either provide approval rules (conditions) or enable 'Approval Required (No Rules)'.",
+        confirmButtonColor: "#4f46e5",
+      });
       return;
     }
+
+    // let foundItem = allData?.data
+    //   ?.filter((i) => (id ? i.id != id : true))
+    //   ?.some((item) => item.moduleId == moduleId && item.name === workflowName);
+
+    // if (foundItem) {
+    //   toast.warning("This configuration already exists.");
+    //   return;
+    // }
 
     if (id && !window.confirm("Are you sure update the details ...?")) return;
 
@@ -369,6 +379,32 @@ export default function Form({
                     className="text-right "
                   />
                 </div>
+
+                {/*   <div className="pb-1">
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                    Always Approved (No Conditions)
+                    <div className="mt-1">
+                      <ToggleButton
+                        name=""
+                        value={isAlwaysApproved}
+                        setActive={setIsAlwaysApproved}
+                        readOnly={readOnly}
+                      />
+                    </div>
+                  </label>
+                </div> */}
+                <div className="pb-1 ">
+                  <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                    Approval Required (No Rules)
+                  </label>
+                  <input
+                    type="checkbox"
+                    checked={isAlwaysApproved}
+                    onChange={(e) => setIsAlwaysApproved(e.target.checked)}
+                    disabled={readOnly}
+                    className="w-4 h-6 accent-indigo-600 cursor-pointer "
+                  />
+                </div>
                 <div className="pb-1 ">
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                     Status
@@ -381,25 +417,12 @@ export default function Form({
                     />{" "}
                   </label>
                 </div>
-                <div className="pb-1">
-                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                    Always Approved (No Conditions)
-                    <div className="mt-1">
-                      <ToggleButton
-                        name=""
-                        value={isAlwaysApproved}
-                        setActive={setIsAlwaysApproved}
-                        readOnly={readOnly}
-                      />
-                    </div>
-                  </label>
-                </div>
               </div>
             </div>
 
             {/* Tabs Section */}
             <div className="flex flex-col flex-1">
-              <div className="flex border-b border-gray-200 bg-white rounded-t-lg overflow-hidden">
+              {/* <div className="flex border-b border-gray-200 bg-white rounded-t-lg overflow-hidden">
                 <button
                   className={`flex-1 py-2 px-6 text-xs font-bold transition-all duration-200 ${activeTab === 0 ? "border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50/30" : "text-gray-500 hover:bg-gray-50"}`}
                   onClick={() => setActiveTab(0)}
@@ -412,8 +435,30 @@ export default function Form({
                 >
                   Approval Levels
                 </button>
-              </div>
+              </div> */}
+              <div className="flex p-1 rounded-lg w-fit bg-gray-100 gap-1">
+                <button
+                  className={`px-5 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
+                    activeTab === 0
+                      ? "bg-indigo-600 text-white shadow-md"
+                      : "text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
+                  }`}
+                  onClick={() => setActiveTab(0)}
+                >
+                  Rule Builder
+                </button>
 
+                <button
+                  className={`px-5 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
+                    activeTab === 1
+                      ? "bg-indigo-600 text-white shadow-md"
+                      : "text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
+                  }`}
+                  onClick={() => setActiveTab(1)}
+                >
+                  Approval Levels
+                </button>
+              </div>
               <div
                 className={`p-2 border border-t-0 border-gray-200 rounded-b-lg bg-white min-h-[400px] max-h-[400px] ${
                   activeTab === 1 ? "overflow-visible" : "overflow-y-auto"

@@ -215,7 +215,7 @@ const Notification = () => {
                           <th className="px-2 py-2">Level</th>
                           <th className="px-2 py-2">View</th>
                           {/* ✅ NEW column */}
-                          <th className="px-2 py-2">Done</th>
+                          <th className="px-2 py-2">Readed</th>
                         </tr>
                       </thead>
                       <tbody>
