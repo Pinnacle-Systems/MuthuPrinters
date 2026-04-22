@@ -64,6 +64,9 @@ model Company {
   sizeTemplates       SizeTemplate[]
   processes           Process[]
   processGroups       ProcessGroup[]
+  boards              Board[]
+  plates              Plate[]
+  dies                Die[]
 }
 
 model Subscription {
@@ -116,6 +119,7 @@ model Branch {
   purchaseBillEntries   PurchaseBillEntry[]
   approvalConfigs       ApprovalConfig[]
   orderEntries          OrderEntry[]
+  jobCards              JobCard[]
 }
 
 model UserOnBranch {
@@ -199,6 +203,8 @@ model User {
   approvalLogsRaisedBy           ApprovalLog[]          @relation(name: "raisedBy")
   orderEntriesCreatedBy          OrderEntry[]           @relation(name: "createdBy")
   orderEntriesUpdatedBy          OrderEntry[]           @relation(name: "updatedBy")
+  jobCardsCreatedBy              JobCard[]              @relation(name: "createdBy")
+  jobCardsUpdatedBy              JobCard[]              @relation(name: "updatedBy")
 }
 
 model Employee {
@@ -249,7 +255,8 @@ model Employee {
   updatedAt          DateTime?         @updatedAt
   employeeId         String?
 
-  User User[]
+  User    User[]
+  JobCard JobCard[]
 }
 
 model FinYear {
@@ -450,6 +457,7 @@ model Party {
   purchaseBillEntries   PurchaseBillEntry[]
   purchaseLedgers       PurchaseLedger[]
   orderEntries          OrderEntry[]
+  JobCard               JobCard[]
 }
 
 model PartyBranch {
@@ -1578,6 +1586,8 @@ model Gsm {
   purchaseCancelItems    PurchaseCancelItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
   stocks                 Stock[]
+
+  jobCards JobCard[]
 }
 
 model ItemGroup {
@@ -1772,6 +1782,7 @@ model OrderEntry {
   Terms             TermsAndConditions? @relation(fields: [termsId], references: [id])
   termsId           Int?
   attachments       attachments[]
+  JobCard           JobCard[]
 }
 
 model Process {
@@ -1781,6 +1792,11 @@ model Process {
   Company          Company?           @relation(fields: [companyId], references: [id])
   companyId        Int?
   processGroupList ProcessGroupList[]
+
+  laminationDetails LaminationDetails[]
+  varnishDetails    VarnishDetails[]
+  machineDetails    MachineDetails[]
+  processDetails    ProcessDetails[]
 }
 
 model ProcessGroup {
@@ -1798,4 +1814,129 @@ model ProcessGroupList {
   processGroupId Int?
   Process        Process?      @relation(fields: [processId], references: [id])
   processId      Int?
+}
+
+model Board {
+  id        Int      @id @default(autoincrement())
+  name      String?
+  active    Boolean? @default(true)
+  Company   Company? @relation(fields: [companyId], references: [id])
+  companyId Int?
+
+  boardQualities BoardQuality[]
+  JobCards       JobCard[]
+}
+
+model Plate {
+  id        Int       @id @default(autoincrement())
+  name      String?
+  active    Boolean?  @default(true)
+  Company   Company?  @relation(fields: [companyId], references: [id])
+  companyId Int?
+  JobCard   JobCard[]
+}
+
+model Die {
+  id        Int       @id @default(autoincrement())
+  name      String?
+  active    Boolean?  @default(true)
+  Company   Company?  @relation(fields: [companyId], references: [id])
+  companyId Int?
+  JobCard   JobCard[]
+}
+
+model JobCard {
+  id                 Int         @id @default(autoincrement())
+  docId              String
+  docDate            DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  createdBy          User?       @relation("createdBy", fields: [createdById], references: [id])
+  createdById        Int?
+  updatedBy          User?       @relation("updatedBy", fields: [updatedById], references: [id])
+  updatedById        Int?
+  Branch             Branch?     @relation(fields: [branchId], references: [id])
+  branchId           Int?
+  OrderEntry         OrderEntry? @relation(fields: [orderEntryId], references: [id])
+  orderEntryId       Int?
+  orderType          String?
+  orderQty           Int?
+  customerId         Int?
+  customer           Party?      @relation(fields: [customerId], references: [id])
+  gsmId              Int?
+  gsm                Gsm?        @relation(fields: [gsmId], references: [id])
+  Board              Board?      @relation(fields: [boardId], references: [id])
+  boardId            Int?
+  fullBoard          Int?
+  noOfPockets        Int?
+  cuttingSize        String?
+  runningQty         Int?
+  isFourColor        Boolean?    @default(false)
+  isCutColor         Boolean?    @default(false)
+  isFront            Boolean?    @default(false)
+  isFrontAndBack     Boolean?    @default(false)
+  isCMYK             Boolean?    @default(false)
+  isCutColMachine    Boolean?    @default(false)
+  isFrontMachine     Boolean?    @default(false)
+  isFrontBackMachine Boolean?    @default(false)
+  plateId            Int?
+  Plate              Plate?      @relation(fields: [plateId], references: [id])
+  dieId              Int?
+  Die                Die?        @relation(fields: [dieId], references: [id])
+  totalPlateSet      Int?
+  remarks            String?
+  designerId         Int?
+  Designer           Employee?   @relation(fields: [designerId], references: [id])
+  tagCardUps         String?
+  jobRunTime         String?
+
+  boardQualities    BoardQuality[]
+  processDetails    ProcessDetails[]
+  laminationDetails LaminationDetails[]
+  varnishDetails    VarnishDetails[]
+  machineDetails    MachineDetails[]
+}
+
+model BoardQuality {
+  id        Int      @id @default(autoincrement())
+  jobCardId Int?
+  JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  boardId   Int?
+  Board     Board?   @relation(fields: [boardId], references: [id])
+}
+
+model ProcessDetails {
+  id        Int      @id @default(autoincrement())
+  jobCardId Int?
+  JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processId Int?
+  Process   Process? @relation(fields: [processId], references: [id])
+}
+
+model LaminationDetails {
+  id             Int      @id @default(autoincrement())
+  jobCardId      Int?
+  JobCard        JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  laminationId   Int?
+  Lamination     Process? @relation(fields: [laminationId], references: [id])
+  isFrontAndBack Boolean? @default(false)
+  isFront        Boolean? @default(false)
+}
+
+model VarnishDetails {
+  id             Int      @id @default(autoincrement())
+  jobCardId      Int?
+  JobCard        JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  varnishId      Int?
+  Varnish        Process? @relation(fields: [varnishId], references: [id])
+  isFrontAndBack Boolean? @default(false)
+  isFront        Boolean? @default(false)
+}
+
+model MachineDetails {
+  id        Int      @id @default(autoincrement())
+  jobCardId Int?
+  JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  machineId Int?
+  Machine   Process? @relation(fields: [machineId], references: [id])
 }

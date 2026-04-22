@@ -1,6 +1,50 @@
+// ─────────────────────────────────────────────────────────────
+// Updated CheckBox Component
+// ─────────────────────────────────────────────────────────────
+export const CheckBox = ({
+    name,
+    value,
+    setValue,
+    readOnly = false,
+    className,
+    required = false,
+    disabled = false,
+    tabIndex = null,
+}) => {
+    return (
+        <label
+            className={`inline-flex items-center gap-1.5 cursor-pointer select-none
+        text-xs font-medium text-slate-700 leading-none
+        ${readOnly || disabled ? "opacity-50 cursor-not-allowed" : "hover:text-indigo-600"}
+        ${className || ""}`}
+        >
+            <input
+                tabIndex={tabIndex ?? undefined}
+                type="checkbox"
+                required={required}
+                checked={value}
+                onChange={() => !readOnly && !disabled && setValue(!value)}
+                disabled={readOnly || disabled}
+                className="
+          w-[14px] h-[14px] min-w-[14px] min-h-[14px]
+          rounded
+          border border-slate-400
+          accent-indigo-600
+          cursor-pointer
+          disabled:cursor-not-allowed
+        "
+            />
+            <span>{name}</span>
+        </label>
+    );
+};
+
+
+// ─────────────────────────────────────────────────────────────
+// JobCardForm — restructured layout
+// ─────────────────────────────────────────────────────────────
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 import {
-    CheckBox,
     DropdownInput,
     ReusableInput,
     TextInput,
@@ -8,23 +52,63 @@ import {
 import { orderTypes } from "../../../Utils/DropdownData";
 import { useCallback, useEffect, useRef, useState } from "react";
 import moment from "moment";
-import {
-    findFromList,
-    getCommonParams,
-    ModeChip,
-} from "../../../Utils/helper";
+import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
 import { toast } from "react-toastify";
 import { FiEdit2, FiSave } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { dropDownListObject } from "../../../Utils/contructObject";
-import { PartyMaster } from "../index.js";
+import { Gsm, PartyMaster } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
-import { useAddJobCardMutation, useGetJobCardByIdQuery, useUpdateJobCardMutation } from "../../../redux/uniformService/JobCardService.js";
+import {
+    useAddJobCardMutation,
+    useGetJobCardByIdQuery,
+    useUpdateJobCardMutation,
+} from "../../../redux/uniformService/JobCardService.js";
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
 import { useGetProcessGroupMasterQuery } from "../../../redux/services/ProcessGroupMaster.service.js";
 import secureLocalStorage from "react-secure-storage";
 
+// ── Small section heading ────────────────────────────────────
+const SectionTitle = ({ children }) => (
+    <h3 className="text-[11px] font-semibold uppercase tracking-wide text-indigo-600 mb-1.5 border-b border-indigo-100 pb-0.5">
+        {children}
+    </h3>
+);
+
+// ── Fieldset card wrapper ────────────────────────────────────
+const Card = ({ title, children, className = "" }) => (
+    <div className={`border border-slate-200 rounded-md bg-white shadow-sm p-2 ${className}`}>
+        {title && <SectionTitle>{title}</SectionTitle>}
+        {children}
+    </div>
+);
+
+// ── Lamination / Varnish row ─────────────────────────────────
+const LVRow = ({ item, selected, onMain, onFront, onFrontBack, readOnly }) => (
+    <div className="grid grid-cols-3 items-center gap-x-3 py-0.5 border-b border-slate-50 last:border-0">
+        <CheckBox
+            name={item.name}
+            value={!!selected}
+            setValue={onMain}
+            readOnly={readOnly}
+        />
+        <CheckBox
+            name="Front"
+            value={selected?.isFront || false}
+            setValue={onFront}
+            readOnly={!selected || readOnly}
+        />
+        <CheckBox
+            name="Front & Back"
+            value={selected?.isFrontAndBack || false}
+            setValue={onFrontBack}
+            readOnly={!selected || readOnly}
+        />
+    </div>
+);
+
+// ─────────────────────────────────────────────────────────────
 const JobCardForm = ({
     onClose,
     id,
@@ -36,26 +120,15 @@ const JobCardForm = ({
 }) => {
     const today = new Date();
 
-    const [docDate, setDocDate] = useState(
-        moment.utc(today).format("YYYY-MM-DD"),
-    );
+    const [docDate, setDocDate] = useState(moment.utc(today).format("YYYY-MM-DD"));
     const [customerId, setCustomerId] = useState("");
     const [remarks, setRemarks] = useState("");
-    const [requirements, setRequirements] = useState("");
     const [orderType, setOrderType] = useState("Sample");
     const [deliveryDate, setDeliveryDate] = useState("");
-    const [jobType, setJobType] = useState("Internal");
     const [docId, setDocId] = useState("");
-    const [searchDocId, setSearchDocId] = useState("");
-    const [searchDocDate, setSearchDocDate] = useState("");
-    const [summary, setSummary] = useState(false);
-    const [attachmentModal, setAttachmentModal] = useState(false);
-    const [selectedAttachmentIndex, setSelectedAttachmentIndex] = useState(null);
-    const [attachments, setAttachments] = useState([]);
     const [orderQty, setOrderQty] = useState("");
-    const [termsAndCondition, setTermsAndCondition] = useState("");
-    const [termsId, setTermsId] = useState("");
-    const customerRef = useRef(null);
+
+    // Board Details
     const [gsm, setGsm] = useState("");
     const [otherBoard, setOtherBoard] = useState("");
     const [fullBoard, setFullBoard] = useState("");
@@ -66,50 +139,52 @@ const JobCardForm = ({
     const [isCutColor, setIsCutColor] = useState(false);
     const [isFront, setIsFront] = useState(false);
     const [isFrontAndBack, setIsFrontAndBack] = useState(false);
+
+    // Machine
     const [isCMYK, setIsCMYK] = useState(false);
     const [isCutColMachine, setIsCutColMachine] = useState(false);
     const [isFrontMachine, setIsFrontMachine] = useState(false);
     const [isFrontBackMachine, setIsFrontBackMachine] = useState(false);
+    const [totalPlateSet, setTotalPlateSet] = useState("");
+    const [plateId, setPlateId] = useState("");
+    const [dieId, setDieId] = useState("");
+
+    // Arrays
     const [boardItems, setBoardItems] = useState([]);
     const [selectedProcesses, setSelectedProcesses] = useState([]);
     const [selectedMachines, setSelectedMachines] = useState([]);
     const [laminations, setLaminations] = useState([]);
     const [varnishes, setVarnishes] = useState([]);
-    const [plates, setPlates] = useState([]);
-    const [dies, setDies] = useState([]);
 
+    const customerRef = useRef(null);
     const { userId, finYearId, branchId } = getCommonParams();
+
     const params = {
         companyId: secureLocalStorage.getItem(
             sessionStorage.getItem("sessionId") + "userCompanyId"
         ),
     };
-    const {
-        data: processList,
-        isLoading: isProcessLoading,
-        isFetching: isProcessFetching,
-    } = useGetProcessMasterQuery({ params });
 
-    const {
-        data: processGroupList,
-        isLoading: isProcessGroupLoading,
-        isFetching: isProcessGroupFetching,
-    } = useGetProcessGroupMasterQuery({ params });
+    const { data: processList, isFetching: isProcessFetching } =
+        useGetProcessMasterQuery({ params });
+    const { data: processGroupList, isFetching: isProcessGroupFetching } =
+        useGetProcessGroupMasterQuery({ params });
 
-    const boardIds = processGroupList?.data?.find((item) => item.name === "BOARD QUALITY")?.processGroupList?.map((item) => item.id);
-    const boardList = processList?.data?.filter((item) => boardIds?.includes(item.id));
+    const getGroupIds = (groupName) =>
+        processGroupList?.data
+            ?.find((g) => g.name === groupName)
+            ?.processGroupList?.map((i) => i.id) || [];
 
-    const defaultIds = processGroupList?.data?.find((item) => item.name === "DEFAULT")?.processGroupList?.map((item) => item.id);
-    const defaultList = processList?.data?.filter((item) => defaultIds?.includes(item.id));
+    const filterByGroup = (groupName) =>
+        processList?.data?.filter((p) =>
+            getGroupIds(groupName).includes(p.id)
+        ) || [];
 
-    const laminationIds = processGroupList?.data?.find((item) => item.name === "LAMINATION")?.processGroupList?.map((item) => item.id);
-    const laminationList = processList?.data?.filter((item) => laminationIds?.includes(item.id));
-
-    const varnishIds = processGroupList?.data?.find((item) => item.name === "VARNISH")?.processGroupList?.map((item) => item.id);
-    const varnishList = processList?.data?.filter((item) => varnishIds?.includes(item.id));
-
-    const machineIds = processGroupList?.data?.find((item) => item.name === "MACHINE")?.processGroupList?.map((item) => item.id);
-    const machineList = processList?.data?.filter((item) => machineIds?.includes(item.id));
+    const boardList = filterByGroup("BOARD QUALITY");
+    const defaultList = filterByGroup("DEFAULT");
+    const laminationList = filterByGroup("LAMINATION");
+    const varnishList = filterByGroup("VARNISH");
+    const machineList = filterByGroup("MACHINE");
 
     const {
         data: singleData,
@@ -120,94 +195,129 @@ const JobCardForm = ({
     const [addData] = useAddJobCardMutation();
     const [updateData] = useUpdateJobCardMutation();
 
-    const syncFormWithDb = useCallback(
-        (data) => {
-            setDocId(data?.docId ? data?.docId : "New");
-            setDocDate(
-                data?.docDate
-                    ? moment.utc(data.docDate).format("YYYY-MM-DD")
-                    : moment.utc(new Date()).format("YYYY-MM-DD"),
-            );
-            setOrderType(
-                data?.orderType || "Sample",
-            );
-            setCustomerId(data?.customerId || "");
-            setRemarks(data?.remarks || "");
-            setAttachments(data?.attachments ? data?.attachments : []);
-            setOrderQty(data?.orderQty || "");
-            setRequirements(data?.requirements || "");
-            setDeliveryDate(
-                data?.deliveryDate
-                    ? moment.utc(data.deliveryDate).format("YYYY-MM-DD")
-                    : "",
-            );
-            setTermsAndCondition(data?.termsAndCondition || "");
-            setTermsId(data?.termsId || "");
-        },
-        [id],
-    );
+    const syncFormWithDb = useCallback((data) => {
+        setDocId(data?.docId || "New");
+        setDocDate(
+            data?.docDate
+                ? moment.utc(data.docDate).format("YYYY-MM-DD")
+                : moment.utc(new Date()).format("YYYY-MM-DD")
+        );
+        setOrderType(data?.orderType || "Sample");
+        setCustomerId(data?.customerId || "");
+        setRemarks(data?.remarks || "");
+        setOrderQty(data?.orderQty || "");
+        setDeliveryDate(
+            data?.deliveryDate ? moment.utc(data.deliveryDate).format("YYYY-MM-DD") : ""
+        );
+        setGsm(data?.gsmId || "");
+        setFullBoard(data?.fullBoard || "");
+        setNoOfPockets(data?.noOfPockets || "");
+        setCuttingSize(data?.cuttingSize || "");
+        setRunningQty(data?.runningQty || "");
+        setIsFourColor(data?.isFourColor || false);
+        setIsCutColor(data?.isCutColor || false);
+        setIsFront(data?.isFront || false);
+        setIsFrontAndBack(data?.isFrontAndBack || false);
+        setIsCMYK(data?.isCMYK || false);
+        setIsCutColMachine(data?.isCutColMachine || false);
+        setIsFrontMachine(data?.isFrontMachine || false);
+        setIsFrontBackMachine(data?.isFrontBackMachine || false);
+        setPlateId(data?.plateId || "");
+        setDieId(data?.dieId || "");
+        setTotalPlateSet(data?.totalPlateSet || "");
+        setBoardItems(data?.boardQualities?.map((b) => b.boardId) || []);
+        setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
+        setLaminations(
+            data?.laminationDetails?.map((l) => ({
+                processId: l.laminationId,
+                isFront: l.isFront,
+                isFrontAndBack: l.isFrontAndBack,
+            })) || []
+        );
+        setVarnishes(
+            data?.varnishDetails?.map((v) => ({
+                processId: v.varnishId,
+                isFront: v.isFront,
+                isFrontAndBack: v.isFrontAndBack,
+            })) || []
+        );
+        setSelectedMachines(data?.machineDetails?.map((m) => m.machineId) || []);
+    }, []);
 
     useEffect(() => {
-        if (id && singleData?.data) {
-            syncFormWithDb(singleData.data);
-        } else {
-            syncFormWithDb(undefined);
-        }
+        if (id && singleData?.data) syncFormWithDb(singleData.data);
+        else syncFormWithDb(undefined);
     }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
-    let data = {
+    // ── Toggle helpers ───────────────────────────────────────
+    const toggleArr = (setter, val) =>
+        setter((prev) =>
+            prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
+        );
+
+    const toggleLV = (setter, id) =>
+        setter((prev) => {
+            const exists = prev.find((l) => l.processId === id);
+            return exists
+                ? prev.filter((l) => l.processId !== id)
+                : [...prev, { processId: id, isFront: false, isFrontAndBack: false }];
+        });
+
+    const toggleLVProp = (setter, id, prop) =>
+        setter((prev) =>
+            prev.map((l) => (l.processId === id ? { ...l, [prop]: !l[prop] } : l))
+        );
+
+    // ── Build form payload ───────────────────────────────────
+    const getFormData = () => ({
         id,
         docDate,
         branchId,
         userId,
         orderType,
-        jobType,
         customerId,
         remarks,
         finYearId,
-        attachments: attachments?.filter((i) => i.filePath),
         orderQty,
-        requirements,
         deliveryDate,
-        termsAndCondition,
-        termsId,
-    };
+        gsmId: gsm,
+        fullBoard,
+        noOfPockets,
+        cuttingSize,
+        runningQty,
+        isFourColor,
+        isCutColor,
+        isFront,
+        isFrontAndBack,
+        isCMYK,
+        isCutColMachine,
+        isFrontMachine,
+        isFrontBackMachine,
+        plateId,
+        dieId,
+        totalPlateSet,
+        boardItems,
+        selectedProcesses,
+        laminations,
+        varnishes,
+        selectedMachines,
+    });
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
         try {
-            const formData = new FormData();
+            const fd = new FormData();
             for (let key in data) {
-                if (key == "attachments") {
-                    formData.append(
-                        key,
-                        JSON.stringify(
-                            data[key].map((i) => ({
-                                ...i,
-                                filePath:
-                                    i.filePath instanceof File ? i.filePath.name : i.filePath,
-                            })),
-                        ),
-                    );
-                    data[key].forEach((option) => {
-                        if (option?.filePath instanceof File) {
-                            formData.append("images", option.filePath);
-                        }
-                    });
-                } else if (
-                    Array.isArray(data[key]) ||
-                    (typeof data[key] === "object" && data[key] !== null)
-                ) {
-                    formData.append(key, JSON.stringify(data[key]));
+                if (Array.isArray(data[key]) || (typeof data[key] === "object" && data[key] !== null)) {
+                    fd.append(key, JSON.stringify(data[key]));
                 } else {
-                    formData.append(key, data[key]);
+                    fd.append(key, data[key]);
                 }
             }
-            let returnData;
-            if (text === "Updated") {
-                returnData = await callback({ id, body: formData }).unwrap();
-            } else {
-                returnData = await callback(formData).unwrap();
-            }
+            const returnData =
+                text === "Updated"
+                    ? await callback({ id, body: fd }).unwrap()
+                    : await callback(fd).unwrap();
+
             if (returnData.statusCode === 1) {
                 toast.error(returnData.message);
             } else {
@@ -217,20 +327,14 @@ const JobCardForm = ({
                     showConfirmButton: false,
                     timer: 2000,
                     didClose: () => {
-                        dispatchInvalidate();
-
                         if (returnData.statusCode === 0) {
-                            if (nextProcess == "new") {
+                            if (nextProcess === "new") {
                                 setId(0);
                                 setDocId("New");
                                 syncFormWithDb(undefined);
-                                setTimeout(() => {
-                                    customerRef.current?.focus();
-                                }, 100);
+                                setTimeout(() => customerRef.current?.focus(), 100);
                             }
-                            if (nextProcess == "close") {
-                                onClose();
-                            }
+                            if (nextProcess === "close") onClose();
                         } else {
                             toast.error(returnData?.message);
                         }
@@ -238,587 +342,402 @@ const JobCardForm = ({
                 });
             }
         } catch (error) {
-            console.log("handle", error);
+            console.error("submit error", error);
         }
     };
 
     const validateData = (data) => {
-        const items = data?.inwardItems || [];
         const checks = [
             { condition: !data.orderType, title: "Order Type is required!" },
             { condition: !data.orderQty, title: "Order Quantity is required!" },
             { condition: !data.deliveryDate, title: "Delivery Date is required!" },
             { condition: !data.customerId, title: "Customer is required!" },
         ];
-
         const failed = checks.find((c) => c.condition);
         if (failed) {
-            Swal.fire({
-                icon: "warning",
-                title: failed.title,
-                html: failed.html,
-                timer: failed.html ? undefined : 1500,
-                showConfirmButton: !!failed.html,
-                confirmButtonText: "OK",
-            });
+            Swal.fire({ icon: "warning", title: failed.title, timer: 1500, showConfirmButton: false });
             return false;
         }
-
         return true;
     };
 
     const saveData = (nextProcess) => {
-        if (!validateData(data)) {
-            return;
-        }
-        if (id) {
-            if (!window.confirm("Are you sure update the details ...?")) {
-                return;
-            }
-        }
-        if (nextProcess == "draft" && !id) {
-            handleSubmitCustom(
-                addData,
-                (data = { ...data, draftSave: true }),
-                "Added",
-                nextProcess,
-            );
-        } else if (id && nextProcess == "draft") {
-            handleSubmitCustom(
-                updateData,
-                { ...data, draftSave: true },
-                "Updated",
-                nextProcess,
-            );
-        } else if (id) {
-            handleSubmitCustom(updateData, data, "Updated", nextProcess);
-        } else {
-            handleSubmitCustom(addData, data, "Added", nextProcess);
-        }
+        const data = getFormData();
+        if (!validateData(data)) return;
+        if (id && !window.confirm("Are you sure you want to update the details?")) return;
+        if (id) handleSubmitCustom(updateData, data, "Updated", nextProcess);
+        else handleSubmitCustom(addData, data, "Added", nextProcess);
     };
 
-    const handleKeyDown = (event) => {
-        let charCode = String.fromCharCode(event.which).toLowerCase();
-        if ((event.ctrlKey || event.metaKey) && charCode === "s") {
-            event.preventDefault();
+    const handleKeyDown = (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+            e.preventDefault();
             saveData("close");
         }
     };
 
-    const handleBoardQualityChange = (boardId) => {
-        setBoardItems((prev) =>
-            prev.includes(boardId)
-                ? prev.filter((id) => id !== boardId)
-                : [...prev, boardId]
-        );
-    };
-
-    const handleProcessChange = (boardId) => {
-        setSelectedProcesses((prev) =>
-            prev.includes(boardId)
-                ? prev.filter((id) => id !== boardId)
-                : [...prev, boardId]
-        );
-    };
-
-    const handleMachineChange = (boardId) => {
-        setSelectedMachines((prev) =>
-            prev.includes(boardId)
-                ? prev.filter((id) => id !== boardId)
-                : [...prev, boardId]
-        );
-    };
-
-    const handleMainCheck = (id) => {
-        setLaminations((prev) => {
-            const exists = prev.find((l) => l.processId === id);
-
-            if (exists) {
-                return prev.filter((l) => l.processId !== id);
-            } else {
-                return [...prev, { processId: id, isSelected: true, isFront: false, isFrontAndBack: false }];
-            }
-        });
-    };
-
-    const handleFrontCheck = (id) => {
-        setLaminations((prev) =>
-            prev.map((l) =>
-                l.processId === id ? { ...l, isFront: !l.isFront } : l
-            )
-        );
-    };
-
-    const handleFrontBackCheck = (id) => {
-        setLaminations((prev) =>
-            prev.map((l) =>
-                l.processId === id ? { ...l, isFrontAndBack: !l.isFrontAndBack } : l
-            )
-        );
-    };
-
-    const handleMainCheckVarnish = (id) => {
-        setVarnishes((prev) => {
-            const exists = prev.find((l) => l.processId === id);
-
-            if (exists) {
-                return prev.filter((l) => l.processId !== id);
-            } else {
-                return [...prev, { processId: id, isSelected: true, isFront: false, isFrontAndBack: false }];
-            }
-        });
-    };
-
-    const handleFrontVarnishCheck = (id) => {
-        setVarnishes((prev) =>
-            prev.map((l) =>
-                l.processId === id ? { ...l, isFront: !l.isFront } : l
-            )
-        );
-    };
-
-    const handleFrontBackVarnishCheck = (id) => {
-        setVarnishes((prev) =>
-            prev.map((l) =>
-                l.processId === id ? { ...l, isFrontAndBack: !l.isFrontAndBack } : l
-            )
-        );
-    };
-
+    // ── Render ───────────────────────────────────────────────
     return (
-        <>
-            <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-lg font-bold flex items-center gap-2">
-                        Job Card
-                        <ModeChip id={id} readOnly={readOnly} />
-                    </h1>
-                    <button
-                        onClick={() => {
-                            onClose();
-                        }}
-                        className="text-indigo-600 hover:text-indigo-700"
-                        title="Back to Report"
-                    >
-                        <IoArrowBackCircleSharp className="w-7 h-7" />
-                    </button>
-                </div>
+        <div className="flex flex-col bg-slate-50" onKeyDown={handleKeyDown}>
+
+            {/* ── Header ─────────────────────────────────────────── */}
+            <div className="flex justify-between items-center px-3 py-2 border-b border-slate-200 bg-white sticky top-0 z-10 shadow-sm">
+                <h1 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    Job Card
+                    <ModeChip id={id} readOnly={readOnly} />
+                </h1>
+                <button
+                    onClick={onClose}
+                    className="text-indigo-500 hover:text-indigo-700 transition-colors"
+                    title="Back"
+                >
+                    <IoArrowBackCircleSharp className="w-6 h-6" />
+                </button>
             </div>
-            <div className="space-y-1.5 py-2" onKeyDown={handleKeyDown}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">Basic Details</h2>
-                        <div className="grid grid-cols-4 gap-1">
-                            <ReusableInput
-                                label="Order Entry No"
-                                readOnly
-                                value={docId}
-                            />
-                            <ReusableInput
-                                label="Order Entry Date"
-                                value={docDate}
-                                type={"date"}
-                                required={true}
-                                readOnly={true}
-                                disabled
-                            />
+
+            {/* ── Body ───────────────────────────────────────────── */}
+            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+
+                {/* Row 1 — Basic + Customer */}
+                <div className="grid grid-cols-2 gap-2">
+                    <Card title="Basic Details">
+                        <div className="grid grid-cols-4 gap-x-2 gap-y-1">
+                            <ReusableInput label="Job Card No" readOnly value={docId} />
+                            <ReusableInput label="Date" value={docDate} type="date" readOnly disabled />
                             <DropdownInput
                                 name="Order Type"
                                 options={orderTypes}
                                 value={orderType}
-                                setValue={(value) => {
-                                    setOrderType(value);
-                                }}
-                                required={true}
+                                setValue={setOrderType}
+                                required
                                 readOnly={readOnly}
                                 disabled={readOnly}
                                 ref={customerRef}
                             />
-
-                            <div className="w-28">
-                                <TextInput
-                                    name={"Order Quantity"}
-                                    value={orderQty}
-                                    setValue={setOrderQty}
-                                    readOnly={readOnly}
-                                    required={true}
-                                    type={"number"}
-                                    onFocus={(e) => {
-                                        e.target.select();
-                                    }}
-                                    onBlur={(e) =>
-                                        setOrderQty(
-                                            e.target.value ? Number(e.target.value).toFixed(3) : "",
-                                        )
-                                    }
-                                    className={"text-right"}
-                                />
-                            </div>
+                            <TextInput
+                                name="Order Qty"
+                                value={orderQty}
+                                setValue={setOrderQty}
+                                readOnly={readOnly}
+                                required
+                                type="number"
+                                className="text-right"
+                                onFocus={(e) => e.target.select()}
+                                onBlur={(e) =>
+                                    setOrderQty(e.target.value ? Number(e.target.value).toFixed(3) : "")
+                                }
+                            />
                         </div>
-                    </div>
+                    </Card>
 
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">
-                            Customer Details
-                        </h2>
-                        <div className="grid grid-cols-4 gap-1">
-                            <div className="col-span-2">
-                                <DropdownWithModal
-                                    name="Customer"
-                                    options={dropDownListObject(
-                                        id
-                                            ? customerList?.data?.filter((item) => item?.isCustomer)
-                                            : customerList?.data?.filter(
-                                                (item) => item?.active && item?.isCustomer,
-                                            ),
-                                        "name",
-                                        "id",
-                                    )}
-                                    value={customerId}
-                                    setValue={setCustomerId}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    className={`w-[150px]`}
-                                    addNewLabel="+ Add New Customer"
-                                    childComponent={PartyMaster}
-                                    addNewModalWidth="w-[90%] h-[95%]"
-                                    disabled={id}
-                                />
-                            </div>
+                    <Card title="Customer Details">
+                        <div className="grid grid-cols-3 gap-x-2 gap-y-1">
+                            <DropdownWithModal
+                                name="Customer"
+                                options={dropDownListObject(
+                                    id
+                                        ? customerList?.data?.filter((i) => i?.isCustomer)
+                                        : customerList?.data?.filter((i) => i?.active && i?.isCustomer),
+                                    "name",
+                                    "id"
+                                )}
+                                value={customerId}
+                                setValue={setCustomerId}
+                                required
+                                readOnly={readOnly}
+                                addNewLabel="+ Add New Customer"
+                                childComponent={PartyMaster}
+                                addNewModalWidth="w-[90%] h-[95%]"
+                                disabled={!!id}
+                            />
                             <TextInput
                                 name="Contact Person"
-                                placeholder="Contact name"
-                                value={findFromList(
-                                    customerId,
-                                    customerList?.data,
-                                    "contactPersonName",
-                                )}
-                                disabled={true}
+                                value={findFromList(customerId, customerList?.data, "contactPersonName")}
+                                disabled
                             />
-
                             <TextInput
                                 name="Phone"
-                                placeholder="Contact name"
-                                value={findFromList(
-                                    customerId,
-                                    customerList?.data,
-                                    "contactNumber",
-                                )}
-                                disabled={true}
+                                value={findFromList(customerId, customerList?.data, "contactNumber")}
+                                disabled
                             />
                         </div>
-                    </div>
+                    </Card>
                 </div>
-                <div className="border border-slate-200 p-2 py-3 bg-white rounded-md shadow-sm gap-x-2 flex">
-                    <div className="w-1/2">
-                        <fieldset className="border border-gray-300 rounded-md pb-2">
-                            <legend className="font-medium text-slate-700 mb-2  bg-white text-xs px-1">Board Details</legend>
-                            <div className="grid grid-cols-5 gap-x-2">
+
+                {/* Row 2 — Left / Right columns */}
+                <div className="grid grid-cols-2 gap-2">
+
+                    {/* ── LEFT COLUMN ──────────────────────────────── */}
+                    <div className="space-y-2">
+
+                        {/* Board Quality checkboxes */}
+                        <Card title="Board Quality">
+                            <div className="flex flex-wrap gap-x-5 gap-y-2">
                                 {boardList?.map((item) => (
-                                    // <label key={item.id} className="text-xs font-medium gap-2 flex text-slate-700">
-                                    //     <input
-                                    //         type="checkbox"
-                                    //         onClick={() => handleBoardQualityChange(item.id)}
-                                    //         checked={boardItems.includes(item.id)}
-                                    //         className={`px-2 py-1 rounded border ${boardList === item.id ? "bg-indigo-500 text-white" : "bg-white "
-                                    //             }`}
-                                    //     />
-                                    //     {item.name}
-                                    // </label>
                                     <CheckBox
+                                        key={item.id}
                                         name={item.name}
                                         value={boardItems.includes(item.id)}
-                                        setValue={() => handleBoardQualityChange(item.id)}
+                                        setValue={() => toggleArr(setBoardItems, item.id)}
                                         readOnly={readOnly}
                                     />
                                 ))}
                             </div>
-                            <div className="grid grid-cols-4 gap-x-2 mt-3 px-2">
+                        </Card>
+
+                        {/* Board Specifications */}
+                        <Card title="Board Specifications">
+                            <div className="grid grid-cols-4 gap-x-2 gap-y-1">
                                 <DropdownWithModal
-                                    name="Gsm"
+                                    name="GSM"
                                     options={dropDownListObject(
-                                        id
-                                            ? gsmList?.data
-                                            : gsmList?.data?.filter(
-                                                (item) => item?.active,
-                                            ),
+                                        id ? gsmList?.data : gsmList?.data?.filter((i) => i?.active),
                                         "name",
-                                        "id",
+                                        "id"
                                     )}
                                     value={gsm}
                                     setValue={setGsm}
-                                    required={true}
                                     readOnly={readOnly}
-                                    className={`w-[150px]`}
-                                    addNewLabel="+ Add New Gsm"
-                                    // childComponent={GsmMaster}
-                                    addNewModalWidth="w-[90%] h-[95%]"
+                                    addNewLabel="+ Add New GSM"
+                                    childComponent={Gsm}
+                                    addNewModalWidth="w-[30%] h-[45%]"
                                 />
                                 <TextInput
                                     name="Others / Board"
                                     value={otherBoard}
                                     setValue={setOtherBoard}
                                     readOnly={readOnly}
-                                    type={"text"}
-                                // onFocus={(e) => {
-                                //     e.target.select();
-                                // }}
                                 />
                                 <TextInput
                                     name="Full Board"
                                     value={fullBoard}
                                     setValue={setFullBoard}
                                     readOnly={readOnly}
-                                    type={"text"}
+                                    type="number"
+                                    className="text-right"
                                 />
                                 <TextInput
-                                    name="No of Pocket"
+                                    name="No. of Pockets"
                                     value={noOfPockets}
                                     setValue={setNoOfPockets}
                                     readOnly={readOnly}
-                                    type={"text"}
                                 />
                             </div>
-                            <div className="px-2 mt-3">
-                                <div className="flex gap-x-2 mt-2">
 
-                                    <TextInput
-                                        name="Cutting Size"
-                                        value={cuttingSize}
-                                        setValue={setCuttingSize}
-                                        readOnly={readOnly}
-                                        type={"text"}
-                                    />
-                                    <TextInput
-                                        name="Running Qty"
-                                        value={runningQty}
-                                        setValue={setRunningQty}
-                                        readOnly={readOnly}
-                                        type={"text"}
-                                        className={"text-right"}
-                                    />
-                                    <div className="flex items-center gap-2 mt-2 mx-2">
-                                        <CheckBox
-                                            name="4 COLOR"
-                                            value={isFourColor}
-                                            setValue={setIsFourColor}
-                                            readOnly={readOnly}
-                                        />
-                                        <CheckBox
-                                            name="CUT COLOR"
-                                            value={isCutColor}
-                                            setValue={setIsCutColor}
-                                            readOnly={readOnly}
-                                        />
-                                        <CheckBox
-                                            name="FRONT"
-                                            value={isFront}
-                                            setValue={setIsFront}
-                                            readOnly={readOnly}
-                                        />
-                                        <CheckBox
-                                            name="FRONT & BACK"
-                                            value={isFrontAndBack}
-                                            setValue={setIsFrontAndBack}
-                                            readOnly={readOnly}
-                                        />
-                                    </div>
-
-                                </div>
-
-
+                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-1">
+                                <TextInput
+                                    name="Cutting Size"
+                                    value={cuttingSize}
+                                    setValue={setCuttingSize}
+                                    readOnly={readOnly}
+                                />
+                                <TextInput
+                                    name="Running Qty"
+                                    value={runningQty}
+                                    setValue={setRunningQty}
+                                    readOnly={readOnly}
+                                    type="number"
+                                    className="text-right"
+                                />
                             </div>
-                        </fieldset>
-                        <fieldset className="border border-gray-300 rounded-md pb-2 mt-2">
-                            <legend className="font-medium text-slate-700 mb-2 bg-white text-xs px-1">
-                                Varnish  Details
-                            </legend>
 
-                            <div className="flex flex-col gap-2">
-                                {varnishList?.map((item) => {
-                                    const selected = varnishes.find(l => l.processId === item.id);
+                            {/* Printing flags */}
+                            <div className="flex flex-wrap gap-x-5 gap-y-2 mt-2 pt-1.5 border-t border-slate-100">
+                                <CheckBox name="4 Color" value={isFourColor} setValue={setIsFourColor} readOnly={readOnly} />
+                                <CheckBox name="Cut Color" value={isCutColor} setValue={setIsCutColor} readOnly={readOnly} />
+                                <CheckBox name="Front" value={isFront} setValue={setIsFront} readOnly={readOnly} />
+                                <CheckBox name="Front & Back" value={isFrontAndBack} setValue={setIsFrontAndBack} readOnly={readOnly} />
+                            </div>
+                        </Card>
 
-                                    return (
-                                        <div key={item.id} className="grid grid-cols-3 gap-2">
-
-                                            {/* Main checkbox */}
-                                            <CheckBox
-                                                name={item.name}
-                                                value={!!selected}
-                                                setValue={() => handleMainCheckVarnish(item.id)}
+                        {/* Varnish */}
+                        <Card title="Varnish Details">
+                            {varnishList?.length > 0 ? (
+                                <>
+                                    <div className="grid grid-cols-3 gap-x-3 mb-1 px-0.5">
+                                        {["Type", "Front", "Front & Back"].map((h) => (
+                                            <span key={h} className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                                                {h}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    {varnishList.map((item) => {
+                                        const selected = varnishes.find((v) => v.processId === item.id);
+                                        return (
+                                            <LVRow
+                                                key={item.id}
+                                                item={item}
+                                                selected={selected}
+                                                onMain={() => toggleLV(setVarnishes, item.id)}
+                                                onFront={() => toggleLVProp(setVarnishes, item.id, "isFront")}
+                                                onFrontBack={() => toggleLVProp(setVarnishes, item.id, "isFrontAndBack")}
                                                 readOnly={readOnly}
                                             />
-
-                                            {/* FRONT */}
-                                            <CheckBox
-                                                name="FRONT"
-                                                value={selected?.isFront || false}
-                                                setValue={() => handleFrontVarnishCheck(item.id)}
-                                                readOnly={!selected}
-                                            />
-
-                                            {/* FRONT / BACK */}
-                                            <CheckBox
-                                                name="FRONT / BACK"
-                                                value={selected?.isFrontAndBack || false}
-                                                setValue={() => handleFrontBackVarnishCheck(item.id)}
-                                                readOnly={!selected}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </fieldset>
+                                        );
+                                    })}
+                                </>
+                            ) : (
+                                <p className="text-xs text-slate-400 italic">No varnish options configured.</p>
+                            )}
+                        </Card>
                     </div>
-                    <div className="w-1/2">
-                        <fieldset className="border border-gray-300 rounded-md pb-2">
-                            <legend className="font-medium text-slate-700 mb-2  bg-white text-xs px-1">Process</legend>
-                            <div className="grid grid-cols-5 gap-x-2">
+
+                    {/* ── RIGHT COLUMN ─────────────────────────────── */}
+                    <div className="space-y-2">
+
+                        {/* Process */}
+                        <Card title="Process">
+                            <div className="flex flex-wrap gap-x-5 gap-y-2">
                                 {defaultList?.map((item) => (
                                     <CheckBox
+                                        key={item.id}
                                         name={item.name}
                                         value={selectedProcesses.includes(item.id)}
-                                        setValue={() => handleProcessChange(item.id)}
+                                        setValue={() => toggleArr(setSelectedProcesses, item.id)}
                                         readOnly={readOnly}
                                     />
                                 ))}
                             </div>
-                        </fieldset>
-                        <fieldset className="border border-gray-300 rounded-md pb-2 mt-2">
-                            <legend className="font-medium text-slate-700 mb-2 bg-white text-xs px-1">
-                                Lamination Details
-                            </legend>
+                        </Card>
 
-                            <div className="flex flex-col gap-2">
-                                {laminationList?.map((item) => {
-                                    const selected = laminations.find(l => l.processId === item.id);
-
-                                    return (
-                                        <div key={item.id} className="grid grid-cols-3 gap-2">
-
-                                            {/* Main checkbox */}
-                                            <CheckBox
-                                                name={item.name}
-                                                value={!!selected}
-                                                setValue={() => handleMainCheck(item.id)}
+                        {/* Lamination */}
+                        <Card title="Lamination Details">
+                            {laminationList?.length > 0 ? (
+                                <>
+                                    <div className="grid grid-cols-3 gap-x-3 mb-1 px-0.5">
+                                        {["Type", "Front", "Front & Back"].map((h) => (
+                                            <span key={h} className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                                                {h}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    {laminationList.map((item) => {
+                                        const selected = laminations.find((l) => l.processId === item.id);
+                                        return (
+                                            <LVRow
+                                                key={item.id}
+                                                item={item}
+                                                selected={selected}
+                                                onMain={() => toggleLV(setLaminations, item.id)}
+                                                onFront={() => toggleLVProp(setLaminations, item.id, "isFront")}
+                                                onFrontBack={() => toggleLVProp(setLaminations, item.id, "isFrontAndBack")}
                                                 readOnly={readOnly}
                                             />
+                                        );
+                                    })}
+                                </>
+                            ) : (
+                                <p className="text-xs text-slate-400 italic">No lamination options configured.</p>
+                            )}
+                        </Card>
 
-                                            {/* FRONT */}
-                                            <CheckBox
-                                                name="FRONT"
-                                                value={selected?.isFront || false}
-                                                setValue={() => handleFrontCheck(item.id)}
-                                                readOnly={!selected}
-                                            />
-
-                                            {/* FRONT / BACK */}
-                                            <CheckBox
-                                                name="FRONT / BACK"
-                                                value={selected?.isFrontAndBack || false}
-                                                setValue={() => handleFrontBackCheck(item.id)}
-                                                readOnly={!selected}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </fieldset>
-                        <fieldset className="border border-gray-300 rounded-md pb-2">
-                            <legend className="font-medium text-slate-700 mb-2  bg-white text-xs px-1">Machine Details</legend>
-                            <div className="grid grid-cols-5 gap-x-2">
+                        {/* Machine */}
+                        <Card title="Machine Details">
+                            <div className="flex flex-wrap gap-x-5 gap-y-2">
                                 {machineList?.map((item) => (
                                     <CheckBox
+                                        key={item.id}
                                         name={item.name}
                                         value={selectedMachines.includes(item.id)}
-                                        setValue={() => handleMachineChange(item.id)}
+                                        setValue={() => toggleArr(setSelectedMachines, item.id)}
                                         readOnly={readOnly}
                                     />
                                 ))}
-
-                                <CheckBox
-                                    name="CMYK"
-                                    value={isCMYK}
-                                    setValue={setIsCMYK}
-                                    readOnly={readOnly}
-                                />
-                                <CheckBox
-                                    name="CUT COL"
-                                    value={isCutColMachine}
-                                    setValue={setIsCutColMachine}
-                                    readOnly={readOnly}
-                                />
-                                <CheckBox
-                                    name="FRONT"
-                                    value={isFrontMachine}
-                                    setValue={setIsFrontMachine}
-                                    readOnly={readOnly}
-                                />
-                                <CheckBox
-                                    name="FRONT & BACK"
-                                    value={isFrontBackMachine}
-                                    setValue={setIsFrontBackMachine}
-                                    readOnly={readOnly}
-                                />
-
+                                <CheckBox name="CMYK" value={isCMYK} setValue={setIsCMYK} readOnly={readOnly} />
+                                <CheckBox name="Cut Col" value={isCutColMachine} setValue={setIsCutColMachine} readOnly={readOnly} />
+                                <CheckBox name="Front" value={isFrontMachine} setValue={setIsFrontMachine} readOnly={readOnly} />
+                                <CheckBox name="Front & Back" value={isFrontBackMachine} setValue={setIsFrontBackMachine} readOnly={readOnly} />
                             </div>
-                        </fieldset>
-                    </div>
 
+                            {/* Plate / Die / Total */}
+                            <div className="grid grid-cols-3 gap-x-2 gap-y-1 mt-2 pt-1.5 border-t border-slate-100">
+                                <DropdownWithModal
+                                    name="Plate Details"
+                                    options={dropDownListObject(
+                                        id ? gsmList?.data : gsmList?.data?.filter((i) => i?.active),
+                                        "name",
+                                        "id"
+                                    )}
+                                    value={plateId}
+                                    setValue={setPlateId}
+                                    readOnly={readOnly}
+                                    addNewLabel="+ Add Plate"
+                                    childComponent={Gsm}
+                                    addNewModalWidth="w-[30%] h-[45%]"
+                                />
+                                <TextInput
+                                    name="Total Plate Sets"
+                                    value={totalPlateSet}
+                                    setValue={setTotalPlateSet}
+                                    readOnly={readOnly}
+                                    type="number"
+                                    className="text-right"
+                                />
+                                <DropdownWithModal
+                                    name="Die Details"
+                                    options={dropDownListObject(
+                                        id ? gsmList?.data : gsmList?.data?.filter((i) => i?.active),
+                                        "name",
+                                        "id"
+                                    )}
+                                    value={dieId}
+                                    setValue={setDieId}
+                                    readOnly={readOnly}
+                                    addNewLabel="+ Add Die"
+                                    childComponent={Gsm}
+                                    addNewModalWidth="w-[30%] h-[45%]"
+                                />
+                            </div>
+                        </Card>
+                    </div>
                 </div>
 
+                {/* Row 3 — Remarks */}
+                {/* <Card>
+                    <TextInput
+                        name="Remarks"
+                        value={remarks}
+                        setValue={setRemarks}
+                        readOnly={readOnly}
+                    />
+                </Card> */}
             </div>
 
-            <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
-                {/* Left Buttons */}
-                <div className="flex gap-2 flex-wrap">
+            {/* ── Footer Actions ──────────────────────────────────── */}
+            <div className="flex justify-between items-center px-3 py-2 border-t border-slate-200 bg-white sticky bottom-0 z-10 shadow-sm">
+                <div className="flex gap-2">
                     <button
                         onClick={() => saveData("close")}
                         disabled={readOnly}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                e.preventDefault();
-                                saveData("close");
-                                e.stopPropagation();
-                            }
-                        }}
-                        className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-xs"
+                        className="bg-indigo-500 disabled:opacity-50 text-white px-3 py-1.5 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium transition-colors"
                     >
-                        <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                        <HiOutlineRefresh className="w-3.5 h-3.5" />
                         Save & Close
                     </button>
                     <button
                         onClick={() => saveData("new")}
                         disabled={readOnly}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                saveData("new");
-                            }
-                        }}
-                        className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-xs"
+                        className="bg-indigo-500 disabled:opacity-50 text-white px-3 py-1.5 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium transition-colors"
                     >
-                        <FiSave className="w-4 h-4 mr-2" />
+                        <FiSave className="w-3.5 h-3.5" />
                         Save & New
                     </button>
                 </div>
 
-                <div className="flex gap-2 flex-wrap">
-                    {!id ||
-                        (readOnly && (
-                            <button
-                                className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-xs"
-                                onClick={() => setReadOnly(false)}
-                            >
-                                <FiEdit2 className="w-4 h-4 mr-2" />
-                                Edit
-                            </button>
-                        ))}
-
+                <div>
+                    {id && readOnly && (
+                        <button
+                            onClick={() => setReadOnly(false)}
+                            className="bg-amber-500 text-white px-3 py-1.5 rounded hover:bg-amber-600 flex items-center gap-1.5 text-xs font-medium transition-colors"
+                        >
+                            <FiEdit2 className="w-3.5 h-3.5" />
+                            Edit
+                        </button>
+                    )}
                 </div>
             </div>
-        </>
+        </div>
     );
 };
+
 export default JobCardForm;

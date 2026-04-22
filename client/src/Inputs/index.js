@@ -808,6 +808,44 @@ export const CheckBox = ({
   );
 };
 
+export const CheckBoxNew = ({
+  name,
+  value,
+  setValue,
+  readOnly = false,
+  className,
+  required = false,
+  disabled = false,
+  tabIndex = null,
+}) => {
+  return (
+    <label
+      className={`inline-flex items-center gap-1.5 cursor-pointer select-none
+        text-xs font-medium text-slate-700 leading-none
+        ${readOnly || disabled ? "opacity-50 cursor-not-allowed" : "hover:text-indigo-600"}
+        ${className || ""}`}
+    >
+      <input
+        tabIndex={tabIndex ?? undefined}
+        type="checkbox"
+        required={required}
+        checked={value}
+        onChange={() => !readOnly && !disabled && setValue(!value)}
+        disabled={readOnly || disabled}
+        className="
+          w-[14px] h-[14px] min-w-[14px] min-h-[14px]
+          rounded
+          border border-slate-400
+          accent-indigo-600
+          cursor-pointer
+          disabled:cursor-not-allowed
+        "
+      />
+      <span>{name}</span>
+    </label>
+  );
+};
+
 export const validateEmail = (data) => {
   return validator.isEmail(data);
 };
