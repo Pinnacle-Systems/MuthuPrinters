@@ -29,6 +29,9 @@ import { Plus } from "lucide-react";
 import { useAddOrderEntryMutation, useGetOrderEntryByIdQuery, useUpdateOrderEntryMutation } from "../../../redux/uniformService/OrderEntryService.js";
 import { QRCodeCanvas } from "qrcode.react";
 import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFooter.jsx";
+import { PDFViewer } from "@react-pdf/renderer";
+import OrderEntryPrintFormat from "./OrderEntryPrintFormat.jsx";
+import { FiFileText, FiPrinter } from "react-icons/fi";
 const OrderEntryForm = ({
     onClose,
     id,
@@ -37,6 +40,7 @@ const OrderEntryForm = ({
     setReadOnly,
     customerList,
     termsData,
+    branchList,
 }) => {
     const today = new Date();
 
@@ -59,6 +63,9 @@ const OrderEntryForm = ({
     const [orderQty, setOrderQty] = useState("");
     const [termsAndCondition, setTermsAndCondition] = useState("");
     const [termsId, setTermsId] = useState("");
+    const [printModalOpen, setPrintModalOpen] = useState(false);
+    const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
+    const qrRef = useRef(null);
     const customerRef = useRef(null);
     const [dispatchInvalidate] = useInvalidateTags();
 
@@ -129,6 +136,7 @@ const OrderEntryForm = ({
         deliveryDate,
         termsAndCondition,
         termsId,
+        docId,
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -320,6 +328,23 @@ const OrderEntryForm = ({
 
                 </Modal>
             )}
+
+            {printModalOpen && (
+                <Modal
+                    isOpen={printModalOpen}
+                    onClose={() => setPrintModalOpen(false)}
+                    widthClass="w-[90%] h-[90%]"
+                >
+                    <PDFViewer className="w-full h-full border-none">
+                        <OrderEntryPrintFormat
+                            data={data}
+                            customerDetails={customerList?.data?.find(c => c.id === customerId)}
+                            branchData={branchList?.data?.find(b => b.id === branchId)}
+                            qrCodeDataUrl={qrCodeDataUrl}
+                        />
+                    </PDFViewer>
+                </Modal>
+            )}
             <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
                 <div className="flex justify-between items-center">
                     <h1 className="text-lg font-bold flex items-center gap-2">
@@ -464,6 +489,7 @@ const OrderEntryForm = ({
                             {docId && docId !== "New" ? (
                                 <>
                                     <QRCodeCanvas
+                                        ref={qrRef}
                                         value={JSON.stringify({ id, docId })}
                                         size={96}
                                         className="border border-slate-200 rounded"
@@ -861,6 +887,21 @@ focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"  
                         <FiSave className="w-4 h-4 mr-2" />
                         Save & New
                     </button>
+
+                    {id && (
+                        <button
+                            onClick={() => {
+                                if (qrRef.current) {
+                                    setQrCodeDataUrl(qrRef.current.toDataURL("image/png"));
+                                }
+                                setPrintModalOpen(true);
+                            }}
+                            className="bg-slate-600 text-white px-4 py-1 rounded-md hover:bg-slate-700 flex items-center text-xs"
+                        >
+                            <FiFileText className="w-4 h-4 mr-2" />
+                            PDF Export
+                        </button>
+                    )}
                 </div>
 
                 <div className="flex gap-2 flex-wrap">

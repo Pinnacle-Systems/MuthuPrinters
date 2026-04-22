@@ -81,7 +81,24 @@ function manualFilterSearchDataPoItems(
 // ── PO Status ─────────────────────────────────────────────────────────────────
 function getPOStatus(po) {
   const poItems = po.poItems || [];
-  const totalPoQty = poItems.reduce((sum, item) => sum + (item.qty || 0), 0);
+  
+  // Find the latest quote version to only sum active items
+  let latestQuoteVersion = 1;
+  if (poItems.length > 0) {
+    const validVersions = poItems
+      .filter((i) => i.quoteVersion && i.quoteVersion !== "New")
+      .map((i) => Number(i.quoteVersion))
+      .filter((n) => !isNaN(n) && n > 0);
+    if (validVersions.length > 0) {
+      latestQuoteVersion = Math.max(...validVersions);
+    }
+  }
+
+  const activePoItems = poItems.filter(
+    (i) => (Number(i.quoteVersion) || 1) === latestQuoteVersion
+  );
+
+  const totalPoQty = activePoItems.reduce((sum, item) => sum + (item.qty || 0), 0);
   const totalInwardQty =
     po.inwardItems?.reduce((sum, item) => sum + (item.inwardQty || 0), 0) || 0;
   const totalCancelQty =

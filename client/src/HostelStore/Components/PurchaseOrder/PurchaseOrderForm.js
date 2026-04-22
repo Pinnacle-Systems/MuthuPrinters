@@ -197,7 +197,23 @@ const PurchaseOrderForm = ({
       setTermsId(data?.termsId ? data?.termsId : "");
       setIsNewVersion(false);
       // ✅ Set quoteVersion BEFORE poItems so isVisibleRow works correctly on first render
-      const resolvedQuoteVersion = data?.quoteVersion || "";
+      let resolvedQuoteVersion = data?.quoteVersion || "";
+
+      // ✅ Find the maximum quoteVersion from poItems to ensure we always default to the latest version
+      if (data?.poItems?.length) {
+        const validVersions = data.poItems
+          .filter((i) => i.quoteVersion && i.quoteVersion !== "New")
+          .map((i) => Number(i.quoteVersion))
+          .filter((n) => !isNaN(n) && n > 0);
+
+        if (validVersions.length > 0) {
+          const maxVersion = Math.max(...validVersions);
+          if (maxVersion > Number(resolvedQuoteVersion || 0)) {
+            resolvedQuoteVersion = maxVersion;
+          }
+        }
+      }
+
       setQuoteVersion(resolvedQuoteVersion);
 
       // ✅ Pass quoteVersion directly to filter correctly
