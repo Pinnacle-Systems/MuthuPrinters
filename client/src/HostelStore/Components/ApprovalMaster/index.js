@@ -53,6 +53,7 @@ export default function Form({
   const [workflowName, setWorkflowName] = useState("");
   const [workflowPriority, setWorkflowPriority] = useState(1);
   const [ruleLogicalOperator, setRuleLogicalOperator] = useState("AND");
+  const [isAlwaysApproved, setIsAlwaysApproved] = useState(false);
   const [configConditions, setConfigConditions] = useState([]);
   const childRecord = useRef(0);
 
@@ -88,6 +89,7 @@ export default function Form({
         setWorkflowName("");
         setWorkflowPriority(1);
         setRuleLogicalOperator("AND");
+        setIsAlwaysApproved(false);
         setConfigConditions([]);
         setApprovalLevelItems(
           Array.from({ length: 4 }, (_, i) => ({
@@ -106,6 +108,7 @@ export default function Form({
       setWorkflowName(data?.name || "");
       setWorkflowPriority(data?.priority || 1);
       setRuleLogicalOperator(data?.ruleLogicalOperator || "AND");
+      setIsAlwaysApproved(data?.isAlwaysApproved || false);
 
       const normalizedConditions = (data?.ConfigConditions || []).map((c) => ({
         fieldId: String(c.fieldId ?? ""),
@@ -166,16 +169,23 @@ export default function Form({
     name: workflowName,
     priority: Number(workflowPriority),
     ruleLogicalOperator,
-    ConfigConditions: configConditions?.filter(
-      (c) => c.fieldId && c.operatorId,
-    ),
+    isAlwaysApproved,
+    ConfigConditions: isAlwaysApproved
+      ? []
+      : configConditions?.filter((c) => c.fieldId && c.operatorId),
     approvalLevelItems: approvalLevelItems?.filter(
       (item) => item.users.length > 0,
     ),
   };
 
   const validateData = (data) => {
-    return data.moduleId && data.approvalLevelItems.length > 0 && data.name;
+    const hasConditions = data.isAlwaysApproved || data.ConfigConditions.length > 0;
+    return (
+      data.moduleId &&
+      data.approvalLevelItems.length > 0 &&
+      data.name &&
+      hasConditions
+    );
   };
 
   const handleSubmitCustom = async (callback, data, text) => {
@@ -197,10 +207,20 @@ export default function Form({
   };
 
   const saveData = (process) => {
-    if (!validateData(data)) {
+    if (!data.name || !data.moduleId || data.approvalLevelItems.length === 0) {
       toast.warning(
         "Please fill required fields (Name, Module, and at least one Level).",
       );
+      return;
+    }
+
+    if (!data.isAlwaysApproved && data.ConfigConditions.length === 0) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        text: "Please either provide approval rules (conditions) or enable 'Always Approved (No Conditions)'.",
+        confirmButtonColor: "#4f46e5",
+      });
       return;
     }
 
@@ -251,6 +271,7 @@ export default function Form({
     setWorkflowPriority(1);
     setModuleId("");
     setActive(true);
+    setIsAlwaysApproved(false);
   };
   const ACTIVE = (
     <div className="bg-gradient-to-r from-green-200 to-green-500 inline-flex items-center justify-center rounded-full border-2 w-6 border-green-500 shadow-lg text-white hover:scale-110 transition-transform duration-300">
@@ -360,6 +381,19 @@ export default function Form({
                     />{" "}
                   </label>
                 </div>
+                <div className="pb-1">
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                    Always Approved (No Conditions)
+                    <div className="mt-1">
+                      <ToggleButton
+                        name=""
+                        value={isAlwaysApproved}
+                        setActive={setIsAlwaysApproved}
+                        readOnly={readOnly}
+                      />
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -394,6 +428,7 @@ export default function Form({
                     fieldOptions={fieldData?.data}
                     operatorOptions={operatorData?.data}
                     readOnly={readOnly}
+                    isAlwaysApproved={isAlwaysApproved}
                   />
                 ) : (
                   <ApprovalDetails

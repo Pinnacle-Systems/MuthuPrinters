@@ -117,6 +117,7 @@ export function evaluateRuleCondition(cond, recordData) {
 }
 
 export function evaluateConfigTrigger(config, recordData) {
+  if (config.isAlwaysApproved) return true;
   if (!config.ConfigConditions || config.ConfigConditions.length === 0)
     return true;
   const results = config.ConfigConditions.map((c) =>

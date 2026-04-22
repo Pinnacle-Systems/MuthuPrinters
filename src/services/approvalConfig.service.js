@@ -206,6 +206,7 @@ async function create(body) {
     branchId,
     moduleId,
     active,
+    isAlwaysApproved,
     approvalLevelItems,
     name,
     priority,
@@ -220,6 +221,7 @@ async function create(body) {
       moduleId: parseInt(moduleId),
       priority: parseInt(priority || 0),
       active,
+      isAlwaysApproved: Boolean(isAlwaysApproved),
       ruleLogicalOperator: ruleLogicalOperator || "AND",
 
       ConfigConditions: {
@@ -260,6 +262,7 @@ async function update(id, body) {
     branchId,
     moduleId,
     active,
+    isAlwaysApproved,
     approvalLevelItems,
     name,
     priority,
@@ -281,6 +284,7 @@ async function update(id, body) {
       moduleId: parseInt(moduleId),
       priority: parseInt(priority || 0),
       active,
+      isAlwaysApproved: Boolean(isAlwaysApproved),
       ruleLogicalOperator: ruleLogicalOperator || "AND",
 
       ConfigConditions: {

@@ -197,6 +197,7 @@ export default function RuleBuilder({
   fieldOptions,
   operatorOptions,
   readOnly,
+  isAlwaysApproved,
 }) {
   const addCondition = () => {
     setConditions([
@@ -235,14 +236,14 @@ export default function RuleBuilder({
         <button
           type="button"
           onClick={addCondition}
-          disabled={readOnly}
-          className="flex items-center justify-center gap-1 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-medium px-3 py-1.5  transition-colors shadow-sm"
+          disabled={readOnly || isAlwaysApproved}
+          className="flex items-center justify-center gap-1 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-medium px-3 py-1.5  transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus size={14} /> Add Rule
         </button>
       </div>
 
-      {conditions.length > 1 && (
+      {conditions.length > 1 && !isAlwaysApproved && (
         <div className="mb-4 flex items-center gap-2">
           <span className="text-xs font-medium text-slate-500">
             Combine rules using:
@@ -259,10 +260,22 @@ export default function RuleBuilder({
         </div>
       )}
 
-      {conditions.length === 0 ? (
+      {isAlwaysApproved ? (
+        <div className="text-xs text-indigo-600 font-medium py-6 text-center border border-dashed border-indigo-200 bg-indigo-50/50 rounded-lg flex flex-col items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+          <span>"Always Approved" is active. No trigger rules are required.</span>
+          <p className="text-[10px] text-slate-400 font-normal px-10">
+            All records submitted for this module will automatically enter the approval workflow levels defined in the next tab.
+          </p>
+        </div>
+      ) : conditions.length === 0 ? (
         <div className="text-xs text-slate-400  py-3 text-center border border-dashed border-slate-300 bg-white rounded-sm">
-          No trigger rules specified. This workflow will always trigger for
-          every form submitted!
+          No trigger rules specified. Please add rules or enable "Always Approved".
         </div>
       ) : (
         <div className="border border-slate-200 rounded-md overflow-hidden shadow-sm">

@@ -1242,12 +1242,12 @@ async function getPoItems(req) {
 
     const poIds = [...new Set(data.map((item) => item.Po.id))];
 
-    // ✅ Universal check — if PO has no approval config, all items pass through
     const { module, hasApproval } = await getModuleApprovalSetup(
       REFERENCE_PAGE,
       branchId,
     );
 
+    // ✅ Fetch approval logs for these POs
     const approvalLogs = hasApproval
       ? await prisma.approvalLog.findMany({
           where: { referencePage: REFERENCE_PAGE, referenceId: { in: poIds } },
@@ -1260,20 +1260,79 @@ async function getPoItems(req) {
       return acc;
     }, {});
 
-    data = data.map((item) => ({
-      ...item,
-      approvalStatus: getPOApprovalStatus(
-        approvalLogMap[item.Po.id] ?? null,
-        hasApproval,
-      ),
-    }));
+    // ✅ Fetch configs once for condition evaluation (same as get() list view)
+    const activeConfigs =
+      hasApproval && module
+        ? await prisma.approvalConfig.findMany({
+            where: {
+              moduleId: module.id,
+              branchId: parseInt(branchId),
+              active: true,
+            },
+            include: {
+              ConfigConditions: {
+                include: { Field: true, Operator: true, CompareField: true },
+              },
+              approvalLevels: {
+                include: { LevelUsers: true },
+                orderBy: { levelNo: "asc" },
+              },
+            },
+            orderBy: { priority: "asc" },
+          })
+        : [];
+
+    // ✅ Need full PO records to evaluate conditions (poItems has only Po.id)
+    // Fetch POs with the relations that approval fields reference
+    const includeClause =
+      hasApproval && module ? await buildIncludeForModule(module.id) : {};
+
+    const fullPoRecords =
+      poIds.length > 0
+        ? await prisma.po.findMany({
+            where: { id: { in: poIds } },
+            include: { ...includeClause, poItems: true },
+          })
+        : [];
+
+    const fullPoMap = fullPoRecords.reduce((acc, po) => {
+      acc[po.id] = po;
+      return acc;
+    }, {});
+
+    data = data.map((item) => {
+      const log = approvalLogMap[item.Po.id] ?? null;
+      const fullPo = fullPoMap[item.Po.id];
+
+      // ✅ Per-PO condition evaluation — same logic as get() list view
+      let shouldTrigger = false;
+      if (!log && hasApproval && activeConfigs.length > 0 && fullPo) {
+        shouldTrigger = evaluateConfigs(activeConfigs, fullPo);
+      }
+
+      return {
+        ...item,
+        approvalStatus: getPOApprovalStatus(log, !!log || shouldTrigger),
+      };
+    });
+
     console.log(data, "datacheck");
 
-    // ✅ If approval not configured for PO → let ALL items through
-    // If configured → only APPROVED items pass to inward
-    data = data.filter((item) =>
-      hasApproval ? item.approvalStatus.status === "APPROVED" : true,
-    );
+    // ✅ Filter logic:
+    // No approval configured → ALL items pass (NOT_CONFIGURED)
+    // Approval configured:
+    //   - APPROVED → pass ✅
+    //   - NOTAPPROVED (matches condition, no log) → blocked ❌
+    //   - NOT_CONFIGURED (doesn't match any condition) → pass ✅ (no rule applies to this PO)
+    //   - PENDING → blocked ❌
+    //   - REJECTED → blocked ❌
+    data = data.filter((item) => {
+      if (!hasApproval) return true; // no approval setup → allow all
+      const s = item.approvalStatus.status;
+      return s === "APPROVED" || s === "NOT_CONFIGURED"; // ✅ NOT_CONFIGURED means no rule applies
+    });
+
+    console.log(data, "afterfilterdatacheck");
   } else {
     data = await prisma.poItems.findMany({
       where: {
@@ -1282,6 +1341,7 @@ async function getPoItems(req) {
       },
     });
   }
+
   totalCount = data.length;
   return { statusCode: 0, data, totalCount };
 }
