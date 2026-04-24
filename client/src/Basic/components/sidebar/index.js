@@ -164,16 +164,7 @@ const Sidebar = ({
     return { id: pageId, name: findElement(pageId, pageGroup?.data) };
   });
 
-  const order = [
-    "ORDER",
-    "YARN",
-    "ACCESSORY ",
-    "PRODUCTION",
-    "PROCESS",
-    "STOCK TRANSFER",
-    "OPENING STOCK",
-    "SAMPLE",
-  ];
+  const order = ["APPROVAL", "ORDER", "PURCHASE", "OPENING STOCK"];
 
   const sorted = order
     .map((name) => transactionsGroup?.find((item) => item.name === name))
@@ -189,7 +180,7 @@ const Sidebar = ({
     {
       heading: "Transactions",
       logo: <PanelLeftClose size={24} />,
-      groups: transactionsGroup,
+      groups: sorted,
       pages: transactions,
     },
     {
