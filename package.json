@@ -10,7 +10,6 @@
   },
   "main": "server.js",
   "scripts": {
-    "postinstall": "pnpm prisma:generate",
     "dev": "nodemon server.js",
     "dev:all": "concurrently -k -n api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
     "dev:api": "nodemon server.js",
