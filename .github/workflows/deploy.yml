@@ -31,13 +31,13 @@ jobs:
         with:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           ARGS: "-az --stats"
-          SOURCE: package.json pnpm-lock.yaml pnpm-workspace.yaml prisma.config.ts server.js src/
+          SOURCE: package.json pnpm-lock.yaml pnpm-workspace.yaml prisma.config.ts server.js src
           REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
           TARGET: ${{ secrets.REMOTE_TARGET }}/
           SCRIPT_BEFORE: |
             mkdir -p ${{ secrets.REMOTE_TARGET }}
-            mkdir -p ${{ secrets.REMOTE_TARGET }}/client
+            mkdir -p ${{ secrets.REMOTE_TARGET }}/client/dist
 
       - name: Deploy frontend build artifacts to VPS
         uses: easingthemes/ssh-deploy@v5.1.0
@@ -47,8 +47,16 @@ jobs:
           SOURCE: client/dist/
           REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
-          TARGET: ${{ secrets.REMOTE_TARGET }}/client/
-          SCRIPT_AFTER: |
+          TARGET: ${{ secrets.REMOTE_TARGET }}/client/dist/
+
+      - name: Run remote install, migrate, and restart
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
             set -eu
 
             . ~/.nvm/nvm.sh
