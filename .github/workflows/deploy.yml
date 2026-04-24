@@ -51,6 +51,8 @@ jobs:
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
           TARGET: ${{ secrets.REMOTE_TARGET }}/client/
           SCRIPT_AFTER: |
+            set -eu
+
             . ~/.nvm/nvm.sh
             nvm install 24
             nvm use 24
