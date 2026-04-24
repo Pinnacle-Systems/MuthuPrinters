@@ -8,8 +8,30 @@ async function get(req) {
       companyId: companyId ? parseInt(companyId) : undefined,
       // active: active ? Boolean(active) : undefined,
     },
+    include: {
+      _count: {
+        select: {
+          processGroupList: true,
+          laminationDetails: true,
+          varnishDetails: true,
+          machineDetails: true,
+          processDetails: true,
+        },
+      },
+    },
   });
-  return { statusCode: 0, data };
+  return {
+    statusCode: 0,
+    data: data.map((process) => ({
+      ...process,
+      childRecord:
+        process._count.processGroupList +
+        process._count.laminationDetails +
+        process._count.varnishDetails +
+        process._count.machineDetails +
+        process._count.processDetails,
+    })),
+  };
 }
 
 async function getOne(id) {

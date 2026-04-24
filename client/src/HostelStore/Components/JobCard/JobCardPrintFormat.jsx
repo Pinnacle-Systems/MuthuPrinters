@@ -101,6 +101,7 @@ const styles = StyleSheet.create({
         paddingTop: 8,
         paddingBottom: 4,
         gap: 8,
+        flexWrap: "wrap",
     },
     metaPill: {
         flexDirection: "row",
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
     // ── SIGNATURES ──
     sigArea: {
         marginHorizontal: 20,
-        marginTop: 14,
+        marginTop: 18,
         marginBottom: 8,
     },
     sigCompany: {
@@ -440,6 +441,7 @@ const JobCardPrintFormat = ({
     varnishList,
     machineList,
     branchData,
+    orderList,
 }) => {
     if (!singleData) return null;
 
@@ -476,6 +478,7 @@ const JobCardPrintFormat = ({
     } = singleData;
 
     const customer = customerList?.data?.find((c) => c.id === customerId);
+    const orderEntry = orderList?.data?.find((o) => o.id === singleData?.orderEntryId);
 
     // Normalise arrays from saved detail records
     const selectedBoardIds = boardQualities?.map((b) => b.boardId) || [];
@@ -536,7 +539,9 @@ const JobCardPrintFormat = ({
                     {[
                         { label: "Job Card No", value: docId },
                         { label: "Date", value: getDateFromDateTimeToDisplay(docDate) },
+                        { label: "Order No", value: orderEntry?.docId || "-" },
                         { label: "Order Type", value: orderType },
+                        { label: "Order Qty", value: orderQty ? Number(orderQty).toFixed(3) : "" },
                     ].map(({ label, value }) => (
                         <View key={label} style={styles.metaPill}>
                             <Text style={styles.metaLabel}>{label}:</Text>
@@ -574,16 +579,15 @@ const JobCardPrintFormat = ({
 
                     {/* Order Info */}
                     <View style={styles.colHalf}>
-                        <Text style={styles.sectionHeader}>ORDER DETAILS</Text>
+                        <Text style={styles.sectionHeader}>OTHER DETAILS</Text>
                         <View style={styles.sectionBody}>
                             <View style={styles.specTable}>
-                                <SpecField label="Order Qty" value={orderQty ? Number(orderQty).toFixed(3) : "—"} />
                                 <SpecField label="GSM" value={findFromList(gsmId, gsmList?.data, "name")} />
                                 <SpecField label="Full Board" value={fullBoard || "—"} />
-                                <SpecField label="Cutting Size" value={cuttingSize || "—"} />
                                 <SpecField label="No. of Pockets" value={noOfPockets || "—"} />
+                                <SpecField label="Others / Board" value={findFromList(boardId, boardList, "name")} />
+                                <SpecField label="Cutting Size" value={cuttingSize || "—"} />
                                 <SpecField label="Running Qty" value={runningQty || "—"} />
-                                <SpecField label="Others / Board" value={findFromList(boardId, boardList?.data, "name")} />
                                 <SpecField label="Plate Type" value={findFromList(plateId, plateList?.data, "name")} />
                                 <SpecField label="Total Plate Set" value={totalPlateSet || "—"} />
                                 <SpecField label="Die Reference" value={findFromList(dieId, dieList?.data, "name")} />
@@ -592,13 +596,13 @@ const JobCardPrintFormat = ({
                     </View>
                 </View>
 
-                {/* ── BOARD QUALITY ── */}
-                {boardList?.data?.length > 0 && (
+                {/* ── BOARD QUALITY SECTION (like PRINTING OPTIONS) ── */}
+                {boardList?.length > 0 && (
                     <View style={styles.sectionWrap}>
                         <Text style={styles.sectionTitle}>BOARD QUALITY</Text>
                         <View style={[styles.sectionContent, { paddingVertical: 6 }]}>
                             <View style={styles.gridRow}>
-                                {boardList.data.map((item) => (
+                                {boardList.map((item) => (
                                     <Checkbox
                                         key={item.id}
                                         checked={selectedBoardIds.includes(item.id)}
@@ -678,7 +682,7 @@ const JobCardPrintFormat = ({
                 </View>
 
                 {/* ── SIGNATURES ── */}
-                <View style={styles.sigArea}>
+                <View style={styles.sigArea} >
                     <Text style={styles.sigCompany}>For {branchData?.branchName || ""}</Text>
                     <View style={styles.sigRow}>
                         {["Prepared By", "Verified By", "Approved By"].map((role) => (

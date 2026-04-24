@@ -46,6 +46,8 @@ export const CheckBox = ({
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 import {
     DropdownInput,
+    DropdownInputNew,
+    DropdownNew,
     ReusableInput,
     TextInput,
 } from "../../../Inputs";
@@ -73,6 +75,7 @@ import Modal from "../../../UiComponents/Modal/index.js";
 import { PDFViewer } from "@react-pdf/renderer";
 import tw from "../../../Utils/tailwind-react-pdf.js";
 import JobCardPrintFormat from "./JobCardPrintFormat.jsx";
+import { useGetOrderEntryQuery } from "../../../redux/uniformService/OrderEntryService.js";
 
 // ── Section card ─────────────────────────────────────────────
 const SectionCard = ({ title, children, className = "" }) => (
@@ -196,9 +199,9 @@ const JobCardForm = ({
     const [selectedMachines, setSelectedMachines] = useState([]);
     const [laminations, setLaminations] = useState([]);
     const [varnishes, setVarnishes] = useState([]);
-
+    const [orderEntryId, setOrderEntryId] = useState("");
     const customerRef = useRef(null);
-    const { userId, finYearId, branchId } = getCommonParams();
+    const { userId, finYearId, branchId, companyId } = getCommonParams();
 
     const params = {
         companyId: secureLocalStorage.getItem(
@@ -212,7 +215,9 @@ const JobCardForm = ({
         useGetBoardMasterQuery({ params });
     const { data: processGroupList, isFetching: isProcessGroupFetching } =
         useGetProcessGroupMasterQuery({ params });
-
+    const { data: orderList } = useGetOrderEntryQuery({
+        params: { companyId, branchId },
+    });
     // const getGroupIds = (groupName) =>
     //     processGroupList?.data
     //         ?.find((g) => g.name === groupName)
@@ -290,6 +295,8 @@ const JobCardForm = ({
             })) || []
         );
         setSelectedMachines(data?.machineDetails?.map((m) => m.machineId) || []);
+        setOrderEntryId(data?.orderEntryId || "");
+        setBoardId(data?.boardId || "");
     }, []);
 
     useEffect(() => {
@@ -321,6 +328,7 @@ const JobCardForm = ({
         runningQty, isFourColor, isCutColor, isFront, isFrontAndBack, isCMYK,
         isCutColMachine, isFrontMachine, isFrontBackMachine, plateId, dieId,
         totalPlateSet, selectedProcesses, laminations, varnishes, selectedMachines,
+        orderEntryId,
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -418,6 +426,7 @@ const JobCardForm = ({
                         laminationList={laminationList}
                         varnishList={varnishList}
                         branchData={branchData?.data}
+                        orderList={orderList}
                     />
                 </PDFViewer>
             </Modal>
@@ -446,18 +455,29 @@ const JobCardForm = ({
                         <Col title="Basic Details">
 
                             <SectionCard>
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                <div className="grid grid-cols-2 gap-x-2 gap-y-2">
                                     <Field label="Job Card No">
                                         <ReusableInput label="" readOnly value={docId} />
                                     </Field>
                                     <Field label="Date">
                                         <ReusableInput label="" value={docDate} type="date" readOnly disabled />
                                     </Field>
-                                </div>
-                            </SectionCard>
-                            <SectionCard title="">
+                                    <div className="w-[135px]">
 
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                        <Field label="Order No">
+                                            <DropdownNew
+                                                name=""
+                                                dataList={orderList?.data}
+                                                value={orderEntryId}
+                                                setValue={setOrderEntryId}
+                                                required
+                                                readOnly={readOnly}
+                                                disabled={readOnly}
+                                                otherField={"docId"}
+                                            />
+                                        </Field>
+                                    </div>
+
                                     <Field label="Order Type">
                                         <DropdownInput
                                             name=""
@@ -485,6 +505,7 @@ const JobCardForm = ({
                                             }
                                         />
                                     </Field>
+
                                 </div>
                                 <div className="mt-2">
                                     <Field label="Remarks">
@@ -493,6 +514,13 @@ const JobCardForm = ({
                                     </Field>
                                 </div>
                             </SectionCard>
+                            {/* <SectionCard title="">
+
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+
+                                </div>
+                               
+                            </SectionCard> */}
                             <SectionCard title="Customer Details">
                                 <div className="flex flex-col gap-2">
                                     <Field label="Customer">
@@ -593,11 +621,11 @@ const JobCardForm = ({
                                     </Field>
                                     <Field label="No. of Pockets">
                                         <TextInput name="" value={noOfPockets} setValue={setNoOfPockets}
-                                            readOnly={readOnly} className="w-full" />
+                                            readOnly={readOnly} type="number" className="w-full text-right" />
                                     </Field>
                                     <Field label="Running Qty">
                                         <TextInput name="" value={runningQty} setValue={setRunningQty}
-                                            readOnly={readOnly} type="number" className="text-right w-full" />
+                                            readOnly={readOnly} type="number" className="w-full text-right" />
                                     </Field>
                                 </div>
 
@@ -630,6 +658,29 @@ const JobCardForm = ({
 
                         {/* ══ COL 3 — VARNISH + LAMINATION (one column) ═ */}
                         <Col title="Varnish & Lamination Details">
+                            <SectionCard title="Lamination" className="min-h-[195px]">
+                                {laminationList?.length > 0 ? (
+                                    <>
+                                        <LVHeader />
+                                        {laminationList.map((item) => {
+                                            const selected = laminations.find((l) => l.processId === item.id);
+                                            return (
+                                                <LVRow
+                                                    key={item.id}
+                                                    item={item}
+                                                    selected={selected}
+                                                    onMain={() => toggleLV(setLaminations, item.id)}
+                                                    onFront={() => toggleLVProp(setLaminations, item.id, "isFront")}
+                                                    onFrontBack={() => toggleLVProp(setLaminations, item.id, "isFrontAndBack")}
+                                                    readOnly={readOnly}
+                                                />
+                                            );
+                                        })}
+                                    </>
+                                ) : (
+                                    <p className="text-xs text-slate-400 italic">No lamination options configured.</p>
+                                )}
+                            </SectionCard>
 
                             <SectionCard title="Varnish">
                                 {varnishList?.length > 0 ? (
@@ -655,29 +706,7 @@ const JobCardForm = ({
                                 )}
                             </SectionCard>
 
-                            <SectionCard title="Lamination">
-                                {laminationList?.length > 0 ? (
-                                    <>
-                                        <LVHeader />
-                                        {laminationList.map((item) => {
-                                            const selected = laminations.find((l) => l.processId === item.id);
-                                            return (
-                                                <LVRow
-                                                    key={item.id}
-                                                    item={item}
-                                                    selected={selected}
-                                                    onMain={() => toggleLV(setLaminations, item.id)}
-                                                    onFront={() => toggleLVProp(setLaminations, item.id, "isFront")}
-                                                    onFrontBack={() => toggleLVProp(setLaminations, item.id, "isFrontAndBack")}
-                                                    readOnly={readOnly}
-                                                />
-                                            );
-                                        })}
-                                    </>
-                                ) : (
-                                    <p className="text-xs text-slate-400 italic">No lamination options configured.</p>
-                                )}
-                            </SectionCard>
+
                         </Col>
 
                         {/* ══ COL 4 — MACHINE DETAILS ════════════════════ */}
@@ -702,7 +731,7 @@ const JobCardForm = ({
                             </SectionCard>
 
                             <SectionCard title="Plate & Die Details">
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 min-h-[125px]">
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 min-h-[110px]">
                                     <Field label="Plate Type">
                                         <DropdownWithModal
                                             name=""
