@@ -58,7 +58,6 @@ jobs:
 
             cd ${{ secrets.REMOTE_TARGET }}
             pnpm install --prod --frozen-lockfile
-            pnpm prisma:generate
             pnpm prisma:migrate:deploy
 
             pm2 reload muthu-printers --update-env || pm2 start server.js --name muthu-printers
