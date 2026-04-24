@@ -10,7 +10,6 @@
   },
   "main": "server.js",
   "scripts": {
-    "postinstall": "pnpm prisma:generate",
     "dev": "nodemon server.js",
     "dev:all": "concurrently -k -n api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
     "dev:api": "nodemon server.js",
@@ -20,7 +19,6 @@
     "prisma:format": "prisma format",
     "prisma:validate": "prisma validate",
     "prisma:validate:mysql": "prisma validate --schema src/models/schema.mysql.prisma",
-
     "prisma:generate": "prisma generate",
     "prisma:setup": "pnpm prisma:format && pnpm prisma:validate && pnpm prisma:generate",
     "prisma:migrate:dev": "prisma migrate dev && pnpm prisma:generate",
@@ -31,8 +29,6 @@
     "prisma:seed": "prisma db seed",
     "prisma:seed:extract": "node src/models/extractSeedData.js",
     "prisma:migrate:squash": "mkdir -p ./src/models/migrations/000000000000_squashed_migrations && prisma migrate diff --from-empty --to-schema ./src/models/schema.prisma --script > ./src/models/migrations/000000000000_squashed_migrations/migration.sql",
-
-
     "prisma:migrate:squash:resolve": "prisma migrate resolve --applied 000000000000_squashed_migrations",
     "migrate": "pnpm run prisma:migrate:dev",
     "studio": "pnpm run prisma:studio",
@@ -55,12 +51,12 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.1",
     "pg": "^8.20.0",
-    "socket.io": "^4.6.1"
+    "socket.io": "^4.6.1",
+    "prisma": "^7.0.0"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "nodemon": "^3.0.1",
-    "prisma": "^7.0.0"
+    "nodemon": "^3.0.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
