@@ -58,3 +58,7 @@ export { default as approvalMasterData } from "./approvalMasterData.route.js";
 export { default as orderEntry } from "./orderEntry.route.js";
 export { default as processMaster } from "./process.route.js";
 export { default as processGroup } from "./processGroup.route.js";
+export { default as plateMaster } from "./plate.route.js";
+export { default as dieMaster } from "./die.route.js";
+export { default as jobCard } from "./jobCard.route.js";
+export { default as board } from "./board.route.js";

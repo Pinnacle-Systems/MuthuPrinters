@@ -1,20 +1,20 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { JOB_CARD_API } from "../../Api";
+import { DIE_API } from "../../Api";
 
 const BASE_URL = process.env.REACT_APP_SERVER_URL;
 
-const JobCardApi = createApi({
-  reducerPath: "jobCard",
+const DieMasterApi = createApi({
+  reducerPath: "die",
   baseQuery: fetchBaseQuery({
     baseUrl: BASE_URL,
   }),
-  tagTypes: ["jobCard"],
+  tagTypes: ["Die"],
   endpoints: (builder) => ({
-    getJobCard: builder.query({
+    getDieMaster: builder.query({
       query: ({ params, searchParams }) => {
         if (searchParams) {
           return {
-            url: JOB_CARD_API + "/search/" + searchParams,
+            url: DIE_API + "/search/" + searchParams,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
@@ -23,7 +23,7 @@ const JobCardApi = createApi({
           };
         }
         return {
-          url: JOB_CARD_API,
+          url: DIE_API,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -31,58 +31,59 @@ const JobCardApi = createApi({
           params,
         };
       },
-      providesTags: ["jobCard"],
+      providesTags: ["Die"],
     }),
-    getJobCardById: builder.query({
+    getDieMasterById: builder.query({
       query: (id) => {
         return {
-          url: `${JOB_CARD_API}/${id}`,
+          url: `${DIE_API}/${id}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
         };
       },
-      providesTags: ["jobCard"],
+      providesTags: ["Die"],
     }),
-    addJobCard: builder.mutation({
+    addDieMaster: builder.mutation({
       query: (payload) => ({
-        url: JOB_CARD_API,
+        url: DIE_API,
         method: "POST",
         body: payload,
         headers: {
           "Content-type": "application/json; charset=UTF-8",
         },
       }),
-      invalidatesTags: ["jobCard"],
+      invalidatesTags: ["Die"],
     }),
-    updateJobCard: builder.mutation({
-      query: ({ id, ...body }) => {
+    updateDieMaster: builder.mutation({
+      query: (payload) => {
+        const { id, ...body } = payload;
         return {
-          url: `${JOB_CARD_API}/${id}`,
+          url: `${DIE_API}/${id}`,
           method: "PUT",
           body,
         };
       },
-      invalidatesTags: ["jobCard"],
+      invalidatesTags: ["Die"],
     }),
-    deleteJobCard: builder.mutation({
+    deleteDieMaster: builder.mutation({
       query: (id) => ({
-        url: `${JOB_CARD_API}/${id}`,
+        url: `${DIE_API}/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["jobCard"],
+      invalidatesTags: ["Die"],
     }),
   }),
 });
 
 export const {
-  useGetJobCardQuery,
-  useGetJobCardByIdQuery,
-  useLazyGetJobCardByIdQuery,
-  useAddJobCardMutation,
-  useUpdateJobCardMutation,
-  useDeleteJobCardMutation,
-} = JobCardApi;
+  useGetDieMasterQuery,
+  useGetDieMasterByIdQuery,
+  useLazyGetDieMasterByIdQuery,
+  useAddDieMasterMutation,
+  useUpdateDieMasterMutation,
+  useDeleteDieMasterMutation,
+} = DieMasterApi;
 
-export default JobCardApi;
+export default DieMasterApi;

@@ -7,7 +7,7 @@ import { ReusableTable, TextInputNew, ToggleButton } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
-import { useAddProcessMasterMutation, useDeleteProcessMasterMutation, useGetProcessMasterByIdQuery, useGetProcessMasterQuery, useLazyGetProcessMasterByIdQuery, useUpdateProcessMasterMutation } from "../../../redux/services/ProcessMasterService";
+import { useAddBoardMasterMutation, useDeleteBoardMasterMutation, useGetBoardMasterByIdQuery, useGetBoardMasterQuery, useLazyGetBoardMasterByIdQuery, useUpdateBoardMasterMutation } from "../../../redux/services/boardService";
 
 export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
     const [form, setForm] = useState(false);
@@ -30,17 +30,17 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         data: allData,
         isLoading,
         isFetching,
-    } = useGetProcessMasterQuery({ params, searchParams: searchValue });
+    } = useGetBoardMasterQuery({ params, searchParams: searchValue });
     const {
         data: singleData,
         isFetching: isSingleFetching,
         isLoading: isSingleLoading,
-    } = useGetProcessMasterByIdQuery(id, { skip: !id });
-    const [trigger, { data: LazyData }] = useLazyGetProcessMasterByIdQuery();
+    } = useGetBoardMasterByIdQuery(id, { skip: !id });
+    const [trigger, { data: LazyData }] = useLazyGetBoardMasterByIdQuery();
 
-    const [addData] = useAddProcessMasterMutation();
-    const [updateData] = useUpdateProcessMasterMutation();
-    const [removeData] = useDeleteProcessMasterMutation();
+    const [addData] = useAddBoardMasterMutation();
+    const [updateData] = useUpdateBoardMasterMutation();
+    const [removeData] = useDeleteBoardMasterMutation();
 
     const syncFormWithDb = useCallback(
         (data) => {
@@ -125,7 +125,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
 
         if (foundItem) {
             Swal.fire({
-                text: "The Process Name already exists.",
+                text: "The Board Name already exists.",
                 icon: "warning",
                 didClose: () => {
 
@@ -209,7 +209,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         },
 
         {
-            header: "Process",
+            header: "Board",
             accessor: (item) => item?.name,
             //   cellClass: () => "font-medium  text-gray-900",
             className: "font-medium text-gray-900 text-center uppercase w-72",
@@ -253,7 +253,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                                 <div className="grid grid-cols-2 my-2">
                                     <div className="w-[50%">
                                         <TextInputNew
-                                            name="Process"
+                                            name="Board"
                                             value={name}
                                             setValue={setName}
                                             required={true}
@@ -308,7 +308,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         return (
             <div className="min-h-[250px] flex flex-col bg-gray-200">
                 <div className="border-b py-2 px-4 mx-3 mt-4 bg-white">
-                    <h2 className="text-lg font-semibold">Delete Process</h2>
+                    <h2 className="text-lg font-semibold">Delete Board</h2>
                 </div>
 
                 <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
@@ -353,7 +353,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             <div onKeyDown={handleKeyDown} className="h-full flex flex-col bg-gray-200">
                 <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
                     <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
-                        {editId ? "Edit Process" : "Add New Process"}
+                        {editId ? "Edit Board" : "Add New Board"}
                     </h2>
                     <button
                         type="button"
@@ -375,7 +375,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     return (
         <div onKeyDown={handleKeyDown} className="p-1 h-[87%]">
             <div className="w-full flex bg-white p-1 justify-between  items-center">
-                <h5 className="text-lg font-bold text-gray-800">Process Master</h5>
+                <h5 className="text-lg font-bold text-gray-800">Board Master</h5>
                 <div className="flex items-center">
                     <button
                         onClick={() => {
@@ -384,7 +384,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                         }}
                         className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
                     >
-                        + Add New Process
+                        + Add New Board
                     </button>
                 </div>
             </div>
@@ -419,9 +419,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                                     <h2 className="text-lg px-2 py-0.5 font-semibold  text-gray-800">
                                         {id
                                             ? !readOnly
-                                                ? "Edit Process  Master"
-                                                : "Process  Master"
-                                            : "Add New Process  Master"}
+                                                ? "Edit Board  Master"
+                                                : "Board  Master"
+                                            : "Add New Board  Master"}
                                     </h2>
                                 </div>
                                 <div className="flex gap-2">

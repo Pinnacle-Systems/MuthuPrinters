@@ -575,7 +575,7 @@ export default function Form({
             syncFormWithDb(undefined);
           }}
           onDelete={deleteData}
-          itemsPerPage={15}
+          itemsPerPage={10}
           isLoading={isLoading || isFetching}
         />
       </div>

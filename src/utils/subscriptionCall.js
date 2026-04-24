@@ -6,7 +6,10 @@ export async function getSubscriptionDetails(name) {
   }
 
   if (!name) {
-    return { statusCode: 1, message: "Company name is required for licensing lookup." };
+    return {
+      statusCode: 1,
+      message: "Company name is required for licensing lookup.",
+    };
   }
 
   try {

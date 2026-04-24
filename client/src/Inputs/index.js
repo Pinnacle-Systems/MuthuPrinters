@@ -786,22 +786,63 @@ export const CheckBox = ({
     setValue(!value);
   };
   return (
-    <div className="items-center md:my-1 md:px-1 data">
-      <label htmlFor="id" className={`md:text-start items-center ${className}`}>
+    <div className="flex justify-center items-center md:m-1">
+      <label
+        htmlFor="id"
+        className={`flex items-center justify-center w-full gap-2 text-xs font-medium text-slate-700 ${className}`}
+      >
         <input
           tabIndex={tabIndex ? tabIndex : undefined}
           type="checkbox"
           required={required}
-          className="mx-2 py-2"
+          className=""
           checked={value}
           onChange={(e) => {
             handleOnChange(e);
           }}
           disabled={readOnly || disabled}
         />
-        {name}
+        <span className="mt-1">{name}</span>
       </label>
     </div>
+  );
+};
+
+export const CheckBoxNew = ({
+  name,
+  value,
+  setValue,
+  readOnly = false,
+  className,
+  required = false,
+  disabled = false,
+  tabIndex = null,
+}) => {
+  return (
+    <label
+      className={`inline-flex items-center gap-1.5 cursor-pointer select-none
+        text-xs font-medium text-slate-700 leading-none
+        ${readOnly || disabled ? "opacity-50 cursor-not-allowed" : "hover:text-indigo-600"}
+        ${className || ""}`}
+    >
+      <input
+        tabIndex={tabIndex ?? undefined}
+        type="checkbox"
+        required={required}
+        checked={value}
+        onChange={() => !readOnly && !disabled && setValue(!value)}
+        disabled={readOnly || disabled}
+        className="
+          w-[14px] h-[14px] min-w-[14px] min-h-[14px]
+          rounded
+          border border-slate-400
+          accent-indigo-600
+          cursor-pointer
+          disabled:cursor-not-allowed
+        "
+      />
+      <span>{name}</span>
+    </label>
   );
 };
 

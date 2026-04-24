@@ -380,7 +380,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
           onView={handleView}
           onEdit={handleEdit}
           onDelete={deleteData}
-          itemsPerPage={15}
+          itemsPerPage={10}
         />
       </div>
 

@@ -244,6 +244,7 @@ export const {
   useGetApprovalByIdQuery,
   useGetPendingApprovalQuery,
   useAddApprovalMutation,
+  useMarkApprovalReadMutation,
   useUpdateApprovalMutation,
   useDeleteApprovalMutation,
   useGetApprovalFieldsQuery,

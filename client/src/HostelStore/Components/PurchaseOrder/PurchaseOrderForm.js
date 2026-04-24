@@ -966,6 +966,7 @@ const PurchaseOrderForm = ({
           disabled={orderId || id || isCoreLocked}
           ref={supplierRef}
           className={`${compactFieldClass} w-full max-w-none`}
+          autoFocus={true}
         />
       </div>
       <div className={narrowFieldWrap}>

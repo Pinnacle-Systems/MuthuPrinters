@@ -1,20 +1,20 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { JOB_CARD_API } from "../../Api";
+import { BOARD_API } from "../../Api";
 
 const BASE_URL = process.env.REACT_APP_SERVER_URL;
 
-const JobCardApi = createApi({
-  reducerPath: "jobCard",
+const BoardMasterApi = createApi({
+  reducerPath: "board",
   baseQuery: fetchBaseQuery({
     baseUrl: BASE_URL,
   }),
-  tagTypes: ["jobCard"],
+  tagTypes: ["Board"],
   endpoints: (builder) => ({
-    getJobCard: builder.query({
+    getBoardMaster: builder.query({
       query: ({ params, searchParams }) => {
         if (searchParams) {
           return {
-            url: JOB_CARD_API + "/search/" + searchParams,
+            url: BOARD_API + "/search/" + searchParams,
             method: "GET",
             headers: {
               "Content-type": "application/json; charset=UTF-8",
@@ -23,7 +23,7 @@ const JobCardApi = createApi({
           };
         }
         return {
-          url: JOB_CARD_API,
+          url: BOARD_API,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
@@ -31,58 +31,59 @@ const JobCardApi = createApi({
           params,
         };
       },
-      providesTags: ["jobCard"],
+      providesTags: ["Board"],
     }),
-    getJobCardById: builder.query({
+    getBoardMasterById: builder.query({
       query: (id) => {
         return {
-          url: `${JOB_CARD_API}/${id}`,
+          url: `${BOARD_API}/${id}`,
           method: "GET",
           headers: {
             "Content-type": "application/json; charset=UTF-8",
           },
         };
       },
-      providesTags: ["jobCard"],
+      providesTags: ["Board"],
     }),
-    addJobCard: builder.mutation({
+    addBoardMaster: builder.mutation({
       query: (payload) => ({
-        url: JOB_CARD_API,
+        url: BOARD_API,
         method: "POST",
         body: payload,
         headers: {
           "Content-type": "application/json; charset=UTF-8",
         },
       }),
-      invalidatesTags: ["jobCard"],
+      invalidatesTags: ["Board"],
     }),
-    updateJobCard: builder.mutation({
-      query: ({ id, ...body }) => {
+    updateBoardMaster: builder.mutation({
+      query: (payload) => {
+        const { id, ...body } = payload;
         return {
-          url: `${JOB_CARD_API}/${id}`,
+          url: `${BOARD_API}/${id}`,
           method: "PUT",
           body,
         };
       },
-      invalidatesTags: ["jobCard"],
+      invalidatesTags: ["Board"],
     }),
-    deleteJobCard: builder.mutation({
+    deleteBoardMaster: builder.mutation({
       query: (id) => ({
-        url: `${JOB_CARD_API}/${id}`,
+        url: `${BOARD_API}/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["jobCard"],
+      invalidatesTags: ["Board"],
     }),
   }),
 });
 
 export const {
-  useGetJobCardQuery,
-  useGetJobCardByIdQuery,
-  useLazyGetJobCardByIdQuery,
-  useAddJobCardMutation,
-  useUpdateJobCardMutation,
-  useDeleteJobCardMutation,
-} = JobCardApi;
+  useGetBoardMasterQuery,
+  useGetBoardMasterByIdQuery,
+  useLazyGetBoardMasterByIdQuery,
+  useAddBoardMasterMutation,
+  useUpdateBoardMasterMutation,
+  useDeleteBoardMasterMutation,
+} = BoardMasterApi;
 
-export default JobCardApi;
+export default BoardMasterApi;

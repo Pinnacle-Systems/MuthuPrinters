@@ -42,6 +42,8 @@ import {
   purchaseReportApi,
   ProcessMasterApi,
   ProcessGroupMasterApi,
+  PlateMasterApi,
+  DieMasterApi,
 } from "./services";
 import paymentApi from "./services/PaymentService";
 import StyleMasterApi from "./services/StyleMasterService";
@@ -59,6 +61,7 @@ import {
   JobCardApi,
 } from "./uniformService";
 import OrderEntryApi from "./uniformService/OrderEntryService";
+import BoardMasterApi from "./services/boardService";
 
 const commonReducers = {
   openTabs,
@@ -117,6 +120,9 @@ const commonReducers = {
   process: ProcessMasterApi.reducer,
   processGroup: ProcessGroupMasterApi.reducer,
   jobCard: JobCardApi.reducer,
+  plate: PlateMasterApi.reducer,
+  die: DieMasterApi.reducer,
+  board: BoardMasterApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -174,6 +180,9 @@ const commonMiddleware = [
   ProcessMasterApi.middleware,
   ProcessGroupMasterApi.middleware,
   JobCardApi.middleware,
+  PlateMasterApi.middleware,
+  DieMasterApi.middleware,
+  BoardMasterApi.middleware,
 ];
 
 const store = configureStore({

@@ -48,3 +48,7 @@ export { default as StockReport } from "./StockReport/StockReport";
 export { default as OrderEntry } from "./OrderEntry";
 export { default as ProcessMaster } from "./ProcessMaster";
 export { default as ProcessGroupMaster } from "./ProcessGroupMaster";
+export { default as JobCard } from "./JobCard";
+export { default as PlateMaster } from "./PlateMaster";
+export { default as DieMaster } from "./DieMaster";
+export { default as BoardMaster } from "./BoardMaster";

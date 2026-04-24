@@ -1,7 +1,50 @@
-import { IoArrowBackCircleSharp } from "react-icons/io5";
+// ─────────────────────────────────────────────────────────────
+// CheckBox Component
+// ─────────────────────────────────────────────────────────────
+export const CheckBox = ({
+    name,
+    value,
+    setValue,
+    readOnly = false,
+    className,
+    required = false,
+    disabled = false,
+    tabIndex = null,
+}) => {
+    return (
+        <label
+            className={`inline-flex items-center gap-1.5 cursor-pointer select-none
+        text-xs font-medium text-slate-700 leading-none
+        ${readOnly || disabled ? "opacity-50 cursor-not-allowed" : "hover:text-indigo-600"}
+        ${className || ""}`}
+        >
+            <input
+                tabIndex={tabIndex ?? undefined}
+                type="checkbox"
+                required={required}
+                checked={value}
+                onChange={() => !readOnly && !disabled && setValue(!value)}
+                disabled={readOnly || disabled}
+                className="
+          w-[14px] h-[14px] min-w-[14px] min-h-[14px]
+          rounded
+          border border-slate-400
+          accent-indigo-600
+          cursor-pointer
+          disabled:cursor-not-allowed
+        "
+            />
+            <span>{name}</span>
+        </label>
+    );
+};
 
+
+// ─────────────────────────────────────────────────────────────
+// JobCardForm — 5-column card layout
+// ─────────────────────────────────────────────────────────────
+import { IoArrowBackCircleSharp } from "react-icons/io5";
 import {
-    DateInputNew,
     DropdownInput,
     ReusableInput,
     TextInput,
@@ -9,26 +52,103 @@ import {
 import { orderTypes } from "../../../Utils/DropdownData";
 import { useCallback, useEffect, useRef, useState } from "react";
 import moment from "moment";
-import {
-    findFromList,
-    getCommonParams,
-    ModeChip,
-    renameFile,
-} from "../../../Utils/helper";
+import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
 import { toast } from "react-toastify";
-import { FiEdit2, FiSave } from "react-icons/fi";
+import { FiEdit2, FiPrinter, FiSave } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { dropDownListObject } from "../../../Utils/contructObject";
-import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
-import { PartyMaster } from "../index.js";
+import { BoardMaster, DieMaster, Gsm, PartyMaster, PlateMaster } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
+import {
+    useAddJobCardMutation,
+    useGetJobCardByIdQuery,
+    useUpdateJobCardMutation,
+} from "../../../redux/uniformService/JobCardService.js";
+import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
+import { useGetProcessGroupMasterQuery } from "../../../redux/services/ProcessGroupMaster.service.js";
+import secureLocalStorage from "react-secure-storage";
+import { useGetBoardMasterQuery } from "../../../redux/services/boardService.js";
 import Modal from "../../../UiComponents/Modal/index.js";
-import { getImageUrlPath } from "../../../Constants/index.js";
-import { Plus } from "lucide-react";
-import { QRCodeCanvas } from "qrcode.react";
-import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFooter.jsx";
-import { useAddJobCardMutation, useGetJobCardByIdQuery, useUpdateJobCardMutation } from "../../../redux/uniformService/JobCardService.js";
+import { PDFViewer } from "@react-pdf/renderer";
+import tw from "../../../Utils/tailwind-react-pdf.js";
+import JobCardPrintFormat from "./JobCardPrintFormat.jsx";
+
+// ── Section card ─────────────────────────────────────────────
+const SectionCard = ({ title, children, className = "" }) => (
+    <div className={`bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden ${className}`}>
+        {title && (
+            <div className="bg-slate-50 border-b border-slate-200 px-3 py-1.5">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">
+                    {title}
+                </h3>
+            </div>
+        )}
+        <div className="p-3">
+            {children}
+        </div>
+    </div>
+);
+
+// ── Column wrapper ────────────────────────────────────────────
+const Col = ({ title, children, className = "" }) => (
+    <div className={`flex flex-col gap-2.5 gap-y-4 ${className}`}>
+        <h2 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-800 pb-1.5 border-b-2 border-slate-700">
+            {title}
+        </h2>
+        {children}
+    </div>
+);
+
+// ── Field label + input wrapper ───────────────────────────────
+const Field = ({ label, children }) => (
+    <div className="flex flex-col gap-0.5">
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">{label}</span>
+        {children}
+    </div>
+);
+
+// ── LV Row (Lamination / Varnish) ─────────────────────────────
+// type col is wider (flex-[2]) so long names don't crowd the checkboxes
+const LVRow = ({ item, selected, onMain, onFront, onFrontBack, readOnly }) => (
+    <div className="flex items-center gap-2 gap-y-4 py-1 border-b border-slate-100 last:border-0">
+        <div className="flex-[2] min-w-0">
+            <CheckBox
+                name={item.name}
+                value={!!selected}
+                setValue={onMain}
+                readOnly={readOnly}
+            />
+        </div>
+        <div className="flex-1 flex justify-center">
+            <CheckBox
+                name=""
+                value={selected?.isFront || false}
+                setValue={onFront}
+                readOnly={!selected || readOnly}
+            />
+        </div>
+        <div className="flex-1 flex justify-center">
+            <CheckBox
+                name=""
+                value={selected?.isFrontAndBack || false}
+                setValue={onFrontBack}
+                readOnly={!selected || readOnly}
+            />
+        </div>
+    </div>
+);
+
+// ── Shared LV column header ───────────────────────────────────
+const LVHeader = () => (
+    <div className="flex items-center gap-2 pb-1 mb-1 border-b border-slate-200">
+        <span className="flex-[2] text-[9px] font-bold uppercase tracking-wider text-slate-400">Type</span>
+        <span className="flex-1 text-center text-[9px] font-bold uppercase tracking-wider text-slate-400">Front</span>
+        <span className="flex-1 text-center text-[9px] font-bold uppercase tracking-wider text-slate-400">F&B</span>
+    </div>
+);
+
+// ─────────────────────────────────────────────────────────────
 const JobCardForm = ({
     onClose,
     id,
@@ -36,33 +156,77 @@ const JobCardForm = ({
     readOnly,
     setReadOnly,
     customerList,
-    termsData,
+    gsmList,
+    plateList,
+    dieList,
 }) => {
     const today = new Date();
 
-    const [docDate, setDocDate] = useState(
-        moment.utc(today).format("YYYY-MM-DD"),
-    );
+    const [docDate, setDocDate] = useState(moment.utc(today).format("YYYY-MM-DD"));
     const [customerId, setCustomerId] = useState("");
     const [remarks, setRemarks] = useState("");
-    const [requirements, setRequirements] = useState("");
     const [orderType, setOrderType] = useState("Sample");
     const [deliveryDate, setDeliveryDate] = useState("");
-    const [jobType, setJobType] = useState("Internal");
     const [docId, setDocId] = useState("");
-    const [searchDocId, setSearchDocId] = useState("");
-    const [searchDocDate, setSearchDocDate] = useState("");
-    const [summary, setSummary] = useState(false);
-    const [attachmentModal, setAttachmentModal] = useState(false);
-    const [selectedAttachmentIndex, setSelectedAttachmentIndex] = useState(null);
-    const [attachments, setAttachments] = useState([]);
     const [orderQty, setOrderQty] = useState("");
-    const [termsAndCondition, setTermsAndCondition] = useState("");
-    const [termsId, setTermsId] = useState("");
-    const customerRef = useRef(null);
-    const [dispatchInvalidate] = useInvalidateTags();
+    const [printModalOpen, setPrintModalOpen] = useState(false);
 
+    const [gsmId, setGsmId] = useState("");
+    const [boardId, setBoardId] = useState("");
+    const [fullBoard, setFullBoard] = useState("");
+    const [noOfPockets, setNoOfPockets] = useState("");
+    const [cuttingSize, setCuttingSize] = useState("");
+    const [runningQty, setRunningQty] = useState("");
+    const [isFourColor, setIsFourColor] = useState(false);
+    const [isCutColor, setIsCutColor] = useState(false);
+    const [isFront, setIsFront] = useState(false);
+    const [isFrontAndBack, setIsFrontAndBack] = useState(false);
+
+    const [isCMYK, setIsCMYK] = useState(false);
+    const [isCutColMachine, setIsCutColMachine] = useState(false);
+    const [isFrontMachine, setIsFrontMachine] = useState(false);
+    const [isFrontBackMachine, setIsFrontBackMachine] = useState(false);
+    const [totalPlateSet, setTotalPlateSet] = useState("");
+    const [plateId, setPlateId] = useState("");
+    const [dieId, setDieId] = useState("");
+
+    const [boardItems, setBoardItems] = useState([]);
+    const [selectedProcesses, setSelectedProcesses] = useState([]);
+    const [selectedMachines, setSelectedMachines] = useState([]);
+    const [laminations, setLaminations] = useState([]);
+    const [varnishes, setVarnishes] = useState([]);
+
+    const customerRef = useRef(null);
     const { userId, finYearId, branchId } = getCommonParams();
+
+    const params = {
+        companyId: secureLocalStorage.getItem(
+            sessionStorage.getItem("sessionId") + "userCompanyId"
+        ),
+    };
+
+    const { data: processList, isFetching: isProcessFetching } =
+        useGetProcessMasterQuery({ params });
+    const { data: boardData, isFetching: isBoardListFetching } =
+        useGetBoardMasterQuery({ params });
+    const { data: processGroupList, isFetching: isProcessGroupFetching } =
+        useGetProcessGroupMasterQuery({ params });
+
+    const getGroupIds = (groupName) =>
+        processGroupList?.data
+            ?.find((g) => g.name === groupName)
+            ?.processGroupList?.map((i) => i.id) || [];
+
+    const filterByGroup = (groupName) =>
+        processList?.data?.filter((p) =>
+            getGroupIds(groupName).includes(p.id)
+        ) || [];
+
+    const boardList = boardData?.data || [];
+    const defaultList = filterByGroup("DEFAULT");
+    const laminationList = filterByGroup("LAMINATION");
+    const varnishList = filterByGroup("VARNISH");
+    const machineList = filterByGroup("MACHINE");
 
     const {
         data: singleData,
@@ -73,99 +237,89 @@ const JobCardForm = ({
     const [addData] = useAddJobCardMutation();
     const [updateData] = useUpdateJobCardMutation();
 
-    const searchFields = {
-        searchDocId,
-        searchDocDate,
-    };
-
-    const syncFormWithDb = useCallback(
-        (data) => {
-            setDocId(data?.docId ? data?.docId : "New");
-            setDocDate(
-                data?.docDate
-                    ? moment.utc(data.docDate).format("YYYY-MM-DD")
-                    : moment.utc(new Date()).format("YYYY-MM-DD"),
-            );
-            setOrderType(
-                data?.orderType || "Sample",
-            );
-            setCustomerId(data?.customerId || "");
-            setRemarks(data?.remarks || "");
-            setAttachments(data?.attachments ? data?.attachments : []);
-            setOrderQty(data?.orderQty || "");
-            setRequirements(data?.requirements || "");
-            setDeliveryDate(
-                data?.deliveryDate
-                    ? moment.utc(data.deliveryDate).format("YYYY-MM-DD")
-                    : "",
-            );
-            setTermsAndCondition(data?.termsAndCondition || "");
-            setTermsId(data?.termsId || "");
-        },
-        [id],
-    );
+    const syncFormWithDb = useCallback((data) => {
+        setDocId(data?.docId || "New");
+        setDocDate(
+            data?.docDate
+                ? moment.utc(data.docDate).format("YYYY-MM-DD")
+                : moment.utc(new Date()).format("YYYY-MM-DD")
+        );
+        setOrderType(data?.orderType || "Sample");
+        setCustomerId(data?.customerId || "");
+        setRemarks(data?.remarks || "");
+        setOrderQty(data?.orderQty || "");
+        setDeliveryDate(
+            data?.deliveryDate ? moment.utc(data.deliveryDate).format("YYYY-MM-DD") : ""
+        );
+        setGsmId(data?.gsmId || "");
+        setFullBoard(data?.fullBoard || "");
+        setNoOfPockets(data?.noOfPockets || "");
+        setCuttingSize(data?.cuttingSize || "");
+        setRunningQty(data?.runningQty || "");
+        setIsFourColor(data?.isFourColor || false);
+        setIsCutColor(data?.isCutColor || false);
+        setIsFront(data?.isFront || false);
+        setIsFrontAndBack(data?.isFrontAndBack || false);
+        setIsCMYK(data?.isCMYK || false);
+        setIsCutColMachine(data?.isCutColMachine || false);
+        setIsFrontMachine(data?.isFrontMachine || false);
+        setIsFrontBackMachine(data?.isFrontBackMachine || false);
+        setPlateId(data?.plateId || "");
+        setDieId(data?.dieId || "");
+        setTotalPlateSet(data?.totalPlateSet || "");
+        setBoardItems(data?.boardQualities?.map((b) => b.boardId) || []);
+        setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
+        setLaminations(
+            data?.laminationDetails?.map((l) => ({
+                processId: l.laminationId,
+                isFront: l.isFront,
+                isFrontAndBack: l.isFrontAndBack,
+            })) || []
+        );
+        setVarnishes(
+            data?.varnishDetails?.map((v) => ({
+                processId: v.varnishId,
+                isFront: v.isFront,
+                isFrontAndBack: v.isFrontAndBack,
+            })) || []
+        );
+        setSelectedMachines(data?.machineDetails?.map((m) => m.machineId) || []);
+    }, []);
 
     useEffect(() => {
-        if (id && singleData?.data) {
-            syncFormWithDb(singleData.data);
-        } else {
-            syncFormWithDb(undefined);
-        }
+        if (id && singleData?.data) syncFormWithDb(singleData.data);
+        else syncFormWithDb(undefined);
     }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
-    let data = {
-        id,
-        docDate,
-        branchId,
-        userId,
-        orderType,
-        jobType,
-        customerId,
-        remarks,
-        finYearId,
-        attachments: attachments?.filter((i) => i.filePath),
-        orderQty,
-        requirements,
-        deliveryDate,
-        termsAndCondition,
-        termsId,
+    const toggleArr = (setter, val) =>
+        setter((prev) =>
+            prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
+        );
+
+    const toggleLV = (setter, id) =>
+        setter((prev) => {
+            const exists = prev.find((l) => l.processId === id);
+            return exists
+                ? prev.filter((l) => l.processId !== id)
+                : [...prev, { processId: id, isFront: false, isFrontAndBack: false }];
+        });
+
+    const toggleLVProp = (setter, id, prop) =>
+        setter((prev) =>
+            prev.map((l) => (l.processId === id ? { ...l, [prop]: !l[prop] } : l))
+        );
+
+    const data = {
+        id, docDate, branchId, userId, finYearId, orderType, orderQty, customerId,
+        boardItems, gsmId, boardId, remarks, fullBoard, noOfPockets, cuttingSize,
+        runningQty, isFourColor, isCutColor, isFront, isFrontAndBack, isCMYK,
+        isCutColMachine, isFrontMachine, isFrontBackMachine, plateId, dieId,
+        totalPlateSet, selectedProcesses, laminations, varnishes, selectedMachines,
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
         try {
-            const formData = new FormData();
-            for (let key in data) {
-                if (key == "attachments") {
-                    formData.append(
-                        key,
-                        JSON.stringify(
-                            data[key].map((i) => ({
-                                ...i,
-                                filePath:
-                                    i.filePath instanceof File ? i.filePath.name : i.filePath,
-                            })),
-                        ),
-                    );
-                    data[key].forEach((option) => {
-                        if (option?.filePath instanceof File) {
-                            formData.append("images", option.filePath);
-                        }
-                    });
-                } else if (
-                    Array.isArray(data[key]) ||
-                    (typeof data[key] === "object" && data[key] !== null)
-                ) {
-                    formData.append(key, JSON.stringify(data[key]));
-                } else {
-                    formData.append(key, data[key]);
-                }
-            }
-            let returnData;
-            if (text === "Updated") {
-                returnData = await callback({ id, body: formData }).unwrap();
-            } else {
-                returnData = await callback(formData).unwrap();
-            }
+            const returnData = await callback(data).unwrap();
             if (returnData.statusCode === 1) {
                 toast.error(returnData.message);
             } else {
@@ -175,20 +329,14 @@ const JobCardForm = ({
                     showConfirmButton: false,
                     timer: 2000,
                     didClose: () => {
-                        dispatchInvalidate();
-
                         if (returnData.statusCode === 0) {
-                            if (nextProcess == "new") {
+                            if (nextProcess === "new") {
                                 setId(0);
                                 setDocId("New");
                                 syncFormWithDb(undefined);
-                                setTimeout(() => {
-                                    customerRef.current?.focus();
-                                }, 100);
+                                setTimeout(() => customerRef.current?.focus(), 100);
                             }
-                            if (nextProcess == "close") {
-                                onClose();
-                            }
+                            if (nextProcess === "close") onClose();
                         } else {
                             toast.error(returnData?.message);
                         }
@@ -196,688 +344,439 @@ const JobCardForm = ({
                 });
             }
         } catch (error) {
-            console.log("handle", error);
+            console.error("submit error", error);
         }
-    };
-
-    const findDuplicates = (items) => {
-        const seen = new Map(); // key -> first index
-        const duplicates = [];
-
-        return duplicates; // empty array = no duplicates
     };
 
     const validateData = (data) => {
-        const items = data?.inwardItems || [];
         const checks = [
             { condition: !data.orderType, title: "Order Type is required!" },
             { condition: !data.orderQty, title: "Order Quantity is required!" },
-            { condition: !data.deliveryDate, title: "Delivery Date is required!" },
             { condition: !data.customerId, title: "Customer is required!" },
         ];
-
         const failed = checks.find((c) => c.condition);
         if (failed) {
-            Swal.fire({
-                icon: "warning",
-                title: failed.title,
-                html: failed.html,
-                timer: failed.html ? undefined : 1500,
-                showConfirmButton: !!failed.html,
-                confirmButtonText: "OK",
-            });
+            Swal.fire({ icon: "warning", title: failed.title, timer: 1500, showConfirmButton: false });
             return false;
         }
-
         return true;
     };
 
     const saveData = (nextProcess) => {
-        if (!validateData(data)) {
-            return;
-        }
-        if (id) {
-            if (!window.confirm("Are you sure update the details ...?")) {
-                return;
-            }
-        }
-        if (nextProcess == "draft" && !id) {
-            handleSubmitCustom(
-                addData,
-                (data = { ...data, draftSave: true }),
-                "Added",
-                nextProcess,
-            );
-        } else if (id && nextProcess == "draft") {
-            handleSubmitCustom(
-                updateData,
-                { ...data, draftSave: true },
-                "Updated",
-                nextProcess,
-            );
-        } else if (id) {
-            handleSubmitCustom(updateData, data, "Updated", nextProcess);
-        } else {
-            handleSubmitCustom(addData, data, "Added", nextProcess);
-        }
+        if (!validateData(data)) return;
+        if (id && !window.confirm("Are you sure you want to update the details?")) return;
+        if (id) handleSubmitCustom(updateData, data, "Updated", nextProcess);
+        else handleSubmitCustom(addData, data, "Added", nextProcess);
     };
 
-    const handleKeyDown = (event) => {
-        let charCode = String.fromCharCode(event.which).toLowerCase();
-        if ((event.ctrlKey || event.metaKey) && charCode === "s") {
-            event.preventDefault();
+    const handleKeyDown = (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+            e.preventDefault();
             saveData("close");
         }
     };
 
-    useEffect(() => {
-        customerRef.current?.focus();
-    }, []);
-
-    useEffect(() => {
-        if (attachments?.length >= 4) return;
-        setAttachments((prev) => {
-            let newArray = Array.from({ length: 4 - prev?.length }, () => {
-                return { date: today, filePath: "", log: "", name: "" };
-            });
-            return [...prev, ...newArray];
-        });
-    }, [setAttachments, attachments]);
-
-    function handleInputChange(value, index, field) {
-        const newBlend = structuredClone(attachments);
-        newBlend[index][field] = value;
-        setAttachments(newBlend);
-    }
-
-    function openPreview(filePath) {
-        window.open(
-            filePath instanceof File
-                ? URL.createObjectURL(filePath)
-                : getImageUrlPath(filePath),
-        );
-    }
-
-    function addNewComments() {
-        setAttachments((prev) => [...prev, { log: "", date: today, filePath: "" }]);
-    }
-
-    function deleteRow(index) {
-        setAttachments((prev) => prev.filter((_, i) => i !== index));
-    }
-
     return (
         <>
-            {attachmentModal && (
-                <Modal
-                    isOpen={attachmentModal}
-                    onClose={() => {
-                        setAttachmentModal(false);
-                        setSelectedAttachmentIndex(null);
-                    }}
-                    widthClass="p-4 w-[600px] h-[420px]"
-                >
+            <Modal
+                isOpen={printModalOpen}
+                onClose={() => {
+                    setPrintModalOpen(false);
 
-                </Modal>
-            )}
-            <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-lg font-bold flex items-center gap-2">
-                        Order Entry
+                    // // Execute pending action after print modal closes
+                    // if (pendingAction === "new") {
+                    //     setId("");
+                    //     setDocId("New");
+                    //     syncFormWithDb(undefined);
+                    //     setTimeout(() => {
+                    //         supplierRef.current?.focus();
+                    //     }, 100);
+                    // }
+                    // if (pendingAction === "close") {
+                    //     onClose();
+                    // }
+                    // setPendingAction(null);
+                }}
+                widthClass={"w-[90%] h-[90%]"}
+            >
+                <PDFViewer style={tw("w-full h-full")}>
+                    {/* <JobCardPrintFormat
+                        singleData={singleData?.data}
+                        // branchData={branchData}
+                        customerList={customerList}
+                    /> */}
+                </PDFViewer>
+            </Modal>
+            <div className="flex flex-col" onKeyDown={handleKeyDown}>
+
+                {/* ── Header ─────────────────────────────────────────── */}
+                <div className="flex justify-between items-center px-4 py-1 bg-white rounded-md sticky top-0 z-10 shadow-sm">
+                    <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        Job Card
                         <ModeChip id={id} readOnly={readOnly} />
                     </h1>
                     <button
-                        onClick={() => {
-                            onClose();
-                        }}
-                        className="text-indigo-600 hover:text-indigo-700"
-                        title="Back to Report"
+                        onClick={onClose}
+                        className="text-indigo-500 hover:text-indigo-700 transition-colors"
+                        title="Back"
                     >
-                        <IoArrowBackCircleSharp className="w-7 h-7" />
+                        <IoArrowBackCircleSharp className="w-6 h-6" />
                     </button>
                 </div>
-            </div>
-            <div className="space-y-2 py-2" onKeyDown={handleKeyDown}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">Basic Details</h2>
-                        <div className="grid grid-cols-2 gap-1">
-                            <ReusableInput
-                                label="Order Entry No"
-                                readOnly
-                                value={docId}
-                            />
-                            <ReusableInput
-                                label="Order Entry Date"
-                                value={docDate}
-                                type={"date"}
-                                required={true}
-                                readOnly={true}
-                                disabled
-                            />
 
-                        </div>
-                    </div>
+                {/* ── Body — 5 card columns with gaps ─────────────────── */}
+                <div className="flex-1 overflow-y-auto p-3">
+                    <div className="grid grid-cols-5 gap-3 items-start">
 
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">Order Details</h2>
-                        <div className="grid grid-cols-3 gap-1 ">
-                            <DropdownInput
-                                name="Order Type"
-                                options={orderTypes}
-                                value={orderType}
-                                setValue={(value) => {
-                                    setOrderType(value);
-                                }}
-                                required={true}
-                                readOnly={readOnly}
-                                disabled={readOnly}
-                                ref={customerRef}
-                            />
-
-                            <div className="w-28">
-                                <TextInput
-                                    name={"Order Quantity"}
-                                    value={orderQty}
-                                    setValue={setOrderQty}
-                                    readOnly={readOnly}
-                                    required={true}
-                                    type={"number"}
-                                    onFocus={(e) => {
-                                        e.target.select();
-                                    }}
-                                    onBlur={(e) =>
-                                        setOrderQty(
-                                            e.target.value ? Number(e.target.value).toFixed(3) : "",
-                                        )
-                                    }
-                                    className={"text-right"}
-                                />
-                            </div>
-                            <div className="w-28">
-                                <DateInputNew
-                                    name="Delivery Date"
-                                    value={deliveryDate}
-                                    setValue={setDeliveryDate}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    type={"date"}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">
-                            Customer Details
-                        </h2>
-                        <div className="grid grid-cols-2 gap-1">
-                            <div className="col-span-2">
-                                <DropdownWithModal
-                                    name="Customer"
-                                    options={dropDownListObject(
-                                        id
-                                            ? customerList?.data?.filter((item) => item?.isCustomer)
-                                            : customerList?.data?.filter(
-                                                (item) => item?.active && item?.isCustomer,
-                                            ),
-                                        "name",
-                                        "id",
-                                    )}
-                                    value={customerId}
-                                    setValue={setCustomerId}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    className={`w-[150px]`}
-                                    addNewLabel="+ Add New Customer"
-                                    childComponent={PartyMaster}
-                                    addNewModalWidth="w-[90%] h-[95%]"
-                                    disabled={id}
-                                />
-                            </div>
-                            <TextInput
-                                name="Contact Person"
-                                placeholder="Contact name"
-                                value={findFromList(
-                                    customerId,
-                                    customerList?.data,
-                                    "contactPersonName",
-                                )}
-                                disabled={true}
-                            />
-
-                            <TextInput
-                                name="Phone"
-                                placeholder="Contact name"
-                                value={findFromList(
-                                    customerId,
-                                    customerList?.data,
-                                    "contactNumber",
-                                )}
-                                disabled={true}
-                            />
-                        </div>
-                    </div>
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">QR Code</h2>
-                        <div className="flex flex-col items-center justify-center gap-2">
-                            {docId && docId !== "New" ? (
-                                <>
-                                    <QRCodeCanvas
-                                        value={JSON.stringify({ id, docId })}
-                                        size={96}
-                                        className="border border-slate-200 rounded"
-                                    />
-                                    <span className="text-xs text-slate-400">Scan to identify order</span>
-                                </>
-                            ) : (
-                                <div className="w-24 h-24 flex items-center justify-center border border-dashed border-slate-300 rounded text-slate-400 text-xs text-center px-2">
-                                    QR appears after save
+                        {/* ══ COL 1 — BOARD DETAILS ══════════════════════ */}
+                        <Col title="Board Details">
+                            {/* Board Quality — 2 checkboxes per row */}
+                            <SectionCard title="Board Quality">
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+                                    {boardList?.map((item) => (
+                                        <CheckBox
+                                            key={item.id}
+                                            name={item.name}
+                                            value={boardItems.includes(item.id)}
+                                            setValue={() => toggleArr(setBoardItems, item.id)}
+                                            readOnly={readOnly}
+                                        />
+                                    ))}
                                 </div>
-                            )}
-                        </div>
+                            </SectionCard>
+
+                            {/* Specifications — inputs 2 per row */}
+                            <SectionCard title="Specifications">
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                    <Field label="GSM">
+                                        <DropdownWithModal
+                                            name=""
+                                            options={dropDownListObject(
+                                                id ? gsmList?.data : gsmList?.data?.filter((i) => i?.active),
+                                                "name", "id"
+                                            )}
+                                            value={gsmId}
+                                            setValue={setGsmId}
+                                            readOnly={readOnly}
+                                            addNewLabel="+ Add GSM"
+                                            childComponent={Gsm}
+                                            addNewModalWidth="w-[30%] h-[45%]"
+                                        />
+                                    </Field>
+                                    <Field label="Others / Board">
+                                        <DropdownWithModal
+                                            name=""
+                                            options={dropDownListObject(
+                                                id ? boardData?.data : boardData?.data?.filter((i) => i?.active),
+                                                "name", "id"
+                                            )}
+                                            value={boardId}
+                                            setValue={setBoardId}
+                                            readOnly={readOnly}
+                                            addNewLabel="+ Add Board"
+                                            childComponent={BoardMaster}
+                                            addNewModalWidth="w-[30%] h-[45%]"
+                                        />
+                                    </Field>
+                                    <Field label="Full Board">
+                                        <TextInput name="" value={fullBoard} setValue={setFullBoard}
+                                            readOnly={readOnly} type="number" className="text-right w-full" />
+                                    </Field>
+                                    <Field label="Cutting Size">
+                                        <TextInput name="" value={cuttingSize} setValue={setCuttingSize}
+                                            readOnly={readOnly} className="w-full" />
+                                    </Field>
+                                    <Field label="No. of Pockets">
+                                        <TextInput name="" value={noOfPockets} setValue={setNoOfPockets}
+                                            readOnly={readOnly} className="w-full" />
+                                    </Field>
+                                    <Field label="Running Qty">
+                                        <TextInput name="" value={runningQty} setValue={setRunningQty}
+                                            readOnly={readOnly} type="number" className="text-right w-full" />
+                                    </Field>
+                                </div>
+
+                                {/* Printing flags — 2 per row */}
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-4 mt-2.5 pt-2 border-t border-slate-100">
+                                    <CheckBox name="4 Color" value={isFourColor} setValue={setIsFourColor} readOnly={readOnly} />
+                                    <CheckBox name="Cut Color" value={isCutColor} setValue={setIsCutColor} readOnly={readOnly} />
+                                    <CheckBox name="Front" value={isFront} setValue={setIsFront} readOnly={readOnly} />
+                                    <CheckBox name="Front & Back" value={isFrontAndBack} setValue={setIsFrontAndBack} readOnly={readOnly} />
+                                </div>
+                            </SectionCard>
+                        </Col>
+
+                        {/* ══ COL 2 — PROCESS ════════════════════════════ */}
+                        <Col title="Process Details">
+                            <SectionCard title="Process">
+                                <div className="grid grid-cols-1 gap-x-3 gap-y-4 min-h-[365px]">
+                                    {defaultList?.map((item) => (
+                                        <CheckBox
+                                            key={item.id}
+                                            name={item.name}
+                                            value={selectedProcesses.includes(item.id)}
+                                            setValue={() => toggleArr(setSelectedProcesses, item.id)}
+                                            readOnly={readOnly}
+                                        />
+                                    ))}
+                                </div>
+                            </SectionCard>
+                        </Col>
+
+                        {/* ══ COL 3 — VARNISH + LAMINATION (one column) ═ */}
+                        <Col title="Varnish & Lamination Details">
+
+                            <SectionCard title="Varnish">
+                                {varnishList?.length > 0 ? (
+                                    <>
+                                        <LVHeader />
+                                        {varnishList.map((item) => {
+                                            const selected = varnishes.find((v) => v.processId === item.id);
+                                            return (
+                                                <LVRow
+                                                    key={item.id}
+                                                    item={item}
+                                                    selected={selected}
+                                                    onMain={() => toggleLV(setVarnishes, item.id)}
+                                                    onFront={() => toggleLVProp(setVarnishes, item.id, "isFront")}
+                                                    onFrontBack={() => toggleLVProp(setVarnishes, item.id, "isFrontAndBack")}
+                                                    readOnly={readOnly}
+                                                />
+                                            );
+                                        })}
+                                    </>
+                                ) : (
+                                    <p className="text-xs text-slate-400 italic">No varnish options configured.</p>
+                                )}
+                            </SectionCard>
+
+                            <SectionCard title="Lamination">
+                                {laminationList?.length > 0 ? (
+                                    <>
+                                        <LVHeader />
+                                        {laminationList.map((item) => {
+                                            const selected = laminations.find((l) => l.processId === item.id);
+                                            return (
+                                                <LVRow
+                                                    key={item.id}
+                                                    item={item}
+                                                    selected={selected}
+                                                    onMain={() => toggleLV(setLaminations, item.id)}
+                                                    onFront={() => toggleLVProp(setLaminations, item.id, "isFront")}
+                                                    onFrontBack={() => toggleLVProp(setLaminations, item.id, "isFrontAndBack")}
+                                                    readOnly={readOnly}
+                                                />
+                                            );
+                                        })}
+                                    </>
+                                ) : (
+                                    <p className="text-xs text-slate-400 italic">No lamination options configured.</p>
+                                )}
+                            </SectionCard>
+                        </Col>
+
+                        {/* ══ COL 4 — MACHINE DETAILS ════════════════════ */}
+                        <Col title="Machine Details">
+
+                            <SectionCard title="Machines">
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-5">
+                                    {machineList?.map((item) => (
+                                        <CheckBox
+                                            key={item.id}
+                                            name={item.name}
+                                            value={selectedMachines.includes(item.id)}
+                                            setValue={() => toggleArr(setSelectedMachines, item.id)}
+                                            readOnly={readOnly}
+                                        />
+                                    ))}
+                                    <CheckBox name="CMYK" value={isCMYK} setValue={setIsCMYK} readOnly={readOnly} />
+                                    <CheckBox name="Cut Col" value={isCutColMachine} setValue={setIsCutColMachine} readOnly={readOnly} />
+                                    <CheckBox name="Front" value={isFrontMachine} setValue={setIsFrontMachine} readOnly={readOnly} />
+                                    <CheckBox name="Front & Back" value={isFrontBackMachine} setValue={setIsFrontBackMachine} readOnly={readOnly} />
+                                </div>
+                            </SectionCard>
+
+                            <SectionCard title="Plate & Die Details">
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 min-h-[125px]">
+                                    <Field label="Plate Type">
+                                        <DropdownWithModal
+                                            name=""
+                                            options={dropDownListObject(
+                                                id ? plateList?.data : plateList?.data?.filter((i) => i?.active),
+                                                "name", "id"
+                                            )}
+                                            value={plateId}
+                                            setValue={setPlateId}
+                                            readOnly={readOnly}
+                                            addNewLabel="+ Add Plate"
+                                            childComponent={PlateMaster}
+                                            addNewModalWidth="w-[30%] h-[45%]"
+                                        />
+                                    </Field>
+                                    <Field label="Total Plate Set">
+                                        <TextInput name="" value={totalPlateSet} setValue={setTotalPlateSet}
+                                            readOnly={readOnly} type="number" className="text-right w-full" />
+                                    </Field>
+                                    <div className="col-span-2">
+                                        <Field label="Die Reference">
+                                            <DropdownWithModal
+                                                name=""
+                                                options={dropDownListObject(
+                                                    id ? dieList?.data : dieList?.data?.filter((i) => i?.active),
+                                                    "name", "id"
+                                                )}
+                                                value={dieId}
+                                                setValue={setDieId}
+                                                readOnly={readOnly}
+                                                addNewLabel="+ Add Die"
+                                                childComponent={DieMaster}
+                                                addNewModalWidth="w-[30%] h-[45%]"
+                                            />
+                                        </Field>
+                                    </div>
+                                </div>
+                            </SectionCard>
+                        </Col>
+
+                        {/* ══ COL 5 — BASIC DETAILS ══════════════════════ */}
+                        <Col title="Basic Details">
+
+                            <SectionCard>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                    <Field label="Job Card No">
+                                        <ReusableInput label="" readOnly value={docId} />
+                                    </Field>
+                                    <Field label="Date">
+                                        <ReusableInput label="" value={docDate} type="date" readOnly disabled />
+                                    </Field>
+                                </div>
+                            </SectionCard>
+                            <SectionCard title="">
+
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                    <Field label="Order Type">
+                                        <DropdownInput
+                                            name=""
+                                            options={orderTypes}
+                                            value={orderType}
+                                            setValue={setOrderType}
+                                            required
+                                            readOnly={readOnly}
+                                            disabled={readOnly}
+                                            ref={customerRef}
+                                        />
+                                    </Field>
+                                    <Field label="Order Qty">
+                                        <TextInput
+                                            name=""
+                                            value={orderQty}
+                                            setValue={setOrderQty}
+                                            readOnly={readOnly}
+                                            required
+                                            type="number"
+                                            className="text-right w-full"
+                                            onFocus={(e) => e.target.select()}
+                                            onBlur={(e) =>
+                                                setOrderQty(e.target.value ? Number(e.target.value).toFixed(3) : "")
+                                            }
+                                        />
+                                    </Field>
+                                </div>
+                                <div className="mt-2">
+                                    <Field label="Remarks">
+                                        <TextInput name="" value={remarks} setValue={setRemarks}
+                                            readOnly={readOnly} className="w-full" />
+                                    </Field>
+                                </div>
+                            </SectionCard>
+                            <SectionCard title="Customer Details">
+                                <div className="flex flex-col gap-2">
+                                    <Field label="Customer">
+                                        <DropdownWithModal
+                                            name=""
+                                            options={dropDownListObject(
+                                                id
+                                                    ? customerList?.data?.filter((i) => i?.isCustomer)
+                                                    : customerList?.data?.filter((i) => i?.active && i?.isCustomer),
+                                                "name", "id"
+                                            )}
+                                            value={customerId}
+                                            setValue={setCustomerId}
+                                            required
+                                            readOnly={readOnly}
+                                            addNewLabel="+ Add New Customer"
+                                            childComponent={PartyMaster}
+                                            addNewModalWidth="w-[90%] h-[95%]"
+                                            disabled={!!id}
+                                        />
+                                    </Field>
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                        <Field label="Contact Person">
+                                            <TextInput name=""
+                                                value={findFromList(customerId, customerList?.data, "contactPersonName")}
+                                                disabled />
+                                        </Field>
+                                        <Field label="Phone">
+                                            <TextInput name=""
+                                                value={findFromList(customerId, customerList?.data, "contactNumber")}
+                                                disabled />
+                                        </Field>
+                                    </div>
+                                </div>
+                            </SectionCard>
+
+                            {/* <SectionCard title="Order Info"> */}
+
+                        </Col>
+
                     </div>
                 </div>
-                <div className="border border-slate-200 p-2 py-3 bg-white rounded-md shadow-sm gap-x-4 flex">
-                    <div className="w-1/2 px-2">
-                        <fieldset className="">
-                            <legend className="font-medium text-slate-700 mb-2 text-xs">Customer Requirements</legend>
-                            <textarea
-                                readOnly={readOnly}
-                                value={requirements}
-                                onChange={(e) => {
-                                    setRequirements(e.target.value);
-                                }}
-                                className="w-full overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md 
-focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"                            placeholder="Requirements..."
-                                onKeyDown={(e) => {
-                                    if (e.ctrlKey && e.key === "Enter") {
-                                        e.preventDefault();
 
-                                        const textarea = e.target;
-                                        const start = textarea.selectionStart;
-                                        const end = textarea.selectionEnd;
-
-                                        const newValue =
-                                            requirements.substring(0, start) + "\n" + requirements.substring(end);
-
-                                        setRequirements(newValue);
-
-                                        // ✅ Restore focus + cursor properly
-                                        requestAnimationFrame(() => {
-                                            textarea.focus();
-                                            textarea.setSelectionRange(start + 1, start + 1);
-                                        });
-                                    }
-                                }}
-                                rows={9}
-                            />
-                        </fieldset>
-                    </div>
-                    <div className="w-1/2 space-y-2 px-2">
-                        <h2 className="text-xs font-medium text-slate-700">
-                            Attachments
-                        </h2>
-
-                        {/* Drag & Drop Zone */}
-                        {/* <div
-                            className="border-2 border-dashed border-indigo-300 rounded-lg p-4 text-center cursor-pointer hover:bg-indigo-50 transition"
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                                e.preventDefault();
-                                const file = e.dataTransfer.files[0];
-                                if (file && selectedAttachmentIndex !== null) {
-                                    handleInputChange(
-                                        renameFile(file),
-                                        selectedAttachmentIndex,
-                                        "filePath",
-                                    );
-                                }
-                            }}
-                            onClick={() =>
-                                document.getElementById("modal-file-upload")?.click()
-                            }
-                        >
-                            <p className="text-sm text-slate-500">
-                                Drag & drop here, or{" "}
-                                <span className="text-indigo-600 font-medium underline">
-                                    click to browse
-                                </span>
-                            </p>
-                            {selectedAttachmentIndex !== null ? (
-                                <p className="text-xs text-indigo-500 mt-1">
-                                    Uploading to row:{" "}
-                                    <strong>{selectedAttachmentIndex + 1}</strong>
-                                </p>
-                            ) : (
-                                <p className="text-xs text-slate-400 mt-1">
-                                    Select a row below first
-                                </p>
-                            )}
-                        </div> */}
-
-                        {/* Hidden file input for drag & drop zone */}
-                        <input
-                            type="file"
-                            id="modal-file-upload"
-                            className="hidden"
-                            onChange={(e) => {
-                                if (e.target.files[0] && selectedAttachmentIndex !== null) {
-                                    handleInputChange(
-                                        renameFile(e.target.files[0]),
-                                        selectedAttachmentIndex,
-                                        "filePath",
-                                    );
-                                    e.target.value = "";
-                                }
-                            }}
+                {/* ── Footer Actions ──────────────────────────────────── */}
+                <div className="flex justify-between items-center px-4 py-2 sticky z-10 shadow-sm">
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => saveData("close")}
                             disabled={readOnly}
-                        />
-
-                        {/* Attachments Table */}
-                        <div className="max-h-[170px] overflow-auto">
-                            <div className="border-collapse bg-[#F1F1F0] shadow-sm overflow-auto">
-                                <table className="bg-gray-200 text-gray-700 text-xs table-auto w-full">
-                                    <thead className="py-2 font-medium sticky top-0">
-                                        <tr>
-                                            <th className="py-2 text-xs w-10 text-center border-r border-white/50">
-                                                S.No
-                                            </th>
-                                            <th className="py-2 text-xs w-60 text-center border-r border-white/50">
-                                                Name
-                                            </th>
-                                            <th className="py-2 text-xs w-60 text-center border-r border-white/50">
-                                                File
-                                            </th>
-                                            <th className="py-2 text-xs w-10 text-center">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {attachments?.map((item, index) => (
-                                            <tr
-                                                key={index}
-                                                onClick={() => setSelectedAttachmentIndex(index)}
-                                                className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${index % 2 === 0
-                                                    ? "bg-white hover:bg-gray-50"
-                                                    : "bg-gray-100 hover:bg-gray-50"
-                                                    }`}
-                                            >
-                                                {/* S.No */}
-                                                <td className="border-r border-white/50 h-8 text-center">
-                                                    {index + 1}
-                                                </td>
-
-                                                {/* Name */}
-                                                <td className="border-r border-white/50 h-8">
-                                                    <input
-                                                        type="text"
-                                                        className="text-left rounded py-1 px-2 w-full focus:outline-none focus:ring focus:border-blue-300 bg-transparent"
-                                                        value={item?.name}
-                                                        onChange={(e) =>
-                                                            handleInputChange(e.target.value, index, "name")
-                                                        }
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        disabled={readOnly}
-                                                    />
-                                                </td>
-
-                                                {/* File */}
-                                                <td className="border-r border-white/50 h-8 px-2">
-                                                    <div className="flex items-center gap-2">
-                                                        {!readOnly && (
-                                                            <label
-                                                                htmlFor={`modal-row-upload-${index}`}
-                                                                className="cursor-pointer flex items-center justify-center p-1 bg-gray-100 rounded hover:bg-gray-200"
-                                                                title="Attach file"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                📎
-                                                                <input
-                                                                    type="file"
-                                                                    id={`modal-row-upload-${index}`}
-                                                                    className="hidden"
-                                                                    onChange={(e) => {
-                                                                        if (e.target.files[0]) {
-                                                                            handleInputChange(
-                                                                                renameFile(e.target.files[0]),
-                                                                                index,
-                                                                                "filePath",
-                                                                            );
-                                                                            e.target.value = "";
-                                                                        }
-                                                                    }}
-                                                                    disabled={readOnly}
-                                                                />
-                                                            </label>
-                                                        )}
-
-                                                        {item.filePath ? (
-                                                            <>
-                                                                <span className="truncate max-w-[120px] text-green-700 font-medium">
-                                                                    ✅ {item.filePath?.name ?? item.filePath}
-                                                                </span>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        openPreview(item.filePath);
-                                                                    }}
-                                                                    className="text-blue-600 text-xs hover:underline"
-                                                                >
-                                                                    View
-                                                                </button>
-                                                                {!readOnly && (
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleInputChange("", index, "filePath");
-                                                                        }}
-                                                                        className="text-red-600 text-xs"
-                                                                        title="Remove file"
-                                                                        disabled={readOnly}
-                                                                    >
-                                                                        ✕
-                                                                    </button>
-                                                                )}
-                                                            </>
-                                                        ) : (
-                                                            <span className="text-gray-400 italic text-xs">
-                                                                No file
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-
-                                                {/* Actions */}
-                                                <td className="w-[30px] border-gray-200 h-8">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                addNewComments();
-                                                            }}
-                                                            disabled={readOnly}
-                                                            className="flex items-center px-1 bg-blue-50 rounded"
-                                                        >
-                                                            <Plus size={18} className="text-blue-800" />
-                                                        </button>
-                                                        <button
-                                                            className="flex items-center px-1 bg-red-50 rounded"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                deleteRow(index);
-                                                                if (selectedAttachmentIndex === index) {
-                                                                    setSelectedAttachmentIndex(null);
-                                                                }
-                                                            }}
-                                                            disabled={readOnly}
-                                                        >
-                                                            <svg
-                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                className="h-4 w-4 text-red-800"
-                                                                viewBox="0 0 20 20"
-                                                                fill="currentColor"
-                                                            >
-                                                                <path
-                                                                    fillRule="evenodd"
-                                                                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                                                    clipRule="evenodd"
-                                                                />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
+                            className="bg-indigo-500 disabled:opacity-50 text-white px-3 py-1.5 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium transition-colors"
+                        >
+                            <HiOutlineRefresh className="w-3.5 h-3.5" />
+                            Save & Close
+                        </button>
+                        <button
+                            onClick={() => saveData("new")}
+                            disabled={readOnly}
+                            className="bg-indigo-500 disabled:opacity-50 text-white px-3 py-1.5 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium transition-colors"
+                        >
+                            <FiSave className="w-3.5 h-3.5" />
+                            Save & New
+                        </button>
                     </div>
-                </div>
-
-            </div>
-            <CommonFormFooter
-                remarks={remarks}
-                hasSummaryTitle={"Summary"}
-                setRemarks={setRemarks}
-                terms={termsAndCondition}
-                setTerms={setTermsAndCondition}
-                readOnly={readOnly}
-                showTermSelect={true}
-                termValue={termsId}
-                onTermChange={(value) => setTermsId(value)}
-                termOptions={(
-                    id ? termsData?.data : termsData?.data?.filter((item) => item?.active)
-                )?.map((item) => ({
-                    value: item?.id,
-                    label: item?.name,
-                    templateText: item?.description || "",
-                })) || []}
-                totalsRows={[
-                    {
-                        key: "orderType",
-                        label: "Order Type",
-                        value: orderType,
-                        summaryColumn: "left",
-                    },
-                    {
-                        key: "orderQty",
-                        label: "Order Qty",
-                        value: orderQty,
-                        summaryColumn: "left",
-                    },
-                ]}
-            />
-            {/* <div className="grid grid-cols-2 gap-3">
-                <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-                    <h2 className="font-medium text-slate-700 mb-2 text-xs">
-                        Remarks
-                    </h2>
-                    <textarea
-                        readOnly={readOnly}
-                        value={remarks}
-                        onChange={(e) => {
-                            setRemarks(e.target.value);
-                        }}
-                        className="w-full h-10 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md focus:outline-none   focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
-                        placeholder="Additional notes..."
-                        onKeyDown={(e) => {
-                            if (e.ctrlKey && e.key === "Enter") {
-                                e.preventDefault();
-
-                                const textarea = e.target;
-                                const start = textarea.selectionStart;
-                                const end = textarea.selectionEnd;
-
-                                const newValue =
-                                    remarks.substring(0, start) + "\n" + remarks.substring(end);
-
-                                setRemarks(newValue);
-
-                                // ✅ Restore focus + cursor properly
-                                requestAnimationFrame(() => {
-                                    textarea.focus();
-                                    textarea.setSelectionRange(start + 1, start + 1);
-                                });
-                            }
-                        }}
-                    />
-                </div>
-
-                <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm flex">
-                    <div className="w-1/2">
-
-                        <h2 className="font-medium text-slate-700 mb-2 text-base">
-                            Summary
-                        </h2>
-                        <div className="flex flex-col gap-1">
-                            <div className="flex justify-between">
-                                <span className="text-sm text-slate-600">Order Type:</span>
-                                <span className="text-sm text-slate-600">{orderType}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-slate-600">Order Quantity:</span>
-                                <span className="text-sm text-slate-600">{orderQty}</span>
-                            </div>
-
-                        </div>
-
-                    </div>
-                </div>
-
-            </div> */}
-
-            <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
-                {/* Left Buttons */}
-                <div className="flex gap-2 flex-wrap">
-                    <button
-                        onClick={() => saveData("close")}
-                        disabled={readOnly}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                e.preventDefault();
-                                saveData("close");
-                                e.stopPropagation();
-                            }
-                        }}
-                        className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-xs"
-                    >
-                        <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                        Save & Close
-                    </button>
-                    <button
-                        onClick={() => saveData("new")}
-                        disabled={readOnly}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                saveData("new");
-                            }
-                        }}
-                        className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-xs"
-                    >
-                        <FiSave className="w-4 h-4 mr-2" />
-                        Save & New
-                    </button>
-                </div>
-
-                <div className="flex gap-2 flex-wrap">
-                    {!id ||
-                        (readOnly && (
+                    <div>
+                        {id && readOnly && (
                             <button
-                                className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-xs"
                                 onClick={() => setReadOnly(false)}
+                                className="bg-amber-500 text-white px-3 py-1.5 rounded hover:bg-amber-600 flex items-center gap-1.5 text-xs font-medium transition-colors"
                             >
-                                <FiEdit2 className="w-4 h-4 mr-2" />
+                                <FiEdit2 className="w-3.5 h-3.5" />
                                 Edit
                             </button>
-                        ))}
-
+                        )}
+                        <button
+                            className="bg-slate-600 text-white px-4 py-1 rounded-md hover:bg-slate-700 flex items-center text-sm"
+                            onClick={() => {
+                                // handlePrint()
+                                setPrintModalOpen(true);
+                            }}
+                        >
+                            <FiPrinter className="w-4 h-4 mr-2" />
+                            Print
+                        </button>
+                    </div>
                 </div>
             </div>
         </>
     );
 };
+
 export default JobCardForm;

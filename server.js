@@ -61,12 +61,16 @@ import {
   orderEntry,
   processMaster,
   processGroup,
+  plateMaster,
+  dieMaster,
+  jobCard,
+  board,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
 
 const app = express();
-app.use(express.json());
+// app.use(express.json());
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -154,6 +158,10 @@ app.use("/approvalMasterData", approvalMasterData);
 app.use("/orderEntry", orderEntry);
 app.use("/process", processMaster);
 app.use("/processGroup", processGroup);
+app.use("/plate", plateMaster);
+app.use("/die", dieMaster);
+app.use("/jobCard", jobCard);
+app.use("/board", board);
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;
