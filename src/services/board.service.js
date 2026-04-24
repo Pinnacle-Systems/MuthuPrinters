@@ -7,8 +7,22 @@ async function get(req) {
     where: {
       companyId: companyId ? parseInt(companyId) : undefined,
     },
+    include: {
+      _count: {
+        select: {
+          JobCards: true,
+          boardQualities: true,
+        },
+      },
+    },
   });
-  return { statusCode: 0, data };
+  return {
+    statusCode: 0,
+    data: data.map((board) => ({
+      ...board,
+      childRecord: board._count.JobCards + board._count.boardQualities,
+    })),
+  };
 }
 
 async function getOne(id) {

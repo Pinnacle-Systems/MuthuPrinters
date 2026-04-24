@@ -3835,81 +3835,80 @@ export function FxSelectWithAdd({
 export const customSelectStyles = {
   control: (base, state) => ({
     ...base,
-    minHeight: "13px",
-    height: "13px",
-    padding: "14px 4px",
+    minHeight: "28px", // ⚠️ important (13px is too small)
+    height: "28px",
+    padding: "2px 4px",
     fontSize: "12px",
-    borderRadius: "8px",
-    // fontFamily: "Poppins",
-    color: state.isDisabled ? "#6b7280" : "black",
-    backgroundColor: state.isDisabled ? "#f3f4f6" : "white", // bg-gray-100 vs bg-white
+    borderRadius: "6px",
+    color: state.isDisabled ? "#6b7280" : "#111827",
+    backgroundColor: state.isDisabled ? "#f3f4f6" : "white",
     cursor: state.isDisabled ? "not-allowed" : "default",
-    borderColor: state.isFocused ? "#3b82f6" : "#d1d5db", // blue-500 vs gray-300
-    boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : base.boxShadow,
+    borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
+    boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",
     "&:hover": {
-      borderColor: state.isDisabled ? "#d1d5db" : "#9ca3af", // keep gray when disabled
+      borderColor: state.isDisabled ? "#d1d5db" : "#9ca3af",
     },
   }),
-  valueContainer: (base, state) => ({
+
+  valueContainer: (base) => ({
     ...base,
-    padding: "0 3px",
-    marginTop: "-8px",
+    padding: "0 4px",
     fontSize: "12px",
-    // fontFamily: "Poppins",
-    color: state.isDisabled ? "#6b7280" : "black",
   }),
-  input: (base, state) => ({
+
+  input: (base) => ({
     ...base,
     margin: 0,
-    fontSize: "12px",
     padding: 0,
-    color: state.isDisabled ? "#6b7280" : "black",
+    fontSize: "12px",
   }),
+
   singleValue: (base, state) => ({
     ...base,
-    // fontFamily: "Poppins",
     fontSize: "12px",
-    color: state.isDisabled ? "#6b7280" : "black",
+    color: state.isDisabled ? "#6b7280" : "#111827",
   }),
+
   placeholder: (base) => ({
     ...base,
-    // fontFamily: "Poppins",
-    color: "black",
     fontSize: "12px",
+    color: "#6b7280", // softer placeholder
   }),
-  menu: (base, state) => ({
+
+  menu: (base) => ({
     ...base,
-    // fontFamily: "Poppins",
-    maxHeight: 150,
-    // overflowY: "auto",
     fontSize: "12px",
-    color: state.isDisabled ? "#6b7280" : "black",
     zIndex: 9999,
   }),
+
   option: (base, state) => ({
     ...base,
-    // fontFamily: "Poppins",
     fontSize: "12px",
-    color: state.isSelected ? "white" : "black",
-    backgroundColor: state.isSelected ? "#047857" : base.backgroundColor,
-    padding: "6px 8px",
+    padding: "5px 8px",
+    color: state.isSelected ? "white" : "#111827",
+    backgroundColor: state.isSelected
+      ? "#2563eb"
+      : state.isFocused
+        ? "#dbeafe"
+        : "white",
+    cursor: "pointer",
   }),
+
   dropdownIndicator: (base) => ({
     ...base,
     padding: 2,
     svg: {
-      width: 14, // icon width
-      height: 14, // icon height
+      width: 14,
+      height: 14,
     },
-    color: "black",
-    marginTop: "-9px",
+    color: "#374151",
   }),
 
   indicatorSeparator: () => ({ display: "none" }),
+
   menuList: (base) => ({
     ...base,
     maxHeight: 150,
-    // overflowY: "auto",
   }),
 };
 
@@ -3973,7 +3972,7 @@ export const DropdownNew = forwardRef(
           menuShouldScrollIntoView={false}
           maxMenuHeight={170} // <-- Reduce height here
           onInputChange={(value) => value.toUpperCase()}
-          className="w-full px-1 -ml-1  text-xs rounded-lg
+          className="w-full px-1 -ml-1 h-7 text-xs rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm"
           placeholder={placeholder}

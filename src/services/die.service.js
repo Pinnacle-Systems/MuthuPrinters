@@ -6,10 +6,24 @@ async function get(req) {
   const data = await prisma.die.findMany({
     where: {
       companyId: companyId ? parseInt(companyId) : undefined,
+
       // active: active ? Boolean(active) : undefined,
     },
+    include: {
+      _count: {
+        select: {
+          JobCard: true,
+        },
+      },
+    },
   });
-  return { statusCode: 0, data };
+  return {
+    statusCode: 0,
+    data: data.map((die) => ({
+      ...die,
+      childRecord: die._count.JobCard,
+    })),
+  };
 }
 
 async function getOne(id) {
