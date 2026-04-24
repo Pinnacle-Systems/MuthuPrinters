@@ -12,6 +12,9 @@ import path from "path";
 import {
   createApprovalLog,
   getModuleApprovalSetup,
+  evaluateConfigTrigger,
+  getTriggeredConfig,
+  buildIncludeForModule,
 } from "../utils/approvalHelper.js";
 
 const REFERENCE_PAGE = "PURCHASE INWARD";
@@ -102,9 +105,9 @@ function getPurchaseInwardStatus(inward) {
 }
 
 // ── Approval Status ───────────────────────────────────────────────────────────
-function getApprovalStatus(log, isApprovalConfigured = false) {
+function getApprovalStatus(log, isApprovalTriggered = false) {
   if (!log) {
-    return isApprovalConfigured
+    return isApprovalTriggered
       ? {
           status: "NOTAPPROVED",
           label: "Not Approved",
@@ -140,6 +143,12 @@ function getApprovalStatus(log, isApprovalConfigured = false) {
       label: "Not Approved",
       color: "orange",
     },
+    SUPERSEDED: {
+      ...base,
+      status: "SUPERSEDED",
+      label: "Re-approval Needed",
+      color: "yellow",
+    },
   };
   return (
     map[log.status] ?? {
@@ -149,6 +158,19 @@ function getApprovalStatus(log, isApprovalConfigured = false) {
       color: "gray",
     }
   );
+}
+
+// ── Shared config evaluator ───────────────────────────────────────────────────
+function evaluateConfigs(activeConfigs, record) {
+  if (!activeConfigs?.length) return false;
+  const valid = activeConfigs
+    .filter(
+      (c) =>
+        c.approvalLevels?.length > 0 &&
+        c.approvalLevels.some((l) => l.LevelUsers?.length > 0),
+    )
+    .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+  return valid.some((config) => evaluateConfigTrigger(config, record));
 }
 
 // ── GET LIST ──────────────────────────────────────────────────────────────────
@@ -225,8 +247,6 @@ async function get(req) {
   }
 
   const ids = data.map((i) => i.id);
-
-  // ✅ Universal approval setup — works whether PURCHASE INWARD has rules or not
   const { module, hasApproval } = await getModuleApprovalSetup(
     REFERENCE_PAGE,
     branchId,
@@ -260,16 +280,48 @@ async function get(req) {
     return acc;
   }, {});
 
+  // ✅ Fetch configs once for condition evaluation (same as PO service)
+  const activeConfigs =
+    hasApproval && module
+      ? await prisma.approvalConfig.findMany({
+          where: {
+            moduleId: module.id,
+            branchId: parseInt(branchId),
+            active: true,
+          },
+          include: {
+            ConfigConditions: {
+              include: { Field: true, Operator: true, CompareField: true },
+            },
+            approvalLevels: {
+              include: { LevelUsers: true },
+              orderBy: { levelNo: "asc" },
+            },
+          },
+          orderBy: { priority: "asc" },
+        })
+      : [];
+
   return {
     statusCode: 0,
-    data: data.map((item) => ({
-      ...item,
-      status: getPurchaseInwardStatus(item),
-      // ✅ If no approval setup → NOT_CONFIGURED; if setup exists → show real status
-      approvalStatus: getApprovalStatus(logMap[item.id] ?? null, hasApproval),
-      childRecord:
-        item._count?.purchaseReturnItems + item._count?.purchaseBillEntryItems,
-    })),
+    data: data.map((item) => {
+      const log = logMap[item.id] ?? null;
+
+      // ✅ FIX: evaluate per-record, not just hasApproval
+      let shouldTrigger = false;
+      if (!log && hasApproval && activeConfigs.length > 0) {
+        shouldTrigger = evaluateConfigs(activeConfigs, item);
+      }
+
+      return {
+        ...item,
+        status: getPurchaseInwardStatus(item),
+        approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+        childRecord:
+          item._count?.purchaseReturnItems +
+          item._count?.purchaseBillEntryItems,
+      };
+    }),
     nextDocId: newDocId,
     totalCount,
   };
@@ -392,11 +444,35 @@ async function getOne(id) {
     }),
   ]);
 
-  // ✅ Universal check for getOne
-  const { hasApproval } = await getModuleApprovalSetup(
+  const { hasApproval, module } = await getModuleApprovalSetup(
     REFERENCE_PAGE,
     data.branchId,
   );
+
+  // ✅ FIX: evaluate if THIS specific record triggers any config (same as PO getOne)
+  let isApprovalTriggered = false;
+  if (!approvalLog && hasApproval && module) {
+    const activeConfigs = await prisma.approvalConfig.findMany({
+      where: { moduleId: module.id, branchId: data.branchId, active: true },
+      include: {
+        ConfigConditions: {
+          include: { Field: true, Operator: true, CompareField: true },
+        },
+        approvalLevels: {
+          include: { LevelUsers: true },
+          orderBy: { levelNo: "asc" },
+        },
+      },
+      orderBy: { priority: "asc" },
+    });
+    isApprovalTriggered = activeConfigs
+      .filter(
+        (c) =>
+          c.approvalLevels?.length > 0 &&
+          c.approvalLevels.some((l) => l.LevelUsers?.length > 0),
+      )
+      .some((config) => evaluateConfigTrigger(config, data));
+  }
 
   return {
     statusCode: 0,
@@ -405,7 +481,11 @@ async function getOne(id) {
       inwardItems: itemsWithQty,
       childRecord: childRecordReturn,
       childRecordBill,
-      approvalStatus: getApprovalStatus(approvalLog, hasApproval),
+      // ✅ FIX: use isApprovalTriggered not hasApproval
+      approvalStatus: getApprovalStatus(
+        approvalLog,
+        !!approvalLog || isApprovalTriggered,
+      ),
       approvalLog: approvalLog ?? null,
     },
   };
@@ -472,7 +552,6 @@ async function create(body) {
       ? parseFloat(netBillValue)
       : null;
 
-  // ✅ Universal check OUTSIDE transaction
   const { module, hasApproval } = await getModuleApprovalSetup(
     REFERENCE_PAGE,
     branchId,
@@ -505,7 +584,7 @@ async function create(body) {
             ? {
                 createMany: {
                   data: JSON.parse(attachments).map((sub) => ({
-                    date: sub?.date ? new Date(sub?.date) : undefined,
+                    date: sub?.date ? new Date(sub.date) : undefined,
                     filePath: sub?.filePath || undefined,
                     name: sub?.name || undefined,
                   })),
@@ -544,12 +623,16 @@ async function create(body) {
       });
     }
 
-    // ✅ Only triggers if PURCHASE INWARD module exists AND has active config
-    // If no rules configured → skipped, inward saves normally
     if (hasApproval && module) {
+      const includeClause = await buildIncludeForModule(module.id);
       const fullRecord = await tx.purchaseInward.findUnique({
         where: { id: data.id },
-        include: { supplier: true, Branch: true, inwardItems: true },
+        include: {
+          ...includeClause,
+          supplier: true,
+          Branch: true,
+          inwardItems: true,
+        },
       });
       await createApprovalLog(
         tx,
@@ -567,7 +650,7 @@ async function create(body) {
   return { statusCode: 0, data };
 }
 
-// ── CREATE INWARD ITEMS (unchanged) ──────────────────────────────────────────
+// ── CREATE INWARD ITEMS ───────────────────────────────────────────────────────
 async function createInwardItems(
   tx,
   inwardItems,
@@ -694,14 +777,108 @@ async function update(id, body, files) {
     ?.filter((i) => i.id)
     .map((i) => parseInt(i.id));
 
+  // ✅ Always get module setup first
+  const { module, hasApproval } = await getModuleApprovalSetup(
+    REFERENCE_PAGE,
+    branchId,
+  );
+
+  const dynamicInclude =
+    hasApproval && module ? await buildIncludeForModule(module.id) : {};
+
   const dataFound = await prisma.purchaseInward.findUnique({
     where: { id: parseInt(id) },
     include: {
+      ...dynamicInclude,
       inwardItems: { select: { id: true } },
       attachments: { select: { id: true, filePath: true } },
+      supplier: true,
+      Branch: true,
     },
   });
   if (!dataFound) return NoRecordFound("Purchase Inward");
+
+  // ── Get latest approval log ───────────────────────────────────────────────
+  const latestLog = await prisma.approvalLog.findFirst({
+    where: { referenceId: parseInt(id), referencePage: REFERENCE_PAGE },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, status: true },
+  });
+
+  // ✅ Block edits while PENDING
+  if (latestLog?.status === "PENDING") {
+    return {
+      statusCode: 1,
+      message: "This Purchase Inward is pending approval and cannot be edited.",
+    };
+  }
+
+  // ✅ NEW: Approved Inward Locking (Core Fields vs Remarks/Attachments)
+  const isApproved = latestLog?.status === "APPROVED";
+
+  if (isApproved) {
+    const parsedItems = typeof rawInwardItems === "string" ? JSON.parse(rawInwardItems) : rawInwardItems;
+    
+    const coreFieldsChanged =
+      parseInt(dataFound.supplierId || 0) !== parseInt(supplierId || 0) ||
+      parseInt(dataFound.storeId || 0) !== parseInt(storeId || 0) ||
+      parseInt(dataFound.locationId || 0) !== parseInt(locationId || 0) ||
+      (dataFound.docDate && docDate && new Date(dataFound.docDate).toISOString().split('T')[0] !== new Date(docDate).toISOString().split('T')[0]) ||
+      (dataFound.dcDate && dcDate && new Date(dataFound.dcDate).toISOString().split('T')[0] !== new Date(dcDate).toISOString().split('T')[0]) ||
+      dataFound.inwardType !== inwardType ||
+      dataFound.dcNo !== dcNo ||
+      dataFound.invNo !== invNo ||
+      dataFound.receiptType !== receiptType ||
+      parseInt(dataFound.taxTemplateId || 0) !== parseInt(taxTemplateId || 0) ||
+      dataFound.discountType !== discountType ||
+      parseFloat(dataFound.discountValue || 0) !== parseFloat(discountValue || 0) ||
+      parseFloat(dataFound.netBillValue || 0) !== parseFloat(netBillValue || 0);
+
+    const oldItems = dataFound.inwardItems;
+    const itemsChanged =
+      parsedItems.length !== oldItems.length ||
+      parsedItems.some((newItem) => {
+        const oldItem = oldItems.find((o) => parseInt(o.id) === parseInt(newItem.id));
+        if (!oldItem) return true; // new item
+        return (
+          parseFloat(newItem.inwardQty || 0) !== parseFloat(oldItem.inwardQty || 0) ||
+          parseFloat(newItem.price || 0) !== parseFloat(oldItem.price || 0)
+        );
+      });
+
+    if (coreFieldsChanged || itemsChanged) {
+      return {
+        statusCode: 1,
+        message: "This Purchase Inward is Approved. Only remarks, vehicle number, and attachments can be modified.",
+      };
+    }
+  }
+
+  // ✅ Determine approval action needed
+  let needsFirstApproval = false;
+
+  if (hasApproval && module) {
+    if (!latestLog || latestLog?.status === "SUPERSEDED") {
+      // Check if updated record now matches any config
+      const prospectiveRecord = {
+        ...dataFound,
+        supplierId: parseInt(supplierId),
+        inwardType,
+        netBillValue: safeNetBillValue,
+        supplier: dataFound.supplier,
+        inwardItems:
+          typeof body.inwardItems === "string"
+            ? JSON.parse(body.inwardItems)
+            : body.inwardItems,
+      };
+      const triggeredConfig = await getTriggeredConfig(
+        branchId,
+        module.id,
+        prospectiveRecord,
+      );
+      if (triggeredConfig) needsFirstApproval = true;
+    }
+  }
 
   const removedAttachments = dataFound.attachments.filter(
     (existing) => !incomingIds.includes(existing.id),
@@ -739,11 +916,6 @@ async function update(id, body, files) {
     parseInt(item.id),
   );
 
-  // ✅ Universal check — only when resubmitting
-  const { module, hasApproval } = submitApproval
-    ? await getModuleApprovalSetup(REFERENCE_PAGE, branchId)
-    : { module: null, hasApproval: false };
-
   let data;
   await prisma.$transaction(async (tx) => {
     if (removeItemsGoodsIds.length > 0) {
@@ -780,14 +952,10 @@ async function update(id, body, files) {
             .map((sub) => ({
               where: { id: parseInt(sub.id) },
               data: {
-                date: sub?.date ? new Date(sub?.date) : undefined,
+                date: sub?.date ? new Date(sub.date) : undefined,
                 filePath: (() => {
-                  const matchedFile = files?.find(
-                    (f) => f.originalname === sub.filePath,
-                  );
-                  return matchedFile
-                    ? matchedFile.filename
-                    : sub.filePath || undefined;
+                  const f = files?.find((f) => f.originalname === sub.filePath);
+                  return f ? f.filename : sub.filePath || undefined;
                 })(),
                 name: sub?.name || undefined,
               },
@@ -795,12 +963,10 @@ async function update(id, body, files) {
           create: parseAttachments
             .filter((item) => !item.id)
             .map((sub) => ({
-              date: sub?.date ? new Date(sub?.date) : undefined,
+              date: sub?.date ? new Date(sub.date) : undefined,
               filePath: (() => {
-                const matchedFile = files?.find(
-                  (f) => f.originalname === sub.filePath,
-                );
-                return matchedFile ? matchedFile.filename : sub.filePath;
+                const f = files?.find((f) => f.originalname === sub.filePath);
+                return f ? f.filename : sub.filePath;
               })(),
               name: sub?.name || undefined,
             })),
@@ -837,18 +1003,16 @@ async function update(id, body, files) {
       }
     }
 
-    // ✅ Resubmit approval — clear old rejected log first
-    if (submitApproval && hasApproval && module) {
-      await tx.approvalLog.deleteMany({
-        where: {
-          referenceId: parseInt(id),
-          referencePage: REFERENCE_PAGE,
-          status: { in: ["REJECTED", "NOTAPPROVED"] },
-        },
-      });
+    // ✅ CASE 2: No log / SUPERSEDED → first-time approval triggered
+    if (needsFirstApproval && hasApproval && module) {
       const fullRecord = await tx.purchaseInward.findUnique({
         where: { id: parseInt(id) },
-        include: { supplier: true, Branch: true, inwardItems: true },
+        include: {
+          ...(await buildIncludeForModule(module.id)),
+          supplier: true,
+          Branch: true,
+          inwardItems: true,
+        },
       });
       await createApprovalLog(
         tx,
@@ -861,12 +1025,50 @@ async function update(id, body, files) {
         userId,
       );
     }
+
+    // ✅ CASE 3: Explicit resubmit after REJECTED/NOTAPPROVED
+    else if (submitApproval && hasApproval && module) {
+      await tx.approvalLog.deleteMany({
+        where: {
+          referenceId: parseInt(id),
+          referencePage: REFERENCE_PAGE,
+          status: { in: ["REJECTED", "NOTAPPROVED"] },
+        },
+      });
+      const fullRecord = await tx.purchaseInward.findUnique({
+        where: { id: parseInt(id) },
+        include: {
+          ...(await buildIncludeForModule(module.id)),
+          supplier: true,
+          Branch: true,
+          inwardItems: true,
+        },
+      });
+      await createApprovalLog(
+        tx,
+        branchId,
+        module.id,
+        data.id,
+        REFERENCE_PAGE,
+        fullRecord,
+        data.docId,
+        userId,
+      );
+    }
+
+    // ✅ CASE 4: APPROVED + no relevant changes → silent edit
   });
 
-  return { statusCode: 0, data };
+  const message = needsFirstApproval
+    ? "Purchase Inward updated and submitted for approval."
+    : submitApproval
+      ? "Purchase Inward updated and submitted for approval."
+      : "Purchase Inward updated successfully.";
+
+  return { statusCode: 0, data, message };
 }
 
-// ── UPDATE INWARD ITEMS (unchanged logic) ─────────────────────────────────────
+// ── UPDATE INWARD ITEMS ───────────────────────────────────────────────────────
 async function updateinwardItems(
   tx,
   inwardItems,
@@ -1053,18 +1255,16 @@ async function remove(id) {
     });
   });
 
-  // ✅ Delete approval logs before deleting record — prevents FK crash
   await prisma.approvalLog.deleteMany({
     where: { referencePage: REFERENCE_PAGE, referenceId: parseInt(id) },
   });
-
   const data = await prisma.purchaseInward.delete({
     where: { id: parseInt(id) },
   });
   return { statusCode: 0, data };
 }
 
-// ── remaining functions unchanged ─────────────────────────────────────────────
+// ── Remaining functions unchanged ─────────────────────────────────────────────
 async function getPurchaseDetail(req) {
   const { invNo } = req.query;
   let data = await prisma.purchaseInward.findFirst({
@@ -1458,7 +1658,6 @@ async function getPurchaseInwardBillEntryItems(req) {
         purchaseInwardId: true,
       },
     });
-
     const billedKeys = new Set(
       billedInwardItemIds.map(
         (b) =>

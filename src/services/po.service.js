@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import moment from "moment";
 import { NoRecordFound } from "../configs/Responses.js";
 import {
   getDateFromDateTime,
@@ -15,8 +16,7 @@ import {
   getTriggeredConfig,
   getModuleApprovalSetup,
   applyOperator,
-  getValueByPath,
-  buildIncludeForModule, // ✅ single universal helper
+  buildIncludeForModule,
 } from "../utils/approvalHelper.js";
 
 const REFERENCE_PAGE = "PURCHASE ORDER";
@@ -81,7 +81,24 @@ function manualFilterSearchDataPoItems(
 // ── PO Status ─────────────────────────────────────────────────────────────────
 function getPOStatus(po) {
   const poItems = po.poItems || [];
-  const totalPoQty = poItems.reduce((sum, item) => sum + (item.qty || 0), 0);
+  
+  // Find the latest quote version to only sum active items
+  let latestQuoteVersion = 1;
+  if (poItems.length > 0) {
+    const validVersions = poItems
+      .filter((i) => i.quoteVersion && i.quoteVersion !== "New")
+      .map((i) => Number(i.quoteVersion))
+      .filter((n) => !isNaN(n) && n > 0);
+    if (validVersions.length > 0) {
+      latestQuoteVersion = Math.max(...validVersions);
+    }
+  }
+
+  const activePoItems = poItems.filter(
+    (i) => (Number(i.quoteVersion) || 1) === latestQuoteVersion
+  );
+
+  const totalPoQty = activePoItems.reduce((sum, item) => sum + (item.qty || 0), 0);
   const totalInwardQty =
     po.inwardItems?.reduce((sum, item) => sum + (item.inwardQty || 0), 0) || 0;
   const totalCancelQty =
@@ -103,6 +120,7 @@ function getPOStatus(po) {
 }
 
 // ── Approval Status ───────────────────────────────────────────────────────────
+// purchaseOrder.service.js
 function getPOApprovalStatus(log, isApprovalConfigured = false) {
   if (!log) {
     return isApprovalConfigured
@@ -141,6 +159,12 @@ function getPOApprovalStatus(log, isApprovalConfigured = false) {
       label: "Not Approved",
       color: "orange",
     },
+    SUPERSEDED: {
+      ...base,
+      status: "SUPERSEDED",
+      label: "Re-approval Needed",
+      color: "yellow",
+    }, // ✅ NEW
   };
   return (
     map[log.status] ?? {
@@ -440,7 +464,31 @@ async function getOne(id) {
       }),
     ],
   );
+  let isApprovalTriggered = false;
+  if (!approvalLog && hasApproval && module) {
+    const activeConfigs = await prisma.approvalConfig.findMany({
+      where: { moduleId: module.id, branchId: po.branchId, active: true },
+      include: {
+        ConfigConditions: {
+          include: { Field: true, Operator: true, CompareField: true },
+        },
+        approvalLevels: {
+          include: { LevelUsers: true },
+          orderBy: { levelNo: "asc" },
+        },
+      },
+      orderBy: { priority: "asc" },
+    });
 
+    // ✅ Use the same evaluateConfigs logic as the list view
+    isApprovalTriggered = activeConfigs
+      .filter(
+        (c) =>
+          c.approvalLevels?.length > 0 &&
+          c.approvalLevels.some((l) => l.LevelUsers?.length > 0),
+      )
+      .some((config) => evaluateConfigTrigger(config, po));
+  }
   return {
     statusCode: 0,
     data: {
@@ -448,7 +496,10 @@ async function getOne(id) {
       childRecordInward,
       childRecordCancel,
       // ✅ isApprovalConfigured = hasApproval from universal check
-      approvalStatus: getPOApprovalStatus(approvalLog, hasApproval),
+      approvalStatus: getPOApprovalStatus(
+        approvalLog,
+        !!approvalLog || isApprovalTriggered,
+      ),
       approvalLog: approvalLog ?? null,
     },
   };
@@ -694,9 +745,25 @@ async function update(id, body) {
     quoteVersion,
     submitApproval,
   } = await body;
+
+  // ── Always get module setup first to know what fields to include ─────────────
+  const { module, hasApproval } = await getModuleApprovalSetup(
+    REFERENCE_PAGE,
+    branchId,
+  );
+
+  const dynamicInclude =
+    hasApproval && module ? await buildIncludeForModule(module.id) : {};
+
   const dataFound = await prisma.po.findUnique({
     where: { id: parseInt(id) },
-    include: { poItems: true, quoteVersions: true },
+    include: {
+      ...dynamicInclude,
+      poItems: true,
+      quoteVersions: true,
+      Supplier: true,
+      Branch: true,
+    },
   });
   if (!dataFound) return NoRecordFound("PO");
 
@@ -708,13 +775,94 @@ async function update(id, body) {
     ),
   );
 
+  // ── Get latest approval log ───────────────────────────────────────────────
+  const latestLog = await prisma.approvalLog.findFirst({
+    where: { referenceId: parseInt(id), referencePage: REFERENCE_PAGE },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, status: true },
+  });
+
+  // ✅ Block edits while PENDING
+  if (latestLog?.status === "PENDING") {
+    return {
+      statusCode: 1,
+      message: "This PO is pending approval and cannot be edited.",
+    };
+  }
+
+  // ✅ NEW: Delivery Date Restriction (2-day threshold)
+  if (dataFound.dueDate) {
+    const daysToDelivery = moment(dataFound.dueDate).diff(moment(), "days", true);
+    if (daysToDelivery <= 2) {
+      return {
+        statusCode: 1,
+        message:
+          "This PO is fully locked. Edits are not allowed within 2 days of the delivery date.",
+      };
+    }
+  }
+
+  // ✅ NEW: Approved PO Locking (Core Fields vs Remarks)
+  const isApproved = latestLog?.status === "APPROVED";
+  let isRemarksOnlyUpdate = false;
+
+  if (isApproved) {
+    // Check if any field OTHER than remarks changed
+    // Core fields: supplierId, docDate, dueDate, poType, taxTemplateId, deliveryType, deliveryToId, discountType, discountValue, taxPercent, termsId, payTermId, and poItems
+    const coreFieldsChanged =
+      parseInt(dataFound.supplierId || 0) !== parseInt(supplierId || 0) ||
+      moment(dataFound.docDate).format("YYYY-MM-DD") !==
+        moment(docDate).format("YYYY-MM-DD") ||
+      moment(dataFound.dueDate).format("YYYY-MM-DD") !==
+        moment(dueDate).format("YYYY-MM-DD") ||
+      dataFound.poType !== poType ||
+      parseInt(dataFound.taxTemplateId || 0) !== parseInt(taxTemplateId || 0) ||
+      dataFound.deliveryType !== deliveryType ||
+      (deliveryType === "ToParty" &&
+        parseInt(dataFound.deliveryToId || 0) !== parseInt(deliveryToId || 0)) ||
+      (deliveryType === "ToSelf" &&
+        parseInt(dataFound.deliveryBranchId || 0) !== parseInt(deliveryToId || 0)) ||
+      dataFound.discountType !== discountType ||
+      parseFloat(dataFound.discountValue || 0) !== parseFloat(discountValue || 0) ||
+      parseFloat(dataFound.taxPercent || 0) !== parseFloat(taxPercent || 0) ||
+      parseInt(dataFound.termsId || 0) !== parseInt(termsId || 0) ||
+      parseInt(dataFound.payTermId || 0) !== parseInt(payTermId || 0);
+
+    // Deep check poItems
+    const oldItems = dataFound.poItems;
+    const itemsChanged =
+      poItems.length !== oldItems.length ||
+      poItems.some((newItem) => {
+        const oldItem = oldItems.find(
+          (o) => parseInt(o.id) === parseInt(newItem.id),
+        );
+        if (!oldItem) return true; // new item
+        return (
+          parseInt(newItem.styleItemId || 0) !== parseInt(oldItem.styleItemId || 0) ||
+          parseFloat(newItem.qty || 0) !== parseFloat(oldItem.qty || 0) ||
+          parseFloat(newItem.price || 0) !== parseFloat(oldItem.price || 0)
+        );
+      });
+
+    if (coreFieldsChanged || itemsChanged) {
+      return {
+        statusCode: 1,
+        message: "This PO is Approved. Only the remarks field can be modified.",
+      };
+    }
+
+    if (dataFound.remarks !== remarks) {
+      isRemarksOnlyUpdate = true;
+    }
+  }
+
+  // ── (Module setup moved up) ──────────────────────────────────────────────
+
+  // ── Determine what approval action to take ────────────────────────────────
+  let needsFirstApproval = false; // Add this back
+
   let removedItems = findRemovedItems(dataFound, poItems);
   let removeItemsIds = removedItems.map((item) => parseInt(item.id));
-
-  // ✅ Universal check — only when resubmitting, skip otherwise
-  const { module, hasApproval } = submitApproval
-    ? await getModuleApprovalSetup(REFERENCE_PAGE, branchId)
-    : { module: null, hasApproval: false };
 
   let data;
   await prisma.$transaction(async (tx) => {
@@ -754,16 +902,19 @@ async function update(id, body) {
             : Number(discountValue),
         taxPercent:
           taxPercent === "" || taxPercent == null ? null : Number(taxPercent),
-        quoteVersion: isNewVersion
-          ? currentQuoteVersion + 1
-          : currentQuoteVersion,
-        quoteVersions: isNewVersion
-          ? { create: { quoteVersion: currentQuoteVersion + 1 } }
-          : undefined,
+        quoteVersion:
+          isNewVersion && !isRemarksOnlyUpdate
+            ? currentQuoteVersion + 1
+            : parseInt(quoteVersion),
+        quoteVersions:
+          isNewVersion && !isRemarksOnlyUpdate
+            ? { create: { quoteVersion: currentQuoteVersion + 1 } }
+            : undefined,
         termsId: termsId ? parseInt(termsId) : null,
         payTermId: payTermId ? parseInt(payTermId) : null,
       },
     });
+
     if (isNewVersion) {
       await createNewVersionItems(
         tx,
@@ -783,9 +934,45 @@ async function update(id, body) {
       );
     }
 
-    // ✅ Only runs if resubmitting AND approval is configured for this form
-    if (submitApproval && hasApproval && module) {
-      // Clear old rejected/notapproved log so user can resubmit cleanly
+    // ✅ CASE 2: No log before OR was superseded → check if updated record matches config
+    if (
+      (!latestLog || latestLog?.status === "SUPERSEDED") &&
+      hasApproval &&
+      module
+    ) {
+      const fullRecord = await tx.po.findUnique({
+        where: { id: parseInt(id) },
+        include: await buildIncludeForModule(module.id),
+      });
+
+      // ✅ Re-check if this record now meets any approval criteria
+      const triggeredConfig = await getTriggeredConfig(
+        branchId,
+        module.id,
+        fullRecord,
+        tx,
+      );
+
+      if (triggeredConfig) {
+        console.log(
+          `🔔 PO ${id} matches approval config "${triggeredConfig.name}" after update`,
+        );
+        await createApprovalLog(
+          tx,
+          branchId,
+          module.id,
+          data.id,
+          REFERENCE_PAGE,
+          fullRecord,
+          data.docId,
+          userId,
+        );
+        needsFirstApproval = true; // Set flag for message
+      }
+    }
+
+    // ✅ CASE 3: User explicitly resubmitting after REJECTED/NOTAPPROVED
+    else if (submitApproval && hasApproval && module) {
       await tx.approvalLog.deleteMany({
         where: {
           referenceId: parseInt(id),
@@ -794,11 +981,9 @@ async function update(id, body) {
         },
       });
 
-      const includeClause = await buildIncludeForModule(module.id);
-
       const fullRecord = await tx.po.findUnique({
-        where: { id: data.id },
-        include: includeClause, // ← { Supplier: true, poItems: true, inwardItems: true, ... }
+        where: { id: parseInt(id) },
+        include: await buildIncludeForModule(module.id),
       });
 
       await createApprovalLog(
@@ -812,9 +997,17 @@ async function update(id, body) {
         userId,
       );
     }
+
+    // ✅ CASE 4: APPROVED + no relevant changes → silent edit, approval stays intact
   });
 
-  return { statusCode: 0, data };
+  const message = needsFirstApproval
+    ? "PO updated and submitted for approval — this PO now meets approval criteria."
+    : submitApproval
+      ? "PO updated and submitted for approval."
+      : "PO updated successfully.";
+
+  return { statusCode: 0, data, message };
 }
 
 async function updatePoItems(
@@ -1046,6 +1239,7 @@ async function getPoItemById(id) {
     },
   };
 }
+console.log("chek");
 
 async function getPoItems(req) {
   const {
@@ -1095,12 +1289,12 @@ async function getPoItems(req) {
 
     const poIds = [...new Set(data.map((item) => item.Po.id))];
 
-    // ✅ Universal check — if PO has no approval config, all items pass through
     const { module, hasApproval } = await getModuleApprovalSetup(
       REFERENCE_PAGE,
       branchId,
     );
 
+    // ✅ Fetch approval logs for these POs
     const approvalLogs = hasApproval
       ? await prisma.approvalLog.findMany({
           where: { referencePage: REFERENCE_PAGE, referenceId: { in: poIds } },
@@ -1113,19 +1307,79 @@ async function getPoItems(req) {
       return acc;
     }, {});
 
-    data = data.map((item) => ({
-      ...item,
-      approvalStatus: getPOApprovalStatus(
-        approvalLogMap[item.Po.id] ?? null,
-        hasApproval,
-      ),
-    }));
+    // ✅ Fetch configs once for condition evaluation (same as get() list view)
+    const activeConfigs =
+      hasApproval && module
+        ? await prisma.approvalConfig.findMany({
+            where: {
+              moduleId: module.id,
+              branchId: parseInt(branchId),
+              active: true,
+            },
+            include: {
+              ConfigConditions: {
+                include: { Field: true, Operator: true, CompareField: true },
+              },
+              approvalLevels: {
+                include: { LevelUsers: true },
+                orderBy: { levelNo: "asc" },
+              },
+            },
+            orderBy: { priority: "asc" },
+          })
+        : [];
 
-    // ✅ If approval not configured for PO → let ALL items through
-    // If configured → only APPROVED items pass to inward
-    data = data.filter((item) =>
-      hasApproval ? item.approvalStatus.status === "APPROVED" : true,
-    );
+    // ✅ Need full PO records to evaluate conditions (poItems has only Po.id)
+    // Fetch POs with the relations that approval fields reference
+    const includeClause =
+      hasApproval && module ? await buildIncludeForModule(module.id) : {};
+
+    const fullPoRecords =
+      poIds.length > 0
+        ? await prisma.po.findMany({
+            where: { id: { in: poIds } },
+            include: { ...includeClause, poItems: true },
+          })
+        : [];
+
+    const fullPoMap = fullPoRecords.reduce((acc, po) => {
+      acc[po.id] = po;
+      return acc;
+    }, {});
+
+    data = data.map((item) => {
+      const log = approvalLogMap[item.Po.id] ?? null;
+      const fullPo = fullPoMap[item.Po.id];
+
+      // ✅ Per-PO condition evaluation — same logic as get() list view
+      let shouldTrigger = false;
+      if (!log && hasApproval && activeConfigs.length > 0 && fullPo) {
+        shouldTrigger = evaluateConfigs(activeConfigs, fullPo);
+      }
+
+      return {
+        ...item,
+        approvalStatus: getPOApprovalStatus(log, !!log || shouldTrigger),
+      };
+    });
+
+    console.log(data, "datacheck");
+
+    // ✅ Filter logic:
+    // No approval configured → ALL items pass (NOT_CONFIGURED)
+    // Approval configured:
+    //   - APPROVED → pass ✅
+    //   - NOTAPPROVED (matches condition, no log) → blocked ❌
+    //   - NOT_CONFIGURED (doesn't match any condition) → pass ✅ (no rule applies to this PO)
+    //   - PENDING → blocked ❌
+    //   - REJECTED → blocked ❌
+    data = data.filter((item) => {
+      if (!hasApproval) return true; // no approval setup → allow all
+      const s = item.approvalStatus.status;
+      return s === "APPROVED" || s === "NOT_CONFIGURED"; // ✅ NOT_CONFIGURED means no rule applies
+    });
+
+    console.log(data, "afterfilterdatacheck");
   } else {
     data = await prisma.poItems.findMany({
       where: {
@@ -1134,6 +1388,7 @@ async function getPoItems(req) {
       },
     });
   }
+
   totalCount = data.length;
   return { statusCode: 0, data, totalCount };
 }

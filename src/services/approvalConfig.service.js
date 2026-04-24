@@ -37,85 +37,102 @@ async function get(req) {
   };
 }
 
+// notificationService.js or approvalHelper.js
+// approvalConfig.service.js — fix getPendingApproval signature
 async function getPendingApproval(req) {
-  const { userId } = req.query;
-  const uid = parseInt(userId);
+  const { userId } = req.query; // ✅ extract from req.query, not just userId
 
-  // ── 1. Logs where this user is an approver at the CURRENT level ──────────
-  // Prisma can't do field-to-field comparison (currentLevel = levelNo) in where,
-  // so we fetch PENDING logs where user is in ANY level, then filter in JS.
-  const pendingLogs = await prisma.approvalLog.findMany({
+  if (!userId) return { statusCode: 1, message: "userId is required" };
+
+  const pendingToApprove = await prisma.approvalLog.findMany({
     where: {
       status: "PENDING",
       ApprovalConfig: {
         approvalLevels: {
           some: {
-            LevelUsers: { some: { userId: uid } },
+            LevelUsers: { some: { userId: parseInt(userId) } },
           },
         },
       },
     },
     orderBy: { createdAt: "desc" },
-    include: {
+    select: {
+      id: true,
+      referenceId: true,
+      referencePage: true,
+      referenceDocId: true,
+      status: true,
+      currentLevel: true,
+      isRead: true,
+      createdAt: true,
+      raisedById: true,
+      RaisedBy: { select: { id: true, username: true } },
       ApprovalConfig: {
-        include: {
+        select: {
           approvalLevels: {
             orderBy: { levelNo: "asc" },
-            include: {
-              LevelUsers: true,
+            select: {
+              id: true,
+              levelNo: true,
+              LevelUsers: { select: { userId: true } },
             },
           },
         },
       },
-      RaisedBy: { select: { id: true, username: true } },
-      LevelLogs: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
 
-  // Filter to only logs where user is in the CURRENT active level
-  const approverLogs = pendingLogs.filter((log) => {
-    const currentLevel = log.ApprovalConfig?.approvalLevels.find(
+  // ✅ Filter to only logs where user is in CURRENT level specifically
+  const filteredPending = pendingToApprove.filter((log) => {
+    const currentLevelObj = log.ApprovalConfig?.approvalLevels?.find(
       (l) => l.levelNo === log.currentLevel,
     );
-    return currentLevel?.LevelUsers.some((lu) => lu.userId === uid);
+    if (!currentLevelObj) return false;
+    return currentLevelObj.LevelUsers.some(
+      (lu) => lu.userId === parseInt(userId),
+    );
   });
 
-  // ── 2. Logs raised BY this user that have unread status updates ──────────
   const raisedByLogs = await prisma.approvalLog.findMany({
     where: {
-      raisedById: uid,
+      raisedById: parseInt(userId),
+      status: { in: ["APPROVED", "REJECTED", "SUPERSEDED"] },
       isRead: false,
-      // Only show terminal or active states — skip PENDING raised-by
-      // since those will already appear in approverLogs if user is also approver
-      status: { in: ["APPROVED", "REJECTED"] },
     },
     orderBy: { createdAt: "desc" },
-    take: 50, // cap — don't return entire history
-    include: {
+    take: 50,
+    select: {
+      id: true,
+      referenceId: true,
+      referencePage: true,
+      referenceDocId: true,
+      status: true,
+      currentLevel: true,
+      isRead: true,
+      createdAt: true,
+      raisedById: true,
+      RaisedBy: { select: { id: true, username: true } },
       ApprovalConfig: {
-        include: {
+        select: {
           approvalLevels: {
             orderBy: { levelNo: "asc" },
-            include: { LevelUsers: true },
+            select: { id: true, levelNo: true },
           },
         },
       },
-      RaisedBy: { select: { id: true, username: true } },
-      LevelLogs: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
 
-  // ── 3. Merge, deduplicate by log id ──────────────────────────────────────
-  const seen = new Set(approverLogs.map((l) => l.id));
   const merged = [
-    ...approverLogs,
-    ...raisedByLogs.filter((r) => !seen.has(r.id)),
-  ];
-
-  // ── 4. Sort merged: PENDING first, then by createdAt desc ────────────────
-  merged.sort((a, b) => {
-    if (a.status === "PENDING" && b.status !== "PENDING") return -1;
-    if (a.status !== "PENDING" && b.status === "PENDING") return 1;
+    ...filteredPending.map((l) => ({
+      ...l,
+      notificationType: "ACTION_REQUIRED",
+    })),
+    ...raisedByLogs.map((l) => ({ ...l, notificationType: "RESULT" })),
+  ].sort((a, b) => {
+    if (a.notificationType !== b.notificationType) {
+      return a.notificationType === "ACTION_REQUIRED" ? -1 : 1;
+    }
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
 
@@ -189,6 +206,7 @@ async function create(body) {
     branchId,
     moduleId,
     active,
+    isAlwaysApproved,
     approvalLevelItems,
     name,
     priority,
@@ -203,6 +221,7 @@ async function create(body) {
       moduleId: parseInt(moduleId),
       priority: parseInt(priority || 0),
       active,
+      isAlwaysApproved: Boolean(isAlwaysApproved),
       ruleLogicalOperator: ruleLogicalOperator || "AND",
 
       ConfigConditions: {
@@ -243,6 +262,7 @@ async function update(id, body) {
     branchId,
     moduleId,
     active,
+    isAlwaysApproved,
     approvalLevelItems,
     name,
     priority,
@@ -264,6 +284,7 @@ async function update(id, body) {
       moduleId: parseInt(moduleId),
       priority: parseInt(priority || 0),
       active,
+      isAlwaysApproved: Boolean(isAlwaysApproved),
       ruleLogicalOperator: ruleLogicalOperator || "AND",
 
       ConfigConditions: {
@@ -309,7 +330,8 @@ async function remove(id) {
   return { statusCode: 0, data };
 }
 
-async function markApprovalRead(id) {
+// approvalConfig.service.js — fix markApprovalRead (no userId check needed, simpler)
+async function markApprovalRead(id, userId) {
   const data = await prisma.approvalLog.update({
     where: { id: parseInt(id) },
     data: { isRead: true },

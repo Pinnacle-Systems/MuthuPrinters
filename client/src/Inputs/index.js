@@ -206,8 +206,8 @@ export const MultiSelectDropdownWithoutBorder = ({
           menuPortal: (base) => ({ ...base, zIndex: 99999 }),
           container: (base) => ({
             ...base,
-            fontSize: "12px",
-            minHeight: "28px",
+            fontSize: "10px",
+            // minHeight: "28px",
             border: "none",
             outline: "none",
             boxShadow: "none",
@@ -217,13 +217,13 @@ export const MultiSelectDropdownWithoutBorder = ({
           }),
           control: (base) => ({
             ...base,
-            padding: "2px",
+            padding: "0",
             backgroundColor: "transparent", // ← transparent
             border: "none",
             outline: "none",
             boxShadow: "none",
             borderRadius: 0,
-            minHeight: "28px",
+
             margin: 0,
           }),
           valueContainer: (base) => ({
@@ -239,13 +239,13 @@ export const MultiSelectDropdownWithoutBorder = ({
           }),
           option: (base, state) => ({
             ...base,
-            fontSize: "12px",
+            fontSize: "10px",
             backgroundColor: state.isSelected ? "#e0e7ff" : "#fff",
             padding: "4px 8px",
           }),
           chips: (base) => ({
             ...base,
-            fontSize: "12px",
+            fontSize: "10px",
             padding: "2px 4px",
           }),
           searchBox: (base) => ({

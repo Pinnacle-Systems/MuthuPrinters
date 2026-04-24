@@ -117,6 +117,7 @@ export function evaluateRuleCondition(cond, recordData) {
 }
 
 export function evaluateConfigTrigger(config, recordData) {
+  if (config.isAlwaysApproved) return true;
   if (!config.ConfigConditions || config.ConfigConditions.length === 0)
     return true;
   const results = config.ConfigConditions.map((c) =>
@@ -543,3 +544,29 @@ export async function rejectRecord(
     return { statusCode: 0, data: updated };
   });
 }
+
+
+// approvalHelper.js — add this export
+export async function markNotificationAsRead(approvalLogId, userId) {
+  // Mark the specific log as read for this user
+  const log = await prisma.approvalLog.findFirst({
+    where: {
+      id: parseInt(approvalLogId),
+      // Only the raiser can mark their own notifications as read
+      raisedById: parseInt(userId),
+    },
+    select: { id: true, isRead: true },
+  });
+
+  if (!log) {
+    return { statusCode: 1, message: "Notification not found" };
+  }
+
+  const updated = await prisma.approvalLog.update({
+    where: { id: parseInt(approvalLogId) },
+    data: { isRead: true },
+  });
+
+  return { statusCode: 0, data: updated };
+}
+// notificationService.js or approvalHelper.js

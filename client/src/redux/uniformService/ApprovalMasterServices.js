@@ -8,7 +8,12 @@ const approvalMasterApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: BASE_URL,
   }),
-  tagTypes: ["Approval", "ApprovalField", "ApprovalModule"],
+  tagTypes: [
+    "Approval",
+    "ApprovalField",
+    "ApprovalModule",
+    "ApprovalNotification",
+  ],
   endpoints: (builder) => ({
     getApproval: builder.query({
       query: ({ params, searchParams }) => {
@@ -213,6 +218,22 @@ const approvalMasterApi = createApi({
       }),
       invalidatesTags: ["ApprovalModule"],
     }),
+    getPendingApprovall: builder.query({
+      query: ({ params }) => ({
+        url: `${APPROVAL_API}/getPendingApproval`, // ✅ use APPROVAL_API constant not hardcoded string
+        params,
+      }),
+      providesTags: ["ApprovalNotification"],
+    }),
+
+    markNotificationAsRead: builder.mutation({
+      query: ({ id, userId }) => ({
+        url: `${APPROVAL_API}/markRead/${id}`, // ✅ use APPROVAL_API constant
+        method: "PUT", // ✅ PUT not PATCH
+        body: { userId },
+      }),
+      invalidatesTags: ["ApprovalNotification"],
+    }),
   }),
 });
 
@@ -237,6 +258,8 @@ export const {
   useAddApprovalModuleMutation,
   useUpdateApprovalModuleMutation,
   useDeleteApprovalModuleMutation,
+  useMarkNotificationAsReadMutation,
+  useGetPendingApprovallQuery,
 } = approvalMasterApi;
 
 export default approvalMasterApi;

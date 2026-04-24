@@ -197,6 +197,7 @@ export default function RuleBuilder({
   fieldOptions,
   operatorOptions,
   readOnly,
+  isAlwaysApproved,
 }) {
   const addCondition = () => {
     setConditions([
@@ -215,6 +216,45 @@ export default function RuleBuilder({
     setConditions(conditions.filter((_, i) => i !== index));
   };
 
+  const removeAllConditions = () => {
+    setConditions([]);
+  };
+
+  const [contextMenu, setContextMenu] = React.useState(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  React.useEffect(() => {
+    if (!conditions || conditions.length === 0) {
+      setConditions([
+        {
+          fieldId: "",
+          operatorId: "",
+          valueType: "STATIC",
+          value: "",
+          compareFieldId: "",
+        },
+        {
+          fieldId: "",
+          operatorId: "",
+          valueType: "STATIC",
+          value: "",
+          compareFieldId: "",
+        },
+      ]);
+    }
+  }, []);
+
+  const handleContextMenu = (e, index) => {
+    e.preventDefault();
+    if (readOnly) return;
+    setContextMenu({ mouseX: e.clientX, mouseY: e.clientY, index });
+  };
+
   const updateCondition = (index, field, value) => {
     const newConditions = [...conditions];
     newConditions[index][field] = value;
@@ -225,67 +265,76 @@ export default function RuleBuilder({
     setConditions(newConditions);
   };
 
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Enter" && index === conditions.length - 1) {
+      e.preventDefault();
+      if (!readOnly && !isAlwaysApproved) {
+        addCondition();
+      }
+    }
+  };
+
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center mb-4">
-        <label className="text-sm font-semibold text-slate-700">
-          Approval Workflow Rules
-        </label>
-
-        <button
-          type="button"
-          onClick={addCondition}
-          disabled={readOnly}
-          className="flex items-center justify-center gap-1 rounded-md bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-medium px-3 py-1.5  transition-colors shadow-sm"
-        >
-          <Plus size={14} /> Add Rule
-        </button>
-      </div>
-
-      {conditions.length > 1 && (
-        <div className="mb-4 flex items-center gap-2">
-          <span className="text-xs font-medium text-slate-500">
-            Combine rules using:
+      {isAlwaysApproved ? (
+        <div className="text-xs text-indigo-600 font-medium py-6 text-center border border-dashed border-indigo-200 bg-indigo-50/50 rounded-lg flex flex-col items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+          <span>
+            "Approval Required" is Choosed. No trigger rules are required.
           </span>
-          <select
-            value={ruleLogicalOperator}
-            onChange={(e) => setRuleLogicalOperator(e.target.value)}
-            disabled={readOnly}
-            className="text-xs rounded-lg font-medium border text-center border-slate-300  focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-24 h-7 bg-white"
-          >
-            <option value="AND">AND (All)</option>
-            <option value="OR">OR (Any)</option>
-          </select>
+          <p className="text-[10px] text-slate-400 font-normal px-10">
+            All records submitted for this module will automatically enter the
+            approval workflow levels defined in the next tab.
+          </p>
         </div>
-      )}
-
-      {conditions.length === 0 ? (
-        <div className="text-xs text-slate-400  py-3 text-center border border-dashed border-slate-300 bg-white rounded-sm">
-          No trigger rules specified. This workflow will always trigger for
-          every form submitted!
+      ) : conditions.length === 0 ? (
+        <div className="text-xs text-slate-400 py-6 text-center border border-dashed border-slate-300 bg-white rounded-sm flex flex-col items-center gap-3">
+          <span>
+            No trigger rules specified. Please add rules or enable "Approval
+            Required".
+          </span>
+          {!readOnly && !isAlwaysApproved && (
+            <button
+              type="button"
+              onClick={addCondition}
+              className="px-4 py-1.5 bg-emerald-50 text-emerald-600 rounded border border-emerald-200 hover:bg-emerald-100 transition font-bold text-xs flex items-center gap-1.5 shadow-sm"
+            >
+              <Plus size={14} /> Add First Rule
+            </button>
+          )}
         </div>
       ) : (
         <div className="border border-slate-200 rounded-md overflow-hidden shadow-sm">
-          <table className="w-[80vw] border-collapse table-fixed text-[11px]">
+          <table className="w-[50vw] border-collapse table-fixed text-[11px]">
             <thead className="bg-gray-100 text-slate-700 sticky top-0 z-20 border-b border-slate-200">
               <tr className="text-[11px] uppercase tracking-wider font-bold">
-                <th className="w-8 px-2 py-2 text-center border-r border-slate-300">
+                <th className="w-4  py-2 text-center border-r border-slate-300">
                   S.No
                 </th>
-                <th className="w-[24%] px-2 py-2 text-center border-r border-slate-300">
+                <th className="w-12 px-2 py-2 text-center border-r border-slate-300">
                   Field
                 </th>
-                <th className="w-[15%] px-2 py-2 text-center border-r border-slate-300">
+                <th className="w-16 px-2 py-2 text-center border-r border-slate-300">
                   Operator
                 </th>
-                <th className="w-[14%] px-2 py-2 text-center border-r border-slate-300">
+                <th className="w-12 px-2 py-2 text-center border-r border-slate-300">
                   Value Type
                 </th>
-                <th className="w-36 px-2 py-2 text-center border-r border-slate-300">
+                <th className="w-24 px-2 py-2 text-center border-r border-slate-300">
                   Value / Compare Field
                 </th>
-
-                <th className="w-10 px-2 py-2 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -301,6 +350,7 @@ export default function RuleBuilder({
                 return (
                   <tr
                     key={index}
+                    onContextMenu={(e) => handleContextMenu(e, index)}
                     className={`${
                       index % 2 === 0 ? "bg-white" : "bg-[#f5f6fa]"
                     } hover:bg-blue-50/20 transition-colors`}
@@ -373,6 +423,7 @@ export default function RuleBuilder({
                           onChange={(e) =>
                             updateCondition(index, "value", e.target.value)
                           }
+                          onKeyDown={(e) => handleKeyDown(e, index)}
                           disabled={readOnly}
                           placeholder="Enter expected value..."
                           className="w-full  text-[11px] text-black  bg-transparent border-none outline-none px-2 placeholder:text-slate-300 disabled:cursor-default"
@@ -388,6 +439,7 @@ export default function RuleBuilder({
                                 e.target.value,
                               )
                             }
+                            onKeyDown={(e) => handleKeyDown(e, index)}
                             disabled={readOnly}
                             className="w-full  text-[11px] text-indigo-600 font-medium bg-transparent border-none outline-none  pl-2 pr-6 cursor-pointer disabled:cursor-default"
                           >
@@ -401,25 +453,45 @@ export default function RuleBuilder({
                         </>
                       )}
                     </td>
-
-                    {/* Actions */}
-
-                    <td className="text-center w-10 border-l border-slate-200">
-                      <button
-                        type="button"
-                        disabled={readOnly}
-                        onClick={() => removeCondition(index)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="Remove Rule"
-                      >
-                        <Trash2 size={13} strokeWidth={2} />
-                      </button>
-                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Context Menu Modal */}
+      {contextMenu !== null && (
+        <div
+          className="fixed z-50 bg-gray-200 border border-gray-300 rounded shadow-lg py-1 w-32"
+          style={{
+            top: contextMenu.mouseY,
+            left: contextMenu.mouseX,
+          }}
+        >
+          <button
+            type="button"
+            className="w-full text-left px-4 py-1.5 text-[11px] text-black hover:bg-gray-300"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeCondition(contextMenu.index);
+              setContextMenu(null);
+            }}
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            className="w-full text-left px-4 py-1.5 text-[11px] text-black hover:bg-gray-300"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeAllConditions();
+              setContextMenu(null);
+            }}
+          >
+            Delete All
+          </button>
         </div>
       )}
     </div>

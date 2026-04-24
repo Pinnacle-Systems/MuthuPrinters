@@ -109,22 +109,37 @@ const PoItems = ({
   termsRef,
   gsmList,
 }) => {
+  console.log(poItems, "poItemscheck");
+
   const gridWrapperRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
   const [focusedField, setFocusedField] = useState(null);
   const [triggerGetStyleItem] = useLazyGetStyleItemMasterByIdQuery();
+  const effectiveQuoteVersion =
+    quoteVersion ||
+    // ✅ If quoteVersion is empty, derive from the items themselves (use max version)
+    Math.max(
+      ...poItems
+        .map((i) => parseInt(i.quoteVersion))
+        .filter((v) => !isNaN(v) && v > 0),
+      0,
+    ) ||
+    "";
+  const isVisibleRow = (row) => {
+    if (!id) return true;
+    if (isNewVersion) return row.quoteVersion === "New";
 
-  const isVisibleRow = (row) =>
-    id
-      ? isNewVersion
-        ? row.quoteVersion === "New"
-        : parseInt(row.quoteVersion) === parseInt(quoteVersion)
-      : true;
+    // ✅ Use effectiveQuoteVersion instead of quoteVersion
+    if (!effectiveQuoteVersion) return row.quoteVersion !== "New";
+
+    return parseInt(row.quoteVersion) === parseInt(effectiveQuoteVersion);
+  };
 
   const visibleRows = poItems
     .map((row, originalIndex) => ({ row, originalIndex }))
     .filter(({ row }) => isVisibleRow(row));
+  console.log(visibleRows, "visibleRows");
 
   const syncRowPatch = (index, patch) => {
     setPoItems((prevRows) => {
@@ -150,7 +165,11 @@ const PoItems = ({
     setPoItems((prev) => [
       ...prev,
       createPurchaseOrderRow(
-        id ? (isNewVersion ? "New" : quoteVersion) : quoteVersion,
+        id
+          ? isNewVersion
+            ? "New"
+            : effectiveQuoteVersion // ✅
+          : effectiveQuoteVersion,
       ),
     ]);
   };
@@ -201,12 +220,14 @@ const PoItems = ({
         if (prev.length >= requiredRows) return prev;
         return [
           ...prev,
-          ...createPurchaseOrderRows(requiredRows - prev.length, quoteVersion),
+          ...createPurchaseOrderRows(
+            requiredRows - prev.length,
+            effectiveQuoteVersion,
+          ),
         ];
       }
 
       const localVisibleRows = prev.filter((row) => isVisibleRow(row));
-
       const missing = requiredRows - localVisibleRows.length;
       if (missing <= 0) return prev;
 
@@ -214,11 +235,11 @@ const PoItems = ({
         ...prev,
         ...createPurchaseOrderRows(
           missing,
-          isNewVersion ? "New" : quoteVersion,
+          isNewVersion ? "New" : effectiveQuoteVersion, // ✅
         ),
       ];
     });
-  }, [id, isNewVersion, quoteVersion, setPoItems]);
+  }, [id, isNewVersion, effectiveQuoteVersion, setPoItems]);
 
   useEffect(() => {
     if (!isNewVersion) return;

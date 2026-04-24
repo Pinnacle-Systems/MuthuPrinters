@@ -1673,6 +1673,7 @@ model ApprovalConfig {
   moduleId            Int
   priority            Int                       @default(0)
   active              Boolean                   @default(false)
+  isAlwaysApproved    Boolean                   @default(false)
   approvalLogs        ApprovalLog[]
   Branch              Branch                    @relation(fields: [branchId], references: [id])
   Module              ApprovalRuleModule        @relation(fields: [moduleId], references: [id])

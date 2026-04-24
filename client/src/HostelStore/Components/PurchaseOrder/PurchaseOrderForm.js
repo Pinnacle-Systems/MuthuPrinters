@@ -115,6 +115,9 @@ const PurchaseOrderForm = ({
   const [approvalRemarks, setApprovalRemarks] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [requirementId, setRequirementId] = useState("");
+  const [isPostApprovalLock, setIsPostApprovalLock] = useState(false);
+  const [isDeliveryThresholdPassed, setIsDeliveryThresholdPassed] =
+    useState(false);
 
   const supplierRef = useRef(null);
   const termsRef = useRef(null);
@@ -150,7 +153,20 @@ const PurchaseOrderForm = ({
   const syncFormWithDb = useCallback(
     (data) => {
       const status = data?.approvalStatus?.status;
-      setReadOnly((["PENDING"].includes(status) && !isAdmin) || readOnly);
+      const isAdminRole = userData?.role?.name === "ADMIN";
+
+      const deliveryDate = data?.dueDate;
+      const thresholdPassed =
+        deliveryDate && moment(deliveryDate).diff(moment(), "days", true) <= 2;
+
+      setIsPostApprovalLock(status === "APPROVED");
+      setIsDeliveryThresholdPassed(thresholdPassed);
+
+      setReadOnly(
+        (["PENDING"].includes(status) && !isAdminRole) ||
+          (status === "APPROVED" && thresholdPassed && !isAdminRole) ||
+          readOnly,
+      );
       setPoType(data?.poType ? data?.poType : "GENERAL");
       setDocDate(
         data?.docDate
@@ -158,11 +174,6 @@ const PurchaseOrderForm = ({
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
 
-      setPoItems(
-        data?.poItems
-          ? data?.poItems
-          : createPurchaseOrderRows(DEFAULT_PURCHASE_ORDER_ROWS, quoteVersion),
-      );
       setDocId(data?.docId ? data?.docId : "New");
       setDiscountType(data?.discountType || "Percentage");
       setTaxPercent(data?.taxPercent ? data?.taxPercent : "");
@@ -185,7 +196,35 @@ const PurchaseOrderForm = ({
       setTermsAndCondtion(data?.termsAndCondtion ? data?.termsAndCondtion : "");
       setTermsId(data?.termsId ? data?.termsId : "");
       setIsNewVersion(false);
-      setQuoteVersion(data?.quoteVersion || "");
+      // ✅ Set quoteVersion BEFORE poItems so isVisibleRow works correctly on first render
+      let resolvedQuoteVersion = data?.quoteVersion || "";
+
+      // ✅ Find the maximum quoteVersion from poItems to ensure we always default to the latest version
+      if (data?.poItems?.length) {
+        const validVersions = data.poItems
+          .filter((i) => i.quoteVersion && i.quoteVersion !== "New")
+          .map((i) => Number(i.quoteVersion))
+          .filter((n) => !isNaN(n) && n > 0);
+
+        if (validVersions.length > 0) {
+          const maxVersion = Math.max(...validVersions);
+          if (maxVersion > Number(resolvedQuoteVersion || 0)) {
+            resolvedQuoteVersion = maxVersion;
+          }
+        }
+      }
+
+      setQuoteVersion(resolvedQuoteVersion);
+
+      // ✅ Pass quoteVersion directly to filter correctly
+      setPoItems(
+        data?.poItems
+          ? data.poItems // ← use raw DB items, isVisibleRow will filter by quoteVersion
+          : createPurchaseOrderRows(
+              DEFAULT_PURCHASE_ORDER_ROWS,
+              resolvedQuoteVersion,
+            ),
+      );
       setPayTermId(data?.payTermId ? data?.payTermId : "");
     },
     [id],
@@ -200,113 +239,113 @@ const PurchaseOrderForm = ({
     }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
+  // PurchaseOrderForm.jsx — handleSubmitCustom
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
-      let returnData;
-      if (text === "Updated") {
-        returnData = await callback(data).unwrap();
-      } else {
-        returnData = await callback(data).unwrap();
-      }
+      const returnData = await callback(data).unwrap();
+
       if (returnData.statusCode === 1) {
         toast.error(returnData.message);
-      } else {
-        Swal.fire({
-          icon: "success",
-          title: `${text || "Saved"} Successfully`,
-          showConfirmButton: false,
-          timer: 2000,
-          didClose: () => {
-            // ✅ Runs after Swal completely closes
-            invalidatePurchaseModule();
-            dispatchInvalidate();
-
-            if (returnData.statusCode === 0) {
-              // ✅ Show print confirmation only for new entries
-              if (!id) {
-                Swal.fire({
-                  icon: "question",
-                  title: "Do You Want to Print?",
-                  showCancelButton: true,
-                  confirmButtonText: "Yes, Print",
-                  cancelButtonText: "No, Thanks [Esc]",
-                  confirmButtonColor: "#3085d6",
-                  cancelButtonColor: "#6b7280",
-                  focusConfirm: true, // ✅ Auto-focus confirm button
-                  allowEnterKey: true, // ✅ Allow Enter to confirm
-                  allowEscapeKey: true, // ✅ Allow Escape to cancel
-                  didOpen: () => {
-                    // ✅ Ensure confirm button is focused when modal opens
-                    const confirmButton = Swal.getConfirmButton();
-                    const cancelButton = Swal.getCancelButton();
-
-                    if (confirmButton) {
-                      confirmButton.focus();
-
-                      // ✅ Add keyboard navigation
-                      confirmButton.addEventListener("keydown", (e) => {
-                        if (e.key === "Tab" && !e.shiftKey) {
-                          e.preventDefault();
-                          cancelButton?.focus();
-                        }
-                      });
-                    }
-
-                    if (cancelButton) {
-                      cancelButton.addEventListener("keydown", (e) => {
-                        if (e.key === "Tab" && e.shiftKey) {
-                          e.preventDefault();
-                          confirmButton?.focus();
-                        }
-                      });
-                    }
-                  },
-                }).then((result) => {
-                  if (result.isConfirmed) {
-                    // ✅ User clicked "Yes, Print"
-                    setPrintModalOpen(true);
-                    // Set the ID so the print modal can access the saved data
-                    if (returnData?.data?.id) {
-                      setId(returnData.data.id);
-                    }
-                    setPendingAction(nextProcess);
-                  } else {
-                    // ✅ User clicked "No, Thanks" - proceed with normal flow
-                    if (nextProcess === "new") {
-                      syncFormWithDb(undefined);
-                      setId("");
-                      setDocId("New");
-
-                      setTimeout(() => {
-                        supplierRef.current?.focus();
-                      }, 300);
-                    }
-                    if (nextProcess === "close") {
-                      onClose();
-                    }
-                  }
-                });
-              } else {
-                // ✅ For updates, proceed normally without print prompt
-                if (nextProcess === "new") {
-                  setId("");
-                  setDocId("New");
-                  syncFormWithDb(undefined);
-
-                  setTimeout(() => {
-                    supplierRef.current?.focus();
-                  }, 100);
-                }
-                if (nextProcess === "close") {
-                  onClose();
-                }
-              }
-            } else {
-              toast.error(returnData?.message);
-            }
-          },
-        });
+        return;
       }
+      // ✅ Sync quoteVersion immediately from the response
+      if (returnData?.data?.quoteVersion) {
+        setQuoteVersion(returnData.data.quoteVersion);
+      }
+      // ✅ Show re-approval message if backend sent one
+      const successMessage = returnData.message || `${text} Successfully`;
+      const isReApproval = returnData.message?.includes("Re-approval");
+
+      Swal.fire({
+        icon: isReApproval ? "warning" : "success",
+        title: isReApproval
+          ? "⚠️ Re-approval Required"
+          : `${text} Successfully`,
+        text: isReApproval ? returnData.message : undefined,
+        showConfirmButton: isReApproval, // ✅ user must acknowledge re-approval
+        confirmButtonText: "OK, I understand",
+        timer: isReApproval ? undefined : 2000, // no auto-close for re-approval
+        didClose: () => {
+          invalidatePurchaseModule();
+          dispatchInvalidate();
+
+          if (returnData.statusCode === 0) {
+            if (!id) {
+              Swal.fire({
+                icon: "question",
+                title: "Do You Want to Print?",
+                showCancelButton: true,
+                confirmButtonText: "Yes, Print",
+                cancelButtonText: "No, Thanks [Esc]",
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#6b7280",
+                focusConfirm: true, // ✅ Auto-focus confirm button
+                allowEnterKey: true, // ✅ Allow Enter to confirm
+                allowEscapeKey: true, // ✅ Allow Escape to cancel
+                didOpen: () => {
+                  // ✅ Ensure confirm button is focused when modal opens
+                  const confirmButton = Swal.getConfirmButton();
+                  const cancelButton = Swal.getCancelButton();
+
+                  if (confirmButton) {
+                    confirmButton.focus();
+
+                    // ✅ Add keyboard navigation
+                    confirmButton.addEventListener("keydown", (e) => {
+                      if (e.key === "Tab" && !e.shiftKey) {
+                        e.preventDefault();
+                        cancelButton?.focus();
+                      }
+                    });
+                  }
+
+                  if (cancelButton) {
+                    cancelButton.addEventListener("keydown", (e) => {
+                      if (e.key === "Tab" && e.shiftKey) {
+                        e.preventDefault();
+                        confirmButton?.focus();
+                      }
+                    });
+                  }
+                },
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  // ✅ User clicked "Yes, Print"
+                  setPrintModalOpen(true);
+                  // Set the ID so the print modal can access the saved data
+                  if (returnData?.data?.id) {
+                    setId(returnData.data.id);
+                  }
+                  setPendingAction(nextProcess);
+                } else {
+                  // ✅ User clicked "No, Thanks" - proceed with normal flow
+                  if (nextProcess === "new") {
+                    syncFormWithDb(undefined);
+                    setId("");
+                    setDocId("New");
+
+                    setTimeout(() => {
+                      supplierRef.current?.focus();
+                    }, 300);
+                  }
+                  if (nextProcess === "close") {
+                    onClose();
+                  }
+                }
+              });
+            } else {
+              if (nextProcess === "new") {
+                setId("");
+                setDocId("New");
+                syncFormWithDb(undefined);
+              }
+              if (nextProcess === "close") {
+                onClose();
+              }
+            }
+          }
+        },
+      });
     } catch (error) {
       console.log("handle", error);
     }
@@ -351,13 +390,14 @@ const PurchaseOrderForm = ({
       taxTemplateId,
       termsAndCondtion,
       termsId,
-      isNewVersion:
-        (status === "APPROVED" && !isAdmin) ||
-        (status === "REJECTED" && !isAdmin)
-          ? true
-          : isNewVersion || (status === "PENDING" && isAdmin)
-            ? true
-            : isNewVersion,
+      // isNewVersion:
+      //   (status === "APPROVED" && !isAdmin) ||
+      //   (status === "REJECTED" && !isAdmin)
+      //     ? true
+      //     : isNewVersion || (status === "PENDING" && isAdmin)
+      //       ? true
+      //       : isNewVersion,
+      isNewVersion: id ? true : isNewVersion,
       quoteVersion,
       payTermId,
       pageId: currentPageId,
@@ -543,6 +583,44 @@ const PurchaseOrderForm = ({
         .filter((n) => n > 0),
     ),
   ].sort((a, b) => a - b);
+  const versionDropdown = (
+    <div className="flex items-center gap-2 ml-2">
+      <span className="text-xs text-gray-500 mt-1">Version</span>
+
+      <div className="relative">
+        <select
+          value={quoteVersion}
+          onChange={(e) => setQuoteVersion(Number(e.target.value))}
+          className="appearance-none bg-white border border-gray-300 text-gray-700 text-xs rounded-md pl-2 pr-6 py-1 
+                   focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 
+                   hover:border-gray-400 transition"
+        >
+          {quoteVersionOptions.map((v, index) => (
+            <option key={v} value={v}>
+              {index === quoteVersionOptions.length - 1 ? "Latest" : `V${v}`}
+            </option>
+          ))}
+        </select>
+
+        {/* Custom arrow */}
+        <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center text-gray-400">
+          <svg
+            className="w-3 h-3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
 
   const handleKeyDown = (event) => {
     let charCode = String.fromCharCode(event.which).toLowerCase();
@@ -625,7 +703,9 @@ const PurchaseOrderForm = ({
     }
     return null;
   };
-
+  const isFullyLocked =
+    readOnly || (isPostApprovalLock && isDeliveryThresholdPassed);
+  const isCoreLocked = isFullyLocked || isPostApprovalLock;
   const chip = getModeChip();
 
   const actionButtonClass =
@@ -633,7 +713,7 @@ const PurchaseOrderForm = ({
   const actionIconPairClass = "flex items-center gap-1";
 
   const leftActions = [
-    ...(readOnly
+    ...(isFullyLocked
       ? []
       : [
           {
@@ -657,29 +737,37 @@ const PurchaseOrderForm = ({
             disabled: readOnly,
             className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
           },
-          {
-            key: "save-new",
-            icon: (
-              <span className={actionIconPairClass}>
-                <FiSave className="h-4 w-4" />
-                <HiOutlineRefresh className="h-4 w-4" />
-              </span>
-            ),
-            hoverLabel: "Save & New",
-            iconOnly: true,
-            onClick: () => saveData("new"),
-            onKeyDown: (e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                saveData("new");
-              }
-            },
-            disabled: readOnly,
-            className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
-          },
+          ...(status === "APPROVED"
+            ? []
+            : [
+                {
+                  key: "save-new",
+                  icon: (
+                    <span className={actionIconPairClass}>
+                      <FiSave className="h-4 w-4" />
+                      <HiOutlineRefresh className="h-4 w-4" />
+                    </span>
+                  ),
+                  hoverLabel: "Save & New",
+                  iconOnly: true,
+                  onClick: () => saveData("new"),
+                  onKeyDown: (e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      saveData("new");
+                    }
+                  },
+                  disabled: readOnly,
+                  className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
+                },
+              ]),
         ]),
-    ...(!id || status === "PENDING"
+    ...(!id ||
+    status === "PENDING" ||
+    status === "APPROVED" ||
+    status === "SUPERSEDED" ||
+    status === "NOT_CONFIGURED"
       ? []
       : [
           {
@@ -700,7 +788,7 @@ const PurchaseOrderForm = ({
             className: `bg-green-700 hover:bg-green-800 ${actionButtonClass}`,
           },
         ]),
-    ...(id && status === "PENDING"
+    ...((id && status === "PENDING") || status === "SUPERSEDED"
       ? [
           {
             key: "send-back",
@@ -737,7 +825,7 @@ const PurchaseOrderForm = ({
   ];
 
   const rightActions = [
-    ...(!id || !readOnly || status === "PENDING"
+    ...(!id || !readOnly || status === "PENDING" || status === "SUPERSEDED"
       ? []
       : [
           {
@@ -800,6 +888,32 @@ const PurchaseOrderForm = ({
     },
   ];
 
+  const approvalStatusBanner = (() => {
+    if (!isPostApprovalLock) return null;
+    return (
+      <div
+        className={`text-[11px] px-3 py-1.5 rounded border flex items-center gap-2 mb-2 ${
+          isDeliveryThresholdPassed
+            ? "bg-red-50 border-red-200 text-red-700"
+            : "bg-amber-50 border-amber-200 text-amber-700"
+        }`}
+      >
+        <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+        {isDeliveryThresholdPassed ? (
+          <span>
+            <strong>PO FULLY LOCKED:</strong> Approved & within 2-day delivery
+            window. No edits allowed.
+          </span>
+        ) : (
+          <span>
+            <strong>LIMITED EDIT MODE:</strong> Approved PO. Only{" "}
+            <strong>Remarks</strong> can be updated.
+          </span>
+        )}
+      </div>
+    );
+  })();
+
   const compactFieldClass = "px-2 py-1 text-[11px]";
   const compactModalFieldClass = "w-full px-2 py-1 text-[11px]";
   const compactCardClass =
@@ -848,8 +962,8 @@ const PurchaseOrderForm = ({
             setPoType(value);
           }}
           required={true}
-          readOnly={readOnly}
-          disabled={orderId || id}
+          readOnly={isCoreLocked}
+          disabled={orderId || id || isCoreLocked}
           ref={supplierRef}
           className={`${compactFieldClass} w-full max-w-none`}
         />
@@ -865,7 +979,7 @@ const PurchaseOrderForm = ({
           value={taxTemplateId}
           setValue={setTaxTemplateId}
           required={true}
-          readOnly={readOnly}
+          readOnly={isCoreLocked}
           className={`${compactFieldClass} w-full max-w-none`}
         />
       </div>
@@ -882,7 +996,7 @@ const PurchaseOrderForm = ({
           value={payTermId}
           setValue={setPayTermId}
           required={true}
-          readOnly={readOnly}
+          readOnly={isCoreLocked}
           className={`${compactModalFieldClass} w-full max-w-none`}
           dropdownMinWidth={240}
           addNewLabel="+ Add New Pay Term"
@@ -910,7 +1024,7 @@ const PurchaseOrderForm = ({
           value={supplierId}
           setValue={setSupplierId}
           required={true}
-          readOnly={readOnly}
+          readOnly={isCoreLocked}
           className={compactModalFieldClass}
           dropdownMinWidth={partyDropdownMinWidth}
           addNewLabel="+ Add New Supplier"
@@ -955,7 +1069,7 @@ const PurchaseOrderForm = ({
           value={deliveryType}
           setValue={setDeliveryType}
           required={true}
-          readOnly={readOnly}
+          readOnly={isCoreLocked}
           className={`${compactFieldClass} ${fieldWidthShort}`}
         />
       </div>
@@ -975,7 +1089,7 @@ const PurchaseOrderForm = ({
             value={deliveryToId}
             setValue={setDeliveryToId}
             required={true}
-            readOnly={readOnly}
+            readOnly={isCoreLocked}
             className={compactFieldClass}
           />
         ) : (
@@ -991,7 +1105,7 @@ const PurchaseOrderForm = ({
             value={deliveryToId}
             setValue={setDeliveryToId}
             required={true}
-            readOnly={readOnly}
+            readOnly={isCoreLocked}
             className={compactModalFieldClass}
             dropdownMinWidth={partyDropdownMinWidth}
             addNewLabel="+ Add New Customer"
@@ -1007,7 +1121,7 @@ const PurchaseOrderForm = ({
           setValue={setDueDate}
           type={"date"}
           required={true}
-          readOnly={readOnly}
+          readOnly={isCoreLocked}
           className={`${compactFieldClass} ${fieldWidthDate}`}
         />
       </div>
@@ -1239,9 +1353,15 @@ const PurchaseOrderForm = ({
       </div>
     </div>
   );
+  // Add this just before the headerContent definition
 
   const headerContent = (
     <div className="grid grid-cols-1 gap-1 xl:grid-cols-[minmax(0,5fr)_minmax(0,3.6fr)_minmax(0,3.4fr)]">
+      {/* ✅ Add lock warning banner */}
+      {approvalStatusBanner && (
+        <div className="xl:col-span-3">{approvalStatusBanner}</div>
+      )}
+
       {basicDetailsCompactSection}
       {supplierDetailsCompactSection}
       {deliveryDetailsCompactSection}
@@ -1255,7 +1375,8 @@ const PurchaseOrderForm = ({
         setRemarks={setRemarks}
         terms={termsAndCondtion}
         setTerms={setTermsAndCondtion}
-        readOnly={readOnly}
+        readOnly={isCoreLocked}
+        remarksReadOnly={isFullyLocked}
         showTermSelect={true}
         termValue={termsId}
         onTermChange={(value) => setTermsId(value)}
@@ -1301,7 +1422,8 @@ const PurchaseOrderForm = ({
         setRemarks={setRemarks}
         terms={termsAndCondtion}
         setTerms={setTermsAndCondtion}
-        readOnly={readOnly}
+        readOnly={isCoreLocked}
+        remarksReadOnly={isFullyLocked}
         showTermSelect={true}
         termValue={termsId}
         onTermChange={(value) => setTermsId(value)}
@@ -1475,10 +1597,16 @@ const PurchaseOrderForm = ({
                     ? "bg-green-100 text-green-700"
                     : status === "REJECTED"
                       ? "bg-red-100 text-red-700"
-                      : "bg-orange-100 text-orange-700"
+                      : status === "SUPERSEDED"
+                        ? "bg-orange-100 text-orange-700" // ✅ NEW
+                        : "bg-orange-100 text-orange-700"
                 }`}
               >
-                {status === "PENDING" ? "Waiting For Approval" : status}
+                {status === "PENDING"
+                  ? "Waiting For Approval"
+                  : status === "SUPERSEDED"
+                    ? "Re-approval Required" // ✅ NEW
+                    : status}
               </span>
             </div>
           </div>
@@ -1622,6 +1750,7 @@ const PurchaseOrderForm = ({
             styleItemList={styleItemList}
             discountType={discountType}
             sizeList={sizeList}
+            quoteVersion={quoteVersion}
             discountValue={discountValue}
           />
         </PDFViewer>
@@ -1648,9 +1777,15 @@ const PurchaseOrderForm = ({
             poItems={poItems}
             enrichedPoItems={enrichedPoItems}
             setPoItems={setPoItems}
-            readOnly={readOnly}
             uomList={uomList}
             hsnList={hsnList}
+            readOnly={
+              isCoreLocked ||
+              (quoteVersionOptions.length > 0 &&
+                Number(quoteVersion) !==
+                  quoteVersionOptions[quoteVersionOptions.length - 1]) ||
+              childRecordCount > 0
+            }
             styleItemList={styleItemList}
             taxTemplateId={taxTemplateId}
             isNewVersion={isNewVersion}
@@ -1663,6 +1798,7 @@ const PurchaseOrderForm = ({
           />
         }
         footer={footerContent}
+        versionDropdown={id ? versionDropdown : null}
       />
     </>
   );

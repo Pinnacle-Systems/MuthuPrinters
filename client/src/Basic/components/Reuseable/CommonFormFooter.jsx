@@ -72,6 +72,7 @@ const CommonFormFooter = ({
   termsPlaceholder = "Select or type Terms & Conditions...",
   stacked = false,
   hasSummaryTitle = false,
+  remarksReadOnly = null,
 }) => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -348,7 +349,7 @@ const CommonFormFooter = ({
         >
           <h2 className="mb-1 text-[12px] font-bold text-slate-700">Remarks</h2>
           <textarea
-            readOnly={readOnly}
+            readOnly={remarksReadOnly !== null ? remarksReadOnly : readOnly}
             value={remarks || ""}
             onChange={(e) => setRemarks(e.target.value)}
             className="min-h-[2.5rem] focus:outline-none flex-1 w-full overflow-auto rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"

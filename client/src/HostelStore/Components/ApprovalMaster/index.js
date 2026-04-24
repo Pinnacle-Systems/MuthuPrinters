@@ -53,6 +53,7 @@ export default function Form({
   const [workflowName, setWorkflowName] = useState("");
   const [workflowPriority, setWorkflowPriority] = useState(1);
   const [ruleLogicalOperator, setRuleLogicalOperator] = useState("AND");
+  const [isAlwaysApproved, setIsAlwaysApproved] = useState(false);
   const [configConditions, setConfigConditions] = useState([]);
   const childRecord = useRef(0);
 
@@ -88,7 +89,23 @@ export default function Form({
         setWorkflowName("");
         setWorkflowPriority(1);
         setRuleLogicalOperator("AND");
-        setConfigConditions([]);
+        setIsAlwaysApproved(false);
+        setConfigConditions([
+          {
+            fieldId: "",
+            operatorId: "",
+            valueType: "STATIC",
+            value: "",
+            compareFieldId: "",
+          },
+          {
+            fieldId: "",
+            operatorId: "",
+            valueType: "STATIC",
+            value: "",
+            compareFieldId: "",
+          },
+        ]);
         setApprovalLevelItems(
           Array.from({ length: 4 }, (_, i) => ({
             levelNo: i + 1,
@@ -106,6 +123,7 @@ export default function Form({
       setWorkflowName(data?.name || "");
       setWorkflowPriority(data?.priority || 1);
       setRuleLogicalOperator(data?.ruleLogicalOperator || "AND");
+      setIsAlwaysApproved(data?.isAlwaysApproved || false);
 
       const normalizedConditions = (data?.ConfigConditions || []).map((c) => ({
         fieldId: String(c.fieldId ?? ""),
@@ -166,16 +184,24 @@ export default function Form({
     name: workflowName,
     priority: Number(workflowPriority),
     ruleLogicalOperator,
-    ConfigConditions: configConditions?.filter(
-      (c) => c.fieldId && c.operatorId,
-    ),
+    isAlwaysApproved,
+    ConfigConditions: isAlwaysApproved
+      ? []
+      : configConditions?.filter((c) => c.fieldId && c.operatorId),
     approvalLevelItems: approvalLevelItems?.filter(
       (item) => item.users.length > 0,
     ),
   };
 
   const validateData = (data) => {
-    return data.moduleId && data.approvalLevelItems.length > 0 && data.name;
+    const hasConditions =
+      data.isAlwaysApproved || data.ConfigConditions.length > 0;
+    return (
+      data.moduleId &&
+      data.approvalLevelItems.length > 0 &&
+      data.name &&
+      hasConditions
+    );
   };
 
   const handleSubmitCustom = async (callback, data, text) => {
@@ -197,21 +223,40 @@ export default function Form({
   };
 
   const saveData = (process) => {
-    if (!validateData(data)) {
-      toast.warning(
-        "Please fill required fields (Name, Module, and at least one Level).",
+    if (!data.name || !data.moduleId || data.approvalLevelItems.length === 0) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        text: "Please fill required fields (Name, Module, and at least one Level).",
+        confirmButtonColor: "#4f46e5",
+      });
+      return;
+    }
+
+    if (!data.isAlwaysApproved && data.ConfigConditions.length === 0) {
+      console.log(
+        data.isAlwaysApproved,
+        data.ConfigConditions,
+        "data.ConfigConditions",
       );
+
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        text: "Please either provide approval rules (conditions) or enable 'Approval Required (No Rules)'.",
+        confirmButtonColor: "#4f46e5",
+      });
       return;
     }
 
-    let foundItem = allData?.data
-      ?.filter((i) => (id ? i.id != id : true))
-      ?.some((item) => item.moduleId == moduleId && item.name === workflowName);
+    // let foundItem = allData?.data
+    //   ?.filter((i) => (id ? i.id != id : true))
+    //   ?.some((item) => item.moduleId == moduleId && item.name === workflowName);
 
-    if (foundItem) {
-      toast.warning("This configuration already exists.");
-      return;
-    }
+    // if (foundItem) {
+    //   toast.warning("This configuration already exists.");
+    //   return;
+    // }
 
     if (id && !window.confirm("Are you sure update the details ...?")) return;
 
@@ -251,6 +296,7 @@ export default function Form({
     setWorkflowPriority(1);
     setModuleId("");
     setActive(true);
+    setIsAlwaysApproved(false);
   };
   const ACTIVE = (
     <div className="bg-gradient-to-r from-green-200 to-green-500 inline-flex items-center justify-center rounded-full border-2 w-6 border-green-500 shadow-lg text-white hover:scale-110 transition-transform duration-300">
@@ -348,6 +394,32 @@ export default function Form({
                     className="text-right "
                   />
                 </div>
+
+                {/*   <div className="pb-1">
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                    Always Approved (No Conditions)
+                    <div className="mt-1">
+                      <ToggleButton
+                        name=""
+                        value={isAlwaysApproved}
+                        setActive={setIsAlwaysApproved}
+                        readOnly={readOnly}
+                      />
+                    </div>
+                  </label>
+                </div> */}
+                <div className="pb-1 ">
+                  <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                    Approval Required (No Rules)
+                  </label>
+                  <input
+                    type="checkbox"
+                    checked={isAlwaysApproved}
+                    onChange={(e) => setIsAlwaysApproved(e.target.checked)}
+                    disabled={readOnly}
+                    className="w-4 h-6 accent-indigo-600 cursor-pointer "
+                  />
+                </div>
                 <div className="pb-1 ">
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">
                     Status
@@ -363,29 +435,30 @@ export default function Form({
               </div>
             </div>
 
-            {/* Tabs Section */}
-            <div className="flex flex-col flex-1">
-              <div className="flex border-b border-gray-200 bg-white rounded-t-lg overflow-hidden">
-                <button
-                  className={`flex-1 py-2 px-6 text-xs font-bold transition-all duration-200 ${activeTab === 0 ? "border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50/30" : "text-gray-500 hover:bg-gray-50"}`}
-                  onClick={() => setActiveTab(0)}
-                >
-                  Rule Builder
-                </button>
-                <button
-                  className={`flex-1 py-2 px-6 text-xs font-bold transition-all duration-200 ${activeTab === 1 ? "border-b-2 border-indigo-600 text-indigo-600 bg-indigo-50/30" : "text-gray-500 hover:bg-gray-50"}`}
-                  onClick={() => setActiveTab(1)}
-                >
-                  Approval Levels
-                </button>
-              </div>
-
-              <div
-                className={`p-2 border border-t-0 border-gray-200 rounded-b-lg bg-white min-h-[400px] max-h-[400px] ${
-                  activeTab === 1 ? "overflow-visible" : "overflow-y-auto"
-                }`}
-              >
-                {activeTab === 0 ? (
+            {/* Split Columns Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1">
+              {/* Column 1: Rule Builder */}
+              <div className="flex flex-col h-full border border-gray-200 rounded-lg bg-white shadow-sm">
+                <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 font-semibold text-gray-700 text-sm rounded-t-lg flex justify-between items-center">
+                  <span>Rule Builder</span>
+                  {configConditions.length > 1 && !isAlwaysApproved && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-medium text-slate-500 uppercase tracking-tight">
+                        Combine using:
+                      </span>
+                      <select
+                        value={ruleLogicalOperator}
+                        onChange={(e) => setRuleLogicalOperator(e.target.value)}
+                        disabled={readOnly}
+                        className="text-[10px] rounded font-bold border border-slate-300 focus:outline-none focus:border-indigo-500 w-20 h-5 bg-white cursor-pointer px-1"
+                      >
+                        <option value="AND">AND</option>
+                        <option value="OR">OR</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+                <div className="p-2 overflow-y-auto min-h-[400px] max-h-[400px]">
                   <RuleBuilder
                     conditions={configConditions}
                     setConditions={setConfigConditions}
@@ -394,8 +467,17 @@ export default function Form({
                     fieldOptions={fieldData?.data}
                     operatorOptions={operatorData?.data}
                     readOnly={readOnly}
+                    isAlwaysApproved={isAlwaysApproved}
                   />
-                ) : (
+                </div>
+              </div>
+
+              {/* Column 2: Approval Levels */}
+              <div className="flex flex-col h-full border border-gray-200 rounded-lg bg-white shadow-sm">
+                <div className="bg-gray-50 border-b border-gray-200 px-4 py-2 font-semibold text-gray-700 text-sm rounded-t-lg">
+                  Approval Levels
+                </div>
+                <div className="p-2 overflow-y-auto min-h-[400px] max-h-[400px]">
                   <ApprovalDetails
                     approvalLevelItems={approvalLevelItems}
                     setApprovalLevelItems={setApprovalLevelItems}
@@ -403,7 +485,7 @@ export default function Form({
                     roleList={roleList?.data}
                     readOnly={readOnly}
                   />
-                )}
+                </div>
               </div>
             </div>
           </div>
@@ -441,8 +523,7 @@ export default function Form({
                   onClick={() => setReadOnly(false)}
                   className="bg-yellow-600 text-white px-4 py-1.5 rounded-md hover:bg-yellow-700 flex items-center text-sm shadow-sm transition"
                 >
-                  <FiEdit2 className="w-4 h-4 mr-2" />
-                  Edit
+                  <FiEdit2 className="w-4 h-4 " />
                 </button>
               )}
               {/* {id && !readOnly && (

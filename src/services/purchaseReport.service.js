@@ -10,12 +10,28 @@ function isAgainstInvoice(receiptType) {
   return receiptType.trim().toLowerCase() === "against invoice";
 }
 
-function getPOStatus({
-  poItems = [],
-  inwardItems = [],
-  purchaseCancelItems = [],
-}) {
-  const totalPoQty = poItems.reduce((s, i) => s + (i.qty || 0), 0);
+function getPOStatus(po) {
+  const poItems = po.poItems || [];
+  const inwardItems = po.inwardItems || [];
+  const purchaseCancelItems = po.purchaseCancelItems || [];
+  
+  // Find the latest quote version to only sum active items
+  let latestQuoteVersion = 1;
+  if (poItems.length > 0) {
+    const validVersions = poItems
+      .filter((i) => i.quoteVersion && i.quoteVersion !== "New")
+      .map((i) => Number(i.quoteVersion))
+      .filter((n) => !isNaN(n) && n > 0);
+    if (validVersions.length > 0) {
+      latestQuoteVersion = Math.max(...validVersions);
+    }
+  }
+
+  const activePoItems = poItems.filter(
+    (i) => (Number(i.quoteVersion) || 1) === latestQuoteVersion
+  );
+
+  const totalPoQty = activePoItems.reduce((s, i) => s + (i.qty || 0), 0);
   const totalInwardQty = inwardItems.reduce(
     (s, i) => s + (i.inwardQty || 0),
     0,
@@ -314,8 +330,24 @@ async function getPurchaseReport({
 
   // ── STEP 4: compute derived fields per PO ─────────────────────────────────
   const result = pos.map((po) => {
+    // Find the latest quote version to only sum active items
+    let latestQuoteVersion = 1;
+    if (po.poItems.length > 0) {
+      const validVersions = po.poItems
+        .filter((i) => i.quoteVersion && i.quoteVersion !== "New")
+        .map((i) => Number(i.quoteVersion))
+        .filter((n) => !isNaN(n) && n > 0);
+      if (validVersions.length > 0) {
+        latestQuoteVersion = Math.max(...validVersions);
+      }
+    }
+
+    const activePoItems = po.poItems.filter(
+      (i) => (Number(i.quoteVersion) || 1) === latestQuoteVersion
+    );
+
     // ✅ inwardQty sums ALL inward items via poId — null purchaseInwardId included
-    const poQty = po.poItems.reduce((s, i) => s + (i.qty || 0), 0);
+    const poQty = activePoItems.reduce((s, i) => s + (i.qty || 0), 0);
     const inwardQty = po.inwardItems.reduce(
       (s, i) => s + (i.inwardQty || 0),
       0,

@@ -58,7 +58,7 @@ import PO from "./images/po.png";
 import PurchaseCancel from "./images/purchasecancel.png";
 import PurchaseBill from "./images/purchasebillEntry.png";
 import GSM from "./images/gsm.png";
-
+import Approval from "./images/approve.png";
 const SidebarComponent = ({
   logo,
   groups,
@@ -299,6 +299,13 @@ const SidebarComponent = ({
     "GSM MASTER": (
       <img
         src={GSM}
+        alt="country"
+        className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow"
+      />
+    ),
+    "APPROVAL CONFIGURATION": (
+      <img
+        src={Approval}
         alt="country"
         className="w-[23px]  flex justify-center items-center bg-white border-2 border-white rounded shadow"
       />
