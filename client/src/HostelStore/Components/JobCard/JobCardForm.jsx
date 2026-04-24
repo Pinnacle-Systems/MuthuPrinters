@@ -159,6 +159,7 @@ const JobCardForm = ({
     gsmList,
     plateList,
     dieList,
+    branchData,
 }) => {
     const today = new Date();
 
@@ -212,10 +213,15 @@ const JobCardForm = ({
     const { data: processGroupList, isFetching: isProcessGroupFetching } =
         useGetProcessGroupMasterQuery({ params });
 
+    // const getGroupIds = (groupName) =>
+    //     processGroupList?.data
+    //         ?.find((g) => g.name === groupName)
+    //         ?.processGroupList?.map((i) => i.id) || [];
+
     const getGroupIds = (groupName) =>
         processGroupList?.data
             ?.find((g) => g.name === groupName)
-            ?.processGroupList?.map((i) => i.id) || [];
+            ?.processGroupList?.map((i) => i.processId) || [];
 
     const filterByGroup = (groupName) =>
         processList?.data?.filter((p) =>
@@ -402,8 +408,16 @@ const JobCardForm = ({
                 <PDFViewer style={tw("w-full h-full")}>
                     <JobCardPrintFormat
                         singleData={singleData?.data}
-                        // branchData={branchData}
                         customerList={customerList}
+                        boardList={boardList}
+                        gsmList={gsmList}
+                        machineList={machineList}
+                        plateList={plateList}
+                        dieList={dieList}
+                        defaultList={defaultList}
+                        laminationList={laminationList}
+                        varnishList={varnishList}
+                        branchData={branchData?.data}
                     />
                 </PDFViewer>
             </Modal>
@@ -427,6 +441,97 @@ const JobCardForm = ({
                 {/* ── Body — 5 card columns with gaps ─────────────────── */}
                 <div className="flex-1 overflow-y-auto p-3">
                     <div className="grid grid-cols-5 gap-3 items-start">
+
+                        {/* ══ COL 5 — BASIC DETAILS ══════════════════════ */}
+                        <Col title="Basic Details">
+
+                            <SectionCard>
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                    <Field label="Job Card No">
+                                        <ReusableInput label="" readOnly value={docId} />
+                                    </Field>
+                                    <Field label="Date">
+                                        <ReusableInput label="" value={docDate} type="date" readOnly disabled />
+                                    </Field>
+                                </div>
+                            </SectionCard>
+                            <SectionCard title="">
+
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                    <Field label="Order Type">
+                                        <DropdownInput
+                                            name=""
+                                            options={orderTypes}
+                                            value={orderType}
+                                            setValue={setOrderType}
+                                            required
+                                            readOnly={readOnly}
+                                            disabled={readOnly}
+                                            ref={customerRef}
+                                        />
+                                    </Field>
+                                    <Field label="Order Qty">
+                                        <TextInput
+                                            name=""
+                                            value={orderQty}
+                                            setValue={setOrderQty}
+                                            readOnly={readOnly}
+                                            required
+                                            type="number"
+                                            className="text-right w-full"
+                                            onFocus={(e) => e.target.select()}
+                                            onBlur={(e) =>
+                                                setOrderQty(e.target.value ? Number(e.target.value).toFixed(3) : "")
+                                            }
+                                        />
+                                    </Field>
+                                </div>
+                                <div className="mt-2">
+                                    <Field label="Remarks">
+                                        <TextInput name="" value={remarks} setValue={setRemarks}
+                                            readOnly={readOnly} className="w-full" />
+                                    </Field>
+                                </div>
+                            </SectionCard>
+                            <SectionCard title="Customer Details">
+                                <div className="flex flex-col gap-2">
+                                    <Field label="Customer">
+                                        <DropdownWithModal
+                                            name=""
+                                            options={dropDownListObject(
+                                                id
+                                                    ? customerList?.data?.filter((i) => i?.isCustomer)
+                                                    : customerList?.data?.filter((i) => i?.active && i?.isCustomer),
+                                                "name", "id"
+                                            )}
+                                            value={customerId}
+                                            setValue={setCustomerId}
+                                            required
+                                            readOnly={readOnly}
+                                            addNewLabel="+ Add New Customer"
+                                            childComponent={PartyMaster}
+                                            addNewModalWidth="w-[90%] h-[95%]"
+                                            disabled={!!id}
+                                        />
+                                    </Field>
+                                    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                        <Field label="Contact Person">
+                                            <TextInput name=""
+                                                value={findFromList(customerId, customerList?.data, "contactPersonName")}
+                                                disabled />
+                                        </Field>
+                                        <Field label="Phone">
+                                            <TextInput name=""
+                                                value={findFromList(customerId, customerList?.data, "contactNumber")}
+                                                disabled />
+                                        </Field>
+                                    </div>
+                                </div>
+                            </SectionCard>
+
+                            {/* <SectionCard title="Order Info"> */}
+
+                        </Col>
 
                         {/* ══ COL 1 — BOARD DETAILS ══════════════════════ */}
                         <Col title="Board Details">
@@ -636,97 +741,6 @@ const JobCardForm = ({
                                     </div>
                                 </div>
                             </SectionCard>
-                        </Col>
-
-                        {/* ══ COL 5 — BASIC DETAILS ══════════════════════ */}
-                        <Col title="Basic Details">
-
-                            <SectionCard>
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                                    <Field label="Job Card No">
-                                        <ReusableInput label="" readOnly value={docId} />
-                                    </Field>
-                                    <Field label="Date">
-                                        <ReusableInput label="" value={docDate} type="date" readOnly disabled />
-                                    </Field>
-                                </div>
-                            </SectionCard>
-                            <SectionCard title="">
-
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                                    <Field label="Order Type">
-                                        <DropdownInput
-                                            name=""
-                                            options={orderTypes}
-                                            value={orderType}
-                                            setValue={setOrderType}
-                                            required
-                                            readOnly={readOnly}
-                                            disabled={readOnly}
-                                            ref={customerRef}
-                                        />
-                                    </Field>
-                                    <Field label="Order Qty">
-                                        <TextInput
-                                            name=""
-                                            value={orderQty}
-                                            setValue={setOrderQty}
-                                            readOnly={readOnly}
-                                            required
-                                            type="number"
-                                            className="text-right w-full"
-                                            onFocus={(e) => e.target.select()}
-                                            onBlur={(e) =>
-                                                setOrderQty(e.target.value ? Number(e.target.value).toFixed(3) : "")
-                                            }
-                                        />
-                                    </Field>
-                                </div>
-                                <div className="mt-2">
-                                    <Field label="Remarks">
-                                        <TextInput name="" value={remarks} setValue={setRemarks}
-                                            readOnly={readOnly} className="w-full" />
-                                    </Field>
-                                </div>
-                            </SectionCard>
-                            <SectionCard title="Customer Details">
-                                <div className="flex flex-col gap-2">
-                                    <Field label="Customer">
-                                        <DropdownWithModal
-                                            name=""
-                                            options={dropDownListObject(
-                                                id
-                                                    ? customerList?.data?.filter((i) => i?.isCustomer)
-                                                    : customerList?.data?.filter((i) => i?.active && i?.isCustomer),
-                                                "name", "id"
-                                            )}
-                                            value={customerId}
-                                            setValue={setCustomerId}
-                                            required
-                                            readOnly={readOnly}
-                                            addNewLabel="+ Add New Customer"
-                                            childComponent={PartyMaster}
-                                            addNewModalWidth="w-[90%] h-[95%]"
-                                            disabled={!!id}
-                                        />
-                                    </Field>
-                                    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                                        <Field label="Contact Person">
-                                            <TextInput name=""
-                                                value={findFromList(customerId, customerList?.data, "contactPersonName")}
-                                                disabled />
-                                        </Field>
-                                        <Field label="Phone">
-                                            <TextInput name=""
-                                                value={findFromList(customerId, customerList?.data, "contactNumber")}
-                                                disabled />
-                                        </Field>
-                                    </div>
-                                </div>
-                            </SectionCard>
-
-                            {/* <SectionCard title="Order Info"> */}
-
                         </Col>
 
                     </div>

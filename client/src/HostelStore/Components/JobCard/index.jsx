@@ -3,7 +3,7 @@ import { getCommonParams } from "../../../Utils/helper";
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService";
 import { useGetUserByIdQuery } from "../../../redux/services/UsersMasterService";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
-import { useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
+import { useGetBranchByIdQuery, useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
 import { useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import JobCardForm from "./JobCardForm.jsx";
@@ -33,7 +33,9 @@ const index = () => {
 
     const { data: plateList } = useGetPlateMasterQuery({ params });
     const { data: dieList } = useGetDieMasterQuery({ params });
-
+    const { data: branchData } = useGetBranchByIdQuery(branchId, {
+        skip: !branchId,
+    });
     const { data: userData } = useGetUserByIdQuery(userId)
 
     const handleView = (orderId) => {
@@ -152,6 +154,8 @@ const index = () => {
                         gsmList={gsmList}
                         plateList={plateList}
                         dieList={dieList}
+                        branchData={branchData}
+
                     />
                 </div>
             )}
