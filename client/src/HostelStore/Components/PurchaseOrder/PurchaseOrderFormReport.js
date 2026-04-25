@@ -47,6 +47,7 @@ const PurchaseOrderFormReport = ({
 
   const [totalCount, setTotalCount] = useState(0);
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
+
   const [approvalModal, setApprovalModal] = useState(false);
   const [selectedPo, setSelectedPo] = useState(null);
   const [actionType, setActionType] = useState(""); // "APPROVE" | "REJECT"

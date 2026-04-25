@@ -75,7 +75,9 @@ import Modal from "../../../UiComponents/Modal/index.js";
 import { PDFViewer } from "@react-pdf/renderer";
 import tw from "../../../Utils/tailwind-react-pdf.js";
 import JobCardPrintFormat from "./JobCardPrintFormat.jsx";
-import { useGetOrderEntryQuery } from "../../../redux/uniformService/OrderEntryService.js";
+import OrderEntryApi, { useGetOrderEntryQuery } from "../../../redux/uniformService/OrderEntryService.js";
+import { useDispatch } from "react-redux";
+import { invalidateOrderEntryModule } from "../../../redux/Dispatch/OrderInvalidateTags.js";
 
 // ── Section card ─────────────────────────────────────────────
 const SectionCard = ({ title, children, className = "" }) => (
@@ -163,6 +165,14 @@ const JobCardForm = ({
     plateList,
     dieList,
     branchData,
+    formOrderCustomerId,
+    setFormOrderCustomerId,
+    fromOrderId,
+    setFromOrderId,
+    fromOrderType,
+    setFromOrderType,
+    fromOrderQty,
+    setFromOrderQty,
 }) => {
     const today = new Date();
 
@@ -202,6 +212,9 @@ const JobCardForm = ({
     const [orderEntryId, setOrderEntryId] = useState("");
     const customerRef = useRef(null);
     const { userId, finYearId, branchId, companyId } = getCommonParams();
+    const [pendingAction, setPendingAction] = useState(null);
+    const [jobRunTime, setJobRunTime] = useState("")
+    const dispatch = useDispatch();
 
     const params = {
         companyId: secureLocalStorage.getItem(
@@ -297,6 +310,7 @@ const JobCardForm = ({
         setSelectedMachines(data?.machineDetails?.map((m) => m.machineId) || []);
         setOrderEntryId(data?.orderEntryId || "");
         setBoardId(data?.boardId || "");
+        setJobRunTime(data?.jobRunTime || "");
     }, []);
 
     useEffect(() => {
@@ -328,7 +342,7 @@ const JobCardForm = ({
         runningQty, isFourColor, isCutColor, isFront, isFrontAndBack, isCMYK,
         isCutColMachine, isFrontMachine, isFrontBackMachine, plateId, dieId,
         totalPlateSet, selectedProcesses, laminations, varnishes, selectedMachines,
-        orderEntryId,
+        orderEntryId, jobRunTime
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -344,18 +358,85 @@ const JobCardForm = ({
                     timer: 2000,
                     didClose: () => {
                         if (returnData.statusCode === 0) {
-                            if (nextProcess === "new") {
-                                setId(0);
-                                setDocId("New");
-                                syncFormWithDb(undefined);
-                                setTimeout(() => customerRef.current?.focus(), 100);
+                            if (!id) {
+                                Swal.fire({
+                                    icon: "question",
+                                    title: "Do You Want to Print?",
+                                    showCancelButton: true,
+                                    confirmButtonText: "Yes, Print",
+                                    cancelButtonText: "No [Esc]",
+                                    confirmButtonColor: "#3085d6",
+                                    cancelButtonColor: "#6b7280",
+                                    focusConfirm: true, // ✅ Auto-focus confirm button
+                                    allowEnterKey: true, // ✅ Allow Enter to confirm
+                                    allowEscapeKey: true, // ✅ Allow Escape to cancel
+                                    didOpen: () => {
+                                        // ✅ Ensure confirm button is focused when modal opens
+                                        const confirmButton = Swal.getConfirmButton();
+                                        const cancelButton = Swal.getCancelButton();
+
+                                        if (confirmButton) {
+                                            confirmButton.focus();
+
+                                            // ✅ Add keyboard navigation
+                                            confirmButton.addEventListener("keydown", (e) => {
+                                                if (e.key === "Tab" && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    cancelButton?.focus();
+                                                }
+                                            });
+                                        }
+
+                                        if (cancelButton) {
+                                            cancelButton.addEventListener("keydown", (e) => {
+                                                if (e.key === "Tab" && e.shiftKey) {
+                                                    e.preventDefault();
+                                                    confirmButton?.focus();
+                                                }
+                                            });
+                                        }
+                                    },
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        // ✅ User clicked "Yes, Print"
+                                        setPrintModalOpen(true);
+                                        // Set the ID so the print modal can access the saved data
+                                        if (returnData?.data?.id) {
+                                            setId(returnData.data.id);
+                                        }
+                                        setPendingAction(nextProcess);
+                                    } else {
+                                        // ✅ User clicked "No, Thanks" - proceed with normal flow
+                                        if (nextProcess === "new") {
+                                            syncFormWithDb(undefined);
+                                            setId("");
+                                            setDocId("New");
+
+                                            setTimeout(() => {
+                                                supplierRef.current?.focus();
+                                            }, 300);
+                                        }
+                                        if (nextProcess === "close") {
+                                            onClose();
+                                        }
+                                    }
+                                });
+                            } else {
+                                if (nextProcess === "new") {
+                                    setId(0);
+                                    setDocId("New");
+                                    syncFormWithDb(undefined);
+                                    setTimeout(() => customerRef.current?.focus(), 100);
+                                }
+                                if (nextProcess === "close") onClose();
                             }
-                            if (nextProcess === "close") onClose();
                         } else {
                             toast.error(returnData?.message);
                         }
                     },
                 });
+                // dispatch(OrderEntryApi.util.invalidateTags(["orderEntry"]));
+                invalidateOrderEntryModule();
             }
         } catch (error) {
             console.error("submit error", error);
@@ -390,6 +471,19 @@ const JobCardForm = ({
         }
     };
 
+    useEffect(() => {
+        customerRef.current?.focus();
+    }, []);
+
+    useEffect(() => {
+        if (formOrderCustomerId && fromOrderId && fromOrderType && fromOrderQty && !id) {
+            setCustomerId(formOrderCustomerId);
+            setOrderEntryId(fromOrderId);
+            setOrderType(fromOrderType);
+            setOrderQty(fromOrderQty);
+        }
+    }, [formOrderCustomerId, fromOrderId, fromOrderType, fromOrderQty]);
+
     return (
         <>
             <Modal
@@ -397,19 +491,19 @@ const JobCardForm = ({
                 onClose={() => {
                     setPrintModalOpen(false);
 
-                    // // Execute pending action after print modal closes
-                    // if (pendingAction === "new") {
-                    //     setId("");
-                    //     setDocId("New");
-                    //     syncFormWithDb(undefined);
-                    //     setTimeout(() => {
-                    //         supplierRef.current?.focus();
-                    //     }, 100);
-                    // }
-                    // if (pendingAction === "close") {
-                    //     onClose();
-                    // }
-                    // setPendingAction(null);
+                    // Execute pending action after print modal closes
+                    if (pendingAction === "new") {
+                        setId("");
+                        setDocId("New");
+                        syncFormWithDb(undefined);
+                        setTimeout(() => {
+                            customerRef.current?.focus();
+                        }, 100);
+                    }
+                    if (pendingAction === "close") {
+                        onClose();
+                    }
+                    setPendingAction(null);
                 }}
                 widthClass={"w-[90%] h-[90%]"}
             >
@@ -467,13 +561,14 @@ const JobCardForm = ({
                                         <Field label="Order No">
                                             <DropdownNew
                                                 name=""
-                                                dataList={orderList?.data}
+                                                dataList={orderList?.data?.filter(item => item?.approvalStatus?.status === "APPROVED")}
                                                 value={orderEntryId}
                                                 setValue={setOrderEntryId}
                                                 required
                                                 readOnly={readOnly}
                                                 disabled={readOnly}
                                                 otherField={"docId"}
+                                                ref={customerRef}
                                             />
                                         </Field>
                                     </div>
@@ -487,7 +582,6 @@ const JobCardForm = ({
                                             required
                                             readOnly={readOnly}
                                             disabled={readOnly}
-                                            ref={customerRef}
                                         />
                                     </Field>
                                     <Field label="Order Qty">
@@ -503,6 +597,18 @@ const JobCardForm = ({
                                             onBlur={(e) =>
                                                 setOrderQty(e.target.value ? Number(e.target.value).toFixed(3) : "")
                                             }
+                                        />
+                                    </Field>
+                                    <Field label="Job Run Time">
+                                        <TextInput
+                                            name=""
+                                            value={jobRunTime}
+                                            setValue={setJobRunTime}
+                                            readOnly={readOnly}
+                                            required
+                                            type="text"
+                                            className=" w-full"
+                                            onFocus={(e) => e.target.select()}
                                         />
                                     </Field>
 

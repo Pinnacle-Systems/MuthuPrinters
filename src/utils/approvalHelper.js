@@ -545,7 +545,6 @@ export async function rejectRecord(
   });
 }
 
-
 // approvalHelper.js — add this export
 export async function markNotificationAsRead(approvalLogId, userId) {
   // Mark the specific log as read for this user
@@ -570,3 +569,74 @@ export async function markNotificationAsRead(approvalLogId, userId) {
   return { statusCode: 0, data: updated };
 }
 // notificationService.js or approvalHelper.js
+
+export function getApprovalStatus(log, isApprovalConfigured = false) {
+  if (!log) {
+    return isApprovalConfigured
+      ? {
+          status: "NOTAPPROVED",
+          label: "Not Approved",
+          color: "orange",
+          currentLevel: 1,
+          levelLogs: [],
+        }
+      : {
+          status: "NOT_CONFIGURED",
+          label: "No Approval",
+          color: "gray",
+          currentLevel: null,
+          levelLogs: [],
+        };
+  }
+  const base = {
+    currentLevel: log.currentLevel,
+    levelLogs: log.LevelLogs ?? [],
+    remarks: log.remarks,
+  };
+  const map = {
+    APPROVED: {
+      ...base,
+      status: "APPROVED",
+      label: "Approved",
+      color: "green",
+    },
+    REJECTED: { ...base, status: "REJECTED", label: "Rejected", color: "red" },
+    PENDING: { ...base, status: "PENDING", label: "Pending", color: "orange" },
+    NOTAPPROVED: {
+      ...base,
+      status: "NOTAPPROVED",
+      label: "Not Approved",
+      color: "orange",
+    },
+    SUPERSEDED: {
+      ...base,
+      status: "SUPERSEDED",
+      label: "Re-approval Needed",
+      color: "yellow",
+    }, // ✅ NEW
+  };
+  return (
+    map[log.status] ?? {
+      ...base,
+      status: "UNKNOWN",
+      label: "Unknown",
+      color: "gray",
+    }
+  );
+}
+
+export function evaluateConfigs(activeConfigs, record) {
+  if (!activeConfigs?.length) return false;
+
+  // ✅ Only valid configs with levels + users, sorted by priority
+  const valid = activeConfigs
+    .filter(
+      (c) =>
+        c.approvalLevels?.length > 0 &&
+        c.approvalLevels.some((l) => l.LevelUsers?.length > 0),
+    )
+    .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+
+  // ✅ Use shared evaluator — same logic as getTriggeredConfig for consistency
+  return valid.some((config) => evaluateConfigTrigger(config, record));
+}

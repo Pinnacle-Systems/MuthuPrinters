@@ -963,7 +963,7 @@ const PurchaseOrderForm = ({
           }}
           required={true}
           readOnly={isCoreLocked}
-          disabled={orderId || id || isCoreLocked}
+          disabled={orderId || childRecordCount > 0 || isCoreLocked}
           ref={supplierRef}
           className={`${compactFieldClass} w-full max-w-none`}
           autoFocus={true}
@@ -1031,7 +1031,7 @@ const PurchaseOrderForm = ({
           addNewLabel="+ Add New Supplier"
           childComponent={PartyMaster}
           addNewModalWidth="w-[90%] h-[95%]"
-          disabled={id}
+          disabled={childRecordCount > 0}
         />
       </div>
 

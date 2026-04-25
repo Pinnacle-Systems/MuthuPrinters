@@ -839,7 +839,7 @@ const PurchaseOrderPrintFormat = ({
               {/* ── FOOTER BAR ── */}
               <View style={[styles.footerBar, !isLastPage && { marginTop: 20 }]}>
                 <Text style={styles.footerLeft}>
-                  This is a computer-generated document.
+
                 </Text>
                 <Text
                   style={styles.footerRight}

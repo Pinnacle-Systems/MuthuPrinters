@@ -31,6 +31,7 @@ import {
   focusNextGridField,
   focusPreviousGridField,
 } from "../Basic/components/Reuseable/gridNavigation";
+import { UserPermissions } from "../Utils/UserPermissions";
 
 const FORM_LABEL_CLASS = "block text-[11px] font-bold text-slate-700 mb-1";
 const FORM_LABEL_MUTED_CLASS = "block text-[11px] font-bold text-gray-600 mb-1";
@@ -1581,6 +1582,8 @@ export const ReusableTable = ({
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = data?.slice(indexOfFirstItem, indexOfLastItem);
 
+  const { hasPermission } = UserPermissions();
+
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
@@ -1727,7 +1730,9 @@ export const ReusableTable = ({
                               {onView && (
                                 <button
                                   className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
-                                  onClick={() => onView(item.id)}
+                                  onClick={() =>
+                                    hasPermission(() => onView(item.id), "read")
+                                  }
                                 >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1747,7 +1752,9 @@ export const ReusableTable = ({
                               {onEdit && (
                                 <button
                                   className="text-green-600 gap-1 px-1   bg-green-50 rounded"
-                                  onClick={() => onEdit(item.id)}
+                                  onClick={() =>
+                                    hasPermission(() => onEdit(item.id), "edit")
+                                  }
                                 >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1776,7 +1783,15 @@ export const ReusableTable = ({
                                     // cursor-pointer
                                     onClick={() => {
                                       if (!hasChildRecords) {
-                                        onDelete(item.id, item?.childRecord);
+                                        hasPermission(
+                                          () =>
+                                            onDelete(
+                                              item.id,
+                                              item?.childRecord,
+                                            ),
+                                          "delete",
+                                          item?.childRecord,
+                                        );
                                       }
                                     }}
                                     disabled={hasChildRecords}

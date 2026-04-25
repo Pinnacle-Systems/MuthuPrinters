@@ -8,13 +8,14 @@ import { useGetBranchQuery } from "../../../redux/services/BranchMasterService.j
 import { useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import OrderEntryReport from "./OrderEntryReport.jsx";
-import PurchaseOrderForm from "../PurchaseOrder/PurchaseOrderForm.js";
 import OrderEntryForm from "./OrderEntryForm.jsx";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
     const [id, setId] = useState("");
     const [readOnly, setReadOnly] = useState(false);
+    const [selectedOrderId, setSelectedOrderId] = useState("");
+    const [showJobCardForm, setShowJobCardForm] = useState(false);
 
     const dispatch = useDispatch();
     const { branchId, companyId, finYearId, userId } = getCommonParams();
@@ -92,6 +93,11 @@ const index = () => {
     const { data: customerList } = useGetPartyQuery({ params: { ...params } });
     const { data: branchList } = useGetBranchQuery({ params: { ...params } });
 
+    const handleCreateJobCard = (orderId) => {
+        setSelectedOrderId(orderId);
+        setShowJobCardForm(true);
+    };
+
     return (
         <>
             <div
@@ -125,6 +131,7 @@ const index = () => {
                         onDelete={handleDelete}
                         itemsPerPage={10}
                         userData={userData?.data}
+                        onCreateJobCard={handleCreateJobCard}
                     />
                 </div>
             </div>

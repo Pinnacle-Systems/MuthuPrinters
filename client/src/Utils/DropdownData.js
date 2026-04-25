@@ -162,8 +162,8 @@ export const partyType = [
 ];
 
 export const orderTypes = [
-  { show: "Sample", value: "Sample" },
-  { show: "Bulk", value: "Bulk" },
+  { show: "SAMPLE", value: "SAMPLE" },
+  { show: "BULK", value: "BULK" },
 ];
 
 export const jobTypes = [

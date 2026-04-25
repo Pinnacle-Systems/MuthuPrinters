@@ -11,6 +11,14 @@ import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import fs from "fs";
 import path from "path";
+import {
+  getModuleApprovalSetup,
+  getApprovalStatus,
+  evaluateConfigs,
+  buildIncludeForModule,
+  createApprovalLog,
+} from "../utils/approvalHelper.js";
+const REFERENCE_PAGE = "ORDER ENTRY";
 
 async function getNextDocId(
   branchId,
@@ -174,29 +182,112 @@ async function get(req) {
           name: true,
         },
       },
+      _count: {
+        select: {
+          JobCard: true,
+        },
+      },
     },
     orderBy: {
       docId: "desc",
     },
   });
-  totalCount = data.length;
   if (searchDocDate) {
     data = data?.filter((item) =>
       String(getDateFromDateTime(item.createdAt)).includes(searchDocDate),
     );
   }
+  totalCount = data.length;
+
+  // if (pagination) {
+  //   data = data.slice(
+  //     (pageNumber - 1) * parseInt(dataPerPage),
+  //     pageNumber * dataPerPage,
+  //   );
+  // }
+
+  // ── approval setup check ──────────────────────────────────────────────────
+  const { module, hasApproval } = await getModuleApprovalSetup(
+    REFERENCE_PAGE,
+    branchId,
+  );
+
+  // ── fetch all relevant approval logs in one query ─────────────────────────
+  const orderIds = data.map((o) => o.id);
+
+  const approvalLogs = await prisma.approvalLog.findMany({
+    where: { referencePage: REFERENCE_PAGE, referenceId: { in: orderIds } },
+    select: {
+      id: true,
+      referenceId: true,
+      status: true,
+      remarks: true,
+      currentLevel: true,
+      LevelLogs: {
+        select: {
+          action: true,
+          levelNo: true,
+          userId: true,
+          createdAt: true,
+          User: { select: { id: true, username: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+
+  const approvalLogMap = approvalLogs.reduce((acc, log) => {
+    acc[log.referenceId] = log;
+    return acc;
+  }, {});
+
+  // ── fetch active configs only if approval is set up ───────────────────────
+  const activeConfigs =
+    hasApproval && module
+      ? await prisma.approvalConfig.findMany({
+          where: {
+            moduleId: module.id,
+            branchId: parseInt(branchId),
+            active: true,
+          },
+          include: {
+            ConfigConditions: {
+              include: { Field: true, Operator: true, CompareField: true },
+            },
+            approvalLevels: {
+              include: { LevelUsers: true },
+              orderBy: { levelNo: "asc" },
+            },
+          },
+        })
+      : [];
+
+  // ── resolve approval status per record ───────────────────────────────────
+  let resolvedData = data.map((order) => {
+    const log = approvalLogMap[order.id] ?? null;
+
+    let shouldTrigger = false;
+    if (!log && hasApproval && activeConfigs.length > 0) {
+      shouldTrigger = evaluateConfigs(activeConfigs, order);
+    }
+
+    return {
+      ...order,
+      childRecord: order._count.JobCard,
+      approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+    };
+  });
+
   if (pagination) {
-    data = data.slice(
+    resolvedData = resolvedData.slice(
       (pageNumber - 1) * parseInt(dataPerPage),
-      pageNumber * dataPerPage,
+      pageNumber * parseInt(dataPerPage),
     );
   }
+
   return {
     statusCode: 0,
-    data: data.map((item) => ({
-      ...item,
-      childRecord: 0,
-    })),
+    data: resolvedData,
     nextDocId: newDocId,
     totalCount,
   };
@@ -219,12 +310,20 @@ async function getOne(id) {
           name: true,
         },
       },
+      _count: {
+        select: {
+          JobCard: true,
+        },
+      },
     },
   });
   if (!data) return NoRecordFound("Purchase Inward");
   return {
     statusCode: 0,
-    data: data,
+    data: {
+      ...data,
+      childRecord: data._count.JobCard,
+    },
   };
 }
 
@@ -259,6 +358,11 @@ async function create(body) {
     finYearDate?.endDateEndTime,
     draftSave,
   );
+  // ✅ Single universal check OUTSIDE transaction — covers all 3 scenarios
+  const { module, hasApproval } = await getModuleApprovalSetup(
+    REFERENCE_PAGE,
+    branchId,
+  );
   let data;
   const safeorderQty =
     orderQty && !isNaN(Number(orderQty)) ? parseFloat(orderQty) : null;
@@ -291,6 +395,28 @@ async function create(body) {
             : undefined,
       },
     });
+    // ✅ Only runs if: module exists AND active config exists for this branch
+    // If PO has no rules configured → hasApproval=false → skipped, form saves normally
+    if (hasApproval && module) {
+      // ✅ Dynamic include — pulls every relation any Field master references
+      const includeClause = await buildIncludeForModule(module.id);
+
+      const fullRecord = await tx.orderEntry.findUnique({
+        where: { id: data.id },
+        include: includeClause,
+      });
+
+      await createApprovalLog(
+        tx,
+        branchId,
+        module.id,
+        data.id,
+        REFERENCE_PAGE,
+        fullRecord,
+        data.docId,
+        userId,
+      );
+    }
   });
   return { statusCode: 0, data };
 }
@@ -424,6 +550,10 @@ async function update(id, body, files) {
 }
 
 async function remove(id) {
+  const orderEntryId = parseInt(id);
+  await prisma.approvalLog.deleteMany({
+    where: { referencePage: REFERENCE_PAGE, referenceId: orderEntryId },
+  });
   const dataFound = await prisma.orderEntry.findUnique({
     where: { id: parseInt(id) },
     include: { attachments: { select: { filePath: true } } },

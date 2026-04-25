@@ -475,6 +475,7 @@ const JobCardPrintFormat = ({
         laminationDetails,
         varnishDetails,
         machineDetails,
+        jobRunTime
     } = singleData;
 
     const customer = customerList?.data?.find((c) => c.id === customerId);
@@ -590,7 +591,8 @@ const JobCardPrintFormat = ({
                                 <SpecField label="Running Qty" value={runningQty || "—"} />
                                 <SpecField label="Plate Type" value={findFromList(plateId, plateList?.data, "name")} />
                                 <SpecField label="Total Plate Set" value={totalPlateSet || "—"} />
-                                <SpecField label="Die Reference" value={findFromList(dieId, dieList?.data, "name")} />
+                                <SpecField label="Die" value={findFromList(dieId, dieList?.data, "name")} />
+                                <SpecField label="Job Run Time" value={jobRunTime || "—"} />
                             </View>
                         </View>
                     </View>
@@ -685,7 +687,7 @@ const JobCardPrintFormat = ({
                 <View style={styles.sigArea} >
                     <Text style={styles.sigCompany}>For {branchData?.branchName || ""}</Text>
                     <View style={styles.sigRow}>
-                        {["Prepared By", "Verified By", "Approved By"].map((role) => (
+                        {["Designer sign", "Incharge sign", "Proprietor sign", "Operator sign"].map((role) => (
                             <Text key={role} style={styles.sigItem}>{role}</Text>
                         ))}
                     </View>
@@ -693,7 +695,7 @@ const JobCardPrintFormat = ({
 
                 {/* ── FOOTER BAR ── */}
                 <View style={styles.footerBar}>
-                    <Text style={styles.footerLeft}>This is a computer-generated document.</Text>
+                    <Text style={styles.footerLeft}></Text>
                     <Text
                         style={styles.footerRight}
                         render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}

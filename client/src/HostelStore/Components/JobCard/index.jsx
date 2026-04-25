@@ -1,10 +1,10 @@
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getCommonParams } from "../../../Utils/helper";
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService";
 import { useGetUserByIdQuery } from "../../../redux/services/UsersMasterService";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
 import { useGetBranchByIdQuery, useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import JobCardForm from "./JobCardForm.jsx";
 import JobCardReport from "./JobCardReport.jsx";
@@ -12,11 +12,17 @@ import { useDeleteJobCardMutation } from "../../../redux/uniformService/JobCardS
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
 import { useGetPlateMasterQuery } from "../../../redux/services/PlateMasterService.js";
 import { useGetDieMasterQuery } from "../../../redux/services/DieMasterService.js";
+import OrderEntryApi from "../../../redux/uniformService/OrderEntryService.js";
+import { invalidateOrderEntryModule } from "../../../redux/Dispatch/OrderInvalidateTags.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
     const [id, setId] = useState("");
     const [readOnly, setReadOnly] = useState(false);
+    const [formOrderCustomerId, setFormOrderCustomerId] = useState("");
+    const [fromOrderId, setFromOrderId] = useState("");
+    const [fromOrderType, setFromOrderType] = useState("");
+    const [fromOrderQty, setFromOrderQty] = useState("");
 
     const dispatch = useDispatch();
     const { branchId, companyId, finYearId, userId } = getCommonParams();
@@ -59,6 +65,7 @@ const index = () => {
 
             try {
                 let deldata = await removeData(id).unwrap();
+                invalidateOrderEntryModule();
                 if (deldata?.statusCode == 1) {
                     Swal.fire({
                         icon: "error",
@@ -73,9 +80,8 @@ const index = () => {
                     icon: "success",
                     timer: 1000,
                 });
+                // dispatch(OrderEntryApi.util.invalidateTags(["orderEntry"]));
                 setShowForm(false);
-                dispatchInvalidate();
-                invalidatePurchaseModule();
             } catch (error) {
                 Swal.fire({
                     icon: "error",
@@ -98,6 +104,33 @@ const index = () => {
 
     const { data: customerList } = useGetPartyQuery({ params: { ...params } });
     const { data: branchList } = useGetBranchQuery({ params: { ...params } });
+
+    const tabParams = useSelector((state) =>
+        state.openTabs.tabs.find((t) => t.name === "JOB CARD")?.params
+    );
+    console.log(tabParams, "tabparams");
+
+    const lastProcessedTimestamp = useRef(null);
+
+    useEffect(() => {
+        // Skip if no params or already processed this exact timestamp
+        if (!tabParams?.customerId || !tabParams?.timestamp) return;
+        if (tabParams.timestamp === lastProcessedTimestamp.current) return;
+
+        // ⬅️ Mark as processed BEFORE setting state
+        lastProcessedTimestamp.current = tabParams.timestamp;
+
+        setFormOrderCustomerId(tabParams.customerId);
+        setFromOrderId(tabParams.orderEntryId);
+        setFromOrderType(tabParams.orderType);
+        setFromOrderQty(tabParams.orderQty);
+        setId("");
+        setReadOnly(false);
+        setShowForm(true);
+
+        // ❌ NO clearTabParams here — that's what's breaking it
+
+    }, [tabParams]);
 
     return (
         <>
@@ -146,6 +179,10 @@ const index = () => {
                         onClose={() => {
                             setShowForm(false);
                             setReadOnly((prev) => !prev);
+                            setFormOrderCustomerId("");
+                            setFromOrderId("");
+                            setFromOrderType("");
+                            setFromOrderQty("");
                         }}
                         setShowForm={setShowForm}
                         customerList={customerList}
@@ -155,7 +192,14 @@ const index = () => {
                         plateList={plateList}
                         dieList={dieList}
                         branchData={branchData}
-
+                        formOrderCustomerId={formOrderCustomerId}
+                        setFormOrderCustomerId={setFormOrderCustomerId}
+                        fromOrderId={fromOrderId}
+                        setFromOrderId={setFromOrderId}
+                        fromOrderType={fromOrderType}
+                        setFromOrderType={setFromOrderType}
+                        fromOrderQty={fromOrderQty}
+                        setFromOrderQty={setFromOrderQty}
                     />
                 </div>
             )}
