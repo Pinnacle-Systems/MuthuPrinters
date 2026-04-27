@@ -1730,9 +1730,10 @@ export const ReusableTable = ({
                               {onView && (
                                 <button
                                   className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
-                                  onClick={() =>
-                                    hasPermission(() => onView(item.id), "read")
-                                  }
+                                  // onClick={() =>
+                                  //   hasPermission(() => onView(item.id), "read")
+                                  // }
+                                  onClick={() => onView(item.id)}
                                 >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1752,9 +1753,10 @@ export const ReusableTable = ({
                               {onEdit && (
                                 <button
                                   className="text-green-600 gap-1 px-1   bg-green-50 rounded"
-                                  onClick={() =>
-                                    hasPermission(() => onEdit(item.id), "edit")
-                                  }
+                                  // onClick={() =>
+                                  //   hasPermission(() => onEdit(item.id), "edit")
+                                  // }
+                                  onClick={() => onEdit(item.id)}
                                 >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1781,17 +1783,22 @@ export const ReusableTable = ({
                                         : "hover:bg-red-100"
                                     }`}
                                     // cursor-pointer
+                                    // onClick={() => {
+                                    //   if (!hasChildRecords) {
+                                    //     hasPermission(
+                                    //       () =>
+                                    //         onDelete(
+                                    //           item.id,
+                                    //           item?.childRecord,
+                                    //         ),
+                                    //       "delete",
+                                    //       item?.childRecord,
+                                    //     );
+                                    //   }
+                                    // }}
                                     onClick={() => {
                                       if (!hasChildRecords) {
-                                        hasPermission(
-                                          () =>
-                                            onDelete(
-                                              item.id,
-                                              item?.childRecord,
-                                            ),
-                                          "delete",
-                                          item?.childRecord,
-                                        );
+                                        onDelete(item.id, item?.childRecord);
                                       }
                                     }}
                                     disabled={hasChildRecords}
