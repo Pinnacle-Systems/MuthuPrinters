@@ -83,7 +83,6 @@ const OrderEntryForm = ({
     const [actionType, setActionType] = useState("");
     const [approvalRemarks, setApprovalRemarks] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
-
     const qrRef = useRef(null);
     const customerRef = useRef(null);
     const childRecord = useRef(0);
