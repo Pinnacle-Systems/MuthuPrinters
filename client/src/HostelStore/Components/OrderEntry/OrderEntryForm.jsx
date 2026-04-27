@@ -32,6 +32,12 @@ import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFoot
 import { PDFViewer } from "@react-pdf/renderer";
 import OrderEntryPrintFormat from "./OrderEntryPrintFormat.jsx";
 import { FiFileText, FiPrinter } from "react-icons/fi";
+import OrderItems from "./OrderItems.jsx";
+import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
+import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
+import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices.js";
+import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
+
 const OrderEntryForm = ({
     onClose,
     id,
@@ -65,27 +71,34 @@ const OrderEntryForm = ({
     const [termsId, setTermsId] = useState("");
     const [printModalOpen, setPrintModalOpen] = useState(false);
     const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
+    const [orderItems, setOrderItems] = useState([]);
+
     const qrRef = useRef(null);
     const customerRef = useRef(null);
     const childRecord = useRef(0);
 
     const [dispatchInvalidate] = useInvalidateTags();
 
-    const { userId, finYearId, branchId } = getCommonParams();
+    const { userId, finYearId, branchId, companyId } = getCommonParams();
+    const params = {
+        branchId,
+        companyId,
+        finYearId,
+    };
 
     const {
         data: singleData,
         isFetching: isSingleFetching,
         isLoading: isSingleLoading,
     } = useGetOrderEntryByIdQuery(id, { skip: !id });
+    const { data: styleItemList } = useGetStyleItemMasterQuery({
+        params: { ...params },
+    });
+    const { data: uomList } = useGetUnitOfMeasurementMasterQuery({ params });
+    const { data: sizeList } = useGetSizeMasterQuery({ params });
 
     const [addData] = useAddOrderEntryMutation();
     const [updateData] = useUpdateOrderEntryMutation();
-
-    const searchFields = {
-        searchDocId,
-        searchDocDate,
-    };
 
     const syncFormWithDb = useCallback(
         (data) => {
@@ -111,6 +124,7 @@ const OrderEntryForm = ({
             setTermsAndCondition(data?.termsAndCondition || "");
             setTermsId(data?.termsId || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
+            setOrderItems(data?.orderItems || []);
         },
         [id],
     );
@@ -140,6 +154,7 @@ const OrderEntryForm = ({
         termsAndCondition,
         termsId,
         docId,
+        orderItems: orderItems?.filter((i) => i.styleItemId && i.orderQty),
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -286,9 +301,9 @@ const OrderEntryForm = ({
     }, []);
 
     useEffect(() => {
-        if (attachments?.length >= 4) return;
+        if (attachments?.length >= 5) return;
         setAttachments((prev) => {
-            let newArray = Array.from({ length: 4 - prev?.length }, () => {
+            let newArray = Array.from({ length: 5 - prev?.length }, () => {
                 return { date: today, filePath: "", log: "", name: "" };
             });
             return [...prev, ...newArray];
@@ -328,228 +343,13 @@ const OrderEntryForm = ({
                     }}
                     widthClass="p-4 w-[600px] h-[420px]"
                 >
-
-                </Modal>
-            )}
-
-            {printModalOpen && (
-                <Modal
-                    isOpen={printModalOpen}
-                    onClose={() => setPrintModalOpen(false)}
-                    widthClass="w-[90%] h-[90%]"
-                >
-                    <PDFViewer className="w-full h-full border-none">
-                        <OrderEntryPrintFormat
-                            data={data}
-                            customerDetails={customerList?.data?.find(c => c.id === customerId)}
-                            branchData={branchList?.data?.find(b => b.id === branchId)}
-                            qrCodeDataUrl={qrCodeDataUrl}
-                        />
-                    </PDFViewer>
-                </Modal>
-            )}
-            <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-lg font-bold flex items-center gap-2">
-                        Order Entry
-                        <ModeChip id={id} readOnly={readOnly} />
-                    </h1>
-                    <button
-                        onClick={() => {
-                            onClose();
-                        }}
-                        className="text-indigo-600 hover:text-indigo-700"
-                        title="Back to Report"
-                    >
-                        <IoArrowBackCircleSharp className="w-7 h-7" />
-                    </button>
-                </div>
-            </div>
-            <div className="space-y-2 py-2" onKeyDown={handleKeyDown}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">Basic Details</h2>
-                        <div className="grid grid-cols-2 gap-1">
-                            <ReusableInput
-                                label="Order Entry No"
-                                readOnly
-                                value={docId}
-                            />
-                            <ReusableInput
-                                label="Order Entry Date"
-                                value={docDate}
-                                type={"date"}
-                                required={true}
-                                readOnly={true}
-                                disabled
-                            />
-
-                        </div>
-                    </div>
-
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">Order Details</h2>
-                        <div className="grid grid-cols-3 gap-1 ">
-                            <DropdownInput
-                                name="Order Type"
-                                options={orderTypes}
-                                value={orderType}
-                                setValue={(value) => {
-                                    setOrderType(value);
-                                }}
-                                required={true}
-                                readOnly={readOnly}
-                                disabled={readOnly || childRecord.current > 0}
-                                ref={customerRef}
-                            />
-
-                            <div className="w-28">
-                                <TextInput
-                                    name={"Order Quantity"}
-                                    value={orderQty}
-                                    setValue={setOrderQty}
-                                    readOnly={readOnly || childRecord.current > 0}
-                                    required={true}
-                                    type={"number"}
-                                    onFocus={(e) => {
-                                        e.target.select();
-                                    }}
-                                    onBlur={(e) =>
-                                        setOrderQty(
-                                            e.target.value ? Number(e.target.value).toFixed(3) : "",
-                                        )
-                                    }
-                                    className={"text-right"}
-                                />
-                            </div>
-                            <div className="w-28">
-                                <DateInputNew
-                                    name="Delivery Date"
-                                    value={deliveryDate}
-                                    setValue={setDeliveryDate}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    type={"date"}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">
-                            Customer Details
-                        </h2>
-                        <div className="grid grid-cols-2 gap-1">
-                            <div className="col-span-2">
-                                <DropdownWithModal
-                                    name="Customer"
-                                    options={dropDownListObject(
-                                        id
-                                            ? customerList?.data?.filter((item) => item?.isCustomer)
-                                            : customerList?.data?.filter(
-                                                (item) => item?.active && item?.isCustomer,
-                                            ),
-                                        "name",
-                                        "id",
-                                    )}
-                                    value={customerId}
-                                    setValue={setCustomerId}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    className={`w-[150px]`}
-                                    addNewLabel="+ Add New Customer"
-                                    childComponent={PartyMaster}
-                                    addNewModalWidth="w-[90%] h-[95%]"
-                                    disabled={readOnly || childRecord.current > 0}
-                                />
-                            </div>
-                            <TextInput
-                                name="Contact Person"
-                                placeholder="Contact name"
-                                value={findFromList(
-                                    customerId,
-                                    customerList?.data,
-                                    "contactPersonName",
-                                )}
-                                disabled={true}
-                            />
-
-                            <TextInput
-                                name="Phone"
-                                placeholder="Contact name"
-                                value={findFromList(
-                                    customerId,
-                                    customerList?.data,
-                                    "contactNumber",
-                                )}
-                                disabled={true}
-                            />
-                        </div>
-                    </div>
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">QR Code</h2>
-                        <div className="flex flex-col items-center justify-center gap-2">
-                            {docId && docId !== "New" ? (
-                                <>
-                                    <QRCodeCanvas
-                                        ref={qrRef}
-                                        value={JSON.stringify({ id, docId })}
-                                        size={96}
-                                        className="border border-slate-200 rounded"
-                                    />
-                                    <span className="text-xs text-slate-400">Scan to identify order</span>
-                                </>
-                            ) : (
-                                <div className="w-24 h-24 flex items-center justify-center border border-dashed border-slate-300 rounded text-slate-400 text-xs text-center px-2">
-                                    QR appears after save
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-                <div className="border border-slate-200 p-2 py-3 bg-white rounded-md shadow-sm gap-x-4 flex">
-                    <div className="w-1/2 px-2">
-                        <fieldset className="">
-                            <legend className="font-medium text-slate-700 mb-2 text-xs">Customer Requirements</legend>
-                            <textarea
-                                readOnly={readOnly}
-                                value={requirements}
-                                onChange={(e) => {
-                                    setRequirements(e.target.value);
-                                }}
-                                className="w-full overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md 
-focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"                            placeholder="Requirements..."
-                                onKeyDown={(e) => {
-                                    if (e.ctrlKey && e.key === "Enter") {
-                                        e.preventDefault();
-
-                                        const textarea = e.target;
-                                        const start = textarea.selectionStart;
-                                        const end = textarea.selectionEnd;
-
-                                        const newValue =
-                                            requirements.substring(0, start) + "\n" + requirements.substring(end);
-
-                                        setRequirements(newValue);
-
-                                        // ✅ Restore focus + cursor properly
-                                        requestAnimationFrame(() => {
-                                            textarea.focus();
-                                            textarea.setSelectionRange(start + 1, start + 1);
-                                        });
-                                    }
-                                }}
-                                rows={9}
-                            />
-                        </fieldset>
-                    </div>
-                    <div className="w-1/2 space-y-2 px-2">
-                        <h2 className="text-xs font-medium text-slate-700">
+                    <div className="space-y-3">
+                        <h2 className="text-base font-semibold text-slate-700">
                             Attachments
                         </h2>
 
                         {/* Drag & Drop Zone */}
-                        {/* <div
+                        <div
                             className="border-2 border-dashed border-indigo-300 rounded-lg p-4 text-center cursor-pointer hover:bg-indigo-50 transition"
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={(e) => {
@@ -583,7 +383,7 @@ focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"  
                                     Select a row below first
                                 </p>
                             )}
-                        </div> */}
+                        </div>
 
                         {/* Hidden file input for drag & drop zone */}
                         <input
@@ -604,9 +404,9 @@ focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"  
                         />
 
                         {/* Attachments Table */}
-                        <div className="max-h-[170px] overflow-auto">
+                        <div className="max-h-[200px] overflow-auto">
                             <div className="border-collapse bg-[#F1F1F0] shadow-sm overflow-auto">
-                                <table className="bg-gray-200 text-gray-700 text-xs table-auto w-full">
+                                <table className="bg-gray-200 text-gray-800 text-sm table-auto w-full">
                                     <thead className="py-2 font-medium sticky top-0">
                                         <tr>
                                             <th className="py-2 text-xs w-10 text-center border-r border-white/50">
@@ -626,9 +426,11 @@ focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"  
                                             <tr
                                                 key={index}
                                                 onClick={() => setSelectedAttachmentIndex(index)}
-                                                className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${index % 2 === 0
-                                                    ? "bg-white hover:bg-gray-50"
-                                                    : "bg-gray-100 hover:bg-gray-50"
+                                                className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${index === selectedAttachmentIndex
+                                                    ? "bg-indigo-100 border-l-2 border-l-indigo-500"
+                                                    : index % 2 === 0
+                                                        ? "bg-white hover:bg-gray-50"
+                                                        : "bg-gray-100 hover:bg-gray-50"
                                                     }`}
                                             >
                                                 {/* S.No */}
@@ -762,27 +564,213 @@ focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"  
                             </div>
                         </div>
 
+                        {/* Footer */}
+                        <div className="flex justify-end pt-1">
+                            <button
+                                onClick={() => {
+                                    setAttachmentModal(false);
+                                    setSelectedAttachmentIndex(null);
+                                }}
+                                className="px-2 py-1 text-sm rounded bg-green-700 text-white hover:bg-green-800 border border-green-800"
+                            >
+                                Done
+                            </button>
+                        </div>
                     </div>
+                </Modal>
+            )}
+
+            {printModalOpen && (
+                <Modal
+                    isOpen={printModalOpen}
+                    onClose={() => setPrintModalOpen(false)}
+                    widthClass="w-[90%] h-[90%]"
+                >
+                    <PDFViewer className="w-full h-full border-none">
+                        <OrderEntryPrintFormat
+                            data={data}
+                            customerDetails={customerList?.data?.find(c => c.id === customerId)}
+                            branchData={branchList?.data?.find(b => b.id === branchId)}
+                            qrCodeDataUrl={qrCodeDataUrl}
+                        />
+                    </PDFViewer>
+                </Modal>
+            )}
+            <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
+                <div className="flex justify-between items-center">
+                    <h1 className="text-lg font-bold flex items-center gap-2">
+                        Order Entry
+                        <ModeChip id={id} readOnly={readOnly} />
+                    </h1>
+                    <button
+                        onClick={() => {
+                            onClose();
+                        }}
+                        className="text-indigo-600 hover:text-indigo-700"
+                        title="Back to Report"
+                    >
+                        <IoArrowBackCircleSharp className="w-7 h-7" />
+                    </button>
+                </div>
+            </div>
+            <div className="space-y-2 py-2" onKeyDown={handleKeyDown}>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
+                        <h2 className="font-medium text-slate-700 mb-1 text-xs">Basic Details</h2>
+                        <div className="grid grid-cols-2 gap-1">
+                            <ReusableInput
+                                label="Order Entry No"
+                                readOnly
+                                value={docId}
+                            />
+                            <ReusableInput
+                                label="Order Entry Date"
+                                value={docDate}
+                                type={"date"}
+                                required={true}
+                                readOnly={true}
+                                disabled
+                            />
+
+                        </div>
+                    </div>
+
+                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
+                        <h2 className="font-medium text-slate-700 mb-1 text-xs">Order Details</h2>
+                        <div className="grid grid-cols-2 gap-1 ">
+                            <DropdownInput
+                                name="Order Type"
+                                options={orderTypes}
+                                value={orderType}
+                                setValue={(value) => {
+                                    setOrderType(value);
+                                }}
+                                required={true}
+                                readOnly={readOnly}
+                                disabled={readOnly}
+                                ref={customerRef}
+                            />
+
+                            <div className="w-28">
+                                <DateInputNew
+                                    name="Delivery Date"
+                                    value={deliveryDate}
+                                    setValue={setDeliveryDate}
+                                    required={true}
+                                    readOnly={readOnly}
+                                    type={"date"}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
+                        <h2 className="font-medium text-slate-700 mb-1 text-xs">
+                            Customer Details
+                        </h2>
+                        <div className="grid grid-cols-2 gap-1">
+                            <div className="col-span-2">
+                                <DropdownWithModal
+                                    name="Customer"
+                                    options={dropDownListObject(
+                                        id
+                                            ? customerList?.data?.filter((item) => item?.isCustomer)
+                                            : customerList?.data?.filter(
+                                                (item) => item?.active && item?.isCustomer,
+                                            ),
+                                        "name",
+                                        "id",
+                                    )}
+                                    value={customerId}
+                                    setValue={setCustomerId}
+                                    required={true}
+                                    readOnly={readOnly}
+                                    className={`w-[150px]`}
+                                    addNewLabel="+ Add New Customer"
+                                    childComponent={PartyMaster}
+                                    addNewModalWidth="w-[90%] h-[95%]"
+                                    disabled={id}
+                                />
+                            </div>
+                            <TextInput
+                                name="Contact Person"
+                                placeholder="Contact name"
+                                value={findFromList(
+                                    customerId,
+                                    customerList?.data,
+                                    "contactPersonName",
+                                )}
+                                disabled={true}
+                            />
+
+                            <TextInput
+                                name="Phone"
+                                placeholder="Contact name"
+                                value={findFromList(
+                                    customerId,
+                                    customerList?.data,
+                                    "contactNumber",
+                                )}
+                                disabled={true}
+                            />
+                        </div>
+                    </div>
+                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
+                        <h2 className="font-medium text-slate-700 mb-1 text-xs">QR Code</h2>
+                        <div className="flex flex-col items-center justify-center gap-2">
+                            {docId && docId !== "New" ? (
+                                <>
+                                    <QRCodeCanvas
+                                        ref={qrRef}
+                                        value={JSON.stringify({ id, docId })}
+                                        size={96}
+                                        className="border border-slate-200 rounded"
+                                    />
+                                    <span className="text-xs text-slate-400">Scan to identify order</span>
+                                </>
+                            ) : (
+                                <div className="w-24 h-24 flex items-center justify-center border border-dashed border-slate-300 rounded text-slate-400 text-xs text-center px-2">
+                                    QR appears after save
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+                <div className="border border-slate-200 p-2 py-3 bg-white rounded-md shadow-sm gap-x-4 flex">
+                    <div className="w-1/2 px-2">
+                        <fieldset className="">
+                            <legend className="font-medium text-slate-700 mb-2 text-xs">Goods Details</legend>
+                            <OrderItems
+                                orderItems={orderItems}
+                                setOrderItems={setOrderItems}
+                                readOnly={readOnly}
+                                styleItemList={styleItemList}
+                                sizeList={sizeList}
+                                uomList={uomList}
+                                id={id}
+                            />
+                        </fieldset>
+                    </div>
+
                 </div>
 
             </div>
-            <CommonFormFooter
-                remarks={remarks}
-                hasSummaryTitle={"Summary"}
-                setRemarks={setRemarks}
-                terms={termsAndCondition}
-                setTerms={setTermsAndCondition}
-                readOnly={readOnly}
-                showTermSelect={true}
-                termValue={termsId}
-                onTermChange={(value) => setTermsId(value)}
-                termOptions={(
-                    id ? termsData?.data : termsData?.data?.filter((item) => item?.active)
-                )?.map((item) => ({
-                    value: item?.id,
-                    label: item?.name,
-                    templateText: item?.description || "",
-                })) || []}
+            <ReusableFormFooter
+                sections={[
+                    {
+                        title: "Customer Requirements",
+                        value: requirements,
+                        onChange: setRequirements,
+                        placeholder: "Enter requirements...",
+                    },
+                    {
+                        title: "Remarks",
+                        value: remarks,
+                        onChange: setRemarks,
+                        placeholder: "Additional notes...",
+                    },
+                ]}
+                hasSummaryTitle="Summary"
                 totalsRows={[
                     {
                         key: "orderType",
@@ -798,65 +786,6 @@ focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"  
                     },
                 ]}
             />
-            {/* <div className="grid grid-cols-2 gap-3">
-                <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
-                    <h2 className="font-medium text-slate-700 mb-2 text-xs">
-                        Remarks
-                    </h2>
-                    <textarea
-                        readOnly={readOnly}
-                        value={remarks}
-                        onChange={(e) => {
-                            setRemarks(e.target.value);
-                        }}
-                        className="w-full h-10 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md focus:outline-none   focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
-                        placeholder="Additional notes..."
-                        onKeyDown={(e) => {
-                            if (e.ctrlKey && e.key === "Enter") {
-                                e.preventDefault();
-
-                                const textarea = e.target;
-                                const start = textarea.selectionStart;
-                                const end = textarea.selectionEnd;
-
-                                const newValue =
-                                    remarks.substring(0, start) + "\n" + remarks.substring(end);
-
-                                setRemarks(newValue);
-
-                                // ✅ Restore focus + cursor properly
-                                requestAnimationFrame(() => {
-                                    textarea.focus();
-                                    textarea.setSelectionRange(start + 1, start + 1);
-                                });
-                            }
-                        }}
-                    />
-                </div>
-
-                <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm flex">
-                    <div className="w-1/2">
-
-                        <h2 className="font-medium text-slate-700 mb-2 text-base">
-                            Summary
-                        </h2>
-                        <div className="flex flex-col gap-1">
-                            <div className="flex justify-between">
-                                <span className="text-sm text-slate-600">Order Type:</span>
-                                <span className="text-sm text-slate-600">{orderType}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-slate-600">Order Quantity:</span>
-                                <span className="text-sm text-slate-600">{orderQty}</span>
-                            </div>
-
-                        </div>
-
-                    </div>
-                </div>
-
-            </div> */}
-
             <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
                 {/* Left Buttons */}
                 <div className="flex gap-2 flex-wrap">
@@ -891,6 +820,20 @@ focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"  
                         Save & New
                     </button>
 
+
+                </div>
+
+                <div className="flex gap-2 flex-wrap">
+                    {!id ||
+                        (readOnly && (
+                            <button
+                                className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-xs"
+                                onClick={() => setReadOnly(false)}
+                            >
+                                <FiEdit2 className="w-4 h-4 mr-2" />
+                                Edit
+                            </button>
+                        ))}
                     {id && (
                         <button
                             onClick={() => {
@@ -905,23 +848,54 @@ focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"  
                             PDF Export
                         </button>
                     )}
-                </div>
-
-                <div className="flex gap-2 flex-wrap">
-                    {!id ||
-                        (readOnly && (
-                            <button
-                                className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-xs"
-                                onClick={() => setReadOnly(false)}
-                            >
-                                <FiEdit2 className="w-4 h-4 mr-2" />
-                                Edit
-                            </button>
-                        ))}
-
+                    {
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedAttachmentIndex(null);
+                                setAttachmentModal(true);
+                            }}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                        >
+                            📎 Upload
+                        </button>
+                    }
                 </div>
             </div>
         </>
     );
 };
 export default OrderEntryForm;
+
+//   <textarea
+//                                 readOnly={readOnly}
+//                                 value={requirements}
+//                                 onChange={(e) => {
+//                                     setRequirements(e.target.value);
+//                                 }}
+//                                 className="w-full overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md
+// focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"                            placeholder="Requirements..."
+//                                 onKeyDown={(e) => {
+//                                     if (e.ctrlKey && e.key === "Enter") {
+//                                         e.preventDefault();
+
+//                                             const textarea = e.target;
+//                                             const start = textarea.selectionStart;
+//                                             const end = textarea.selectionEnd;
+
+//                                             const newValue =
+//                                                 requirements.substring(0, start) + "\n" + requirements.substring(end);
+
+//                                             setRequirements(newValue);
+
+//                                             // ✅ Restore focus + cursor properly
+//                                             requestAnimationFrame(() => {
+//                                                 textarea.focus();
+//                                                 textarea.setSelectionRange(start + 1, start + 1);
+//                                             });
+//                                         }
+//                                     }}
+//                                     rows={9}
+//                                 />
+
+

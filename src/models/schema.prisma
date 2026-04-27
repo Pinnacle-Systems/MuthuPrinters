@@ -587,6 +587,7 @@ model Uom {
   purchaseBillEntryItems PurchaseBillEntryItems[]
   styles                 Style[]
   styleItems             StyleItem[]
+  orderItems             OrderItems[]
 }
 
 model ProductUomPriceDetails {
@@ -936,6 +937,7 @@ model StyleItem {
   purchaseReturnItems    PurchaseReturnItems[]
   purchaseCancelItems    PurchaseCancelItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
+  orderItems             OrderItems[]
 }
 
 model DeliveryChallan {
@@ -1570,6 +1572,7 @@ model Size {
   purchaseReturnItems    PurchaseReturnItems[]
   inwardItems            InwardItems[]
   stocks                 Stock[]
+  orderItems             OrderItems[]
 }
 
 model Gsm {
@@ -1586,6 +1589,7 @@ model Gsm {
   purchaseCancelItems    PurchaseCancelItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
   stocks                 Stock[]
+  orderItems             OrderItems[]
 
   jobCards JobCard[]
 }
@@ -1784,6 +1788,8 @@ model OrderEntry {
   termsId           Int?
   attachments       attachments[]
   JobCard           JobCard[]
+
+  orderItems OrderItems[]
 }
 
 model Process {
@@ -1940,4 +1946,19 @@ model MachineDetails {
   JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
   machineId Int?
   Machine   Process? @relation(fields: [machineId], references: [id])
+}
+
+model OrderItems {
+  id           Int         @id @default(autoincrement())
+  orderEntryId Int?
+  OrderEntry   OrderEntry? @relation(fields: [orderEntryId], references: [id], onDelete: Cascade)
+  styleItemId  Int?
+  StyleItem    StyleItem?  @relation(fields: [styleItemId], references: [id])
+  orderQty     Int?
+  sizeId       Int?
+  Size         Size?       @relation(fields: [sizeId], references: [id])
+  uomId        Int?
+  Uom          Uom?        @relation(fields: [uomId], references: [id])
+  gsmId        Int?
+  Gsm          Gsm?        @relation(fields: [gsmId], references: [id])
 }
