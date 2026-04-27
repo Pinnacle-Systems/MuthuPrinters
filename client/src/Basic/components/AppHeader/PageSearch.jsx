@@ -54,10 +54,10 @@ const PageSearch = ({ pageList }) => {
                 placeholder="Search here"
                 className="text-black w-[350px] h-[30px] rounded-lg "
                 tabIndex={0}
-                onChange={(e) => { setSearch(e.target.value)}}
+                onChange={(e) => { setSearch(e.target.value) }}
                 value={search} onFocus={() => { setIsListShow(true) }} />
             {isListShow &&
-                <ul className='absolute max-h-[300px] overflow-auto bg-gray-100 top-7  w-[350px] '>
+                <ul className='absolute max-h-[300px] overflow-auto bg-gray-100 top-7  w-[350px] outline-none'>
 
                     {filteredPages.map((page) => <li className='cursor-pointer'
                         key={page.id}
@@ -70,7 +70,7 @@ const PageSearch = ({ pageList }) => {
                             }
                         }}
 
-                        onClick={() => { dispatch(push(page)); setSearch(""); setIsListShow((false)); } } > <pre> {page.name} </pre></li>)}
+                        onClick={() => { dispatch(push(page)); setSearch(""); setIsListShow((false)); }} > <pre> {page.name} </pre></li>)}
                 </ul>
             }
         </div>

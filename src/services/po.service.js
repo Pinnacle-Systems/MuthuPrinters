@@ -81,7 +81,7 @@ function manualFilterSearchDataPoItems(
 // ── PO Status ─────────────────────────────────────────────────────────────────
 function getPOStatus(po) {
   const poItems = po.poItems || [];
-  
+
   // Find the latest quote version to only sum active items
   let latestQuoteVersion = 1;
   if (poItems.length > 0) {
@@ -95,10 +95,13 @@ function getPOStatus(po) {
   }
 
   const activePoItems = poItems.filter(
-    (i) => (Number(i.quoteVersion) || 1) === latestQuoteVersion
+    (i) => (Number(i.quoteVersion) || 1) === latestQuoteVersion,
   );
 
-  const totalPoQty = activePoItems.reduce((sum, item) => sum + (item.qty || 0), 0);
+  const totalPoQty = activePoItems.reduce(
+    (sum, item) => sum + (item.qty || 0),
+    0,
+  );
   const totalInwardQty =
     po.inwardItems?.reduce((sum, item) => sum + (item.inwardQty || 0), 0) || 0;
   const totalCancelQty =
@@ -792,7 +795,11 @@ async function update(id, body) {
 
   // ✅ NEW: Delivery Date Restriction (2-day threshold)
   if (dataFound.dueDate) {
-    const daysToDelivery = moment(dataFound.dueDate).diff(moment(), "days", true);
+    const daysToDelivery = moment(dataFound.dueDate).diff(
+      moment(),
+      "days",
+      true,
+    );
     if (daysToDelivery <= 2) {
       return {
         statusCode: 1,
@@ -819,11 +826,14 @@ async function update(id, body) {
       parseInt(dataFound.taxTemplateId || 0) !== parseInt(taxTemplateId || 0) ||
       dataFound.deliveryType !== deliveryType ||
       (deliveryType === "ToParty" &&
-        parseInt(dataFound.deliveryToId || 0) !== parseInt(deliveryToId || 0)) ||
+        parseInt(dataFound.deliveryToId || 0) !==
+          parseInt(deliveryToId || 0)) ||
       (deliveryType === "ToSelf" &&
-        parseInt(dataFound.deliveryBranchId || 0) !== parseInt(deliveryToId || 0)) ||
+        parseInt(dataFound.deliveryBranchId || 0) !==
+          parseInt(deliveryToId || 0)) ||
       dataFound.discountType !== discountType ||
-      parseFloat(dataFound.discountValue || 0) !== parseFloat(discountValue || 0) ||
+      parseFloat(dataFound.discountValue || 0) !==
+        parseFloat(discountValue || 0) ||
       parseFloat(dataFound.taxPercent || 0) !== parseFloat(taxPercent || 0) ||
       parseInt(dataFound.termsId || 0) !== parseInt(termsId || 0) ||
       parseInt(dataFound.payTermId || 0) !== parseInt(payTermId || 0);
@@ -838,7 +848,8 @@ async function update(id, body) {
         );
         if (!oldItem) return true; // new item
         return (
-          parseInt(newItem.styleItemId || 0) !== parseInt(oldItem.styleItemId || 0) ||
+          parseInt(newItem.styleItemId || 0) !==
+            parseInt(oldItem.styleItemId || 0) ||
           parseFloat(newItem.qty || 0) !== parseFloat(oldItem.qty || 0) ||
           parseFloat(newItem.price || 0) !== parseFloat(oldItem.price || 0)
         );
@@ -1438,36 +1449,3 @@ export {
   getPoItems,
   createApproveStatus,
 };
-
-//  poItems: {
-//       createMany: {
-//         data: poItems
-//           .filter((i) => i["quoteVersion"] == "New")
-//           .map((temp) => {
-//             let newItem = {};
-//             newItem["styleItemId"] = parseInt(temp["styleItemId"]);
-//             newItem["uomId"] = temp["uomId"];
-//             newItem["hsnId"] = temp["hsnId"]
-//               ? parseInt(temp["hsnId"])
-//               : null;
-//             newItem["qty"] = parseFloat(temp["qty"]);
-//             newItem["price"] = parseFloat(temp["price"]);
-//             newItem["discountType"] = temp["discountType"];
-//             newItem["discountValue"] = parseFloat(
-//               temp["discountValue"] || 0,
-//             );
-//             newItem["taxPercent"] = parseFloat(temp["taxPercent"] || 0);
-//             newItem["quoteVersion"] = parseInt(currentQuoteVersion + 1);
-//             newItem["itemGroupId"] = temp["itemGroupId"]
-//               ? parseInt(temp["itemGroupId"])
-//               : null;
-//             newItem["sizeId"] = temp["sizeId"]
-//               ? parseInt(temp["sizeId"])
-//               : null;
-//             newItem["colorId"] = temp["colorId"]
-//               ? parseInt(temp["colorId"])
-//               : null;
-//             return newItem;
-//           }),
-//       },
-//     },

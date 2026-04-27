@@ -100,7 +100,7 @@ const PageSearch = ({ pageList }) => {
           type="text"
           placeholder="SEARCH PAGES..."
           className="w-full pl-8 pr-4 py-2.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-xl 
-      focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 
+      focus:outline-none outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 
       hover:border-gray-300 transition-all duration-200 shadow-sm h-8
       placeholder:text-gray-400 placeholder:font-normal"
           value={search}

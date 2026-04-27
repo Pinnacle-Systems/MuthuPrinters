@@ -19,7 +19,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Check, Power } from "lucide-react";
 import Swal from "sweetalert2";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
-// import { usePermissionForUsers } from "../HasPermission";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 const MODEL = "Country Master";
 
@@ -37,7 +37,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
   const formRef = useRef(null);
 
   const childRecord = useRef(0);
-  // const { hasPermission } = usePermissionForUsers()
+  const { hasPermission } = UserPermissions();
 
 
   const params = {
@@ -429,8 +429,13 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         <div className="flex items-center">
           <button
             onClick={() => {
-              setForm(true);
-              onNew();
+              if (
+                !hasPermission(() => {
+                  setForm(true);
+                  onNew();
+                }, "create")
+              )
+                return;
             }}
             className="bg-white border h-6  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >

@@ -67,6 +67,8 @@ const OrderEntryForm = ({
     const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
     const qrRef = useRef(null);
     const customerRef = useRef(null);
+    const childRecord = useRef(0);
+
     const [dispatchInvalidate] = useInvalidateTags();
 
     const { userId, finYearId, branchId } = getCommonParams();
@@ -108,6 +110,7 @@ const OrderEntryForm = ({
             );
             setTermsAndCondition(data?.termsAndCondition || "");
             setTermsId(data?.termsId || "");
+            childRecord.current = data?.childRecord ? data?.childRecord : 0;
         },
         [id],
     );
@@ -396,7 +399,7 @@ const OrderEntryForm = ({
                                 }}
                                 required={true}
                                 readOnly={readOnly}
-                                disabled={readOnly}
+                                disabled={readOnly || childRecord.current > 0}
                                 ref={customerRef}
                             />
 
@@ -405,7 +408,7 @@ const OrderEntryForm = ({
                                     name={"Order Quantity"}
                                     value={orderQty}
                                     setValue={setOrderQty}
-                                    readOnly={readOnly}
+                                    readOnly={readOnly || childRecord.current > 0}
                                     required={true}
                                     type={"number"}
                                     onFocus={(e) => {
@@ -457,7 +460,7 @@ const OrderEntryForm = ({
                                     addNewLabel="+ Add New Customer"
                                     childComponent={PartyMaster}
                                     addNewModalWidth="w-[90%] h-[95%]"
-                                    disabled={id}
+                                    disabled={readOnly || childRecord.current > 0}
                                 />
                             </div>
                             <TextInput

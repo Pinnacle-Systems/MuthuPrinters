@@ -29,11 +29,20 @@ const AppHeader = ({ setIsGlobalOpen, setLogout }) => {
     const handleApprovalNotification = (data) => {
       const msg = data.message || "Approval notification received";
       if (data.type === "APPROVAL_REQUIRED") {
-        toast.info("\uD83D\uDD14 " + msg, { autoClose: 8000, position: "top-right" });
+        toast.info("\uD83D\uDD14 " + msg, {
+          autoClose: 8000,
+          position: "top-right",
+        });
       } else if (data.type === "APPROVED") {
-        toast.success("\u2705 " + msg, { autoClose: 6000, position: "top-right" });
+        toast.success("\u2705 " + msg, {
+          autoClose: 6000,
+          position: "top-right",
+        });
       } else if (data.type === "REJECTED") {
-        toast.error("\u274C " + msg, { autoClose: 6000, position: "top-right" });
+        toast.error("\u274C " + msg, {
+          autoClose: 6000,
+          position: "top-right",
+        });
       } else {
         toast.info(msg, { autoClose: 5000 });
       }
