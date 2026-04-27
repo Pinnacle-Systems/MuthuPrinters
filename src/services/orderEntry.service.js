@@ -300,6 +300,7 @@ async function getOne(id) {
     },
     include: {
       attachments: true,
+      orderItems: true,
       Branch: {
         select: {
           branchName: true,
@@ -318,11 +319,62 @@ async function getOne(id) {
     },
   });
   if (!data) return NoRecordFound("Purchase Inward");
+  const { module, hasApproval } = await getModuleApprovalSetup(
+    REFERENCE_PAGE,
+    data.branchId,
+  );
+  let log = null;
+  let shouldTrigger = false;
+
+  if (hasApproval && module) {
+    // 🔹 get approval log for this record
+    log = await prisma.approvalLog.findFirst({
+      where: {
+        referencePage: REFERENCE_PAGE,
+        referenceId: data.id,
+      },
+      include: {
+        LevelLogs: {
+          include: {
+            User: { select: { id: true, username: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    // 🔹 if no log → check config condition
+    if (!log) {
+      const activeConfigs = await prisma.approvalConfig.findMany({
+        where: {
+          moduleId: module.id,
+          branchId: parseInt(branchId || data.branchId),
+          active: true,
+        },
+        include: {
+          ConfigConditions: {
+            include: {
+              Field: true,
+              Operator: true,
+              CompareField: true,
+            },
+          },
+        },
+      });
+
+      if (activeConfigs.length > 0) {
+        shouldTrigger = evaluateConfigs(activeConfigs, data);
+      }
+    }
+  }
+
   return {
     statusCode: 0,
     data: {
       ...data,
+      approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
       childRecord: data._count.JobCard,
+      approvalLog: log,
     },
   };
 }
@@ -343,6 +395,7 @@ async function create(body) {
     draftSave,
     termsAndCondition,
     termsId,
+    orderItems,
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
@@ -364,8 +417,23 @@ async function create(body) {
     branchId,
   );
   let data;
-  const safeorderQty =
-    orderQty && !isNaN(Number(orderQty)) ? parseFloat(orderQty) : null;
+  // const safeorderQty =
+  //   orderQty && !isNaN(Number(orderQty)) ? parseFloat(orderQty) : null;
+  const parsedOrderItems =
+    typeof orderItems === "string" ? JSON.parse(orderItems) : orderItems;
+  const safeOrderItems =
+    parsedOrderItems?.length > 0
+      ? parsedOrderItems.map((item) => ({
+          styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
+          orderQty:
+            item?.orderQty && !isNaN(Number(item.orderQty))
+              ? parseInt(item.orderQty)
+              : null,
+          sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
+          uomId: item?.uomId ? parseInt(item.uomId) : null,
+          gsmId: item?.gsmId ? parseInt(item.gsmId) : null,
+        }))
+      : [];
   await prisma.$transaction(async (tx) => {
     data = await tx.orderEntry.create({
       data: {
@@ -378,9 +446,15 @@ async function create(body) {
         deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
         remarks,
         requirements,
-        orderQty: safeorderQty,
+        // orderQty: safeorderQty,
         termsId: termsId ? parseInt(termsId) : null,
         termsAndCondition,
+        orderItems:
+          safeOrderItems.length > 0
+            ? {
+                create: safeOrderItems,
+              }
+            : undefined,
         attachments:
           JSON.parse(attachments)?.length > 0
             ? {
@@ -435,6 +509,8 @@ async function update(id, body, files) {
     attachments,
     termsId,
     termsAndCondition,
+    orderItems,
+    submitApproval,
   } = await body;
 
   const safeorderQty =
@@ -445,6 +521,14 @@ async function update(id, body, files) {
     ?.filter((i) => i.id)
     .map((i) => parseInt(i.id));
 
+  const parsedItems = JSON.parse(orderItems || "[]");
+  const incomingItemIds = parsedItems
+    ?.filter((i) => i.id)
+    .map((i) => parseInt(i.id));
+  const { module, hasApproval } = await getModuleApprovalSetup(
+    REFERENCE_PAGE,
+    branchId,
+  );
   let data;
   const dataFound = await prisma.orderEntry.findUnique({
     where: {
@@ -452,6 +536,7 @@ async function update(id, body, files) {
     },
     include: {
       attachments: { select: { id: true, filePath: true } },
+      orderItems: true,
     },
   });
   if (!dataFound) return NoRecordFound("Purchase Inward");
@@ -505,6 +590,35 @@ async function update(id, body, files) {
         orderQty: safeorderQty,
         termsAndCondition,
         termsId: termsId ? parseInt(termsId) : null,
+        orderItems: {
+          deleteMany: incomingItemIds.length
+            ? { id: { notIn: incomingItemIds } }
+            : {}, // delete all if no items sent
+          update: parsedItems
+            .filter((item) => item.id)
+            .map((item) => ({
+              where: { id: parseInt(item.id) },
+              data: {
+                styleItemId: item.styleItemId
+                  ? parseInt(item.styleItemId)
+                  : null,
+                orderQty: item.orderQty ? parseInt(item.orderQty) : null,
+                sizeId: item.sizeId ? parseInt(item.sizeId) : null,
+                uomId: item.uomId ? parseInt(item.uomId) : null,
+                gsmId: item.gsmId ? parseInt(item.gsmId) : null,
+              },
+            })),
+
+          create: parsedItems
+            .filter((item) => !item.id)
+            .map((item) => ({
+              styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
+              orderQty: item.orderQty ? parseInt(item.orderQty) : null,
+              sizeId: item.sizeId ? parseInt(item.sizeId) : null,
+              uomId: item.uomId ? parseInt(item.uomId) : null,
+              gsmId: item.gsmId ? parseInt(item.gsmId) : null,
+            })),
+        },
         attachments: {
           deleteMany: {
             ...(incomingIds.length > 0 && {
@@ -545,7 +659,33 @@ async function update(id, body, files) {
         },
       },
     });
+    if (submitApproval && hasApproval && module) {
+      await tx.approvalLog.deleteMany({
+        where: {
+          referenceId: parseInt(id),
+          referencePage: REFERENCE_PAGE,
+          status: { in: ["REJECTED", "NOTAPPROVED"] },
+        },
+      });
+
+      const fullRecord = await tx.orderEntry.findUnique({
+        where: { id: parseInt(id) },
+        include: await buildIncludeForModule(module.id),
+      });
+
+      await createApprovalLog(
+        tx,
+        branchId,
+        module.id,
+        data.id,
+        REFERENCE_PAGE,
+        fullRecord,
+        data.docId,
+        userId,
+      );
+    }
   });
+
   return { statusCode: 0, data };
 }
 

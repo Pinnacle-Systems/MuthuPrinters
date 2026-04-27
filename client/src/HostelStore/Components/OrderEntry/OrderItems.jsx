@@ -10,6 +10,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
     };
 
     const [contextMenu, setContextMenu] = useState(null);
+    const [focusedField, setFocusedField] = useState(null);
 
     const addRow = () => {
         setOrderItems([...orderItems, EMPTY_ROW]);
@@ -20,7 +21,10 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
     };
     const handleInputChange = (value, index, field) => {
         const newRows = [...orderItems];
-        newRows[index][field] = value;
+        newRows[index] = {
+            ...newRows[index], // ✅ clone object
+            [field]: value,
+        };
         setOrderItems(newRows);
     };
 
@@ -175,26 +179,51 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                 </td>
                                 <td className="border-blue-gray-200 text-[11px] border border-gray-300  text-right">
                                     <input
+                                        id={`orderQty-input-${index}`}
                                         onKeyDown={(e) => {
                                             if (e.code === "Minus" || e.code === "NumpadSubtract")
                                                 e.preventDefault();
                                             if (e.key === "Delete") {
                                                 handleInputChange("", index, "orderQty");
                                             }
+                                            // if (e.key === "Enter") {
+                                            //     e.preventDefault(); // prevent form submit or line break
+                                            //     e.stopPropagation();
+
+                                            //     const nextQtyInput = document.querySelector(
+                                            //         `#orderQty-input-${index + 1}`,
+                                            //     );
+                                            //     if (nextQtyInput) {
+                                            //         nextQtyInput.focus();
+                                            //     }
+                                            // }
                                         }}
                                         min={"0"}
                                         type="number"
-                                        className="text-right rounded  px-1 w-full table-data-input"
-                                        onFocus={(e) => e.target.select()}
+                                        className="text-right  px-1 w-full table-data-input"
+                                        onFocus={(e) => {
+                                            e.target.select();
+                                            setFocusedField(`${index}`);
+                                        }}
                                         value={
-                                            row?.orderQty ? Number(row.orderQty).toFixed(2) : ""
+                                            focusedField === `${index}`
+                                                ? (row?.orderQty ?? "")
+                                                : row?.orderQty
+                                                    ? Number(row.orderQty).toFixed(2)
+                                                    : ""
                                         }
                                         onChange={(e) =>
                                             handleInputChange(e.target.value, index, "orderQty")
                                         }
                                         onBlur={(e) => {
-                                            handleInputChange(e.target.value, index, "orderQty");
+                                            const val = e.target.value;
+                                            handleInputChange(
+                                                val ? Number(val).toFixed(2) : "",
+                                                index,
+                                                "orderQty",
+                                            );
                                         }}
+                                        disabled={readOnly}
                                     />
                                 </td>
                                 <td className="w-2 border border-gray-300">
@@ -204,7 +233,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                             if (e.key === "Enter") {
                                                 e.preventDefault();
                                                 const next = document.querySelector(
-                                                    `#returnQty-input-${index + 1}`,
+                                                    `#orderQty-input-${index + 1}`,
                                                 );
                                                 if (index === orderItems.length - 1) {
                                                     addRow();

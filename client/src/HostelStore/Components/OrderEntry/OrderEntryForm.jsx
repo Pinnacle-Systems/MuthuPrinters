@@ -16,7 +16,7 @@ import {
     renameFile,
 } from "../../../Utils/helper";
 import { toast } from "react-toastify";
-import { FiEdit2, FiSave } from "react-icons/fi";
+import { FiCheck, FiEdit2, FiSave, FiSend } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { dropDownListObject } from "../../../Utils/contructObject";
@@ -37,6 +37,8 @@ import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMas
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
+import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
+import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoServices.js";
 
 const OrderEntryForm = ({
     onClose,
@@ -47,6 +49,8 @@ const OrderEntryForm = ({
     customerList,
     termsData,
     branchList,
+    canApprove,
+    userData
 }) => {
     const today = new Date();
 
@@ -72,7 +76,11 @@ const OrderEntryForm = ({
     const [printModalOpen, setPrintModalOpen] = useState(false);
     const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
     const [orderItems, setOrderItems] = useState([]);
-
+    const [approvalModal, setApprovalModal] = useState(false);
+    const [actionType, setActionType] = useState("");
+    const [approvalRemarks, setApprovalRemarks] = useState("");
+    const [actionLoading, setActionLoading] = useState(false);
+    console.log(canApprove, "canApprove")
     const qrRef = useRef(null);
     const customerRef = useRef(null);
     const childRecord = useRef(0);
@@ -99,6 +107,8 @@ const OrderEntryForm = ({
 
     const [addData] = useAddOrderEntryMutation();
     const [updateData] = useUpdateOrderEntryMutation();
+    const [addApprovalStatus] = useAddApprovalStausMutation();
+    const status = singleData?.data?.approvalStatus?.status;
 
     const syncFormWithDb = useCallback(
         (data) => {
@@ -125,6 +135,7 @@ const OrderEntryForm = ({
             setTermsId(data?.termsId || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
             setOrderItems(data?.orderItems || []);
+            setReadOnly((["PENDING"].includes(status) && !canApprove) || readOnly);
         },
         [id],
     );
@@ -237,7 +248,7 @@ const OrderEntryForm = ({
         const items = data?.inwardItems || [];
         const checks = [
             { condition: !data.orderType, title: "Order Type is required!" },
-            { condition: !data.orderQty, title: "Order Quantity is required!" },
+            // { condition: !data.orderQty, title: "Order Quantity is required!" },
             { condition: !data.deliveryDate, title: "Delivery Date is required!" },
             { condition: !data.customerId, title: "Customer is required!" },
         ];
@@ -258,7 +269,8 @@ const OrderEntryForm = ({
         return true;
     };
 
-    const saveData = (nextProcess) => {
+    const saveData = (nextProcess, options = {}) => {
+        const submitApprovalFlag = !!options.submitApproval;
         if (!validateData(data)) {
             return;
         }
@@ -282,9 +294,9 @@ const OrderEntryForm = ({
                 nextProcess,
             );
         } else if (id) {
-            handleSubmitCustom(updateData, data, "Updated", nextProcess);
+            handleSubmitCustom(updateData, { ...data, ...(submitApprovalFlag ? { submitApproval: true } : {}) }, "Updated", nextProcess);
         } else {
-            handleSubmitCustom(addData, data, "Added", nextProcess);
+            handleSubmitCustom(addData, { ...data, ...(submitApprovalFlag ? { submitApproval: true } : {}) }, "Added", nextProcess);
         }
     };
 
@@ -332,8 +344,179 @@ const OrderEntryForm = ({
         setAttachments((prev) => prev.filter((_, i) => i !== index));
     }
 
+    const handleApprovalAction = (type) => {
+        setActionType(type);
+        setApprovalRemarks("");
+        setApprovalModal(true);
+    };
+
+    const handleConfirmAction = async () => {
+        if (actionType === "REJECT" && !approvalRemarks.trim()) {
+            toast.warning("Remarks required for sending back!");
+            return;
+        }
+        setActionLoading(true);
+        try {
+            const result = await addApprovalStatus({
+                userId: userData?.id,
+                remarks: approvalRemarks || null,
+                actionType,
+                referenceId: id,
+                referencePage: "ORDER ENTRY",
+                recordData: {},
+            }).unwrap();
+
+            if (result.statusCode === 0) {
+                toast.success(
+                    result.message ||
+                    (actionType === "APPROVE"
+                        ? "Order Entry Approved!"
+                        : "Sent Back for Review!"),
+                );
+                setApprovalModal(false);
+                // dispatchInvalidate();
+                onClose();
+            } else {
+                toast.error(result.message || "Action failed");
+                setApprovalModal(false);
+            }
+        } catch (err) {
+            toast.error(err?.data?.message || "Something went wrong!");
+            setApprovalModal(false);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     return (
         <>
+            <Modal
+                isOpen={approvalModal}
+                onClose={() => setApprovalModal(false)}
+                widthClass="w-[420px]"
+            >
+                <div className="space-y-4">
+                    <h2
+                        className={`text-base font-semibold ${actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
+                            }`}
+                    >
+                        {actionType === "APPROVE"
+                            ? "✅ Approve Order Entry"
+                            : "↩️ Send Back for Review"}
+                    </h2>
+
+                    <div className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-xs space-y-1.5">
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-500">Order Entry No</span>
+                            <span className="font-medium text-gray-800">{docId}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-500">Customer</span>
+                            <span className="font-medium text-gray-800">
+                                {findFromList(customerId, customerList?.data, "name")}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-500">Current Approval</span>
+                            <span
+                                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${status === "APPROVED"
+                                    ? "bg-green-100 text-green-700"
+                                    : status === "REJECTED"
+                                        ? "bg-red-100 text-red-700"
+                                        : status === "SUPERSEDED"
+                                            ? "bg-orange-100 text-orange-700" // ✅ NEW
+                                            : "bg-orange-100 text-orange-700"
+                                    }`}
+                            >
+                                {status === "PENDING"
+                                    ? "Waiting For Approval"
+                                    : status === "SUPERSEDED"
+                                        ? "Re-approval Required" // ✅ NEW
+                                        : status}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-medium text-gray-600 mb-1 block">
+                            Remarks{" "}
+                            {actionType === "REJECT" && (
+                                <span className="text-red-500">* required</span>
+                            )}
+                        </label>
+                        <textarea
+                            rows={3}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300 resize-none"
+                            placeholder={
+                                actionType === "APPROVE"
+                                    ? "Optional remarks..."
+                                    : "Reason for sending back (required)..."
+                            }
+                            value={approvalRemarks}
+                            onChange={(e) => setApprovalRemarks(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                        <button
+                            onClick={() => setApprovalModal(false)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    setApprovalModal(false);
+                                }
+                            }}
+                            className="px-4 py-1.5 text-xs rounded text-white hover:bg-red-600 bg-red-500"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            disabled={actionLoading}
+                            onClick={handleConfirmAction}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleConfirmAction();
+                                }
+                            }}
+                            className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${actionType === "APPROVE"
+                                ? "bg-green-600 hover:bg-green-700"
+                                : "bg-blue-600 hover:bg-blue-700"
+                                } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
+                        >
+                            {actionLoading ? (
+                                <>
+                                    <svg
+                                        className="animate-spin h-3 w-3"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                    >
+                                        <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                        />
+                                        <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8v8z"
+                                        />
+                                    </svg>
+                                    Processing...
+                                </>
+                            ) : actionType === "APPROVE" ? (
+                                "Confirm Approve"
+                            ) : (
+                                "Send Back"
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
             {attachmentModal && (
                 <Modal
                     isOpen={attachmentModal}
@@ -723,7 +906,7 @@ const OrderEntryForm = ({
                                     <QRCodeCanvas
                                         ref={qrRef}
                                         value={JSON.stringify({ id, docId })}
-                                        size={96}
+                                        size={90}
                                         className="border border-slate-200 rounded"
                                     />
                                     <span className="text-xs text-slate-400">Scan to identify order</span>
@@ -762,12 +945,14 @@ const OrderEntryForm = ({
                         value: requirements,
                         onChange: setRequirements,
                         placeholder: "Enter requirements...",
+                        readOnly: readOnly
                     },
                     {
                         title: "Remarks",
                         value: remarks,
                         onChange: setRemarks,
                         placeholder: "Additional notes...",
+                        readOnly: readOnly
                     },
                 ]}
                 hasSummaryTitle="Summary"
@@ -781,7 +966,10 @@ const OrderEntryForm = ({
                     {
                         key: "orderQty",
                         label: "Order Qty",
-                        value: orderQty,
+                        value: orderItems?.reduce((acc, item) => {
+                            const qty = parseFloat(item.orderQty) || 0;
+                            return acc + qty;
+                        }, 0).toFixed(2),
                         summaryColumn: "left",
                     },
                 ]}
@@ -799,7 +987,7 @@ const OrderEntryForm = ({
                                 e.stopPropagation();
                             }
                         }}
-                        className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-xs"
+                        className="bg-indigo-500 text-white px-2 py-1 rounded-md hover:bg-indigo-600 flex items-center text-xs"
                     >
                         <HiOutlineRefresh className="w-4 h-4 mr-2" />
                         Save & Close
@@ -814,12 +1002,74 @@ const OrderEntryForm = ({
                                 saveData("new");
                             }
                         }}
-                        className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-xs"
+                        className="bg-indigo-500 text-white px-2 py-1 rounded-md hover:bg-indigo-600 flex items-center text-xs"
                     >
                         <FiSave className="w-4 h-4 mr-2" />
                         Save & New
                     </button>
+                    {
+                        status === "REJECTED" && (
 
+                            <button
+                                onClick={() => saveData("close", { submitApproval: true })}
+                                disabled={readOnly}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        saveData("close", { submitApproval: true });
+                                    }
+                                }}
+                                title="Submit Approval"
+                                className="bg-green-700 text-white px-2 py-1 rounded-md hover:bg-green-800 flex items-center text-xs"
+                            >
+                                <FiSend className="w-4 h-4" />
+
+                            </button>
+                        )
+                    }
+                    {
+                        (id && status === "PENDING" && canApprove) && (
+                            <button
+                                onClick={() => {
+                                    handleApprovalAction("REJECT")
+                                }}
+                                disabled={readOnly}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleApprovalAction("REJECT");
+                                    }
+                                }}
+                                title="Send Back for Review"
+                                className="bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 flex items-center text-xs"
+                            >
+                                <MdKeyboardDoubleArrowLeft className="w-4 h-4" />
+                            </button>
+                        )
+                    }
+                    {
+                        (id && status === "PENDING" && canApprove) && (
+                            <button
+                                onClick={() => {
+                                    handleApprovalAction("APPROVE")
+                                }}
+                                disabled={readOnly}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleApprovalAction("APPROVE");
+                                    }
+                                }}
+                                title="Approve"
+                                className="bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-700 flex items-center text-xs"
+                            >
+                                <FiCheck className="w-4 h-4" />
+                            </button>
+                        )
+                    }
 
                 </div>
 
