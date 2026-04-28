@@ -6,7 +6,7 @@ import {
     ReusableInput,
     TextInput,
 } from "../../../Inputs";
-import { orderTypes } from "../../../Utils/DropdownData";
+import { orderTypes, productionTypes } from "../../../Utils/DropdownData";
 import { useCallback, useEffect, useRef, useState } from "react";
 import moment from "moment";
 import {
@@ -39,6 +39,8 @@ import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformServic
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoServices.js";
+import { useGetUomQuery } from "../../../redux/services/UomMasterService.js";
+import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
 
 const OrderEntryForm = ({
     onClose,
@@ -60,7 +62,8 @@ const OrderEntryForm = ({
     const [customerId, setCustomerId] = useState("");
     const [remarks, setRemarks] = useState("");
     const [requirements, setRequirements] = useState("");
-    const [orderType, setOrderType] = useState("Sample");
+    const [orderType, setOrderType] = useState("GENERAL");
+    const [productionType, setProductionType] = useState("SAMPLE");
     const [deliveryDate, setDeliveryDate] = useState("");
     const [jobType, setJobType] = useState("Internal");
     const [docId, setDocId] = useState("");
@@ -80,7 +83,7 @@ const OrderEntryForm = ({
     const [actionType, setActionType] = useState("");
     const [approvalRemarks, setApprovalRemarks] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
-    console.log(canApprove, "canApprove")
+
     const qrRef = useRef(null);
     const customerRef = useRef(null);
     const childRecord = useRef(0);
@@ -102,8 +105,9 @@ const OrderEntryForm = ({
     const { data: styleItemList } = useGetStyleItemMasterQuery({
         params: { ...params },
     });
-    const { data: uomList } = useGetUnitOfMeasurementMasterQuery({ params });
+    const { data: uomList } = useGetUomQuery({ params });
     const { data: sizeList } = useGetSizeMasterQuery({ params });
+    const { data: gsmList } = useGetGsmMasterQuery({ params });
 
     const [addData] = useAddOrderEntryMutation();
     const [updateData] = useUpdateOrderEntryMutation();
@@ -119,7 +123,7 @@ const OrderEntryForm = ({
                     : moment.utc(new Date()).format("YYYY-MM-DD"),
             );
             setOrderType(
-                data?.orderType || "Sample",
+                data?.orderType || "GENERAL",
             );
             setCustomerId(data?.customerId || "");
             setRemarks(data?.remarks || "");
@@ -135,7 +139,8 @@ const OrderEntryForm = ({
             setTermsId(data?.termsId || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
             setOrderItems(data?.orderItems || []);
-            setReadOnly((["PENDING"].includes(status) && !canApprove) || readOnly);
+            setReadOnly((["PENDING", "APPROVED"].includes(status) && !canApprove) || readOnly);
+            setProductionType(data?.productionType || "SAMPLE");
         },
         [id],
     );
@@ -154,6 +159,7 @@ const OrderEntryForm = ({
         branchId,
         userId,
         orderType,
+        productionType,
         jobType,
         customerId,
         remarks,
@@ -165,7 +171,7 @@ const OrderEntryForm = ({
         termsAndCondition,
         termsId,
         docId,
-        orderItems: orderItems?.filter((i) => i.styleItemId && i.orderQty),
+        orderItems: orderItems?.filter((i) => i.styleItemId),
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -238,19 +244,56 @@ const OrderEntryForm = ({
     };
 
     const findDuplicates = (items) => {
-        const seen = new Map(); // key -> first index
+        const seen = new Map();
         const duplicates = [];
 
-        return duplicates; // empty array = no duplicates
+        items.forEach((item, index) => {
+            const key = `${item.styleItemId}-${item.sizeId}-${item.uomId}-${item.gsmId}`;
+
+            if (seen.has(key)) {
+                duplicates.push({
+                    firstIndex: seen.get(key),
+                    duplicateIndex: index,
+                });
+            } else {
+                seen.set(key, index);
+            }
+        });
+
+        return duplicates;
+    };
+
+    const validateRows = (items) => {
+        const errors = [];
+
+        items.forEach((item, index) => {
+            if (!item.orderQty || Number(item.orderQty) <= 0) {
+                errors.push(`Row ${index + 1}: Order Qty must be greater than 0`);
+            }
+            if (!item.styleItemId) {
+                errors.push(`Row ${index + 1}: Style is required`);
+            }
+            if (!item.sizeId) {
+                errors.push(`Row ${index + 1}: Size is required`);
+            }
+            if (!item.uomId) {
+                errors.push(`Row ${index + 1}: UOM is required`);
+            }
+
+        });
+
+        return errors;
     };
 
     const validateData = (data) => {
-        const items = data?.inwardItems || [];
+        const items = data?.orderItems || [];
         const checks = [
             { condition: !data.orderType, title: "Order Type is required!" },
-            // { condition: !data.orderQty, title: "Order Quantity is required!" },
+            { condition: !data.productionType, title: "Production Type is required!" },
             { condition: !data.deliveryDate, title: "Delivery Date is required!" },
             { condition: !data.customerId, title: "Customer is required!" },
+            { condition: items.length === 0, title: "Order Items are required!" },
+            {}
         ];
 
         const failed = checks.find((c) => c.condition);
@@ -262,6 +305,33 @@ const OrderEntryForm = ({
                 timer: failed.html ? undefined : 1500,
                 showConfirmButton: !!failed.html,
                 confirmButtonText: "OK",
+            });
+            return false;
+        }
+        const rowErrors = validateRows(items);
+        if (rowErrors.length > 0) {
+            Swal.fire({
+                icon: "warning",
+                title: "Row Validation Error",
+                html: `<div style="text-align:left">${rowErrors.join("<br/>")}</div>`,
+            });
+            return false;
+        }
+
+        // 🔹 Duplicate validation
+        const duplicates = findDuplicates(items);
+        if (duplicates.length > 0) {
+            const message = duplicates
+                .map(
+                    (d) =>
+                        `Row ${d.duplicateIndex + 1} is duplicate of Row ${d.firstIndex + 1}`
+                )
+                .join("<br/>");
+
+            Swal.fire({
+                icon: "warning",
+                title: "Duplicate Items Found",
+                html: `<div style="text-align:left">${message}</div>`,
             });
             return false;
         }
@@ -830,8 +900,19 @@ const OrderEntryForm = ({
                                 }}
                                 required={true}
                                 readOnly={readOnly}
-                                disabled={readOnly}
+                                disabled={childRecord.current > 0 || readOnly}
                                 ref={customerRef}
+                            />
+                            <DropdownInput
+                                name="Production Type"
+                                options={productionTypes}
+                                value={productionType}
+                                setValue={(value) => {
+                                    setProductionType(value);
+                                }}
+                                required={true}
+                                readOnly={readOnly}
+                                disabled={childRecord.current > 0 || readOnly}
                             />
 
                             <div className="w-28">
@@ -872,7 +953,7 @@ const OrderEntryForm = ({
                                     addNewLabel="+ Add New Customer"
                                     childComponent={PartyMaster}
                                     addNewModalWidth="w-[90%] h-[95%]"
-                                    disabled={id}
+                                    disabled={childRecord.current > 0 || readOnly}
                                 />
                             </div>
                             <TextInput
@@ -926,10 +1007,11 @@ const OrderEntryForm = ({
                             <OrderItems
                                 orderItems={orderItems}
                                 setOrderItems={setOrderItems}
-                                readOnly={readOnly}
+                                readOnly={readOnly || childRecord.current > 0}
                                 styleItemList={styleItemList}
                                 sizeList={sizeList}
                                 uomList={uomList}
+                                gsmList={gsmList}
                                 id={id}
                             />
                         </fieldset>
@@ -987,7 +1069,7 @@ const OrderEntryForm = ({
                                 e.stopPropagation();
                             }
                         }}
-                        className="bg-indigo-500 text-white px-2 py-1 rounded-md hover:bg-indigo-600 flex items-center text-xs"
+                        className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
                     >
                         <HiOutlineRefresh className="w-4 h-4 mr-2" />
                         Save & Close
@@ -1002,7 +1084,7 @@ const OrderEntryForm = ({
                                 saveData("new");
                             }
                         }}
-                        className="bg-indigo-500 text-white px-2 py-1 rounded-md hover:bg-indigo-600 flex items-center text-xs"
+                        className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
                     >
                         <FiSave className="w-4 h-4 mr-2" />
                         Save & New
@@ -1021,7 +1103,7 @@ const OrderEntryForm = ({
                                     }
                                 }}
                                 title="Submit Approval"
-                                className="bg-green-700 text-white px-2 py-1 rounded-md hover:bg-green-800 flex items-center text-xs"
+                                className="bg-green-700 text-white px-2 py-1 rounded hover:bg-green-800 flex items-center text-xs"
                             >
                                 <FiSend className="w-4 h-4" />
 
@@ -1043,7 +1125,7 @@ const OrderEntryForm = ({
                                     }
                                 }}
                                 title="Send Back for Review"
-                                className="bg-blue-600 text-white px-2 py-1 rounded-md hover:bg-blue-700 flex items-center text-xs"
+                                className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center text-xs"
                             >
                                 <MdKeyboardDoubleArrowLeft className="w-4 h-4" />
                             </button>
@@ -1064,7 +1146,7 @@ const OrderEntryForm = ({
                                     }
                                 }}
                                 title="Approve"
-                                className="bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-700 flex items-center text-xs"
+                                className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 flex items-center text-xs"
                             >
                                 <FiCheck className="w-4 h-4" />
                             </button>
@@ -1077,7 +1159,7 @@ const OrderEntryForm = ({
                     {!id ||
                         (readOnly && (
                             <button
-                                className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-xs"
+                                className="bg-yellow-600 text-white px-4 py-1 rounded hover:bg-yellow-700 flex items-center text-xs"
                                 onClick={() => setReadOnly(false)}
                             >
                                 <FiEdit2 className="w-4 h-4 mr-2" />
@@ -1092,7 +1174,7 @@ const OrderEntryForm = ({
                                 }
                                 setPrintModalOpen(true);
                             }}
-                            className="bg-slate-600 text-white px-4 py-1 rounded-md hover:bg-slate-700 flex items-center text-xs"
+                            className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs"
                         >
                             <FiFileText className="w-4 h-4 mr-2" />
                             PDF Export
@@ -1116,36 +1198,3 @@ const OrderEntryForm = ({
     );
 };
 export default OrderEntryForm;
-
-//   <textarea
-//                                 readOnly={readOnly}
-//                                 value={requirements}
-//                                 onChange={(e) => {
-//                                     setRequirements(e.target.value);
-//                                 }}
-//                                 className="w-full overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md
-// focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"                            placeholder="Requirements..."
-//                                 onKeyDown={(e) => {
-//                                     if (e.ctrlKey && e.key === "Enter") {
-//                                         e.preventDefault();
-
-//                                             const textarea = e.target;
-//                                             const start = textarea.selectionStart;
-//                                             const end = textarea.selectionEnd;
-
-//                                             const newValue =
-//                                                 requirements.substring(0, start) + "\n" + requirements.substring(end);
-
-//                                             setRequirements(newValue);
-
-//                                             // ✅ Restore focus + cursor properly
-//                                             requestAnimationFrame(() => {
-//                                                 textarea.focus();
-//                                                 textarea.setSelectionRange(start + 1, start + 1);
-//                                             });
-//                                         }
-//                                     }}
-//                                     rows={9}
-//                                 />
-
-

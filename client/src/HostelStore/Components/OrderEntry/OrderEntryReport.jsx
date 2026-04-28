@@ -192,7 +192,6 @@ const OrderEntryReport = ({
             toast.warning("Remarks required for sending back!");
             return;
         }
-        console.log(selectedJobEntry, "selectedJobEntry");
 
         setActionLoading(true);
         try {

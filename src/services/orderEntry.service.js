@@ -396,6 +396,7 @@ async function create(body) {
     termsAndCondition,
     termsId,
     orderItems,
+    productionType,
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
@@ -443,6 +444,7 @@ async function create(body) {
         branchId: parseInt(branchId),
         customerId: parseInt(customerId),
         orderType,
+        productionType,
         deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
         remarks,
         requirements,
@@ -511,6 +513,7 @@ async function update(id, body, files) {
     termsAndCondition,
     orderItems,
     submitApproval,
+    productionType,
   } = await body;
 
   const safeorderQty =
@@ -584,6 +587,7 @@ async function update(id, body, files) {
         branchId: parseInt(branchId),
         customerId: parseInt(customerId),
         orderType,
+        productionType,
         deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
         remarks,
         requirements,

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import FxSelect from '../../../Inputs';
+import FxSelect, { FxSelectWithAdd } from '../../../Inputs';
+import { Gsm, Size, StyleItemMaster, UomMaster } from '..';
 
-const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeList, uomList, id }) => {
+const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeList, uomList, id, gsmList }) => {
     const EMPTY_ROW = {
         styleItemId: "",
         sizeId: "",
@@ -84,6 +85,9 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                             <th className={`w-20 px-4 py-2 text-center font-medium `}>
                                 UOM
                             </th>
+                            <th className={`w-20 px-4 py-2 text-center font-medium `}>
+                                GSM
+                            </th>
                             <th className={`w-24 px-4 py-2 text-center font-medium  `}>
                                 Qty
                             </th>
@@ -107,7 +111,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                     {index + 1}
                                 </td>
                                 <td className=" text-[11px] border border-gray-300 text-left">
-                                    <FxSelect
+                                    <FxSelectWithAdd
                                         inputId={`styleItemId-input-${index}`}
                                         value={row.styleItemId}
                                         onChange={(val) =>
@@ -129,10 +133,13 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                 handleInputChange("", index, "styleItemId");
                                             }
                                         }}
+                                        addNew={true}
+                                        childComponent={StyleItemMaster}
+                                        addNewModalWidth="w-[50%] h-[57%]"
                                     />
                                 </td>
                                 <td className=" border border-gray-300 text-[11px] ">
-                                    <FxSelect
+                                    <FxSelectWithAdd
                                         value={row.sizeId}
                                         onChange={(val) =>
                                             handleInputChange(val, index, "sizeId")
@@ -153,10 +160,13 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                 handleInputChange("", index, "sizeId");
                                             }
                                         }}
+                                        addNew={true}
+                                        childComponent={Size}
+                                        addNewModalWidth="w-[30%] h-[45%]"
                                     />
                                 </td>
                                 <td className=" border border-gray-300 text-[11px] ">
-                                    <FxSelect
+                                    <FxSelectWithAdd
                                         value={row.uomId}
                                         onChange={(val) => handleInputChange(val, index, "uomId")}
                                         options={(uomList?.data || [])
@@ -175,6 +185,34 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                 handleInputChange("", index, "uomId");
                                             }
                                         }}
+                                        addNew={true}
+                                        childComponent={UomMaster}
+                                        addNewModalWidth="w-[30%] h-[45%]"
+                                    />
+                                </td>
+                                <td className=" border border-gray-300 text-[11px] ">
+                                    <FxSelectWithAdd
+                                        value={row.gsmId}
+                                        onChange={(val) => handleInputChange(val, index, "gsmId")}
+                                        options={(gsmList?.data || [])
+                                            .filter((item) => (id ? true : item.active))
+                                            .map((item) => ({
+                                                label: item.name,
+                                                value: item.id,
+                                            }))}
+                                        readOnly={readOnly}
+                                        placeholder=""
+                                        onBlur={() =>
+                                            handleInputChange(row.gsmId, index, "gsmId")
+                                        }
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Delete") {
+                                                handleInputChange("", index, "gsmId");
+                                            }
+                                        }}
+                                        addNew={true}
+                                        childComponent={Gsm}
+                                        addNewModalWidth="w-[30%] h-[45%]"
                                     />
                                 </td>
                                 <td className="border-blue-gray-200 text-[11px] border border-gray-300  text-right">
@@ -255,7 +293,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                         <tr className="bg-gray-50 h-6 font-medium text-gray-800 text-[12px]">
                             <td
                                 className="text-right px-4 border border-gray-300 font-medium  "
-                                colSpan={4}
+                                colSpan={5}
                             >
                                 Total
                             </td>

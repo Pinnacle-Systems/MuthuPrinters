@@ -1779,6 +1779,7 @@ model OrderEntry {
   customer          Party?              @relation(fields: [customerId], references: [id])
   customerId        Int?
   orderType         String?
+  productionType    String?
   orderQty          Int?
   qrCode            String?
   requirements      String?
@@ -1804,6 +1805,7 @@ model Process {
   varnishDetails    VarnishDetails[]
   machineDetails    MachineDetails[]
   processDetails    ProcessDetails[]
+  processRoute      ProcessRoute[]
 }
 
 model ProcessGroup {
@@ -1902,6 +1904,7 @@ model JobCard {
   laminationDetails LaminationDetails[]
   varnishDetails    VarnishDetails[]
   machineDetails    MachineDetails[]
+  processRoute      ProcessRoute[]
 }
 
 model BoardQuality {
@@ -1961,4 +1964,16 @@ model OrderItems {
   Uom          Uom?        @relation(fields: [uomId], references: [id])
   gsmId        Int?
   Gsm          Gsm?        @relation(fields: [gsmId], references: [id])
+}
+
+model ProcessRoute {
+  id             Int      @id @default(autoincrement())
+  jobCardId      Int?
+  JobCard        JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processId      Int?
+  Process        Process? @relation(fields: [processId], references: [id])
+  type           String // "process" | "lamination" | "varnish"
+  sequence       Int
+  isFront        Boolean  @default(false)
+  isFrontAndBack Boolean  @default(false)
 }

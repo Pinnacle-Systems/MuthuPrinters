@@ -162,6 +162,11 @@ export const partyType = [
 ];
 
 export const orderTypes = [
+  { show: "GENERAL", value: "GENERAL" },
+  { show: "ORDER", value: "ORDER" },
+];
+
+export const productionTypes = [
   { show: "SAMPLE", value: "SAMPLE" },
   { show: "BULK", value: "BULK" },
 ];
