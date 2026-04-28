@@ -3015,7 +3015,7 @@ export const DateInputNew = forwardRef(
           required={required}
           min={isToday ? today : undefined}
           className={`h-7 w-full px-2 py-0 border border-slate-300 rounded-md 
-          focus:border-indigo-300 focus:outline-none transition-all duration-200
+          focus:border-indigo-300 focus:outline-none outline-none transition-all duration-200
           hover:border-slate-400 ${readOnly || disabled ? "bg-slate-100" : ""} ${FORM_INPUT_TEXT_CLASS} ${className}`}
           id="id"
           value={value}

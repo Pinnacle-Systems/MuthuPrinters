@@ -5,7 +5,7 @@ import Modal from "../../../UiComponents/Modal";
 import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
 import { useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
 import { getUniqueArrayBySize } from "../../../Utils/helper";
-import { ColorMaster, Size, StyleItemMaster } from "..";
+import { ColorMaster, Gsm, Size, StyleItemMaster } from "..";
 import {
   LookupField,
   TransactionGrid,
@@ -510,7 +510,7 @@ const PoItems = ({
                   data-grid-editable="true"
                   className="grid-editable-cell border border-gray-300 text-[11px]"
                 >
-                  <FxSelect
+                  <FxSelectWithAdd
                     value={row.gsmId}
                     onChange={(value) =>
                       handleInputChange(value, rowIndex, "gsmId")
@@ -533,6 +533,9 @@ const PoItems = ({
                     }}
                     advanceOnEnter
                     advanceOnSelect
+                    addNew={true}
+                    childComponent={Gsm}
+                    addNewModalWidth="w-[30%] h-[45%]"
                   />
                 </td>
                 <td className="border border-gray-300 px-2 text-[11px] text-slate-700">

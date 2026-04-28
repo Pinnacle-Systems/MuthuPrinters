@@ -1,14 +1,15 @@
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getCommonParams } from "../../../Utils/helper";
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService";
 import { useGetUserByIdQuery } from "../../../redux/services/UsersMasterService";
 import { useDeleteOrderEntryMutation } from "../../../redux/uniformService/OrderEntryService";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
 import { useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import OrderEntryReport from "./OrderEntryReport.jsx";
 import OrderEntryForm from "./OrderEntryForm.jsx";
+import { useIsApprover } from "../../../CustomHooks/userIsApprover.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -16,6 +17,9 @@ const index = () => {
     const [readOnly, setReadOnly] = useState(false);
     const [selectedOrderId, setSelectedOrderId] = useState("");
     const [showJobCardForm, setShowJobCardForm] = useState(false);
+
+    const openTabs = useSelector((state) => state.openTabs);
+    const previewOrderId = useMemo(() => openTabs.tabs.find(i => i.name === "ORDER ENTRY")?.previewId, [openTabs]);
 
     const dispatch = useDispatch();
     const { branchId, companyId, finYearId, userId } = getCommonParams();
@@ -31,6 +35,7 @@ const index = () => {
     } = useGetTermsandCondtionsQuery({ params });
 
     const { data: userData } = useGetUserByIdQuery(userId)
+    const { canApprove } = useIsApprover("ORDER ENTRY", userData?.data?.id);
 
     const handleView = (orderId) => {
         setId(orderId);
@@ -82,6 +87,11 @@ const index = () => {
         }
     };
 
+    useEffect(() => {
+        if (!previewOrderId) return
+        setId(previewOrderId);
+        setShowForm(true);
+    }, [previewOrderId])
 
 
     const onNew = () => {
@@ -132,6 +142,7 @@ const index = () => {
                         itemsPerPage={10}
                         userData={userData?.data}
                         onCreateJobCard={handleCreateJobCard}
+                        canApprove={canApprove}
                     />
                 </div>
             </div>
@@ -152,6 +163,7 @@ const index = () => {
                         branchList={branchList}
                         userData={userData?.data}
                         termsData={termsData}
+                        canApprove={canApprove}
                     />
                 </div>
             )}

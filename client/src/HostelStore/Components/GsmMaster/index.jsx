@@ -8,13 +8,14 @@ import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { useAddGsmMasterMutation, useDeleteGsmMasterMutation, useGetGsmMasterByIdQuery, useGetGsmMasterQuery, useLazyGetGsmMasterByIdQuery, useUpdateGsmMasterMutation } from "../../../redux/services/GsmMasterService";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 
-export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
+export default function Form({ onSuccess, defaultName = "" } = {}) {
   const [form, setForm] = useState(false);
 
   const [readOnly, setReadOnly] = useState(false);
   const [id, setId] = useState("");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName || "");
   const [isPoWise, setIsPowise] = useState(false);
   const [active, setActive] = useState(true);
   const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
@@ -42,10 +43,11 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
   const [addData] = useAddGsmMasterMutation();
   const [updateData] = useUpdateGsmMasterMutation();
   const [removeData] = useDeleteGsmMasterMutation();
+  const [dispatchInvalidate] = useInvalidateTags();
 
   const syncFormWithDb = useCallback(
     (data) => {
-      setName(data?.name ? data.name : "");
+      setName(data?.name || defaultName || "");
       setIsPowise(id ? (data?.isPoWise ? data.isPoWise : false) : false);
       setActive(id ? (data?.active ? data.active : false) : true);
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
@@ -105,6 +107,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         //     Swal.showLoading();
         // }
       });
+      dispatchInvalidate();
     } catch (error) {
       console.log("handle");
     }
@@ -309,73 +312,12 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     }
   }, [form, onSuccess]);
 
-  if (deleteId) {
-    const childCount = singleData?.data?.childRecord ?? 0;
-    const isLoadingRecord = isSingleFetching || isSingleLoading;
-
-    const handleConfirmDelete = async () => {
-      try {
-        const res = await removeData(deleteId).unwrap();
-        if (res?.statusCode === 1) {
-          toast.error(res?.data?.message || "Cannot delete: child records exist");
-          return;
-        }
-        toast.success("Deleted successfully");
-        onSuccess?.();
-      } catch (err) {
-        toast.error(err?.data?.message || "Failed to delete");
-      }
-    };
-
-    return (
-      <div className="min-h-[250px] flex flex-col bg-gray-200">
-        <div className="border-b py-2 px-4 mx-3 mt-4 bg-white">
-          <h2 className="text-lg font-semibold">Delete GSM</h2>
-        </div>
-
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
-          {isLoadingRecord ? (
-            <p>Checking...</p>
-          ) : childCount > 0 ? (
-            <>
-              <p className="text-red-600 font-semibold">Cannot Delete</p>
-              <p>"{deleteLabel}" has {childCount} linked records.</p>
-              <button type="button" onClick={onClose}
-                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
-                Close
-              </button>
-            </>
-          ) : (
-            <>
-              <>
-                <p className="text-sm text-gray-700 text-center">
-                  Are you sure you want to delete{" "}
-                  <span className="font-semibold">"{deleteLabel}"</span>?
-                </p>
-                <div className="flex gap-3">
-                  <button type="button" onClick={onClose}
-                    className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
-                    Cancel
-                  </button>
-                  <button type="button" onClick={handleConfirmDelete}
-                    className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded">
-                    Delete
-                  </button>
-                </div>
-              </>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   if (onSuccess) {
     return (
       <div onKeyDown={handleKeyDown} className="h-full flex flex-col bg-gray-200">
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
           <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
-            {editId ? "Edit GSM" : "Add New GSM"}
+            Add New Gsm
           </h2>
           <button
             type="button"
@@ -385,7 +327,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
           >
             <Check size={14} />
-            {editId ? "Update" : "Save"}
+            {"Save"}
           </button>
         </div>
 

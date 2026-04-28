@@ -14,6 +14,7 @@ import { useGetPlateMasterQuery } from "../../../redux/services/PlateMasterServi
 import { useGetDieMasterQuery } from "../../../redux/services/DieMasterService.js";
 import OrderEntryApi from "../../../redux/uniformService/OrderEntryService.js";
 import { invalidateOrderEntryModule } from "../../../redux/Dispatch/OrderInvalidateTags.js";
+import { useIsApprover } from "../../../CustomHooks/userIsApprover.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -43,6 +44,7 @@ const index = () => {
         skip: !branchId,
     });
     const { data: userData } = useGetUserByIdQuery(userId)
+    const { canApprove } = useIsApprover("JOB CARD", userData?.data?.id);
 
     const handleView = (orderId) => {
         setId(orderId);
@@ -116,7 +118,7 @@ const index = () => {
         // Skip if no params or already processed this exact timestamp
         if (!tabParams?.customerId || !tabParams?.timestamp) return;
         if (tabParams.timestamp === lastProcessedTimestamp.current) return;
-
+        console.log(tabParams, "tabParams");
         // ⬅️ Mark as processed BEFORE setting state
         lastProcessedTimestamp.current = tabParams.timestamp;
 
@@ -165,6 +167,7 @@ const index = () => {
                         onDelete={handleDelete}
                         itemsPerPage={10}
                         userData={userData?.data}
+                        canApprove={canApprove}
                     />
                 </div>
             </div>
@@ -200,6 +203,7 @@ const index = () => {
                         setFromOrderType={setFromOrderType}
                         fromOrderQty={fromOrderQty}
                         setFromOrderQty={setFromOrderQty}
+                        canApprove={canApprove}
                     />
                 </div>
             )}
