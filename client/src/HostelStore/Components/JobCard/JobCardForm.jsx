@@ -275,6 +275,7 @@ const JobCardForm = ({
         isLoading: isSingleLoading,
     } = useGetJobCardByIdQuery(id, { skip: !id });
     const status = singleData?.data?.approvalStatus?.status;
+    const isDisabled = (status === "APPROVED" || status === "PENDING") && !canApprove;
 
     const [addData] = useAddJobCardMutation();
     const [updateData] = useUpdateJobCardMutation();
@@ -346,7 +347,7 @@ const JobCardForm = ({
                     })
                 : []
         );
-        setReadOnly((["PENDING", "APPROVED"].includes(status) && !canApprove) || readOnly);
+        // setReadOnly((["PENDING", "APPROVED"].includes(status) && !canApprove) || readOnly);
     }, []);
 
     useEffect(() => {
@@ -767,22 +768,22 @@ const JobCardForm = ({
                                     <Field label="Date">
                                         <ReusableInput label="" value={docDate} type="date" readOnly disabled />
                                     </Field>
-                                    <div className="w-[135px]">
 
-                                        <Field label="Order No">
-                                            <DropdownNew
-                                                name=""
-                                                dataList={orderList?.data?.filter(item => item?.approvalStatus?.status === "APPROVED" || item?.approvalStatus?.status === "NOT_CONFIGURED")}
-                                                value={orderEntryId}
-                                                setValue={setOrderEntryId}
-                                                required
-                                                readOnly={readOnly}
-                                                disabled={readOnly}
-                                                otherField={"docId"}
-                                                ref={customerRef}
-                                            />
-                                        </Field>
-                                    </div>
+
+                                    <Field label="Order No">
+                                        <DropdownNew
+                                            name=""
+                                            dataList={orderList?.data?.filter(item => item?.approvalStatus?.status === "APPROVED" || item?.approvalStatus?.status === "NOT_CONFIGURED")}
+                                            value={orderEntryId}
+                                            setValue={setOrderEntryId}
+                                            required
+                                            readOnly={readOnly}
+                                            disabled={readOnly}
+                                            otherField={"docId"}
+                                            ref={customerRef}
+                                        />
+                                    </Field>
+
 
                                     <Field label="Order Type">
                                         <DropdownInput
@@ -1113,7 +1114,7 @@ const JobCardForm = ({
                     <div className="flex gap-2">
                         <button
                             onClick={() => saveData("close")}
-                            disabled={readOnly}
+                            disabled={readOnly || isDisabled}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                     e.preventDefault();
@@ -1128,7 +1129,7 @@ const JobCardForm = ({
                         </button>
                         <button
                             onClick={() => saveData("new")}
-                            disabled={readOnly}
+                            disabled={readOnly || isDisabled}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                     e.preventDefault();
@@ -1208,6 +1209,7 @@ const JobCardForm = ({
                     <div className="flex gap-2">
                         {id && readOnly && (
                             <button
+                                disabled={status === "PENDING" && !canApprove}
                                 onClick={() => setReadOnly(false)}
                                 className="bg-amber-500 text-white px-3 py-1.5 rounded hover:bg-amber-600 flex items-center gap-1.5 text-xs font-medium transition-colors"
                             >

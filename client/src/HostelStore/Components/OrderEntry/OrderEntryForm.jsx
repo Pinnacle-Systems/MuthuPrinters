@@ -52,7 +52,8 @@ const OrderEntryForm = ({
     termsData,
     branchList,
     canApprove,
-    userData
+    userData,
+    branchData
 }) => {
     const today = new Date();
 
@@ -83,7 +84,6 @@ const OrderEntryForm = ({
     const [actionType, setActionType] = useState("");
     const [approvalRemarks, setApprovalRemarks] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
-
     const qrRef = useRef(null);
     const customerRef = useRef(null);
     const childRecord = useRef(0);
@@ -113,6 +113,7 @@ const OrderEntryForm = ({
     const [updateData] = useUpdateOrderEntryMutation();
     const [addApprovalStatus] = useAddApprovalStausMutation();
     const status = singleData?.data?.approvalStatus?.status;
+    const isDisabled = (status === "APPROVED" || status === "PENDING") && !canApprove;
 
     const syncFormWithDb = useCallback(
         (data) => {
@@ -139,7 +140,7 @@ const OrderEntryForm = ({
             setTermsId(data?.termsId || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
             setOrderItems(data?.orderItems || []);
-            setReadOnly((["PENDING", "APPROVED"].includes(status) && !canApprove) || readOnly);
+            // setReadOnly((["PENDING", "APPROVED"].includes(status) && !canApprove) || readOnly);
             setProductionType(data?.productionType || "SAMPLE");
         },
         [id],
@@ -843,8 +844,12 @@ const OrderEntryForm = ({
                         <OrderEntryPrintFormat
                             data={data}
                             customerDetails={customerList?.data?.find(c => c.id === customerId)}
-                            branchData={branchList?.data?.find(b => b.id === branchId)}
+                            branchData={branchData?.data}
                             qrCodeDataUrl={qrCodeDataUrl}
+                            styleItemList={styleItemList}
+                            gsmList={gsmList}
+                            uomList={uomList}
+                            sizeList={sizeList}
                         />
                     </PDFViewer>
                 </Modal>
@@ -1061,7 +1066,7 @@ const OrderEntryForm = ({
                 <div className="flex gap-2 flex-wrap">
                     <button
                         onClick={() => saveData("close")}
-                        disabled={readOnly}
+                        disabled={readOnly || isDisabled}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") {
                                 e.preventDefault();
@@ -1076,7 +1081,7 @@ const OrderEntryForm = ({
                     </button>
                     <button
                         onClick={() => saveData("new")}
-                        disabled={readOnly}
+                        disabled={readOnly || isDisabled}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") {
                                 e.preventDefault();
@@ -1161,6 +1166,7 @@ const OrderEntryForm = ({
                             <button
                                 className="bg-yellow-600 text-white px-4 py-1 rounded hover:bg-yellow-700 flex items-center text-xs"
                                 onClick={() => setReadOnly(false)}
+                                disabled={isDisabled}
                             >
                                 <FiEdit2 className="w-4 h-4 mr-2" />
                                 Edit
