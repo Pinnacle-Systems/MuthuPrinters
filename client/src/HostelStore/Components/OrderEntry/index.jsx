@@ -4,7 +4,7 @@ import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/Term
 import { useGetUserByIdQuery } from "../../../redux/services/UsersMasterService";
 import { useDeleteOrderEntryMutation } from "../../../redux/uniformService/OrderEntryService";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
-import { useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
+import { useGetBranchByIdQuery, useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
 import { useEffect, useMemo, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import OrderEntryReport from "./OrderEntryReport.jsx";
@@ -102,7 +102,9 @@ const index = () => {
 
     const { data: customerList } = useGetPartyQuery({ params: { ...params } });
     const { data: branchList } = useGetBranchQuery({ params: { ...params } });
-
+    const { data: branchData } = useGetBranchByIdQuery(branchId, {
+        skip: !branchId,
+    });
     const handleCreateJobCard = (orderId) => {
         setSelectedOrderId(orderId);
         setShowJobCardForm(true);
@@ -164,6 +166,7 @@ const index = () => {
                         userData={userData?.data}
                         termsData={termsData}
                         canApprove={canApprove}
+                        branchData={branchData}
                     />
                 </div>
             )}

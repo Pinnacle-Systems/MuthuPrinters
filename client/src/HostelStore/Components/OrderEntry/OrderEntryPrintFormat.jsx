@@ -8,8 +8,9 @@ import {
 } from "@react-pdf/renderer";
 import Logo from "../../../assets/mplogo.png";
 import moment from "moment";
+import { findFromList } from "../../../Utils/helper";
 
-// ─── COLOR PALETTE (Matched with Purchase Return) ──────────────────────────────
+// ─── COLOR PALETTE ────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
     borderBox: { border: "1 solid #ccc", margin: 0, padding: 0 },
     page: { fontFamily: "Helvetica", fontSize: 8, padding: 0, paddingBottom: 60, backgroundColor: "#fff" },
@@ -105,8 +106,31 @@ const styles = StyleSheet.create({
     },
     detailsCol: { flex: 1, padding: 8, borderRight: "1 solid #ddd" },
     detailsItem: { flexDirection: "row", marginBottom: 4 },
-    detailsLabel: { fontSize: 7.5, color: "#888", width: 70 },
+    detailsLabel: { fontSize: 7.5, color: "#888", width: 80 },
     detailsValue: { fontSize: 7.5, color: "#1a1a2e", fontWeight: "bold" },
+
+    // ── TABLE ──
+    tableWrap: { marginHorizontal: 20, border: "1 solid #b0b0b8" },
+    tableHeader: { flexDirection: "row", backgroundColor: "#1a1a2e" },
+    th: {
+        fontSize: 7.5,
+        fontWeight: "bold",
+        color: "#fff",
+        textAlign: "center",
+        borderRight: "1 solid #4a4a60",
+        paddingVertical: 5,
+        paddingHorizontal: 3,
+    },
+    trOdd: { flexDirection: "row", borderBottom: "1 solid #c8c8d0", backgroundColor: "#fff" },
+    trEven: { flexDirection: "row", borderBottom: "1 solid #c8c8d0", backgroundColor: "#fafafa" },
+    td: {
+        fontSize: 7.5,
+        color: "#333",
+        textAlign: "center",
+        borderRight: "1 solid #c8c8d0",
+        paddingVertical: 4,
+        paddingHorizontal: 3,
+    },
 
     // ── REQUIREMENTS SECTION ──
     requirementsBox: {
@@ -120,30 +144,8 @@ const styles = StyleSheet.create({
         fontSize: 8,
         lineHeight: 1.5,
         color: "#333",
-        minHeight: 100,
+        minHeight: 40,
     },
-
-    // ── QR CODE & SIGNATURES ──
-    bottomRow: {
-        flexDirection: "row",
-        marginHorizontal: 20,
-        marginTop: 10,
-        justifyContent: "space-between",
-        alignItems: "flex-end"
-    },
-    qrContainer: {
-        width: 80,
-        height: 80,
-        border: "1 solid #ddd",
-        padding: 4,
-        alignItems: "center",
-        justifyContent: "center"
-    },
-    qrImage: { width: 70, height: 70 },
-    sigArea: { width: 300 },
-    sigCompany: { textAlign: "right", fontSize: 8, fontWeight: "bold", color: "#1a1a2e", marginBottom: 30 },
-    sigRow: { flexDirection: "row", justifyContent: "space-between", borderTop: "1 solid #ddd", paddingTop: 4 },
-    sigItem: { flex: 1, textAlign: "center", fontSize: 7.5, color: "#555", fontWeight: "bold" },
 
     // ── FOOTER BAR ──
     footerBar: {
@@ -160,168 +162,380 @@ const styles = StyleSheet.create({
     footerRight: { fontSize: 8, color: "#1a1a2e", fontWeight: "bold" },
 });
 
-const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUrl }) => {
+// ── TABLE COLUMNS ─────────────────────────────────────────────────────────────
+const COLUMNS = [
+    { label: "S.No", flex: 0.4 },
+    { label: "Description of Goods", flex: 3 },
+    { label: "Size", flex: 1.2 },
+    { label: "UOM", flex: 0.8 },
+    { label: "GSM", flex: 1 },
+    { label: "Order Qty", flex: 1 },
+];
+
+const ROWS_PAGE_1 = 15;
+const ROWS_PAGE_CONT = 22;
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const chunkItems = (items) => {
+    const pages = [];
+    let rem = [...items];
+    pages.push(rem.splice(0, ROWS_PAGE_1));
+    while (rem.length > 0) pages.push(rem.splice(0, ROWS_PAGE_CONT));
+    return pages;
+};
+
+const TableHeader = () => (
+    <View style={styles.tableHeader}>
+        {COLUMNS.map(({ label, flex }, i) => (
+            <Text
+                key={label}
+                style={[styles.th, { flex }, i === COLUMNS.length - 1 && { borderRight: "none" }]}
+            >
+                {label}
+            </Text>
+        ))}
+    </View>
+);
+
+const ContinuationBar = ({ docId, branchName }) => (
+    <View style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        backgroundColor: "#1a1a2e",
+        paddingHorizontal: 20,
+        paddingVertical: 6,
+    }}>
+        <Text style={{ fontSize: 9, fontWeight: "bold", color: "#fff", letterSpacing: 2 }}>
+            ORDER ENTRY — Continued
+        </Text>
+        <Text style={{ fontSize: 8, color: "rgba(255,255,255,0.7)" }}>
+            Order No: {docId}  |  {branchName}
+        </Text>
+    </View>
+);
+
+// ── COMPONENT ─────────────────────────────────────────────────────────────────
+const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUrl, styleItemList, sizeList, uomList, gsmList }) => {
     if (!data) return null;
+
+    const orderItems = (data?.orderItems || []).filter(item => item.styleItemId);
+
+    // ── Grand total ──
+    const totalOrderQty = orderItems.reduce((s, r) => s + (parseFloat(r.orderQty) || 0), 0);
+
+    // ── Pagination ──
+    const pageChunks = chunkItems(orderItems);
+    const totalPg = pageChunks.length || 1; // at least 1 page even if no items
+    const pageOffsets = pageChunks.reduce((acc, chunk, i) => {
+        acc.push(i === 0 ? 0 : acc[i - 1] + pageChunks[i - 1].length);
+        return acc;
+    }, []);
+
+    // If no items, render a single empty page
+    const renderChunks = pageChunks.length === 0 ? [[]] : pageChunks;
 
     return (
         <Document>
-            <Page size="A4" style={styles.borderBox}>
-                <View style={styles.page}>
-                    {/* TOP ACCENT BAR */}
-                    <View style={styles.topBar} />
+            {renderChunks.map((chunkRows, pageIndex) => {
+                const isFirstPage = pageIndex === 0;
+                const isLastPage = pageIndex === renderChunks.length - 1;
+                const globalOffset = pageOffsets[pageIndex] || 0;
+                const minRows = isFirstPage ? ROWS_PAGE_1 : ROWS_PAGE_CONT;
+                const emptyCount = Math.max(0, minRows - chunkRows.length);
 
-                    {/* HEADER */}
-                    <View style={styles.header}>
-                        <View style={styles.companyLeft}>
-                            <Image src={Logo} style={styles.logo} />
-                        </View>
-                        <View style={styles.companyCenter}>
-                            <Text style={styles.companyName}>{branchData?.branchName || "MUTHU PRINTERS"}</Text>
-                        </View>
-                        <View style={styles.companyRight}>
-                            <Text style={{ fontSize: 7.5, color: "#555", marginBottom: 2, textAlign: "right" }}>
-                                {branchData?.address || ""}
-                            </Text>
-                            {[
-                                { label: "Mobile", value: branchData?.contactMobile },
-                                { label: "GST No", value: branchData?.gstNo },
-                                { label: "Email", value: branchData?.contactEmail },
-                            ].map(({ label, value }) =>
-                                value ? (
-                                    <View key={label} style={styles.companyRightRow}>
-                                        <Text style={styles.companyLabel}>{label}</Text>
-                                        <Text style={styles.companyColon}> : </Text>
-                                        <Text style={styles.companyValue}>{value}</Text>
+                return (
+                    <Page key={pageIndex} size="A4" style={styles.borderBox}>
+                        <View style={styles.page}>
+
+                            {/* TOP ACCENT BAR */}
+                            <View style={styles.topBar} />
+
+                            {isFirstPage ? (
+                                <>
+                                    {/* ── FULL HEADER ── */}
+                                    <View style={styles.header}>
+                                        <View style={styles.companyLeft}>
+                                            <Image src={Logo} style={styles.logo} />
+                                        </View>
+                                        <View style={styles.companyCenter}>
+                                            <Text style={styles.companyName}>{branchData?.branchName || "MUTHU PRINTERS"}</Text>
+                                        </View>
+                                        <View style={styles.companyRight}>
+                                            {/* <Text style={{ fontSize: 7.5, color: "#555", marginBottom: 2, textAlign: "right" }}>
+                                                {branchData?.address || ""}
+                                            </Text>
+                                            {[
+                                                { label: "Mobile", value: branchData?.contactMobile },
+                                                { label: "GST No", value: branchData?.gstNo },
+                                                { label: "Email", value: branchData?.contactEmail },
+                                            ].map(({ label, value }) =>
+                                                value ? (
+                                                    <View key={label} style={styles.companyRightRow}>
+                                                        <Text style={styles.companyLabel}>{label}</Text>
+                                                        <Text style={styles.companyColon}> : </Text>
+                                                        <Text style={styles.companyValue}>{value}</Text>
+                                                    </View>
+                                                ) : null
+                                            )} */}
+                                            {qrCodeDataUrl && (
+                                                <View style={{ border: "none", width: 60, height: 60, marginTop: 5, alignSelf: "flex-end", alignItems: "center", justifyContent: "center" }}>
+                                                    <Image src={qrCodeDataUrl} style={{ width: 50, height: 50 }} />
+                                                </View>
+                                            )}
+                                        </View>
                                     </View>
-                                ) : null
+
+                                    {/* TITLE BAND */}
+                                    <Text style={styles.titleBand}>ORDER ENTRY</Text>
+
+                                    {/* META PILLS */}
+                                    <View style={styles.metaRow}>
+                                        {[
+                                            { label: "Order No", value: data?.docId },
+                                            { label: "Order Date", value: moment(data?.docDate).format("DD-MM-YYYY") },
+                                            {
+                                                label: "Order Type", value: data?.orderType
+                                            },
+                                            {
+                                                label: "Production Type", value: data?.productionType
+                                            },
+                                            {
+                                                label: "Delivery Date", value: moment(data?.deliveryDate).format("DD-MM-YYYY")
+                                            }
+                                        ].map(({ label, value }) => (
+                                            <View key={label} style={styles.metaPill}>
+                                                <Text style={styles.metaLabel}>{label}:</Text>
+                                                <Text style={styles.metaValue}>{value}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+
+                                    {/* FROM / TO */}
+                                    <View style={styles.twoCol}>
+                                        {/* FROM */}
+                                        <View style={[styles.colHalf, { borderRight: "1 solid #ddd" }]}>
+                                            <Text style={styles.sectionHeader}>FROM</Text>
+                                            <View style={styles.sectionBody}>
+                                                <Text style={styles.partyName}>{branchData?.branchName || "MUTHU PRINTERS"}</Text>
+                                                <Text style={styles.partyAddr}>{branchData?.address || ""}</Text>
+                                                {[
+                                                    { label: "Mobile No", value: branchData?.contactMobile },
+                                                    { label: "GST No", value: branchData?.gstNo },
+                                                    { label: "Email", value: branchData?.contactEmail },
+                                                ].map(({ label, value }) =>
+                                                    value ? (
+                                                        <View key={label} style={styles.partyRow}>
+                                                            <Text style={styles.partyLabel}>{label}</Text>
+                                                            <Text style={styles.partyValue}>: {value}</Text>
+                                                        </View>
+                                                    ) : null
+                                                )}
+                                            </View>
+                                        </View>
+                                        {/* TO */}
+                                        <View style={styles.colHalf}>
+                                            <Text style={styles.sectionHeader}>CUSTOMER DETAILS</Text>
+                                            <View style={styles.sectionBody}>
+                                                <Text style={styles.partyName}>{customerDetails?.name || "N/A"}</Text>
+                                                <Text style={styles.partyAddr}>{customerDetails?.address || ""}</Text>
+                                                {[
+                                                    { label: "Contact Person", value: customerDetails?.contactPersonName },
+                                                    { label: "Mobile No", value: customerDetails?.contactNumber },
+                                                    { label: "GST No", value: customerDetails?.gstNo },
+                                                ].map(({ label, value }) =>
+                                                    value ? (
+                                                        <View key={label} style={styles.partyRow}>
+                                                            <Text style={styles.partyLabel}>{label}</Text>
+                                                            <Text style={styles.partyValue}>: {value}</Text>
+                                                        </View>
+                                                    ) : null
+                                                )}
+                                            </View>
+                                        </View>
+                                    </View>
+
+                                    {/* ORDER DETAILS GRID */}
+                                    {/* <View style={styles.detailsGrid}>
+                                        <View style={styles.detailsCol}>
+                                            <View style={styles.detailsItem}>
+                                                <Text style={styles.detailsLabel}>Order Type</Text>
+                                                <Text style={styles.detailsValue}>: {data?.orderType}</Text>
+                                            </View>
+                                            <View style={styles.detailsItem}>
+                                                <Text style={styles.detailsLabel}>Production Type</Text>
+                                                <Text style={styles.detailsValue}>: {data?.productionType}</Text>
+                                            </View>
+                                        </View>
+                                        <View style={[styles.detailsCol, { borderRight: "none" }]}>
+                                            <View style={styles.detailsItem}>
+                                                <Text style={styles.detailsLabel}>Delivery Date</Text>
+                                                <Text style={styles.detailsValue}>: {data?.deliveryDate ? moment(data.deliveryDate).format("DD-MM-YYYY") : "N/A"}</Text>
+                                            </View>
+                                        </View>
+                                    </View> */}
+
+                                    {/* ITEMS SECTION HEADER */}
+                                    {/* <View style={{
+                                        backgroundColor: "#2d2d44",
+                                        marginHorizontal: 20,
+                                        paddingHorizontal: 10,
+                                        paddingVertical: 5,
+                                    }}>
+                                        <Text style={{ color: "#e8e8f0", fontSize: 7.5, fontWeight: "bold", letterSpacing: 1 }}>
+                                            ORDER ITEMS
+                                        </Text>
+                                    </View> */}
+                                </>
+                            ) : (
+                                <ContinuationBar docId={data?.docId} branchName={branchData?.branchName || ""} />
                             )}
-                            {qrCodeDataUrl && (
-                                <View style={[styles.qrContainer, { border: "none", width: 60, height: 60, marginTop: 5, alignSelf: "flex-end" }]}>
-                                    <Image src={qrCodeDataUrl} style={{ width: 50, height: 50 }} />
+
+                            {/* ── TABLE ── */}
+                            <View style={styles.tableWrap}>
+                                <TableHeader />
+
+                                {/* Item rows */}
+                                {chunkRows.map((row, index) => {
+                                    const rowStyle = index % 2 === 0 ? styles.trOdd : styles.trEven;
+                                    return (
+                                        <View key={globalOffset + index} style={rowStyle}>
+                                            <Text style={[styles.td, { flex: 0.4 }]}>{globalOffset + index + 1}</Text>
+                                            <Text style={[styles.td, { flex: 3, textAlign: "left" }]}>
+                                                {row?.StyleItem?.name || findFromList(row.styleItemId, styleItemList?.data, "name")}
+                                            </Text>
+                                            <Text style={[styles.td, { flex: 1.2, textAlign: "left" }]}>
+                                                {row?.Size?.name || findFromList(row.sizeId, sizeList?.data, "name")}
+                                            </Text>
+                                            <Text style={[styles.td, { flex: 0.8 }]}>
+                                                {row?.Uom?.name || findFromList(row.uomId, uomList?.data, "name")}
+                                            </Text>
+                                            <Text style={[styles.td, { flex: 1 }]}>
+                                                {row?.Gsm?.name || findFromList(row.gsmId, gsmList?.data, "name") || ""}
+                                            </Text>
+                                            <Text style={[styles.td, { flex: 1, textAlign: "right", borderRight: "none" }]}>
+                                                {row?.orderQty ? parseFloat(row.orderQty).toFixed(2) : ""}
+                                            </Text>
+                                        </View>
+                                    );
+                                })}
+
+                                {/* Empty filler rows */}
+                                {Array.from({ length: emptyCount }).map((_, i) => {
+                                    const rowStyle = (chunkRows.length + i) % 2 === 0 ? styles.trOdd : styles.trEven;
+                                    return (
+                                        <View key={`empty-${i}`} style={rowStyle}>
+                                            <Text style={[styles.td, { flex: 0.4, color: "transparent" }]}> </Text>
+                                            <Text style={[styles.td, { flex: 3 }]}> </Text>
+                                            <Text style={[styles.td, { flex: 1.2 }]}> </Text>
+                                            <Text style={[styles.td, { flex: 0.8 }]}> </Text>
+                                            <Text style={[styles.td, { flex: 1 }]}> </Text>
+                                            <Text style={[styles.td, { flex: 1, borderRight: "none" }]}> </Text>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+
+                            {/* ── GRAND TOTAL — last page only ── */}
+                            {isLastPage && (
+                                <View style={{
+                                    flexDirection: "row",
+                                    marginHorizontal: 20,
+                                    backgroundColor: "#e8e8ec",
+                                    borderLeft: "1 solid #b0b0b8",
+                                    borderRight: "1 solid #b0b0b8",
+                                    borderBottom: "1 solid #b0b0b8",
+                                }}>
+                                    <Text style={{ flex: 0.4, fontSize: 8, paddingVertical: 5, paddingHorizontal: 2, borderRight: "1 solid #bbbbc8", color: "transparent" }}> </Text>
+                                    <Text style={{ flex: 2.8, fontSize: 8, fontWeight: "bold", color: "#1a1a2e", paddingVertical: 5, paddingRight: 5, borderRight: "1 solid #bbbbc8", textAlign: "right" }}>
+                                        TOTAL
+                                    </Text>
+                                    <Text style={{ flex: 1.2, fontSize: 8, color: "transparent", paddingVertical: 5, borderRight: "1 solid #bbbbc8" }}> </Text>
+                                    <Text style={{ flex: 0.8, fontSize: 8, color: "transparent", paddingVertical: 5, borderRight: "1 solid #bbbbc8" }}> </Text>
+                                    <Text style={{ flex: 1, fontSize: 8, color: "transparent", paddingVertical: 5, borderRight: "1 solid #bbbbc8" }}> </Text>
+                                    <Text style={{ flex: 1, fontSize: 8, fontWeight: "bold", color: "#1a1a2e", textAlign: "right", paddingVertical: 5, paddingRight: 1 }}>
+                                        {totalOrderQty.toFixed(2)}
+                                    </Text>
                                 </View>
                             )}
-                        </View>
-                    </View>
 
-                    {/* TITLE BAND */}
-                    <Text style={styles.titleBand}>ORDER ENTRY</Text>
+                            {/* ── SUB TOTAL — non-last pages ── */}
+                            {!isLastPage && (
+                                <View style={{
+                                    flexDirection: "row",
+                                    marginHorizontal: 20,
+                                    backgroundColor: "#f4f4f6",
+                                    borderLeft: "1 solid #b0b0b8",
+                                    borderRight: "1 solid #b0b0b8",
+                                    borderBottom: "1 solid #b0b0b8",
+                                }}>
+                                    <Text style={{ flex: 0.4, fontSize: 8, color: "transparent", paddingVertical: 4, paddingHorizontal: 3, borderRight: "1 solid #bbbbc8" }}> </Text>
+                                    <Text style={{ flex: 5, fontSize: 7.5, color: "#888", fontStyle: "italic", textAlign: "right", paddingVertical: 4, paddingRight: 8, borderRight: "1 solid #bbbbc8" }}>
+                                        Sub Total (Continued on next page...)
+                                    </Text>
+                                    <Text style={{ flex: 1, fontSize: 8, fontWeight: "bold", color: "#1a1a2e", textAlign: "right", paddingVertical: 4, paddingRight: 3 }}>
+                                        {chunkRows.reduce((s, r) => s + (parseFloat(r.orderQty) || 0), 0).toFixed(2)}
+                                    </Text>
+                                </View>
+                            )}
 
-                    {/* META PILLS */}
-                    <View style={styles.metaRow}>
-                        {[
-                            { label: "Order No", value: data?.docId },
-                            { label: "Order Date", value: moment(data?.docDate).format('DD-MM-YYYY') },
-                        ].map(({ label, value }) => (
-                            <View key={label} style={styles.metaPill}>
-                                <Text style={styles.metaLabel}>{label}:</Text>
-                                <Text style={styles.metaValue}>{value}</Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    {/* FROM / TO */}
-                    <View style={styles.twoCol}>
-                        {/* FROM */}
-                        <View style={[styles.colHalf, { borderRight: "1 solid #ddd" }]}>
-                            <Text style={styles.sectionHeader}>FROM</Text>
-                            <View style={styles.sectionBody}>
-                                <Text style={styles.partyName}>{branchData?.branchName || "MUTHU PRINTERS"}</Text>
-                                <Text style={styles.partyAddr}>{branchData?.address || ""}</Text>
-                                {[
-                                    { label: "Mobile No", value: branchData?.contactMobile },
-                                    { label: "GST No", value: branchData?.gstNo },
-                                    { label: "Email", value: branchData?.contactEmail },
-                                ].map(({ label, value }) =>
-                                    value ? (
-                                        <View key={label} style={styles.partyRow}>
-                                            <Text style={styles.partyLabel}>{label}</Text>
-                                            <Text style={styles.partyValue}>: {value}</Text>
+                            {/* ── REQUIREMENTS, REMARKS & TERMS — last page only ── */}
+                            {isLastPage && (
+                                <>
+                                    {/* CUSTOMER REQUIREMENTS */}
+                                    <View style={[styles.requirementsBox, { marginTop: 10 }]}>
+                                        <View style={{ backgroundColor: "#2d2d44", paddingHorizontal: 10, paddingVertical: 5 }}>
+                                            <Text style={{ color: "#e8e8f0", fontSize: 7.5, fontWeight: "bold" }}>CUSTOMER REQUIREMENTS</Text>
                                         </View>
-                                    ) : null
-                                )}
-                            </View>
-                        </View>
-                        {/* TO */}
-                        <View style={styles.colHalf}>
-                            <Text style={styles.sectionHeader}>CUSTOMER DETAILS</Text>
-                            <View style={styles.sectionBody}>
-                                <Text style={styles.partyName}>{customerDetails?.name || "N/A"}</Text>
-                                <Text style={styles.partyAddr}>{customerDetails?.address || ""}</Text>
-                                {[
-                                    { label: "Contact Person", value: customerDetails?.contactPersonName },
-                                    { label: "Mobile No", value: customerDetails?.contactNumber },
-                                    { label: "GST No", value: customerDetails?.gstNo },
-                                ].map(({ label, value }) =>
-                                    value ? (
-                                        <View key={label} style={styles.partyRow}>
-                                            <Text style={styles.partyLabel}>{label}</Text>
-                                            <Text style={styles.partyValue}>: {value}</Text>
+                                        <View style={styles.requirementsBody}>
+                                            <Text>{data?.requirements || "No specific requirements mentioned."}</Text>
                                         </View>
-                                    ) : null
-                                )}
-                            </View>
-                        </View>
-                    </View>
+                                    </View>
 
-                    {/* ORDER DETAILS GRID */}
-                    <View style={styles.detailsGrid}>
-                        <View style={styles.detailsCol}>
-                            <View style={styles.detailsItem}>
-                                <Text style={styles.detailsLabel}>Order Type</Text>
-                                <Text style={styles.detailsValue}>: {data?.orderType}</Text>
-                            </View>
-                            <View style={styles.detailsItem}>
-                                <Text style={styles.detailsLabel}>Order Quantity</Text>
-                                <Text style={styles.detailsValue}>: {data?.orderQty}</Text>
-                            </View>
-                        </View>
-                        <View style={[styles.detailsCol, { borderRight: "none" }]}>
-                            <View style={styles.detailsItem}>
-                                <Text style={styles.detailsLabel}>Delivery Date</Text>
-                                <Text style={styles.detailsValue}>: {data?.deliveryDate ? moment(data.deliveryDate).format('DD-MM-YYYY') : 'N/A'}</Text>
-                            </View>
-                            <View style={styles.detailsItem}>
-                                <Text style={styles.detailsLabel}>Job Type</Text>
-                                <Text style={styles.detailsValue}>: {data?.jobType || 'Internal'}</Text>
-                            </View>
-                        </View>
-                    </View>
+                                    {/* REMARKS & TERMS */}
+                                    <View style={[styles.twoCol, { marginTop: 5 }]}>
+                                        <View style={[styles.colHalf, { borderRight: "1 solid #ddd", backgroundColor: "#f8f8f9" }]}>
+                                            <Text style={styles.sectionHeader}>REMARKS</Text>
+                                            <View style={styles.sectionBody}>
+                                                <Text style={{ fontSize: 7.5, color: "#555" }}>{data?.remarks || "N/A"}</Text>
+                                            </View>
+                                        </View>
+                                        {/* <View style={styles.colHalf}>
+                                            <Text style={styles.sectionHeader}>TERMS &amp; CONDITIONS</Text>
+                                            <View style={styles.sectionBody}>
+                                                <Text style={{ fontSize: 7.5, color: "#555" }}>{data?.termsAndCondition || "N/A"}</Text>
+                                            </View>
+                                        </View> */}
+                                    </View>
 
-                    {/* REQUIREMENTS SECTION */}
-                    <View style={styles.requirementsBox}>
-                        <View style={{ backgroundColor: "#2d2d44", paddingHorizontal: 10, paddingVertical: 5 }}>
-                            <Text style={{ color: "#e8e8f0", fontSize: 7.5, fontWeight: "bold" }}>CUSTOMER REQUIREMENTS</Text>
-                        </View>
-                        <View style={styles.requirementsBody}>
-                            <Text>{data?.requirements || "No specific requirements mentioned."}</Text>
-                        </View>
-                    </View>
+                                    {/* SIGNATURES */}
+                                    <View style={{ marginHorizontal: 20, marginTop: 14, marginBottom: 8 }}>
+                                        <Text style={{ textAlign: "right", fontSize: 8, fontWeight: "bold", color: "#1a1a2e", marginBottom: 18 }}>
+                                            For {branchData?.branchName || ""}
+                                        </Text>
+                                        <View style={{ flexDirection: "row", justifyContent: "space-between", borderTop: "1 solid #ddd", paddingTop: 4 }}>
+                                            {["Prepared By", "Checked By", "Approved By", "Customer Sign"].map((role) => (
+                                                <Text key={role} style={{ flex: 1, textAlign: "center", fontSize: 7.5, color: "#555", fontWeight: "bold" }}>
+                                                    {role}
+                                                </Text>
+                                            ))}
+                                        </View>
+                                    </View>
+                                </>
+                            )}
 
-                    {/* REMARKS & TERMS */}
-                    <View style={[styles.twoCol, { marginTop: 5 }]}>
-                        <View style={[styles.colHalf, { borderRight: "1 solid #ddd", backgroundColor: "#f8f8f9" }]}>
-                            <Text style={styles.sectionHeader}>REMARKS</Text>
-                            <View style={styles.sectionBody}>
-                                <Text style={{ fontSize: 7.5, color: "#555" }}>{data?.remarks || "N/A"}</Text>
-                            </View>
                         </View>
-                        <View style={styles.colHalf}>
-                            <Text style={styles.sectionHeader}>TERMS & CONDITIONS</Text>
-                            <View style={styles.sectionBody}>
-                                <Text style={{ fontSize: 7.5, color: "#555" }}>{data?.termsAndCondition || "N/A"}</Text>
-                            </View>
+
+                        {/* FOOTER BAR — all pages */}
+                        <View style={styles.footerBar} fixed>
+                            <Text
+                                style={styles.footerRight}
+                                render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`}
+                            />
                         </View>
-                    </View>
-
-                    </View>
-
-                {/* FOOTER BAR */}
-                <View style={styles.footerBar} fixed>
-                    <Text style={styles.footerRight} render={({ pageNumber, totalPages }) => (
-                        `Page ${pageNumber} of ${totalPages}`
-                    )} />
-                </View>
-            </Page>
+                    </Page>
+                );
+            })}
         </Document>
     );
 };
