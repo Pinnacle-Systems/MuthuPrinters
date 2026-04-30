@@ -370,7 +370,7 @@ export const DropdownWithModal = forwardRef(
             }
           }}
           className={`flex h-7 w-full items-center justify-between border border-gray-300 rounded-lg px-3 py-0 text-left
-          focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+          focus:outline-none focus:ring-1 outline-none focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm
           ${isDisabled ? "bg-slate-100 cursor-not-allowed" : "bg-white cursor-pointer"}
           ${FORM_INPUT_TEXT_CLASS} ${className}`}

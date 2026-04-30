@@ -3645,22 +3645,26 @@ export default function FxSelect({
   );
 }
 
-export function FxSelectWithAdd({
-  value,
-  onChange,
-  options,
-  placeholder = "",
-  readOnly = false,
-  onBlur,
-  onKeyDown,
-  inputId,
-  addNew = false,
-  childComponent = null,
-  addNewModalWidth = "w-[40%] h-[48%]",
-  nextRef,
-  advanceOnEnter = false,
-  advanceOnSelect = true,
-}) {
+export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
+  {
+    value,
+    onChange,
+    options,
+    placeholder,
+    readOnly,
+    onBlur,
+    onKeyDown,
+    inputId,
+    addNew,
+    childComponent,
+    addNewModalWidth,
+    nextRef,
+    advanceOnEnter,
+    advanceOnSelect,
+    disabled,
+  },
+  ref,
+) {
   const [showAddNewModal, setShowAddNewModal] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [menuIsOpen, setMenuIsOpen] = useState(false);
@@ -3668,6 +3672,13 @@ export function FxSelectWithAdd({
   const pendingAdvanceRef = useRef(false);
 
   const CREATE_NEW_VALUE = "__CREATE_NEW__";
+
+  useImperativeHandle(ref, () => ({
+    focus() {
+      // react-select exposes focus() on the instance
+      selectRef.current?.focus?.();
+    },
+  }));
 
   // ✅ Helper function to focus next field
   const focusNextField = () => {
@@ -3852,7 +3863,7 @@ export function FxSelectWithAdd({
       )}
     </>
   );
-}
+});
 
 export const customSelectStyles = {
   control: (base, state) => ({

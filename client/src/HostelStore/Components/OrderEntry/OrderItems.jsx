@@ -83,10 +83,10 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                 Size
                             </th>
                             <th className={`w-20 px-4 py-2 text-center font-medium `}>
-                                UOM
+                                GSM
                             </th>
                             <th className={`w-20 px-4 py-2 text-center font-medium `}>
-                                GSM
+                                UOM
                             </th>
                             <th className={`w-24 px-4 py-2 text-center font-medium  `}>
                                 Qty
@@ -167,31 +167,6 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                 </td>
                                 <td className=" border border-gray-300 text-[11px] ">
                                     <FxSelectWithAdd
-                                        value={row.uomId}
-                                        onChange={(val) => handleInputChange(val, index, "uomId")}
-                                        options={(uomList?.data || [])
-                                            .filter((item) => (id ? true : item.active))
-                                            .map((item) => ({
-                                                label: item.name,
-                                                value: item.id,
-                                            }))}
-                                        readOnly={readOnly}
-                                        placeholder=""
-                                        onBlur={() =>
-                                            handleInputChange(row.uomId, index, "uomId")
-                                        }
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Delete") {
-                                                handleInputChange("", index, "uomId");
-                                            }
-                                        }}
-                                        addNew={true}
-                                        childComponent={UomMaster}
-                                        addNewModalWidth="w-[30%] h-[45%]"
-                                    />
-                                </td>
-                                <td className=" border border-gray-300 text-[11px] ">
-                                    <FxSelectWithAdd
                                         value={row.gsmId}
                                         onChange={(val) => handleInputChange(val, index, "gsmId")}
                                         options={(gsmList?.data || [])
@@ -215,6 +190,32 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                         addNewModalWidth="w-[30%] h-[45%]"
                                     />
                                 </td>
+                                <td className=" border border-gray-300 text-[11px] ">
+                                    <FxSelectWithAdd
+                                        value={row.uomId}
+                                        onChange={(val) => handleInputChange(val, index, "uomId")}
+                                        options={(uomList?.data || [])
+                                            .filter((item) => (id ? true : item.active))
+                                            .map((item) => ({
+                                                label: item.name,
+                                                value: item.id,
+                                            }))}
+                                        readOnly={readOnly}
+                                        placeholder=""
+                                        onBlur={() =>
+                                            handleInputChange(row.uomId, index, "uomId")
+                                        }
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Delete") {
+                                                handleInputChange("", index, "uomId");
+                                            }
+                                        }}
+                                        addNew={true}
+                                        childComponent={UomMaster}
+                                        addNewModalWidth="w-[30%] h-[45%]"
+                                    />
+                                </td>
+
                                 <td className="border-blue-gray-200 text-[11px] border border-gray-300  text-right">
                                     <input
                                         id={`orderQty-input-${index}`}

@@ -59,6 +59,7 @@ import {
   purchaseBillEntryApi,
   ApprovalMasterApi,
   JobCardApi,
+  ProformaInvoiceApi,
 } from "./uniformService";
 import OrderEntryApi from "./uniformService/OrderEntryService";
 import BoardMasterApi from "./services/boardService";
@@ -123,6 +124,7 @@ const commonReducers = {
   plate: PlateMasterApi.reducer,
   die: DieMasterApi.reducer,
   board: BoardMasterApi.reducer,
+  proformaInvoice: ProformaInvoiceApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -183,6 +185,7 @@ const commonMiddleware = [
   PlateMasterApi.middleware,
   DieMasterApi.middleware,
   BoardMasterApi.middleware,
+  ProformaInvoiceApi.middleware,
 ];
 
 const store = configureStore({

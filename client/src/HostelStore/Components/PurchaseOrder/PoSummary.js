@@ -18,7 +18,7 @@ const PoSummary = ({
 }) => {
   const amount = Math.abs(totals?.net || 0);
   return (
-    <div className={`bg-gray-200 rounded z-50 w-[500px] `}>
+    <div className={`bg-gray-200 rounded z-50 w-[500px]`}>
       <table className="border border-gray-500 w-full text-xs text-start">
         <thead className="border border-gray-500">
           <tr>
@@ -41,7 +41,7 @@ const PoSummary = ({
                 autoFocus
                 name="type"
                 disabled={readOnly}
-                className="text-left w-full rounded h-8"
+                className="text-left w-full rounded h-8 new-data-input"
                 value={discountType}
                 onChange={(e) => {
                   setDiscountType(e.target.value);
@@ -57,14 +57,14 @@ const PoSummary = ({
             </td>
           </tr>
 
-          <tr className="h-7">
+          <tr className="">
             <td className="border border-gray-500">Discount</td>
             <td className="border border-gray-500">
               <input
                 type="text"
                 name="value"
                 disabled={readOnly || !discountType}
-                className="h-7 w-full text-right"
+                className="h-6 w-full text-right new-data-input"
                 value={discountValue}
                 onKeyDown={(e) => {
                   if (e.code === "Minus" || e.code === "NumpadSubtract")

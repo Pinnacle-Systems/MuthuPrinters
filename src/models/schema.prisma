@@ -67,6 +67,7 @@ model Company {
   boards              Board[]
   plates              Plate[]
   dies                Die[]
+  proformaInvoices    ProformaInvoice[]
 }
 
 model Subscription {
@@ -120,6 +121,7 @@ model Branch {
   approvalConfigs       ApprovalConfig[]
   orderEntries          OrderEntry[]
   jobCards              JobCard[]
+  proformaInvoices      ProformaInvoice[]
 }
 
 model UserOnBranch {
@@ -205,6 +207,8 @@ model User {
   orderEntriesUpdatedBy          OrderEntry[]           @relation(name: "updatedBy")
   jobCardsCreatedBy              JobCard[]              @relation(name: "createdBy")
   jobCardsUpdatedBy              JobCard[]              @relation(name: "updatedBy")
+  proformaInvoicesCreatedBy      ProformaInvoice[]      @relation(name: "proformaCreatedBy")
+  proformaInvoicesUpdatedBy      ProformaInvoice[]      @relation(name: "proformaUpdatedBy")
 }
 
 model Employee {
@@ -270,6 +274,7 @@ model FinYear {
   DeliveryInvoice     DeliveryInvoice[]
   openingBalances     OpeningBalance[]
   purchaseBillEntries PurchaseBillEntry[]
+  proformaInvoices    ProformaInvoice[]
 }
 
 model EmployeeCategory {
@@ -458,6 +463,7 @@ model Party {
   purchaseLedgers       PurchaseLedger[]
   orderEntries          OrderEntry[]
   JobCard               JobCard[]
+  proformaInvoices      ProformaInvoice[]
 }
 
 model PartyBranch {
@@ -588,6 +594,7 @@ model Uom {
   styles                 Style[]
   styleItems             StyleItem[]
   orderItems             OrderItems[]
+  proformaInvoiceItems   ProformaInvoiceItem[]
 }
 
 model ProductUomPriceDetails {
@@ -938,6 +945,7 @@ model StyleItem {
   purchaseCancelItems    PurchaseCancelItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
   orderItems             OrderItems[]
+  proformaInvoiceItems   ProformaInvoiceItem[]
 }
 
 model DeliveryChallan {
@@ -1120,6 +1128,7 @@ model TaxTemplate {
   pos                 Po[]
   purchaseBillEntries PurchaseBillEntry[]
   purchaseInwards     PurchaseInward[]
+  proformaInvoices    ProformaInvoice[]
 }
 
 model TaxTemplateDetails {
@@ -1147,6 +1156,7 @@ model Hsn {
   purchaseReturnItems    PurchaseReturnItems[]
   purchaseCancelItems    PurchaseCancelItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
+  proformaInvoiceItems   ProformaInvoiceItem[]
 }
 
 model BranchType {
@@ -1265,19 +1275,21 @@ model TermsAndConditions {
   purchaseInwardReturns PurchaseInwardReturn[]
   purchaseCancels       PurchaseCancel[]
   orderEntries          OrderEntry[]
+  proformaInvoices      ProformaInvoice[]
 }
 
 model PayTerm {
-  id        Int      @id @default(autoincrement())
-  name      String?
-  days      Int?
-  years     Int?
-  months    Int?
-  Company   Company? @relation(fields: [companyId], references: [id])
-  companyId Int?
-  active    Boolean  @default(true)
-  aliasName String?
-  pos       Po[]
+  id               Int               @id @default(autoincrement())
+  name             String?
+  days             Int?
+  years            Int?
+  months           Int?
+  Company          Company?          @relation(fields: [companyId], references: [id])
+  companyId        Int?
+  active           Boolean           @default(true)
+  aliasName        String?
+  pos              Po[]
+  proformaInvoices ProformaInvoice[]
 }
 
 model PurchaseInward {
@@ -1573,6 +1585,7 @@ model Size {
   inwardItems            InwardItems[]
   stocks                 Stock[]
   orderItems             OrderItems[]
+  proformaInvoiceItems   ProformaInvoiceItem[]
 }
 
 model Gsm {
@@ -1590,6 +1603,7 @@ model Gsm {
   purchaseBillEntryItems PurchaseBillEntryItems[]
   stocks                 Stock[]
   orderItems             OrderItems[]
+  proformaInvoiceItems   ProformaInvoiceItem[]
 
   jobCards JobCard[]
 }
@@ -1976,4 +1990,74 @@ model ProcessRoute {
   sequence       Int
   isFront        Boolean  @default(false)
   isFrontAndBack Boolean  @default(false)
+}
+
+model ProformaInvoice {
+  id                Int                   @id @default(autoincrement())
+  docId             String
+  docDate           DateTime?
+  userDate          DateTime?
+  deliveryDate      DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  createdBy         User?                 @relation("proformaCreatedBy", fields: [createdById], references: [id])
+  createdById       Int?
+  updatedBy         User?                 @relation("proformaUpdatedBy", fields: [updatedById], references: [id])
+  updatedById       Int?
+  Branch            Branch?               @relation(fields: [branchId], references: [id])
+  branchId          Int?
+  Company           Company?              @relation(fields: [companyId], references: [id])
+  companyId         Int?
+  customer          Party?                @relation(fields: [customerId], references: [id])
+  customerId        Int?
+  finYear           FinYear?              @relation(fields: [finYearId], references: [id])
+  finYearId         Int?
+  remarks           String?
+  termsAndCondition String?
+  Terms             TermsAndConditions?   @relation(fields: [termsId], references: [id])
+  termsId           Int?
+  items             ProformaInvoiceItem[]
+  attachments       ProformaAttachments[]
+  TaxTemplate       TaxTemplate?          @relation(fields: [taxTemplateId], references: [id])
+  taxTemplateId     Int?
+  quoteVersion      Int                   @default(1)
+  discountType      String?
+  discountValue     Float?
+  PayTerm           PayTerm?              @relation(fields: [payTermId], references: [id])
+  payTermId         Int?
+  isApproved        Boolean               @default(false)
+  approvalStatus    String                @default("PENDING")
+}
+
+model ProformaInvoiceItem {
+  id                Int             @id @default(autoincrement())
+  ProformaInvoice   ProformaInvoice @relation(fields: [proformaInvoiceId], references: [id], onDelete: Cascade)
+  proformaInvoiceId Int
+  styleItemId       Int?
+  StyleItem         StyleItem?      @relation(fields: [styleItemId], references: [id])
+  qty               Float?
+  price             Float?
+  taxPercent        Float?
+  discountType      String?
+  discountValue     Float?
+  amount            Float?
+  sizeId            Int?
+  Size              Size?           @relation(fields: [sizeId], references: [id])
+  uomId             Int?
+  Uom               Uom?            @relation(fields: [uomId], references: [id])
+  gsmId             Int?
+  Gsm               Gsm?            @relation(fields: [gsmId], references: [id])
+  hsnId             Int?
+  Hsn               Hsn?            @relation(fields: [hsnId], references: [id])
+  quoteVersion      Int             @default(1)
+}
+
+model ProformaAttachments {
+  id                Int              @id @default(autoincrement())
+  ProformaInvoice   ProformaInvoice? @relation(fields: [proformaInvoiceId], references: [id], onDelete: Cascade)
+  proformaInvoiceId Int?
+  date              DateTime?
+  name              String?
+  fileName          String?
+  filePath          String?
 }
