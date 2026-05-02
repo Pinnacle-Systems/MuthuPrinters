@@ -68,6 +68,7 @@ model Company {
   plates              Plate[]
   dies                Die[]
   proformaInvoices    ProformaInvoice[]
+  currencies          Currency[]
 }
 
 model Subscription {
@@ -2027,6 +2028,10 @@ model ProformaInvoice {
   payTermId         Int?
   isApproved        Boolean               @default(false)
   approvalStatus    String                @default("PENDING")
+  validityTo        DateTime?
+  Currency          Currency?             @relation(fields: [currencyId], references: [id])
+  currencyId        Int?
+  weightInKg        Float?
 }
 
 model ProformaInvoiceItem {
@@ -2050,6 +2055,7 @@ model ProformaInvoiceItem {
   hsnId             Int?
   Hsn               Hsn?            @relation(fields: [hsnId], references: [id])
   quoteVersion      Int             @default(1)
+  dozen             Float?
 }
 
 model ProformaAttachments {
@@ -2060,4 +2066,18 @@ model ProformaAttachments {
   name              String?
   fileName          String?
   filePath          String?
+}
+
+model Currency {
+  id             Int      @id @default(autoincrement())
+  name           String
+  code           String?
+  symbol         String?
+  isBaseCurrency Boolean  @default(false)
+  exchangeRate   Float?
+  Company        Company? @relation(fields: [companyId], references: [id])
+  companyId      Int?
+  active         Boolean  @default(true)
+
+  proformaInvoices ProformaInvoice[]
 }

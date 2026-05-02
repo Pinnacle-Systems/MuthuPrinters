@@ -1529,7 +1529,7 @@ export const DropdownInputNew = forwardRef(
           defaultValue={defaultValue}
           required={required}
           className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
-          focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+          focus:outline-none outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm ${readOnly || disabled ? "bg-slate-100" : ""}
           ${FORM_INPUT_TEXT_CLASS} ${className}`}
           value={value}
@@ -1977,7 +1977,7 @@ export const TextInputNew1 = forwardRef(
           tabIndex={tabIndex ?? undefined}
           max={max ? String(max) : undefined}
           className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
-          focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+          focus:outline-none outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm ${readOnly || disabled ? "bg-slate-100" : ""}
           ${className}`}
           onKeyDown={onKeyDown}

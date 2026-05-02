@@ -19,6 +19,8 @@ const ProformaInvoiceItems = ({
     readOnly,
     taxTemplateId,
     id,
+    isCurrencySymbol,
+    isCustomerExport,
 }) => {
     const styleItemRefs = useRef({});
     const { companyId } = getCommonParams();
@@ -39,6 +41,7 @@ const ProformaInvoiceItems = ({
         qty: "",
         price: "",
         amount: "", // Used for "Gross"
+        dozen: "",
     };
 
     const [contextMenu, setContextMenu] = useState(null);
@@ -63,7 +66,8 @@ const ProformaInvoiceItems = ({
         // Calculate gross (amount)
         const qty = parseFloat(newItems[index].qty) || "";
         const price = parseFloat(newItems[index].price) || "";
-        newItems[index].amount = (qty * price).toFixed(2);
+        newItems[index].dozen = (qty / 12).toFixed(2);
+        newItems[index].amount = (newItems[index].dozen * price).toFixed(2);
 
         setItems(newItems);
     };
@@ -142,7 +146,7 @@ const ProformaInvoiceItems = ({
                             <th className="w-10 px-1 py-2 text-center font-medium border border-gray-300">
                                 S.No
                             </th>
-                            <th className="w-48 px-2 py-2 text-center font-medium border border-gray-300">
+                            <th className="w-80 px-2 py-2 text-center font-medium border border-gray-300">
                                 Description of Goods
                             </th>
                             {/* <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
@@ -152,24 +156,31 @@ const ProformaInvoiceItems = ({
                             <th className="w-20 px-1 py-2 text-center font-medium border border-gray-300">
                                 GSM
                             </th> */}
-                            <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                            <th className="w-40 px-1 py-2 text-center font-medium border border-gray-300">
                                 HSN
                             </th>
-                            <th className="w-20 px-1 py-2 text-center font-medium border border-gray-300">
+                            <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                                 UOM
                             </th>
-                            <th className="w-16 px-1 py-2 text-center font-medium border border-gray-300">
+                            <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                                 Qty
                             </th>
-                            <th className="w-20 px-1 py-2 text-center font-medium border border-gray-300">
-                                Price
+                            <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                                Dozen
+                            </th>
+                            <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                                Price {isCurrencySymbol && `(${isCurrencySymbol})`}
                             </th>
                             <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                                 Gross
                             </th>
-                            <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
-                                Tax
-                            </th>
+                            {
+                                !isCustomerExport && (
+                                    <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
+                                        Tax
+                                    </th>
+                                )
+                            }
                             {/* <th className="w-10 px-1 py-2 text-center font-medium border border-gray-300">
               </th> */}
                         </tr>
@@ -298,7 +309,7 @@ const ProformaInvoiceItems = ({
                                                 handleInputChange("", index, "qty");
                                             }
                                         }}
-                                        min={"0"}
+                                        // min={"0"}
                                         type="number"
                                         className="text-right  px-1 w-full table-data-input"
                                         onFocus={(e) => {
@@ -328,91 +339,140 @@ const ProformaInvoiceItems = ({
                                 </td>
                                 <td className="text-[11px] border border-gray-300  text-right">
                                     <input
-                                        type="number"
-                                        step="0.01"
-                                        className="text-right  px-1 w-full table-data-input"
-                                        value={
-                                            focusedField === `${index}`
-                                                ? item.price ?? ""
-                                                : item.price
-                                                    ? Number(item.price).toFixed(2)
-                                                    : ""
-                                        }
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-
-                                            handleInputChange(
-                                                val === "" ? "" : val, // allow empty while typing
-                                                index,
-                                                "price",
-                                            );
-                                        }}
-                                        readOnly={readOnly}
-                                        onFocus={(e) => {
-                                            e.target.select();
-                                            setFocusedField(`${index}`);
-                                        }}
-                                        onBlur={(e) => {
-                                            const num = parseFloat(e.target.value);
-                                            handleInputChange(
-                                                num ? Number(num).toFixed(2) : "",
-                                                index,
-                                                "price",
-                                            );
-                                            setFocusedField(null);
-                                        }}
                                         onKeyDown={(e) => {
                                             if (e.code === "Minus" || e.code === "NumpadSubtract")
                                                 e.preventDefault();
                                             if (e.key === "Delete") {
-                                                handleInputChange("", index, "price"); ``
-                                            }
-                                            if (e.key === "Enter") {
-                                                if (index === items.length - 1) {
-                                                    addRow();
-                                                }
+                                                handleInputChange("", index, "dozen");
                                             }
                                         }}
+                                        // min={"0"}
+                                        type="number"
+                                        className="text-right  px-1 w-full table-data-input"
+                                        onFocus={(e) => {
+                                            e.target.select();
+                                            setFocusedField(`${index}`);
+                                        }}
+                                        value={
+                                            focusedField === `${index}`
+                                                ? (item?.dozen ?? "")
+                                                : item?.dozen
+                                                    ? Number(item.dozen).toFixed(2)
+                                                    : ""
+                                        }
+                                        onChange={(e) =>
+                                            handleInputChange(e.target.value, index, "dozen")
+                                        }
+                                        onBlur={(e) => {
+                                            const val = e.target.value;
+                                            handleInputChange(
+                                                val ? Number(val).toFixed(2) : "",
+                                                index,
+                                                "dozen",
+                                            );
+                                        }}
+                                        disabled={true}
                                     />
+                                </td>
+                                <td className="text-[11px] border border-gray-300  text-right">
+                                    <div className="relative w-full">
+                                        {/* {isCurrencySymbol && item.styleItemId && (
+                                            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[10px] pointer-events-none">
+                                                {isCurrencySymbol}
+                                            </span>
+                                        )} */}
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="text-right  px-3 w-full table-data-input"
+                                            value={
+                                                focusedField === `${index}`
+                                                    ? item.price ?? ""
+                                                    : item.price
+                                                        ? Number(item.price).toFixed(2)
+                                                        : ""
+                                            }
+                                            onChange={(e) => {
+                                                const val = e.target.value;
 
-                                </td>
-                                <td className="text-[11px] text-right  px-1 border border-gray-300 bg-gray-50 bg-transparent">
-                                    {parseFloat(item.amount || 0).toFixed(2)}
-                                </td>
-                                <td className="border border-gray-300 text-center text-[11px]">
-                                    <button
-                                        disabled={!item.styleItemId}
-                                        className=" text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
-                                        onClick={() => {
-                                            if (!taxTemplateId) {
-                                                return Swal.fire({
-                                                    title: "Information",
-                                                    text: "Please select Tax Type",
-                                                    icon: "info",
-                                                    confirmButtonColor: "#3085d6",
-                                                });
-                                            }
-                                            setCurrentSelectedIndex(index);
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                if (!taxTemplateId) {
-                                                    return Swal.fire({
-                                                        title: "Information",
-                                                        text: "Please select Tax Type",
-                                                        icon: "info",
-                                                        confirmButtonColor: "#3085d6",
-                                                    });
+                                                handleInputChange(
+                                                    val === "" ? "" : val, // allow empty while typing
+                                                    index,
+                                                    "price",
+                                                );
+                                            }}
+                                            readOnly={readOnly}
+                                            onFocus={(e) => {
+                                                e.target.select();
+                                                setFocusedField(`${index}`);
+                                            }}
+                                            onBlur={(e) => {
+                                                const num = parseFloat(e.target.value);
+                                                handleInputChange(
+                                                    num ? Number(num).toFixed(2) : "",
+                                                    index,
+                                                    "price",
+                                                );
+                                                setFocusedField(null);
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.code === "Minus" || e.code === "NumpadSubtract")
+                                                    e.preventDefault();
+                                                if (e.key === "Delete") {
+                                                    handleInputChange("", index, "price"); ``
                                                 }
-                                                setCurrentSelectedIndex(index);
-                                            }
-                                        }}
-                                    >
-                                        {VIEW}
-                                    </button>
+                                                if (e.key === "Enter") {
+                                                    if (index === items.length - 1) {
+                                                        addRow();
+                                                    }
+                                                }
+                                            }}
+                                        />
+
+                                    </div>
                                 </td>
+                                <td className="text-[11px] text-right  px-1 border border-gray-300 bg-gray-50 bg-transparent gap-x-2">
+                                    <span className="pr-1">{isCurrencySymbol && item.styleItemId ? ` ${isCurrencySymbol}` : ""}</span>
+                                    {item.styleItemId ? (parseFloat(item.amount || 0).toFixed(2)) : ""}
+                                </td>
+                                {
+                                    !isCustomerExport && (
+                                        <td className="border border-gray-300 text-center text-[11px]">
+                                            <button
+                                                disabled={!item.styleItemId}
+                                                className=" text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
+                                                onClick={() => {
+                                                    if (!taxTemplateId) {
+                                                        return Swal.fire({
+                                                            title: "Information",
+                                                            text: "Please select Tax Type",
+                                                            icon: "info",
+                                                            confirmButtonColor: "#3085d6",
+                                                        });
+                                                    }
+                                                    setCurrentSelectedIndex(index);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        if (!taxTemplateId) {
+                                                            return Swal.fire({
+                                                                title: "Information",
+                                                                text: "Please select Tax Type",
+                                                                icon: "info",
+                                                                confirmButtonColor: "#3085d6",
+                                                            });
+                                                        }
+                                                        setCurrentSelectedIndex(index);
+                                                    }
+                                                }}
+                                            >
+                                                {VIEW}
+                                            </button>
+                                        </td>
+                                    )
+                                }
                             </tr>
                         ))}
                     </tbody>
@@ -429,14 +489,30 @@ const ProformaInvoiceItems = ({
                                     ?.reduce((sum, i) => sum + (parseFloat(i.qty) || 0), 0)
                                     .toFixed(3)}
                             </td>
-                            <td className="border border-gray-300"></td>
+                            <td className="text-right px-1  border border-gray-300">
+                                {
+                                    items?.reduce((sum, i) => sum + (parseFloat(i.dozen) || 0), 0)
+                                        .toFixed(2)
+                                }
+                            </td>
+                            <td className="text-right px-1  border border-gray-300">
+                                {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
+                                {
+                                    items?.reduce((sum, i) => sum + (parseFloat(i.price) || 0), 0)
+                                        .toFixed(2)
+                                }
+                            </td>
                             <td className="text-right px-1 border border-gray-300  text-black">
-                                ₹{" "}
+                                {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
                                 {items
                                     ?.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0)
                                     .toFixed(2)}
                             </td>
-                            <td className="border border-gray-300"></td>
+                            {
+                                !isCustomerExport && (
+                                    <td className="border border-gray-300"></td>
+                                )
+                            }
                         </tr>
                     </tfoot>
                 </table>

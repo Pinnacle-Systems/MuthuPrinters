@@ -526,9 +526,9 @@ export default function Form({
     }
 
     // Pincode
-    if (data.pincode && !validatePincode(data.pincode)) {
-      return showAlert("Enter valid 6-digit pincode");
-    }
+    // if (data.pincode && !validatePincode(data.pincode)) {
+    //   return showAlert("Enter valid 6-digit pincode");
+    // }
 
     // Aadhar
     if (data.aadharNo && !aadharRegex.test(data.aadharNo)) {
@@ -1777,7 +1777,7 @@ export default function Form({
                 </div>
                 <div className="col-span-2">
                   <div className=" grid grid-cols-5 gap-3">
-                    <div className="col-span-4">
+                    <div className="col-span-5">
                       {/* <DropdownInputNew
                                   name="City/State Name"
                                   options={dropDownListMergedObject(
@@ -1829,8 +1829,16 @@ export default function Form({
                         </span>
                       )}
                     </div>
+
+                    {/* {errors.pincode && (
+                      <span className="text-red-500 text-xs ml-1">
+                        {errors.pincode}
+                      </span>
+                    )} */}
+                  </div>
+                  <div className="w-[50%] mt-3">
                     <TextInputNew
-                      name="Pincode"
+                      name="Pincode/Zip Code"
                       type="pincode"
                       value={pincode}
                       required={true}
@@ -1842,11 +1850,6 @@ export default function Form({
                       // disabled={childRecord.current > 0}
                       className={`focus:ring-2 focus:ring-blue-100 w-10 ${errorClass("pincode")}`}
                     />
-                    {/* {errors.pincode && (
-                      <span className="text-red-500 text-xs ml-1">
-                        {errors.pincode}
-                      </span>
-                    )} */}
                   </div>
                 </div>
 

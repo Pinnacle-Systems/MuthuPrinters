@@ -43,3 +43,4 @@ export { default as ProcessMasterApi } from "./ProcessMasterService";
 export { default as ProcessGroupMasterApi } from "./ProcessGroupMaster.service";
 export { default as PlateMasterApi } from "./PlateMasterService";
 export { default as DieMasterApi } from "./DieMasterService";
+export { default as currencyMasterApi } from "./CurrencyMasterService";

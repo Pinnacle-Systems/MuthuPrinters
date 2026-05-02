@@ -136,6 +136,8 @@ async function create(body) {
     discountType,
     discountValue,
     payTermId,
+    validityTo,
+    currencyId,
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -171,6 +173,8 @@ async function create(body) {
       termsId: termsId ? parseInt(termsId) : null,
       discountType,
       discountValue: parseFloat(discountValue || 0),
+      validityTo: validityTo ? new Date(validityTo) : null,
+      currencyId: currencyId ? parseInt(currencyId) : null,
       items: {
         createMany: {
           data: JSON.parse(items || "[]").map((item) => ({
@@ -180,6 +184,7 @@ async function create(body) {
             gsmId: item.gsmId ? parseInt(item.gsmId) : null,
             hsnId: item.hsnId ? parseInt(item.hsnId) : null,
             qty: parseFloat(item.qty || 0),
+            dozen: parseFloat(item.dozen || 0),
             price: parseFloat(item.price || 0),
             taxPercent: parseFloat(item.taxPercent || 0),
             discountType: item.discountType,
@@ -226,6 +231,8 @@ async function update(id, body, files) {
     discountType,
     discountValue,
     payTermId,
+    validityTo,
+    currencyId,
   } = body;
 
   const parseItems = JSON.parse(items || "[]");
@@ -312,7 +319,8 @@ async function update(id, body, files) {
         parseInt(newItem.sizeId || 0) !== parseInt(oldItem.sizeId || 0) ||
         parseInt(newItem.uomId || 0) !== parseInt(oldItem.uomId || 0) ||
         parseInt(newItem.gsmId || 0) !== parseInt(oldItem.gsmId || 0) ||
-        parseInt(newItem.hsnId || 0) !== parseInt(oldItem.hsnId || 0)
+        parseInt(newItem.hsnId || 0) !== parseInt(oldItem.hsnId || 0) ||
+        parseFloat(newItem.dozen || 0) !== parseFloat(oldItem.dozen || 0)
       );
     });
   }
@@ -336,10 +344,14 @@ async function update(id, body, files) {
       discountType,
       discountValue: parseFloat(discountValue || 0),
       taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
+      validityTo: validityTo ? new Date(validityTo) : null,
+      currencyId: currencyId ? parseInt(currencyId) : null,
+      payTermId: payTermId ? parseInt(payTermId) : null,
       quoteVersion: nextQuoteVersion,
       ...(isApproved !== undefined && {
         isApproved: isApproved === "true" || isApproved === true,
       }),
+
       items: isTableChanged
         ? {
             createMany: {
@@ -358,6 +370,7 @@ async function update(id, body, files) {
                 discountValue: parseFloat(item.discountValue || 0),
                 amount: parseFloat(item.amount || 0),
                 quoteVersion: nextQuoteVersion,
+                dozen: parseFloat(item.dozen || 0),
               })),
             },
           }

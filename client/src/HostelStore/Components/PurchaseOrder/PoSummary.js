@@ -15,6 +15,7 @@ const PoSummary = ({
   isNewVersion,
   id,
   setSummary,
+  isCustomerExport,
 }) => {
   const amount = Math.abs(totals?.net || 0);
   return (
@@ -40,7 +41,7 @@ const PoSummary = ({
               <select
                 autoFocus
                 name="type"
-                disabled={readOnly}
+                disabled={readOnly || isCustomerExport}
                 className="text-left w-full rounded h-8 new-data-input"
                 value={discountType}
                 onChange={(e) => {
@@ -63,7 +64,7 @@ const PoSummary = ({
               <input
                 type="text"
                 name="value"
-                disabled={readOnly || !discountType}
+                disabled={readOnly || !discountType || isCustomerExport}
                 className="h-6 w-full text-right new-data-input"
                 value={discountValue}
                 onKeyDown={(e) => {

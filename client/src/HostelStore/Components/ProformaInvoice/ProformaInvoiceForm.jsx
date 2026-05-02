@@ -37,7 +37,7 @@ import PoSummary from "../PurchaseOrder/PoSummary";
 import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import { PartyMaster } from "../index.js";
-import { PayTermMaster } from "../../../Basic/components/index.js";
+import { CurrencyMaster, PayTermMaster } from "../../../Basic/components/index.js";
 
 const EMPTY_ROW = {
     styleItemId: "",
@@ -45,9 +45,9 @@ const EMPTY_ROW = {
     uomId: "",
     gsmId: "",
     hsnId: "",
-    qty: 0,
-    price: 0,
-    amount: 0,
+    qty: "",
+    price: "",
+    amount: "",
 };
 
 const padItems = (itemsArray = []) => {
@@ -70,7 +70,9 @@ const ProformaInvoiceForm = ({
     onClose,
     termsData,
     customerList,
-    payTermList
+    payTermList,
+    currencyList,
+    cityList
 }) => {
     const { branchId, companyId, finYearId, userId } = getCommonParams();
 
@@ -89,6 +91,13 @@ const ProformaInvoiceForm = ({
     const [discountValue, setDiscountValue] = useState(0);
     const [printModalOpen, setPrintModalOpen] = useState(false);
     const [payTermId, setPayTermId] = useState("");
+    const [validityTo, setValidityTo] = useState("");
+    const [currencyId, setCurrencyId] = useState("");
+    const [accordionOpen, setAccordionOpen] = useState(false);
+    const [loadingId, setLoadingId] = useState("");
+    const [deliveryId, setDeliveryId] = useState("");
+    const [deliveryDate, setDeliveryDate] = useState("");
+    const [weight, setWeight] = useState("");
 
     const [selectedQuoteVersion, setSelectedQuoteVersion] = useState("Latest");
     const [availableVersions, setAvailableVersions] = useState([]);
@@ -122,6 +131,10 @@ const ProformaInvoiceForm = ({
     const [updateData] = useUpdateProformaInvoiceMutation();
     const [removeData] = useDeleteProformaInvoiceMutation();
 
+    const isCustomerExport = supplierData?.data?.isCustomerExport;
+    const isCurrencySymbol = currencyList?.data?.find(
+        (item) => item?.id === currencyId
+    )?.symbol;
     useEffect(() => {
         if (!id && allData?.nextDocId) {
             setDocId(allData.nextDocId);
@@ -143,7 +156,12 @@ const ProformaInvoiceForm = ({
             setPayTermId(data.payTermId || "");
             setDiscountType(data.discountType || "Percentage");
             setDiscountValue(data.discountValue || 0);
-
+            setValidityTo(data.validityTo ? moment(data.validityTo).format("YYYY-MM-DD") : "");
+            setCurrencyId(data.currencyId || "");
+            setLoadingId(data.loadingId || "");
+            setDeliveryId(data.deliveryId || "");
+            setDeliveryDate(data.deliveryDate ? moment(data.deliveryDate).format("YYYY-MM-DD") : "");
+            setWeight(data.weight || "");
             let loadedVersions = [];
             if (data.items?.length > 0) {
                 loadedVersions = [...new Set(data.items.map(i => i.quoteVersion).filter(Boolean))].sort((a, b) => b - a);
@@ -181,53 +199,53 @@ const ProformaInvoiceForm = ({
         }
     }, [selectedQuoteVersion, singleData, id, availableVersions]);
 
-    useEffect(() => {
-        if (orderEntryId) {
-            const fetchOrderDetails = async () => {
-                try {
-                    const res = await triggerGetOrderById(orderEntryId).unwrap();
-                    if (res.data) {
-                        const order = res.data;
-                        setCustomerId(order.customerId);
+    // useEffect(() => {
+    //     if (orderEntryId) {
+    //         const fetchOrderDetails = async () => {
+    //             try {
+    //                 const res = await triggerGetOrderById(orderEntryId).unwrap();
+    //                 if (res.data) {
+    //                     const order = res.data;
+    //                     setCustomerId(order.customerId);
 
-                        if (!id) {
-                            setTermsId(order.termsId || "");
-                            setTermsAndCondition(order.termsAndCondition || "");
-                            setTaxTemplateId(order.taxTemplateId || "");
+    //                     if (!id) {
+    //                         setTermsId(order.termsId || "");
+    //                         setTermsAndCondition(order.termsAndCondition || "");
+    //                         setTaxTemplateId(order.taxTemplateId || "");
 
-                            if (order.orderItems && order.orderItems.length > 0) {
-                                const mappedItems = order.orderItems.map((oi) => ({
-                                    styleItemId: oi.styleItemId,
-                                    qty: parseFloat(oi.orderQty) || 0,
-                                    price: 0,
-                                    taxPercent: parseFloat(oi.Hsn?.tax) || 0,
-                                    discountType: "Percentage",
-                                    discountValue: 0,
-                                    amount: 0,
-                                    sizeId: oi.sizeId,
-                                    uomId: oi.uomId,
-                                    gsmId: oi.gsmId,
-                                    hsnId: oi.hsnId,
-                                }));
-                                setItems(padItems(mappedItems));
-                            }
-                        }
+    //                         if (order.orderItems && order.orderItems.length > 0) {
+    //                             const mappedItems = order.orderItems.map((oi) => ({
+    //                                 styleItemId: oi.styleItemId,
+    //                                 qty: parseFloat(oi.orderQty) || 0,
+    //                                 price: 0,
+    //                                 taxPercent: parseFloat(oi.Hsn?.tax) || 0,
+    //                                 discountType: "Percentage",
+    //                                 discountValue: 0,
+    //                                 amount: 0,
+    //                                 sizeId: oi.sizeId,
+    //                                 uomId: oi.uomId,
+    //                                 gsmId: oi.gsmId,
+    //                                 hsnId: oi.hsnId,
+    //                             }));
+    //                             setItems(padItems(mappedItems));
+    //                         }
+    //                     }
 
-                        if (order.customer) {
-                            setCustomerDetails({
-                                name: order.customer.name || "",
-                                contactPerson: order.customer.contactPersonName || "",
-                                phone: order.customer.contactNumber || "",
-                            });
-                        }
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch order details", error);
-                }
-            };
-            fetchOrderDetails();
-        }
-    }, [orderEntryId, triggerGetOrderById, id]);
+    //                     if (order.customer) {
+    //                         setCustomerDetails({
+    //                             name: order.customer.name || "",
+    //                             contactPerson: order.customer.contactPersonName || "",
+    //                             phone: order.customer.contactNumber || "",
+    //                         });
+    //                     }
+    //                 }
+    //             } catch (error) {
+    //                 console.error("Failed to fetch order details", error);
+    //             }
+    //         };
+    //         fetchOrderDetails();
+    //     }
+    // }, [orderEntryId, triggerGetOrderById, id]);
 
     useEffect(() => {
         customerRef.current?.focus();
@@ -275,6 +293,16 @@ const ProformaInvoiceForm = ({
             return;
         }
 
+        if (!validityTo) {
+            Swal.fire({ title: "Warning", text: "Validity To is required", icon: "warning", confirmButtonColor: "#3085d6" });
+            return;
+        }
+
+        if (isCustomerExport && !currencyId) {
+            Swal.fire({ title: "Warning", text: "Currency is required", icon: "warning", confirmButtonColor: "#3085d6" });
+            return;
+        }
+
         const filteredItems = items.filter((item) => item.styleItemId);
 
         if (filteredItems.length === 0) {
@@ -314,18 +342,32 @@ const ProformaInvoiceForm = ({
             payTermId,
             discountType,
             discountValue,
+            validityTo,
+            currencyId,
+            loadingId,
+            deliveryId,
+            deliveryDate,
+            weight,
         };
 
         try {
             let savedId = id;
             if (id) {
                 await updateData({ id, body: payload }).unwrap();
-                Swal.fire({ title: "Success", text: "Proforma Invoice updated successfully", icon: "success", timer: 1500, showConfirmButton: false });
+                Swal.fire({
+                    title: "Success", text: "Proforma Invoice updated successfully", icon: "success", timer: 1500, showConfirmButton: false, didClose: () => {
+                        customerRef.current.focus();
+                    }
+                });
             } else {
                 const res = await addData(payload).unwrap();
                 savedId = res.data.id;
                 setId(savedId);
-                Swal.fire({ title: "Success", text: "Proforma Invoice created successfully", icon: "success", timer: 1500, showConfirmButton: false });
+                Swal.fire({
+                    title: "Success", text: "Proforma Invoice created successfully", icon: "success", timer: 1500, showConfirmButton: false, didClose: () => {
+                        customerRef.current.focus();
+                    }
+                });
             }
             setReadOnly(true);
 
@@ -366,6 +408,10 @@ const ProformaInvoiceForm = ({
         setAvailableVersions([]);
         setDiscountType("Percentage");
         setDiscountValue(0);
+        setLoadingId("");
+        setDeliveryId("");
+        setDeliveryDate("");
+        setWeight("");
 
     };
 
@@ -386,10 +432,6 @@ const ProformaInvoiceForm = ({
 
     const totalAmount = items.reduce(
         (sum, item) => sum + (parseFloat(item.amount) || 0),
-        0,
-    );
-    const totalQty = items.reduce(
-        (sum, item) => sum + (parseFloat(item.qty) || 0),
         0,
     );
 
@@ -464,45 +506,118 @@ const ProformaInvoiceForm = ({
         },
     ].filter((a) => !a.hidden);
 
-    const headerContent = (
-        <div className="flex flex-col md:flex-row gap-1">
-            <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-                <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                    Basic Details
-                </h2>
-                <div className="flex gap-2">
-                    <div className="w-36">
-                        <TextInput name="PI No" value={docId} disabled={true} />
-                    </div>
-                    <div className="w-32">
+    const shippingAccordion = (
+        <div className="border border-slate-200 rounded-md bg-white shadow-sm mt-1">
+            {/* Accordion Header */}
+            <button
+                type="button"
+                onClick={() => setAccordionOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between px-3 py-1.5 text-left"
+            >
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">
+                    Shipping Details
+                </span>
+                <svg
+                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${accordionOpen ? "rotate-180" : ""
+                        }`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            {/* Accordion Body */}
+            {accordionOpen && (
+                <div className="px-3 pb-2 border-t border-slate-100">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-fit">
+                        <DropdownInput
+                            name="Loading Port"
+                            options={dropDownListObject(
+                                cityList?.data?.filter((item) => item.active),
+                                "name",
+                                "id",
+                            )}
+                            value={loadingId}
+                            setValue={setLoadingId}
+                            readOnly={effectiveReadOnly}
+                        />
+                        <DropdownInput
+                            name="Delivery Port"
+                            options={dropDownListObject(
+                                cityList?.data?.filter((item) => item.active),
+                                "name",
+                                "id",
+                            )}
+                            value={deliveryId}
+                            setValue={setDeliveryId}
+                            readOnly={effectiveReadOnly}
+                        />
                         <DateInputNew
-                            name="PI Date"
-                            value={docDate}
-                            setValue={setDocDate}
-                            disabled={true}
-                            required={true}
+                            name="Delivery Date"
+                            value={deliveryDate}
+                            setValue={setDeliveryDate}
+                            disabled={effectiveReadOnly}
                             type="date"
                         />
-                    </div>
-                    <div className="w-32">
-                        <DateInputNew
-                            name="User Date"
-                            value={userDate}
-                            setValue={setUserDate}
+                        <TextInput
+                            name="Weight (KG)"
+                            value={weight}
+                            setValue={setWeight}
                             disabled={effectiveReadOnly}
-                            required={false}
-                            type="date"
+                            type="number"
+                            min="0"
                         />
                     </div>
                 </div>
-            </div>
+            )}
+        </div>
+    );
 
-            <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-                <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                    Customer Details
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-8 gap-2">
-                    {/* <div className="md:col-span-1">
+    const headerContent = (
+        <>
+            <div className="flex flex-col md:flex-row gap-1">
+                <div className="flex flex-col md:flex-row gap-1">
+
+                    <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                            Basic Details
+                        </h2>
+                        <div className="flex gap-2">
+                            <div className="w-36">
+                                <TextInput name="PI No" value={docId} disabled={true} />
+                            </div>
+                            <div className="w-32">
+                                <DateInputNew
+                                    name="PI Date"
+                                    value={docDate}
+                                    setValue={setDocDate}
+                                    disabled={true}
+                                    required={true}
+                                    type="date"
+                                />
+                            </div>
+                            <div className="w-32">
+                                <DateInputNew
+                                    name="User Date"
+                                    value={userDate}
+                                    setValue={setUserDate}
+                                    disabled={effectiveReadOnly}
+                                    required={false}
+                                    type="date"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                            Customer Details
+                        </h2>
+                        <div className="grid grid-cols-2 md:grid-cols-8 gap-2">
+                            {/* <div className="md:col-span-1">
                         <DropdownInput
                             name="Order No"
                             options={dropDownListObject(orderList?.data, "docId", "id")}
@@ -512,94 +627,133 @@ const ProformaInvoiceForm = ({
                             required={true}
                         />
                     </div> */}
-                    <div className="md:col-span-2">
-                        <DropdownWithModal
-                            name="Customer"
-                            options={dropDownListObject(
-                                id
-                                    ? customerList?.data?.filter((item) => item?.isCustomer)
-                                    : customerList?.data?.filter(
-                                        (item) => item?.active && item?.isCustomer,
-                                    ),
-                                "name",
-                                "id",
-                            )}
-                            value={customerId}
-                            setValue={setCustomerId}
-                            required={true}
-                            readOnly={readOnly}
-                            className={`w-[150px]`}
-                            addNewLabel="+ Add New Customer"
-                            childComponent={PartyMaster}
-                            addNewModalWidth="w-[90%] h-[95%]"
-                            disabled={readOnly}
-                            // openOnFocus={true}
-                            autoFocus={true}
-                        // ref={customerRef}
-                        />
-                    </div>
-                    <div className="md:col-span-2">
-                        <TextInput
-                            name="Contact Person"
-                            placeholder="Contact name"
-                            value={findFromList(
-                                customerId,
-                                customerList?.data,
-                                "contactPersonName",
-                            )}
-                            disabled={true}
-                        />
-                    </div>
-                    <div className="md:col-span-1">
-                        <TextInput
-                            name="Phone"
-                            placeholder="Contact name"
-                            value={findFromList(
-                                customerId,
-                                customerList?.data,
-                                "contactNumber",
-                            )}
-                            disabled={true}
-                        />
-                    </div>
-                    <div className="md:col-span-1">
-                        <DropdownInput
-                            name="Tax Type"
-                            options={dropDownListObject(
-                                taxTypeList ? taxTypeList?.data : [],
-                                "name",
-                                "id",
-                            )}
-                            value={taxTemplateId}
-                            setValue={setTaxTemplateId}
-                            required={true}
-                            readOnly={effectiveReadOnly}
-                        />
-                    </div>
-                    <div className="md:col-span-1">
-                        <DropdownWithModal
-                            name="Pay Term"
-                            options={dropDownListObject(
-                                id
-                                    ? payTermList?.data
-                                    : payTermList?.data?.filter((item) => item?.active),
-                                "name",
-                                "id",
-                            )}
-                            value={payTermId}
-                            setValue={setPayTermId}
-                            required={true}
-                            readOnly={readOnly}
-                            className={`w-full max-w-none`}
-                            dropdownMinWidth={240}
-                            addNewLabel="+ Add New Pay Term"
-                            childComponent={PayTermMaster}
-                            addNewModalWidth="w-[40%] h-[66%]"
-                        />
+                            <div className="md:col-span-2">
+                                <DropdownWithModal
+                                    name="Customer"
+                                    options={dropDownListObject(
+                                        id
+                                            ? customerList?.data?.filter((item) => item?.isCustomer)
+                                            : customerList?.data?.filter(
+                                                (item) => item?.active && item?.isCustomer,
+                                            ),
+                                        "name",
+                                        "id",
+                                    )}
+                                    value={customerId}
+                                    setValue={setCustomerId}
+                                    required={true}
+                                    readOnly={readOnly}
+                                    className={`w-[150px]`}
+                                    addNewLabel="+ Add New Customer"
+                                    childComponent={PartyMaster}
+                                    addNewModalWidth="w-[90%] h-[95%]"
+                                    disabled={readOnly}
+                                    openOnFocus={true}
+                                    // autoFocus={true}
+                                    ref={customerRef}
+                                />
+                            </div>
+                            <div className="md:col-span-1">
+                                <TextInput
+                                    name="Contact Person"
+                                    placeholder="Contact name"
+                                    value={findFromList(
+                                        customerId,
+                                        customerList?.data,
+                                        "contactPersonName",
+                                    )}
+                                    disabled={true}
+                                />
+                            </div>
+                            <div className="md:col-span-1">
+                                <TextInput
+                                    name="Phone"
+                                    placeholder="Contact name"
+                                    value={findFromList(
+                                        customerId,
+                                        customerList?.data,
+                                        "contactNumber",
+                                    )}
+                                    disabled={true}
+                                />
+                            </div>
+                            <div className="md:col-span-1">
+                                <DropdownInput
+                                    name="Tax Type"
+                                    options={dropDownListObject(
+                                        taxTypeList ? taxTypeList?.data : [],
+                                        "name",
+                                        "id",
+                                    )}
+                                    value={taxTemplateId}
+                                    setValue={setTaxTemplateId}
+                                    required={true}
+                                    readOnly={effectiveReadOnly}
+                                />
+                            </div>
+                            <div className="md:col-span-1">
+                                <DropdownWithModal
+                                    name="Pay Term"
+                                    options={dropDownListObject(
+                                        id
+                                            ? payTermList?.data
+                                            : payTermList?.data?.filter((item) => item?.active),
+                                        "name",
+                                        "id",
+                                    )}
+                                    value={payTermId}
+                                    setValue={setPayTermId}
+                                    required={true}
+                                    readOnly={readOnly}
+                                    className={`w-full max-w-none`}
+                                    dropdownMinWidth={240}
+                                    addNewLabel="+ Add New Pay Term"
+                                    childComponent={PayTermMaster}
+                                    addNewModalWidth="w-[40%] h-[66%]"
+                                />
+                            </div>
+                            <div className="">
+                                <DateInputNew
+                                    name="Valid To"
+                                    value={validityTo}
+                                    setValue={setValidityTo}
+                                    disabled={effectiveReadOnly}
+                                    required={true}
+                                    type="date"
+                                />
+                            </div>
+                            {
+                                isCustomerExport && (
+                                    <div className="md:col-span-1">
+                                        <DropdownWithModal
+                                            name="Currency"
+                                            options={dropDownListObject(
+                                                id
+                                                    ? currencyList?.data
+                                                    : currencyList?.data?.filter((item) => item?.active),
+                                                "name",
+                                                "id",
+                                            )}
+                                            value={currencyId}
+                                            setValue={setCurrencyId}
+                                            required={true}
+                                            readOnly={readOnly}
+                                            className={`w-full max-w-none`}
+                                            dropdownMinWidth={240}
+                                            addNewLabel="+ Add New Currency"
+                                            childComponent={CurrencyMaster}
+                                            addNewModalWidth="w-[40%] h-[66%]"
+                                        />
+                                    </div>
+                                )
+                            }
+                        </div>
                     </div>
                 </div>
+
             </div>
-        </div>
+            {isCustomerExport ? shippingAccordion : null}
+        </>
     );
 
     const isSupplierOutside = useMemo(() => {
@@ -625,6 +779,7 @@ const ProformaInvoiceForm = ({
             isSupplierOutside,
             discountType,
             discountValue,
+            true
         );
     }, [items, isSupplierOutside, discountType, discountValue]);
 
@@ -671,6 +826,11 @@ const ProformaInvoiceForm = ({
         </div>
     );
 
+    const totalQty = enrichedData?.items?.reduce(
+        (sum, item) => sum + (parseFloat(item.qty)),
+        0,
+    );
+
     const footerContent = (
         <>
             <CommonFormFooter
@@ -699,13 +859,13 @@ const ProformaInvoiceForm = ({
                     {
                         key: "grossAmount",
                         label: "Gross Amount",
-                        value: `₹ ${enrichedData.gross.toFixed(2)}`,
+                        value: `${isCurrencySymbol ? isCurrencySymbol : ''} ${isCustomerExport ? enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0).toFixed(2) : enrichedData.gross.toFixed(2)}`,
                         summaryColumn: "right",
                     },
                     {
                         key: "netAmount",
                         label: "Net Amount",
-                        value: `₹ ${enrichedData.net.toFixed(2)}`,
+                        value: `${isCurrencySymbol ? isCurrencySymbol : ''} ${isCustomerExport ? enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0).toFixed(2) : enrichedData.net.toFixed(2)}`,
                         summaryColumn: "right",
                         emphasized: true,
                     },
@@ -734,6 +894,7 @@ const ProformaInvoiceForm = ({
                     discountValue={discountValue}
                     setDiscountValue={setDiscountValue}
                     setSummary={setSummary}
+                    isCustomerExport={isCustomerExport}
                 />
             </Modal>
 
@@ -764,6 +925,8 @@ const ProformaInvoiceForm = ({
                         readOnly={effectiveReadOnly}
                         taxTemplateId={taxTemplateId}
                         id={id}
+                        isCurrencySymbol={isCurrencySymbol}
+                        isCustomerExport={isCustomerExport}
                     />
                 }
                 footer={footerContent}

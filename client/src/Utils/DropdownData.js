@@ -176,3 +176,17 @@ export const jobTypes = [
   { show: "External", value: "External" },
   { show: "Both", value: "Both" },
 ];
+
+export const currencySymbolList = [
+  { code: "INR", show: "₹ (INR)", value: "₹" },
+  { code: "USD", show: "$ (USD)", value: "$" },
+  { code: "EUR", show: "€ (EUR)", value: "€" },
+  { code: "GBP", show: "£ (GBP)", value: "£" },
+  { code: "JPY", show: "¥ (JPY)", value: "¥" },
+  { code: "CNY", show: "¥ (CNY)", value: "¥" },
+  { code: "AED", show: "د.إ (AED)", value: "د.إ" },
+  { code: "SAR", show: "﷼ (SAR)", value: "﷼" },
+  { code: "SGD", show: "$ (SGD)", value: "$" },
+  { code: "AUD", show: "$ (AUD)", value: "$" },
+  { code: "CAD", show: "$ (CAD)", value: "$" },
+];

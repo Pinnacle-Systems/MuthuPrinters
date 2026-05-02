@@ -11,6 +11,8 @@ import ProformaInvoiceReport from "./ProformaInvoiceReport.jsx";
 import ProformaInvoiceForm from "./ProformaInvoiceForm.jsx";
 import Swal from "sweetalert2";
 import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterService.js";
+import { useGetCurrenciesQuery } from "../../../redux/services/CurrencyMasterService.js";
+import { useGetCityQuery } from "../../../redux/services/CityMasterService.js";
 
 const ProformaInvoice = () => {
     const [showForm, setShowForm] = useState(false);
@@ -28,7 +30,7 @@ const ProformaInvoice = () => {
     } = useGetTermsandCondtionsQuery({ params });
     const { data: payTermList } = useGetPaytermMasterQuery({ params });
     const { data: userData } = useGetUserByIdQuery(userId)
-
+    const { data: cityList } = useGetCityQuery({ params });
     const handleView = (orderId) => {
         setId(orderId);
         setShowForm(true);
@@ -82,7 +84,7 @@ const ProformaInvoice = () => {
 
     const { data: customerList } = useGetPartyQuery({ params: { ...params } });
     const { data: branchList } = useGetBranchQuery({ params: { ...params } });
-
+    const { data: currencyList } = useGetCurrenciesQuery({ params: { ...params } });
     return (
         <>
             <div
@@ -132,6 +134,8 @@ const ProformaInvoice = () => {
                         userData={userData?.data}
                         termsData={termsData}
                         payTermList={payTermList}
+                        currencyList={currencyList}
+                        cityList={cityList}
                     />
                 </div>
             )}
