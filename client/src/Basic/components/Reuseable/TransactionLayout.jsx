@@ -173,8 +173,8 @@ export const TransactionScreen = ({
               type="button"
               onClick={() => setActiveDetailsLayout(layoutOption)}
               className={`rounded px-2 py-1 text-[11px] font-medium transition ${isActive
-                  ? "bg-slate-700 text-white shadow-sm"
-                  : "text-slate-600 hover:bg-white"
+                ? "bg-slate-700 text-white shadow-sm"
+                : "text-slate-600 hover:bg-white"
                 }`}
             >
               {label}

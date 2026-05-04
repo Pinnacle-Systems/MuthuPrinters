@@ -163,7 +163,7 @@ export const partyType = [
 
 export const orderTypes = [
   { show: "GENERAL", value: "GENERAL" },
-  { show: "ORDER", value: "ORDER" },
+  { show: "AGAINST PI", value: "AGAINSTPI" },
 ];
 
 export const productionTypes = [
