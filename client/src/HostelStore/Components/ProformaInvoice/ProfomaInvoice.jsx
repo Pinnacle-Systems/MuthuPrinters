@@ -13,6 +13,7 @@ import Swal from "sweetalert2";
 import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterService.js";
 import { useGetCurrenciesQuery } from "../../../redux/services/CurrencyMasterService.js";
 import { useGetCityQuery } from "../../../redux/services/CityMasterService.js";
+import { useGetbankQuery } from "../../../redux/services/BankMasterService.js";
 
 const ProformaInvoice = () => {
     const [showForm, setShowForm] = useState(false);
@@ -31,6 +32,7 @@ const ProformaInvoice = () => {
     const { data: payTermList } = useGetPaytermMasterQuery({ params });
     const { data: userData } = useGetUserByIdQuery(userId)
     const { data: cityList } = useGetCityQuery({ params });
+    const { data: bankList } = useGetbankQuery({ params });
     const handleView = (orderId) => {
         setId(orderId);
         setShowForm(true);
@@ -136,6 +138,7 @@ const ProformaInvoice = () => {
                         payTermList={payTermList}
                         currencyList={currencyList}
                         cityList={cityList}
+                        bankList={bankList}
                     />
                 </div>
             )}

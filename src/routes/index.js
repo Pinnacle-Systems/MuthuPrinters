@@ -64,3 +64,4 @@ export { default as jobCard } from "./jobCard.route.js";
 export { default as board } from "./board.route.js";
 export { default as ProformaInvoice } from "./ProformaInvoice.route.js";
 export { default as currency } from "./currency.route.js";
+export { default as bank } from "./bank.route.js";

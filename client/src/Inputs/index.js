@@ -1436,6 +1436,34 @@ export const TextInputNew = forwardRef(
               setValue(digits);
             } else if (type === "number") {
               setValue(e.target.value);
+            } else if (type === "acc_no") {
+              const digits = e.target.value.replace(/\D/g, "").slice(0, 18);
+              setValue(digits);
+            } else if (type === "ifsc") {
+              const raw = e.target.value
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, "");
+              let formatted = "";
+
+              for (let i = 0; i < Math.min(raw.length, 11); i++) {
+                if (i < 4) {
+                  if (/[A-Z]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                } else if (i === 4) {
+                  if (raw[i] === "0") formatted += raw[i];
+                  else break;
+                } else {
+                  if (/[A-Z0-9]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                }
+              }
+
+              setValue(formatted);
+            } else if (type === "swift") {
+              const raw = e.target.value
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, "");
+              setValue(raw.slice(0, 11)); // max 11 chars
             } else {
               handleOnChange(e, setValue);
             }

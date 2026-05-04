@@ -3,6 +3,7 @@ import { IoArrowBackCircleSharp } from "react-icons/io5";
 import {
     DateInputNew,
     DropdownInput,
+    DropdownNew,
     ReusableInput,
     TextInput,
 } from "../../../Inputs";
@@ -41,6 +42,7 @@ import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoServices.js";
 import { useGetUomQuery } from "../../../redux/services/UomMasterService.js";
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
+import { useGetProformaInvoiceQuery } from "../../../redux/uniformService/ProformaInvoiceService.js";
 
 const OrderEntryForm = ({
     onClose,
@@ -84,6 +86,9 @@ const OrderEntryForm = ({
     const [actionType, setActionType] = useState("");
     const [approvalRemarks, setApprovalRemarks] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
+    const [proFormaId, setProFormaId] = useState("");
+    const [refNo, setRefNo] = useState("")
+
     const qrRef = useRef(null);
     const customerRef = useRef(null);
     const childRecord = useRef(0);
@@ -108,6 +113,9 @@ const OrderEntryForm = ({
     const { data: uomList } = useGetUomQuery({ params });
     const { data: sizeList } = useGetSizeMasterQuery({ params });
     const { data: gsmList } = useGetGsmMasterQuery({ params });
+    const { data: PIList } = useGetProformaInvoiceQuery({
+        params: { companyId, branchId },
+    });
 
     const [addData] = useAddOrderEntryMutation();
     const [updateData] = useUpdateOrderEntryMutation();
@@ -140,8 +148,9 @@ const OrderEntryForm = ({
             setTermsId(data?.termsId || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
             setOrderItems(data?.orderItems || []);
-            // setReadOnly((["PENDING", "APPROVED"].includes(status) && !canApprove) || readOnly);
             setProductionType(data?.productionType || "SAMPLE");
+            setProFormaId(data?.proFormaId || "");
+            setRefNo(data?.refNo || "");
         },
         [id],
     );
@@ -173,6 +182,8 @@ const OrderEntryForm = ({
         termsId,
         docId,
         orderItems: orderItems?.filter((i) => i.styleItemId),
+        proFormaId,
+        refNo
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -872,7 +883,7 @@ const OrderEntryForm = ({
                 </div>
             </div>
             <div className="space-y-2 py-2" onKeyDown={handleKeyDown}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
                         <h2 className="font-medium text-slate-700 mb-1 text-xs">Basic Details</h2>
                         <div className="grid grid-cols-2 gap-1">
@@ -895,7 +906,7 @@ const OrderEntryForm = ({
 
                     <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
                         <h2 className="font-medium text-slate-700 mb-1 text-xs">Order Details</h2>
-                        <div className="grid grid-cols-2 gap-1 ">
+                        <div className="grid grid-cols-3 gap-1 ">
                             <DropdownInput
                                 name="Order Type"
                                 options={orderTypes}
@@ -908,6 +919,16 @@ const OrderEntryForm = ({
                                 disabled={childRecord.current > 0 || readOnly}
                                 ref={customerRef}
                             />
+                            <DropdownNew
+                                name="Proforma Invoice No"
+                                dataList={PIList?.data}
+                                value={proFormaId}
+                                setValue={setProFormaId}
+                                required
+                                readOnly={readOnly}
+                                disabled={readOnly}
+                                otherField={"docId"}
+                            />
                             <DropdownInput
                                 name="Production Type"
                                 options={productionTypes}
@@ -919,7 +940,13 @@ const OrderEntryForm = ({
                                 readOnly={readOnly}
                                 disabled={childRecord.current > 0 || readOnly}
                             />
-
+                            <TextInput
+                                name="Reference No"
+                                value={refNo}
+                                setValue={setRefNo}
+                                disabled={readOnly}
+                                required={false}
+                            />
                             <div className="w-28">
                                 <DateInputNew
                                     name="Delivery Date"
@@ -937,7 +964,7 @@ const OrderEntryForm = ({
                         <h2 className="font-medium text-slate-700 mb-1 text-xs">
                             Customer Details
                         </h2>
-                        <div className="grid grid-cols-2 gap-1">
+                        <div className="grid grid-cols-4 gap-1">
                             <div className="col-span-2">
                                 <DropdownWithModal
                                     name="Customer"
@@ -984,7 +1011,7 @@ const OrderEntryForm = ({
                             />
                         </div>
                     </div>
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
+                    {/* <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
                         <h2 className="font-medium text-slate-700 mb-1 text-xs">QR Code</h2>
                         <div className="flex flex-col items-center justify-center gap-2">
                             {docId && docId !== "New" ? (
@@ -1003,7 +1030,7 @@ const OrderEntryForm = ({
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </div> */}
                 </div>
                 <div className="border border-slate-200 p-2 py-3 bg-white rounded-md shadow-sm gap-x-4 flex">
                     <div className="w-1/2 px-2">

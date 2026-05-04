@@ -8,12 +8,25 @@ async function get(req) {
       companyId: companyId ? parseInt(companyId) : undefined,
       active: active ? Boolean(active) : undefined,
     },
+    include: {
+      _count: {
+        select: {
+          proformaInvoices: true,
+        },
+      },
+    },
+  });
+
+  data.forEach((item) => {
+    item.childRecord = item._count.proformaInvoices;
   });
   return { statusCode: 0, data };
 }
 
 async function getOne(id) {
-  const childRecord = 0;
+  const childRecord = await prisma.proformaInvoice.count({
+    where: { currencyId: parseInt(id) },
+  });
   const data = await prisma.currency.findUnique({
     where: {
       id: parseInt(id),

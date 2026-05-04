@@ -69,6 +69,7 @@ model Company {
   dies                Die[]
   proformaInvoices    ProformaInvoice[]
   currencies          Currency[]
+  bank                Bank[]
 }
 
 model Subscription {
@@ -311,16 +312,19 @@ model State {
 }
 
 model City {
-  id              Int           @id @default(autoincrement())
-  name            String
-  code            String
-  state           State         @relation(fields: [stateId], references: [id])
-  stateId         Int
-  active          Boolean       @default(true)
-  doctorLocalCity Employee[]    @relation(name: "localCity")
-  doctorPermCity  Employee[]    @relation(name: "permCity")
-  Party           Party[]
-  PartyBranch     PartyBranch[]
+  id                      Int               @id @default(autoincrement())
+  name                    String
+  code                    String
+  state                   State             @relation(fields: [stateId], references: [id])
+  stateId                 Int
+  active                  Boolean           @default(true)
+  doctorLocalCity         Employee[]        @relation(name: "localCity")
+  doctorPermCity          Employee[]        @relation(name: "permCity")
+  Party                   Party[]
+  PartyBranch             PartyBranch[]
+  bank                    Bank[]
+  proformaInvoiceDelivery ProformaInvoice[] @relation(name: "delivery")
+  proformaInvoiceLoading  ProformaInvoice[] @relation(name: "loading")
 }
 
 model Department {
@@ -2032,6 +2036,13 @@ model ProformaInvoice {
   Currency          Currency?             @relation(fields: [currencyId], references: [id])
   currencyId        Int?
   weightInKg        Float?
+  Loading           City?                 @relation("loading", fields: [loadingId], references: [id])
+  loadingId         Int?
+  Delivery          City?                 @relation("delivery", fields: [deliveryId], references: [id])
+  deliveryId        Int?
+  carriageCharge    Float?
+  bankId            Int?
+  Bank              Bank?                 @relation(fields: [bankId], references: [id])
 }
 
 model ProformaInvoiceItem {
@@ -2078,6 +2089,21 @@ model Currency {
   Company        Company? @relation(fields: [companyId], references: [id])
   companyId      Int?
   active         Boolean  @default(true)
+
+  proformaInvoices ProformaInvoice[]
+}
+
+model Bank {
+  id        Int      @id @default(autoincrement())
+  companyId Int?
+  Company   Company? @relation(fields: [companyId], references: [id])
+  name      String?
+  accNo     String?
+  ifsc      String?
+  swiftCode String?
+  branchId  Int?
+  Branch    City?    @relation(fields: [branchId], references: [id])
+  active    Boolean  @default(true)
 
   proformaInvoices ProformaInvoice[]
 }

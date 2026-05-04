@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import FxSelect, { FxSelectWithAdd } from "../../../Inputs";
-import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService";
+import { useGetStyleItemMasterQuery, useLazyGetStyleItemMasterByIdQuery } from "../../../redux/services/StyleItemMasterService";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService";
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService";
 import { useGetUomQuery } from "../../../redux/services/UomMasterService";
@@ -48,6 +48,9 @@ const ProformaInvoiceItems = ({
     const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
     const [focusedField, setFocusedField] = useState(null);
 
+    const [triggerGetStyleItem, { data: styleData }] =
+        useLazyGetStyleItemMasterByIdQuery();
+
     const addRow = () => {
         setItems([...items, EMPTY_ROW]);
     };
@@ -56,7 +59,7 @@ const ProformaInvoiceItems = ({
         setItems(items.filter((_, i) => i !== index));
     };
 
-    const handleInputChange = (value, index, field) => {
+    const handleInputChange = async (value, index, field) => {
         const newItems = [...items];
         newItems[index] = {
             ...newItems[index],
@@ -64,12 +67,40 @@ const ProformaInvoiceItems = ({
         };
 
         // Calculate gross (amount)
-        const qty = parseFloat(newItems[index].qty) || "";
-        const price = parseFloat(newItems[index].price) || "";
-        newItems[index].dozen = (qty / 12).toFixed(2);
-        newItems[index].amount = (newItems[index].dozen * price).toFixed(2);
+        const qty = parseFloat(newItems[index].qty) || 0;
+        const price = parseFloat(newItems[index].price) || 0;
+        const dozen = qty / 12
+        newItems[index].dozen = dozen ? dozen.toFixed(2) : "";
+        newItems[index].amount = dozen && price ? (dozen * price).toFixed(2) : "";
 
         setItems(newItems);
+        if (field === "styleItemId") {
+            // 1️⃣ update immediately
+            newItems[index].styleItemId = value;
+            setItems([...newItems]); // 🔥 maintain UI instantly
+
+            try {
+                // 2️⃣ fetch style data
+                const response = await triggerGetStyleItem(value).unwrap();
+
+                const updatedItems = items.map((item, i) =>
+                    i === index
+                        ? {
+                            ...item,
+                            styleItemId: value,
+                            hsnId: response?.data?.hsnId,
+                            uomId: response?.data?.uomId,
+                        }
+                        : item
+                );
+
+                setItems(updatedItems);
+            } catch (e) {
+                console.error("Style fetch failed", e);
+            }
+
+            return; // stop here
+        }
     };
 
     const handleRightClick = (event, rowIndex) => {
@@ -140,7 +171,7 @@ const ProformaInvoiceItems = ({
             </Modal>
 
             <div className="w-full h-full overflow-y-auto bg-white">
-                <table className="w-full table-fixed min-h-full bg-white">
+                <table className=" table-fixed min-h-full bg-white">
                     <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10 text-[12px]">
                         <tr>
                             <th className="w-10 px-1 py-2 text-center font-medium border border-gray-300">
@@ -168,10 +199,10 @@ const ProformaInvoiceItems = ({
                             <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                                 Dozen
                             </th>
-                            <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                            <th className="w-32 px-1 py-2 text-center font-medium border border-gray-300">
                                 Price {isCurrencySymbol && `(${isCurrencySymbol})`}
                             </th>
-                            <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                            <th className="w-32 px-1 py-2 text-center font-medium border border-gray-300">
                                 Gross
                             </th>
                             {

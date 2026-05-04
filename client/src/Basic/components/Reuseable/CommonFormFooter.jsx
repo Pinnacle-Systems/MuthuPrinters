@@ -163,7 +163,7 @@ const CommonFormFooter = ({
         key={row.key || row.label || index}
         className={[
           "flex items-center justify-between gap-2 py-0.5 text-[12px]",
-          row.emphasized ? "border-t border-slate-100 pt-1.5" : "",
+          row.emphasized ? "border-t border-slate-100 " : "",
           row.className || "",
         ]
           .filter(Boolean)
@@ -172,7 +172,7 @@ const CommonFormFooter = ({
         <span
           className={[
             "shrink-0",
-            row.emphasized ? "font-semibold text-slate-700" : "text-slate-600",
+            row.emphasized ? "font-semibold text-slate-800" : "text-slate-800",
             row.labelClassName || "",
           ]
             .filter(Boolean)

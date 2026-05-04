@@ -21,6 +21,7 @@ import {
   ApprovalRuleField,
   ApprovalRuleModule,
   CurrencyMaster,
+  BankMaster,
 } from "..";
 
 import { CLOSE_ICON, DOUBLE_NEXT_ICON } from "../../../icons";
@@ -164,6 +165,7 @@ const ActiveTabList = () => {
     "BOARD MASTER": <BoardMaster />,
     "PROFORMA INVOICE": <ProformaInvoice />,
     "CURRENCY MASTER": <CurrencyMaster />,
+    "BANK MASTER": <BankMaster />,
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

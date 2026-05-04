@@ -41,9 +41,13 @@ export const dropDownFinYear = (data) => {
 };
 
 export const dropDownListMergedObject = (data) => {
+  if (!Array.isArray(data)) return [];
   const outputData = [];
   for (let i of data) {
-    outputData.push({ show: i.name + " / " + i.state.name, value: i["id"] });
+    outputData.push({
+      show: `${i?.name || ""} / ${i?.state?.name || ""}`, // ✅ safe access
+      value: i?.id,
+    });
   }
   return outputData;
 };

@@ -45,6 +45,7 @@ import {
   PlateMasterApi,
   DieMasterApi,
   currencyMasterApi,
+  bankMasterApi,
 } from "./services";
 import paymentApi from "./services/PaymentService";
 import StyleMasterApi from "./services/StyleMasterService";
@@ -127,6 +128,7 @@ const commonReducers = {
   board: BoardMasterApi.reducer,
   proformaInvoice: ProformaInvoiceApi.reducer,
   currencyMaster: currencyMasterApi.reducer,
+  bankMaster: bankMasterApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -189,6 +191,7 @@ const commonMiddleware = [
   BoardMasterApi.middleware,
   ProformaInvoiceApi.middleware,
   currencyMasterApi.middleware,
+  bankMasterApi.middleware,
 ];
 
 const store = configureStore({

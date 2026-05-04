@@ -9,7 +9,7 @@ import {
     useGetProformaInvoiceQuery,
 } from "../../../redux/uniformService/ProformaInvoiceService";
 import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
-import { dropDownListObject } from "../../../Utils/contructObject";
+import { dropDownListObject, dropDownListObjectMultiple } from "../../../Utils/contructObject";
 import ProformaInvoiceItems from "./ProformaInvoiceItems.jsx";
 import moment from "moment";
 import { PDFViewer } from "@react-pdf/renderer";
@@ -37,7 +37,8 @@ import PoSummary from "../PurchaseOrder/PoSummary";
 import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import { PartyMaster } from "../index.js";
-import { CurrencyMaster, PayTermMaster } from "../../../Basic/components/index.js";
+import { BankMaster, CurrencyMaster, PayTermMaster } from "../../../Basic/components/index.js";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 
 const EMPTY_ROW = {
     styleItemId: "",
@@ -72,7 +73,8 @@ const ProformaInvoiceForm = ({
     customerList,
     payTermList,
     currencyList,
-    cityList
+    cityList,
+    bankList,
 }) => {
     const { branchId, companyId, finYearId, userId } = getCommonParams();
 
@@ -97,10 +99,12 @@ const ProformaInvoiceForm = ({
     const [loadingId, setLoadingId] = useState("");
     const [deliveryId, setDeliveryId] = useState("");
     const [deliveryDate, setDeliveryDate] = useState("");
-    const [weight, setWeight] = useState("");
-
+    const [weightInKg, setWeightInKg] = useState("");
+    const [carriageCharge, setCarriageCharge] = useState("");
     const [selectedQuoteVersion, setSelectedQuoteVersion] = useState("Latest");
     const [availableVersions, setAvailableVersions] = useState([]);
+    const [bankId, setBankId] = useState("");
+
     const customerRef = useRef(null);
 
     const isOldVersion = selectedQuoteVersion !== "Latest";
@@ -126,6 +130,7 @@ const ProformaInvoiceForm = ({
         skip: !customerId,
     });
     const [triggerGetOrderById] = useLazyGetOrderEntryByIdQuery();
+    const [dispatchInvalidate] = useInvalidateTags();
 
     const [addData] = useAddProformaInvoiceMutation();
     const [updateData] = useUpdateProformaInvoiceMutation();
@@ -161,7 +166,9 @@ const ProformaInvoiceForm = ({
             setLoadingId(data.loadingId || "");
             setDeliveryId(data.deliveryId || "");
             setDeliveryDate(data.deliveryDate ? moment(data.deliveryDate).format("YYYY-MM-DD") : "");
-            setWeight(data.weight || "");
+            setCarriageCharge(parseFloat(data.carriageCharge).toFixed(2) || "");
+            setWeightInKg(parseFloat(data.weightInKg).toFixed(3) || "");
+            setBankId(data.bankId || "");
             let loadedVersions = [];
             if (data.items?.length > 0) {
                 loadedVersions = [...new Set(data.items.map(i => i.quoteVersion).filter(Boolean))].sort((a, b) => b - a);
@@ -253,7 +260,7 @@ const ProformaInvoiceForm = ({
 
     const validateRows = (items) => {
         const errors = [];
-
+        const seen = new Set();
         items.forEach((item, index) => {
 
             if (!item.styleItemId) {
@@ -268,23 +275,24 @@ const ProformaInvoiceForm = ({
             if (!item.qty || Number(item.qty) <= 0) {
                 errors.push(`Row ${index + 1}: Qty is required`);
             }
-
+            const key = `${item.styleItemId}_${item.uomId}_${item.hsnId}`;
+            if (seen.has(key)) {
+                errors.push(`Row ${index + 1}: Duplicate item found`);
+            } else {
+                seen.add(key);
+            }
         });
 
         return errors;
     };
 
     const handleSave = async (pendingAction = null) => {
-        // if (!orderEntryId) {
-        //     Swal.fire({ title: "Warning", text: "Please select an Order No.", icon: "warning", confirmButtonColor: "#3085d6" });
-        //     return;
-        // }
         if (!customerId) {
             Swal.fire({ title: "Warning", text: "Please select a Customer.", icon: "warning", confirmButtonColor: "#3085d6" });
             return;
         }
 
-        if (!taxTemplateId) {
+        if (!isCustomerExport && !taxTemplateId) {
             Swal.fire({ title: "Warning", text: "Please select a Tax Template.", icon: "warning", confirmButtonColor: "#3085d6" });
             return;
         }
@@ -300,6 +308,31 @@ const ProformaInvoiceForm = ({
 
         if (isCustomerExport && !currencyId) {
             Swal.fire({ title: "Warning", text: "Currency is required", icon: "warning", confirmButtonColor: "#3085d6" });
+            return;
+        }
+
+        if (isCustomerExport && !loadingId) {
+            Swal.fire({ title: "Warning", text: "Loading Port is required", icon: "warning", confirmButtonColor: "#3085d6" });
+            return;
+        }
+
+        if (isCustomerExport && !deliveryId) {
+            Swal.fire({ title: "Warning", text: "Delivery Port is required", icon: "warning", confirmButtonColor: "#3085d6" });
+            return;
+        }
+
+        if (!deliveryDate) {
+            Swal.fire({ title: "Warning", text: "Delivery Date is required", icon: "warning", confirmButtonColor: "#3085d6" });
+            return;
+        }
+
+        if (!weightInKg) {
+            Swal.fire({ title: "Warning", text: "Weight is required", icon: "warning", confirmButtonColor: "#3085d6" });
+            return;
+        }
+
+        if (!isCustomerExport && !bankId) {
+            Swal.fire({ title: "Warning", text: "Bank is required", icon: "warning", confirmButtonColor: "#3085d6" });
             return;
         }
 
@@ -331,7 +364,6 @@ const ProformaInvoiceForm = ({
             finYearId,
             docDate,
             userDate,
-            deliveryDate: docDate,
             customerId,
             // orderEntryId,
             remarks,
@@ -347,7 +379,9 @@ const ProformaInvoiceForm = ({
             loadingId,
             deliveryId,
             deliveryDate,
-            weight,
+            weightInKg,
+            carriageCharge,
+            bankId
         };
 
         try {
@@ -370,6 +404,7 @@ const ProformaInvoiceForm = ({
                 });
             }
             setReadOnly(true);
+            dispatchInvalidate();
 
             if (pendingAction === "new") {
                 onNew();
@@ -411,8 +446,12 @@ const ProformaInvoiceForm = ({
         setLoadingId("");
         setDeliveryId("");
         setDeliveryDate("");
-        setWeight("");
-
+        setWeightInKg("");
+        setCarriageCharge("");
+        setValidityTo("");
+        setCurrencyId("");
+        setAccordionOpen(false);
+        setBankId("");
     };
 
     useEffect(() => {
@@ -452,6 +491,13 @@ const ProformaInvoiceForm = ({
                     hoverLabel: "Save & Close",
                     iconOnly: true,
                     onClick: () => handleSave("close"),
+                    onKeyDown: (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleSave("close");
+                        }
+                    },
                     className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
                 },
                 {
@@ -465,6 +511,13 @@ const ProformaInvoiceForm = ({
                     hoverLabel: "Save & New",
                     iconOnly: true,
                     onClick: () => handleSave("new"),
+                    onKeyDown: (e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleSave("new");
+                        }
+                    },
                     className: `bg-indigo-600 hover:bg-indigo-700 ${actionButtonClass}`,
                 },
             ]
@@ -493,6 +546,21 @@ const ProformaInvoiceForm = ({
                 }
                 setSummary(true);
             },
+            onKeyDown: (e) => {
+                if (!taxTemplateId) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toast.info("Please Select Tax Template !", {
+                        position: "top-center",
+                    });
+                    return;
+                }
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSummary(true);
+                }
+            },
             className:
                 "bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md transition",
         },
@@ -502,6 +570,13 @@ const ProformaInvoiceForm = ({
             hoverLabel: "Print",
             iconOnly: true,
             onClick: () => setPrintModalOpen(true),
+            onKeyDown: (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setPrintModalOpen(true);
+                }
+            },
             className: `bg-slate-600 hover:bg-slate-700 ${actionButtonClass}`,
         },
     ].filter((a) => !a.hidden);
@@ -515,7 +590,7 @@ const ProformaInvoiceForm = ({
                 className="w-full flex items-center justify-between px-3 py-1.5 text-left"
             >
                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">
-                    Shipping Details
+                    Other Details
                 </span>
                 <svg
                     className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${accordionOpen ? "rotate-180" : ""
@@ -532,44 +607,109 @@ const ProformaInvoiceForm = ({
             {/* Accordion Body */}
             {accordionOpen && (
                 <div className="px-3 pb-2 border-t border-slate-100">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-fit">
-                        <DropdownInput
-                            name="Loading Port"
-                            options={dropDownListObject(
-                                cityList?.data?.filter((item) => item.active),
-                                "name",
-                                "id",
-                            )}
-                            value={loadingId}
-                            setValue={setLoadingId}
-                            readOnly={effectiveReadOnly}
-                        />
-                        <DropdownInput
-                            name="Delivery Port"
-                            options={dropDownListObject(
-                                cityList?.data?.filter((item) => item.active),
-                                "name",
-                                "id",
-                            )}
-                            value={deliveryId}
-                            setValue={setDeliveryId}
-                            readOnly={effectiveReadOnly}
-                        />
+                    <div className="grid grid-cols-2 md:grid-cols-8 gap-2 w-fit">
+                        {
+                            isCustomerExport && (
+                                <>
+                                    <DropdownInput
+                                        name="Loading Port"
+                                        options={dropDownListObject(
+                                            cityList?.data?.filter((item) => item.active),
+                                            "name",
+                                            "id",
+                                        )}
+                                        value={loadingId}
+                                        setValue={setLoadingId}
+                                        readOnly={effectiveReadOnly}
+                                        required={true}
+                                    />
+                                    <DropdownInput
+                                        name="Delivery Port"
+                                        options={dropDownListObject(
+                                            cityList?.data?.filter((item) => item.active),
+                                            "name",
+                                            "id",
+                                        )}
+                                        value={deliveryId}
+                                        setValue={setDeliveryId}
+                                        readOnly={effectiveReadOnly}
+                                        required={true}
+                                    />
+                                </>
+                            )
+                        }
                         <DateInputNew
                             name="Delivery Date"
                             value={deliveryDate}
                             setValue={setDeliveryDate}
                             disabled={effectiveReadOnly}
                             type="date"
+                            required={true}
                         />
                         <TextInput
-                            name="Weight (KG)"
-                            value={weight}
-                            setValue={setWeight}
+                            name="WeightInKg (KG)"
+                            value={weightInKg}
+                            setValue={setWeightInKg}
                             disabled={effectiveReadOnly}
                             type="number"
                             min="0"
+                            className="text-right"
+                            required={true}
+                            onBlur={(e) =>
+                                setWeightInKg(
+                                    e.target.value ? Number(e.target.value).toFixed(3) : "",
+                                )
+                            }
+                            onFocus={(e) => {
+                                e.target.select();
+                            }}
                         />
+                        {
+                            isCustomerExport && (
+                                <TextInput
+                                    name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
+                                    value={carriageCharge}
+                                    setValue={setCarriageCharge}
+                                    disabled={effectiveReadOnly}
+                                    type="number"
+                                    min="0"
+                                    className="text-right"
+                                    onBlur={(e) =>
+                                        setCarriageCharge(
+                                            e.target.value ? Number(e.target.value).toFixed(2) : "",
+                                        )
+                                    }
+                                    onFocus={(e) => {
+                                        e.target.select();
+                                    }}
+                                />
+                            )
+                        }
+                        <div className="col-span-2">
+                            <DropdownWithModal
+                                name="Advising Bank"
+                                options={dropDownListObjectMultiple(
+                                    id
+                                        ? bankList?.data
+                                        : bankList?.data?.filter(
+                                            (item) => item?.active,
+                                        ),
+                                    ["name", "Branch.name"],
+                                    "id",
+                                )}
+                                value={bankId}
+                                setValue={setBankId}
+                                required={isCustomerExport}
+                                readOnly={readOnly}
+                                className={`w-[150px]`}
+                                addNewLabel="+ Add New Bank"
+                                childComponent={BankMaster}
+                                addNewModalWidth="w-[45%] h-[64%]"
+                                disabled={readOnly}
+                            />
+                        </div>
+
+
                     </div>
                 </div>
             )}
@@ -687,7 +827,7 @@ const ProformaInvoiceForm = ({
                                     )}
                                     value={taxTemplateId}
                                     setValue={setTaxTemplateId}
-                                    required={true}
+                                    required={!isCustomerExport}
                                     readOnly={effectiveReadOnly}
                                 />
                             </div>
@@ -752,7 +892,7 @@ const ProformaInvoiceForm = ({
                 </div>
 
             </div>
-            {isCustomerExport ? shippingAccordion : null}
+            {shippingAccordion}
         </>
     );
 
@@ -855,20 +995,37 @@ const ProformaInvoiceForm = ({
                         label: "Total Qty",
                         value: totalQty.toFixed(2),
                         summaryColumn: "right",
+                        emphasized: true,
+
                     },
                     {
                         key: "grossAmount",
                         label: "Gross Amount",
                         value: `${isCurrencySymbol ? isCurrencySymbol : ''} ${isCustomerExport ? enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0).toFixed(2) : enrichedData.gross.toFixed(2)}`,
                         summaryColumn: "right",
-                    },
-                    {
-                        key: "netAmount",
-                        label: "Net Amount",
-                        value: `${isCurrencySymbol ? isCurrencySymbol : ''} ${isCustomerExport ? enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0).toFixed(2) : enrichedData.net.toFixed(2)}`,
-                        summaryColumn: "right",
                         emphasized: true,
+
                     },
+
+                    ...(!isCustomerExport
+                        ? [
+                            {
+                                key: "netAmount",
+                                label: "Net Amount",
+                                value: `${isCurrencySymbol ? isCurrencySymbol : ''} ${enrichedData.net.toFixed(2)}`,
+                                summaryColumn: "right",
+                                emphasized: true,
+                            },
+                        ]
+                        : [
+                            {
+                                key: "carriageCharge",
+                                label: "Carraige Charges",
+                                value: `${isCurrencySymbol ? isCurrencySymbol : ''} ${carriageCharge}`,
+                                summaryColumn: "right",
+                                emphasized: true,
+                            },
+                        ]),
                 ]}
             />
             <TransactionActions

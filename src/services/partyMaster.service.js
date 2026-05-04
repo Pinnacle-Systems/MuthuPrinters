@@ -90,6 +90,7 @@ async function get(req) {
         select: {
           PoSupplier: true,
           purchaseInwards: true,
+          proformaInvoices: true,
         },
       },
       BranchType: true,
@@ -113,7 +114,10 @@ async function get(req) {
     statusCode: 0,
     data: (data = data?.map((party) => ({
       ...party,
-      childRecord: party?._count.PoSupplier + party?._count.purchaseInwards,
+      childRecord:
+        party?._count.PoSupplier +
+        party?._count.purchaseInwards +
+        party?._count.proformaInvoices,
     }))),
   };
 }
@@ -216,6 +220,9 @@ async function getOne(id) {
   });
   const childRecordInward = await prisma.purchaseInward.count({
     where: { supplierId: parseInt(id) },
+  });
+  const childRecordPI = await prisma.proformaInvoice.count({
+    where: { customerId: parseInt(id) },
   });
 
   const data = await prisma.party.findUnique({
@@ -329,7 +336,7 @@ async function getOne(id) {
       totalPaymentPurchaseBill,
       totalDiscount,
       isCustomerExport,
-      childRecord: childRecordPo + childRecordInward,
+      childRecord: childRecordPo + childRecordInward + childRecordPI,
       totaloutstanding,
       totalPaymentAgainstInvoice,
     },

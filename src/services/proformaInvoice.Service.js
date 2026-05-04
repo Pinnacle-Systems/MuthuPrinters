@@ -138,6 +138,11 @@ async function create(body) {
     payTermId,
     validityTo,
     currencyId,
+    weightInKg,
+    loadingId,
+    deliveryId,
+    carriageCharge,
+    bankId,
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -175,6 +180,11 @@ async function create(body) {
       discountValue: parseFloat(discountValue || 0),
       validityTo: validityTo ? new Date(validityTo) : null,
       currencyId: currencyId ? parseInt(currencyId) : null,
+      weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+      loadingId: loadingId ? parseInt(loadingId) : null,
+      deliveryId: deliveryId ? parseInt(deliveryId) : null,
+      carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+      bankId: bankId ? parseInt(bankId) : null,
       items: {
         createMany: {
           data: JSON.parse(items || "[]").map((item) => ({
@@ -233,6 +243,11 @@ async function update(id, body, files) {
     payTermId,
     validityTo,
     currencyId,
+    weightInKg,
+    loadingId,
+    deliveryId,
+    carriageCharge,
+    bankId,
   } = body;
 
   const parseItems = JSON.parse(items || "[]");
@@ -347,6 +362,11 @@ async function update(id, body, files) {
       validityTo: validityTo ? new Date(validityTo) : null,
       currencyId: currencyId ? parseInt(currencyId) : null,
       payTermId: payTermId ? parseInt(payTermId) : null,
+      weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+      loadingId: loadingId ? parseInt(loadingId) : null,
+      deliveryId: deliveryId ? parseInt(deliveryId) : null,
+      carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+      bankId: bankId ? parseInt(bankId) : null,
       quoteVersion: nextQuoteVersion,
       ...(isApproved !== undefined && {
         isApproved: isApproved === "true" || isApproved === true,

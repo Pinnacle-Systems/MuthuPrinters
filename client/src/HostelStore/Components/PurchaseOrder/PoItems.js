@@ -109,8 +109,6 @@ const PoItems = ({
   termsRef,
   gsmList,
 }) => {
-  console.log(poItems, "poItemscheck");
-
   const gridWrapperRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
