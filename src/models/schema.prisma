@@ -1162,6 +1162,7 @@ model Hsn {
   purchaseCancelItems    PurchaseCancelItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
   proformaInvoiceItems   ProformaInvoiceItem[]
+  orderItems             OrderItems[]
 }
 
 model BranchType {
@@ -1591,6 +1592,7 @@ model Size {
   stocks                 Stock[]
   orderItems             OrderItems[]
   proformaInvoiceItems   ProformaInvoiceItem[]
+  orderSizeBreakups      OrderSizeBreakup[]
 }
 
 model Gsm {
@@ -1627,6 +1629,7 @@ model ItemGroup {
   purchaseReturnItems    PurchaseReturnItems[]
   inwardItems            InwardItems[]
   stocks                 Stock[]
+  orderItems             OrderItems[]
 }
 
 model SizeTemplate {
@@ -1638,6 +1641,7 @@ model SizeTemplate {
   SizeTemplateList SizeTemplateList[]
   styles           Style[]
   styleItems       StyleItem[]
+  orderItems       OrderItems[]
 }
 
 model SizeTemplateList {
@@ -1806,6 +1810,10 @@ model OrderEntry {
   termsAndCondition String?
   Terms             TermsAndConditions? @relation(fields: [termsId], references: [id])
   termsId           Int?
+  Proforma          ProformaInvoice?    @relation(fields: [proFormaId], references: [id])
+  proFormaId        Int?
+  refNo             String?
+  isRepeatedPI      Boolean?            @default(false)
   attachments       attachments[]
   JobCard           JobCard[]
 
@@ -1971,18 +1979,37 @@ model MachineDetails {
 }
 
 model OrderItems {
-  id           Int         @id @default(autoincrement())
-  orderEntryId Int?
-  OrderEntry   OrderEntry? @relation(fields: [orderEntryId], references: [id], onDelete: Cascade)
-  styleItemId  Int?
-  StyleItem    StyleItem?  @relation(fields: [styleItemId], references: [id])
-  orderQty     Int?
-  sizeId       Int?
-  Size         Size?       @relation(fields: [sizeId], references: [id])
-  uomId        Int?
-  Uom          Uom?        @relation(fields: [uomId], references: [id])
-  gsmId        Int?
-  Gsm          Gsm?        @relation(fields: [gsmId], references: [id])
+  id             Int                @id @default(autoincrement())
+  orderEntryId   Int?
+  OrderEntry     OrderEntry?        @relation(fields: [orderEntryId], references: [id], onDelete: Cascade)
+  styleItemId    Int?
+  StyleItem      StyleItem?         @relation(fields: [styleItemId], references: [id])
+  orderQty       Int?
+  sizeId         Int?
+  Size           Size?              @relation(fields: [sizeId], references: [id])
+  uomId          Int?
+  Uom            Uom?               @relation(fields: [uomId], references: [id])
+  gsmId          Int?
+  Gsm            Gsm?               @relation(fields: [gsmId], references: [id])
+  itemGroupId    Int?
+  ItemGroup      ItemGroup?         @relation(fields: [itemGroupId], references: [id])
+  hsnId          Int?
+  Hsn            Hsn?               @relation(fields: [hsnId], references: [id])
+  sizeTemplateId Int?
+  SizeTemplate   SizeTemplate?      @relation(fields: [sizeTemplateId], references: [id])
+  trackingType   String?
+  sizeBreakup    OrderSizeBreakup[]
+}
+
+model OrderSizeBreakup {
+  id          Int        @id @default(autoincrement())
+  orderItemId Int
+  OrderItem   OrderItems @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  sizeId      Int?
+  Size        Size?      @relation(fields: [sizeId], references: [id])
+  qty         Int?
+  barcodeFrom String?
+  barcodeTo   String?
 }
 
 model ProcessRoute {
@@ -2043,6 +2070,7 @@ model ProformaInvoice {
   carriageCharge    Float?
   bankId            Int?
   Bank              Bank?                 @relation(fields: [bankId], references: [id])
+  orderEntries      OrderEntry[]
 }
 
 model ProformaInvoiceItem {

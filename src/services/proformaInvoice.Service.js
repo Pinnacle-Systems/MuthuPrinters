@@ -67,6 +67,17 @@ async function get(req) {
     include: {
       customer: { select: { id: true, name: true } },
       items: true,
+      orderEntries: {
+        select: {
+          id: true,
+          productionType: true,
+        },
+      },
+      _count: {
+        select: {
+          orderEntries: true,
+        },
+      },
       // OrderEntry: { select: { id: true, docId: true } },
     },
     orderBy: { id: "desc" },
@@ -89,7 +100,17 @@ async function get(req) {
 
   return {
     statusCode: 0,
-    data,
+    data: data?.map((item) => {
+      const hasBulk = item.orderEntries?.some(
+        (entry) => entry.productionType === "BULK",
+      );
+      console.log(item.orderEntries, "orderEntries");
+      return {
+        ...item,
+        childRecord: item?._count?.orderEntries || 0,
+        hasBulk: hasBulk,
+      };
+    }),
     totalCount,
   };
 }

@@ -1,6 +1,8 @@
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 
 import {
+    CheckBox,
+    CheckBoxNew,
     DateInputNew,
     DropdownInput,
     DropdownNew,
@@ -28,7 +30,7 @@ import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import Modal from "../../../UiComponents/Modal/index.js";
 import { getImageUrlPath } from "../../../Constants/index.js";
 import { Plus } from "lucide-react";
-import { useAddOrderEntryMutation, useGetOrderEntryByIdQuery, useUpdateOrderEntryMutation } from "../../../redux/uniformService/OrderEntryService.js";
+import { useAddOrderEntryMutation, useGetOrderEntryByIdQuery, useGetOrderEntryQuery, useUpdateOrderEntryMutation } from "../../../redux/uniformService/OrderEntryService.js";
 import { QRCodeCanvas } from "qrcode.react";
 import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFooter.jsx";
 import { PDFViewer } from "@react-pdf/renderer";
@@ -43,8 +45,11 @@ import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoServices.js";
 import { useGetUomQuery } from "../../../redux/services/UomMasterService.js";
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
-import { useGetProformaInvoiceQuery } from "../../../redux/uniformService/ProformaInvoiceService.js";
+import ProformaInvoiceApi, { useGetProformaInvoiceQuery } from "../../../redux/uniformService/ProformaInvoiceService.js";
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
+import { useGetSizeTemplateQuery } from "../../../redux/services/SizeTemplateMaster.js";
+import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
+import { useDispatch } from "react-redux";
 
 const OrderEntryForm = ({
     onClose,
@@ -89,13 +94,13 @@ const OrderEntryForm = ({
     const [approvalRemarks, setApprovalRemarks] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
     const [proFormaId, setProFormaId] = useState("");
-    const [refNo, setRefNo] = useState("")
-
+    const [refNo, setRefNo] = useState("");
+    const [isRepeatedPI, setIsRepeatedPI] = useState(false);
+    const dispatch = useDispatch();
     const qrRef = useRef(null);
     const customerRef = useRef(null);
     const childRecord = useRef(0);
-
-    const [dispatchInvalidate] = useInvalidateTags();
+    const requirementRef = useRef(null);
 
     const { userId, finYearId, branchId, companyId } = getCommonParams();
     const params = {
@@ -103,7 +108,13 @@ const OrderEntryForm = ({
         companyId,
         finYearId,
     };
-
+    const {
+        data: allData,
+        isFetching,
+        isLoading,
+    } = useGetOrderEntryQuery({
+        params: params,
+    });
     const {
         data: singleData,
         isFetching: isSingleFetching,
@@ -119,6 +130,10 @@ const OrderEntryForm = ({
         params: { companyId, branchId },
     });
     const { data: itemGroupList } = useGetItemGroupMasterQuery({ params });
+    const { data: sizeTemplateList } = useGetSizeTemplateQuery({
+        params: { companyId },
+    });
+    const { data: hsnList } = useGetHsnMasterQuery({ params });
 
     const [addData] = useAddOrderEntryMutation();
     const [updateData] = useUpdateOrderEntryMutation();
@@ -154,6 +169,7 @@ const OrderEntryForm = ({
             setProductionType(data?.productionType || "SAMPLE");
             setProFormaId(data?.proFormaId || "");
             setRefNo(data?.refNo || "");
+            setIsRepeatedPI(data?.isRepeatedPI || false);
         },
         [id],
     );
@@ -186,7 +202,8 @@ const OrderEntryForm = ({
         docId,
         orderItems: orderItems?.filter((i) => i.styleItemId),
         proFormaId,
-        refNo
+        refNo,
+        isRepeatedPI
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -252,6 +269,7 @@ const OrderEntryForm = ({
                         }
                     },
                 });
+                dispatch(ProformaInvoiceApi.util.invalidateTags(["proformaInvoice"]));
             }
         } catch (error) {
             console.log("handle", error);
@@ -288,9 +306,7 @@ const OrderEntryForm = ({
             if (!item.styleItemId) {
                 errors.push(`Row ${index + 1}: Style is required`);
             }
-            if (!item.sizeId) {
-                errors.push(`Row ${index + 1}: Size is required`);
-            }
+
             if (!item.uomId) {
                 errors.push(`Row ${index + 1}: UOM is required`);
             }
@@ -303,10 +319,12 @@ const OrderEntryForm = ({
     const validateData = (data) => {
         const items = data?.orderItems || [];
         const checks = [
-            { condition: !data.orderType, title: "Order Type is required!" },
-            { condition: !data.productionType, title: "Production Type is required!" },
-            { condition: !data.deliveryDate, title: "Delivery Date is required!" },
             { condition: !data.customerId, title: "Customer is required!" },
+            { condition: !data.orderType, title: "Order Type is required!" },
+            { condition: data.orderType === "AGAINSTPI" && !data.proFormaId, title: "PI No is required!" },
+            { condition: !data.productionType, title: "Production Type is required!" },
+            { condition: data.productionType === "BULK" && !data.refNo, title: "RefNo is required!" },
+            { condition: !data.deliveryDate, title: "Delivery Date is required!" },
             { condition: items.length === 0, title: "Order Items are required!" },
             {}
         ];
@@ -880,11 +898,11 @@ const OrderEntryForm = ({
                             <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Basic Details</h2>
                             <div className="flex gap-2">
                                 <div className="w-36">
-                                    <TextInput name="OE No" value={docId} disabled={true} />
+                                    <TextInput name="ORD No" value={docId} disabled={true} />
                                 </div>
                                 <div className="w-32">
                                     <DateInputNew
-                                        name="OE Date"
+                                        name="ORD Date"
                                         value={docDate}
                                         setValue={setDocDate}
                                         disabled={true}
@@ -894,68 +912,12 @@ const OrderEntryForm = ({
                                 </div>
                             </div>
                         </div>
-
-                        <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-                            <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Order Details</h2>
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                                <DropdownInput
-                                    name="Order Type"
-                                    options={orderTypes}
-                                    value={orderType}
-                                    setValue={(value) => setOrderType(value)}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    disabled={childRecord.current > 0 || readOnly}
-                                    ref={customerRef}
-                                />
-                                <div className="col-span-1">
-
-                                    <DropdownNew
-                                        name="Proforma Invoice No"
-                                        dataList={PIList?.data}
-                                        value={proFormaId}
-                                        setValue={setProFormaId}
-                                        required={orderType === "AGAINSTPI"}
-                                        readOnly={readOnly || orderType === "GENERAL"}
-                                        disabled={readOnly || orderType === "GENERAL"}
-                                        otherField={"docId"}
-                                    />
-                                </div>
-
-
-                                <DropdownInput
-                                    name="Production Type"
-                                    options={productionTypes}
-                                    value={productionType}
-                                    setValue={(value) => setProductionType(value)}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    disabled={childRecord.current > 0 || readOnly}
-                                />
-                                <TextInput
-                                    name="Reference No"
-                                    value={refNo}
-                                    setValue={setRefNo}
-                                    disabled={readOnly}
-                                    required={productionType === "BULK"}
-                                />
-                                <DateInputNew
-                                    name="Delivery Date"
-                                    value={deliveryDate}
-                                    setValue={setDeliveryDate}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    type={"date"}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                        <div className=" w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                             <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
                                 Customer Details
                             </h2>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                <div className="md:col-span-1">
+                            <div className="grid grid-cols-2 md:grid-cols-2 gap-2">
+                                <div className="md:col-span-2">
                                     <DropdownWithModal
                                         name="Customer"
                                         options={dropDownListObject(
@@ -974,6 +936,8 @@ const OrderEntryForm = ({
                                         childComponent={PartyMaster}
                                         addNewModalWidth="w-[90%] h-[95%]"
                                         disabled={childRecord.current > 0 || readOnly}
+                                        ref={customerRef}
+                                        openOnFocus={true}
                                     />
                                 </div>
                                 <div className="">
@@ -990,10 +954,101 @@ const OrderEntryForm = ({
                                         placeholder="Contact number"
                                         value={findFromList(customerId, customerList?.data, "contactNumber")}
                                         disabled={true}
+                                        className="w-20"
                                     />
                                 </div>
                             </div>
                         </div>
+
+                        <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                            <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Order Details</h2>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                <DropdownInput
+                                    name="Order Type"
+                                    options={orderTypes}
+                                    value={orderType}
+                                    setValue={(value) => setOrderType(value)}
+                                    required={true}
+                                    readOnly={readOnly}
+                                    disabled={childRecord.current > 0 || readOnly}
+                                />
+                                <div className="col-span-1">
+
+                                    <DropdownNew
+                                        name="PI No"
+                                        dataList={PIList?.data?.filter((item) => id ? item?.customerId === customerId : isRepeatedPI ? item?.customerId === customerId && item?.hasBulk : item?.customerId === customerId && !item?.hasBulk)}
+                                        value={proFormaId}
+                                        setValue={setProFormaId}
+                                        required={orderType === "AGAINSTPI"}
+                                        readOnly={readOnly || orderType === "GENERAL"}
+                                        disabled={readOnly || orderType === "GENERAL"}
+                                        otherField={"docId"}
+                                    />
+                                </div>
+
+
+                                <DropdownInput
+                                    name="Production Type"
+                                    options={productionTypes}
+                                    value={productionType}
+                                    setValue={(value) => setProductionType(value)}
+                                    required={true}
+                                    readOnly={readOnly}
+                                    disabled={childRecord.current > 0 || readOnly}
+                                    beforeChange={() => {
+                                        setRefNo("");
+                                    }}
+                                />
+                                {
+                                    productionType === "SAMPLE" ? (
+                                        <TextInput
+                                            name="Ref No"
+                                            value={refNo}
+                                            setValue={setRefNo}
+                                            disabled={readOnly || productionType === "SAMPLE"}
+                                            required={productionType === "BULK"}
+                                        />
+                                    ) : (
+                                        <DropdownNew
+                                            name="Ref No"
+                                            dataList={PIList?.data?.filter((item) => id ? item?.customerId === customerId : isRepeatedPI ? item?.customerId === customerId && item?.hasBulk : item?.customerId === customerId && !item?.hasBulk)}
+                                            value={refNo}
+                                            setValue={setRefNo}
+                                            required={productionType === "BULK"}
+                                            readOnly={readOnly}
+                                            disabled={readOnly}
+                                            otherField={"refNo"}
+                                        />
+                                    )
+                                }
+
+                                <div className="w-28">
+
+                                    <DateInputNew
+                                        name="Delivery Date"
+                                        value={deliveryDate}
+                                        setValue={setDeliveryDate}
+                                        required={true}
+                                        readOnly={readOnly}
+                                        type={"date"}
+                                    />
+                                </div>
+
+                                <div className="m-2 p-0">
+
+                                    <CheckBoxNew
+                                        name="Repeated PI"
+                                        readOnly={readOnly}
+                                        value={isRepeatedPI}
+                                        setValue={setIsRepeatedPI}
+                                        disabled={readOnly || childRecord.current > 0}
+                                        className="text-[11px] font-medium"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+
                     </div>
                 }
                 detailsLayout="default"
@@ -1009,6 +1064,9 @@ const OrderEntryForm = ({
                         gsmList={gsmList}
                         id={id}
                         itemGroupList={itemGroupList}
+                        sizeTemplateList={sizeTemplateList}
+                        hsnList={hsnList}
+                        requirementRef={requirementRef}
                     />
                 }
                 footer={
@@ -1020,7 +1078,8 @@ const OrderEntryForm = ({
                                     value: requirements,
                                     onChange: setRequirements,
                                     placeholder: "Enter requirements...",
-                                    readOnly: readOnly
+                                    readOnly: readOnly,
+                                    ref: requirementRef
                                 },
                                 {
                                     title: "Remarks",

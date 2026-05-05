@@ -822,7 +822,7 @@ export const CheckBoxNew = ({
   return (
     <label
       className={`inline-flex items-center gap-1.5 cursor-pointer select-none
-        text-xs font-medium text-slate-700 leading-none
+        text-xs font-medium text-slate-800 leading-none
         ${readOnly || disabled ? "opacity-50 cursor-not-allowed" : "hover:text-indigo-600"}
         ${className || ""}`}
     >
@@ -842,7 +842,7 @@ export const CheckBoxNew = ({
           disabled:cursor-not-allowed
         "
       />
-      <span>{name}</span>
+      <span className="mt-1">{name}</span>
     </label>
   );
 };
@@ -3708,6 +3708,14 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
     },
   }));
 
+  const focusNextSafe = (ref, retries = 10) => {
+    if (ref?.current) {
+      ref.current.focus();
+    } else if (retries > 0) {
+      setTimeout(() => focusNextSafe(ref, retries - 1), 50);
+    }
+  };
+
   // ✅ Helper function to focus next field
   const focusNextField = () => {
     const current = selectRef.current?.controlRef || document.activeElement;
@@ -3716,7 +3724,7 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
     focusNextGridField({
       currentElement: current,
       onReachGridEnd: () => {
-        nextRef?.current?.focus?.();
+        focusNextSafe(nextRef);
       },
     });
   };
@@ -3838,7 +3846,7 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
 
             if (!value && nextRef) {
               e.preventDefault();
-              nextRef?.current?.focus();
+              focusNextSafe(nextRef);
             }
             return;
           }

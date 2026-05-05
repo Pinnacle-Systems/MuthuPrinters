@@ -106,6 +106,7 @@ const ProformaInvoiceForm = ({
     const [bankId, setBankId] = useState("");
 
     const customerRef = useRef(null);
+    const termsRef = useRef(null);
 
     const isOldVersion = selectedQuoteVersion !== "Latest";
     const effectiveReadOnly = readOnly || isOldVersion;
@@ -980,6 +981,7 @@ const ProformaInvoiceForm = ({
                 setTerms={setTermsAndCondition}
                 readOnly={effectiveReadOnly}
                 showTermSelect={true}
+                termsRef={termsRef}
                 termValue={termsId}
                 onTermChange={(value) => setTermsId(value)}
                 termOptions={
@@ -1083,6 +1085,7 @@ const ProformaInvoiceForm = ({
                         taxTemplateId={taxTemplateId}
                         id={id}
                         isCurrencySymbol={isCurrencySymbol}
+                        termsRef={termsRef}
                         isCustomerExport={isCustomerExport}
                     />
                 }

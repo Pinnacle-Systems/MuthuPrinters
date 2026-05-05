@@ -73,6 +73,7 @@ const CommonFormFooter = ({
   stacked = false,
   hasSummaryTitle = false,
   remarksReadOnly = null,
+  termsRef = null,
 }) => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -337,8 +338,19 @@ const CommonFormFooter = ({
 
 
             <textarea
-              ref={termsTextareaRef}
-              disabled={readOnly}
+              ref={(el) => {
+                termsTextareaRef.current = el;
+
+                // ✅ attach external ref
+                if (termsRef) {
+                  if (typeof termsRef === "function") {
+                    termsRef(el);
+                  } else {
+                    termsRef.current = el;
+                  }
+                }
+              }}
+              readOnly={readOnly}
               className="min-h-[2.5rem] flex-1 w-full overflow-auto focus:outline-none rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
               value={terms || ""}
               onChange={(e) => setTerms(e.target.value)}

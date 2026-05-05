@@ -222,6 +222,17 @@ export default function Form({
       });
       return;
     }
+    if (data?.sizeTemplateList.length === 0) {
+      Swal.fire({
+        icon: "error",
+        title: "Submission error",
+        text: "Please select at least one size...",
+        didClose: () => {
+          multiSelectRef?.current?.focus();
+        }
+      });
+      return;
+    }
     if (id) {
 
       if (!window.confirm("Are you sure update the details ...?")) {

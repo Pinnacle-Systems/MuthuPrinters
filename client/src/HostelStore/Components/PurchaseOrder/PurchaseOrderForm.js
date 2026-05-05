@@ -142,7 +142,7 @@ const PurchaseOrderForm = ({
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetPoByIdQuery(id, { skip: !id });
-
+  console.log("termsRef:", termsRef.current);
   const childRecordCount =
     singleData?.data?.childRecordInward + singleData?.data?.childRecordCancel;
 
@@ -1426,6 +1426,7 @@ const PurchaseOrderForm = ({
         readOnly={isCoreLocked}
         remarksReadOnly={isFullyLocked}
         showTermSelect={true}
+        termsRef={termsRef}
         termValue={termsId}
         onTermChange={(value) => setTermsId(value)}
         termOptions={

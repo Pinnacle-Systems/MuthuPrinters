@@ -190,10 +190,33 @@ const ReusableFormFooter = ({
                             </div>
 
                             <textarea
-                                ref={(el) => (textareaRefs.current[index] = el)}
-                                disabled={readOnly || sec.readOnly}
+                                ref={(el) => {
+                                    textareaRefs.current[index] = el;
+
+                                    // ✅ attach external ref if provided
+                                    if (sec.ref) {
+                                        if (typeof sec.ref === "function") {
+                                            sec.ref(el);
+                                        } else {
+                                            sec.ref.current = el;
+                                        }
+                                    }
+                                }}
+                                readOnly={readOnly || sec.readOnly}
                                 value={sec.value || ""}
                                 onChange={(e) => sec.onChange(e.target.value)}
+                                onKeyDown={(e) => {
+                                    // ✅ Ctrl + Enter → move to next section
+                                    if (e.ctrlKey && e.key === "Enter") {
+                                        e.preventDefault();
+
+                                        const nextIndex = index + 1;
+
+                                        if (textareaRefs.current[nextIndex]) {
+                                            textareaRefs.current[nextIndex].focus();
+                                        }
+                                    }
+                                }}
                                 placeholder={sec.placeholder}
                                 className="min-h-[2.5rem] flex-1 w-full overflow-auto focus:outline-none rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
                             />

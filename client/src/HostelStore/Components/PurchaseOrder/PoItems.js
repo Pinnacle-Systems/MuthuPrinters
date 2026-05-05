@@ -137,7 +137,6 @@ const PoItems = ({
   const visibleRows = poItems
     .map((row, originalIndex) => ({ row, originalIndex }))
     .filter(({ row }) => isVisibleRow(row));
-  console.log(visibleRows, "visibleRows");
 
   const syncRowPatch = (index, patch) => {
     setPoItems((prevRows) => {

@@ -5,7 +5,7 @@ import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService";
 import { useGetUomQuery } from "../../../redux/services/UomMasterService";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices";
-import { getCommonParams } from "../../../Utils/helper";
+import { findFromList, getCommonParams } from "../../../Utils/helper";
 import { VIEW } from "../../../icons";
 import Modal from "../../../UiComponents/Modal";
 import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
@@ -21,6 +21,7 @@ const ProformaInvoiceItems = ({
     id,
     isCurrencySymbol,
     isCustomerExport,
+    termsRef,
 }) => {
     const styleItemRefs = useRef({});
     const { companyId } = getCommonParams();
@@ -178,7 +179,7 @@ const ProformaInvoiceItems = ({
                                 S.No
                             </th>
                             <th className="w-80 px-2 py-2 text-center font-medium border border-gray-300">
-                                Description of Goods
+                                Description of Goods<span className="text-red-500">*</span>
                             </th>
                             {/* <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                                 Size
@@ -194,13 +195,13 @@ const ProformaInvoiceItems = ({
                                 UOM
                             </th>
                             <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
-                                Qty
+                                Qty<span className="text-red-500">*</span>
                             </th>
                             <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                                 Dozen
                             </th>
                             <th className="w-32 px-1 py-2 text-center font-medium border border-gray-300">
-                                Price {isCurrencySymbol && `(${isCurrencySymbol})`}
+                                Price {isCurrencySymbol && `(${isCurrencySymbol})`}<span className="text-red-500">*</span>
                             </th>
                             <th className="w-32 px-1 py-2 text-center font-medium border border-gray-300">
                                 Gross
@@ -220,7 +221,7 @@ const ProformaInvoiceItems = ({
                         {items?.map((item, index) => (
                             <tr
                                 key={index}
-                                className={`h-7 hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                                className={`h-6 hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                                     }`}
                                 onContextMenu={(e) => {
                                     if (!readOnly) {
@@ -248,44 +249,11 @@ const ProformaInvoiceItems = ({
                                         childComponent={StyleItemMaster}
                                         addNewModalWidth="w-[50%] h-[57%]"
                                         ref={(el) => (styleItemRefs.current[index] = el)}
+                                        nextRef={termsRef}
                                     />
                                 </td>
-                                {/* <td className="border border-gray-300">
-                                    <FxSelectWithAdd
-                                        value={item.sizeId}
-                                        onChange={(val) => handleInputChange(val, index, "sizeId")}
-                                        options={
-                                            sizeList?.data
-                                                ?.filter((p) => p.active)
-                                                .map((p) => ({ label: p.name, value: p.id })) || []
-                                        }
-                                        readOnly={readOnly} // Read-only from Order Entry
-                                        placeholder=""
-                                        addNew={true}
-                                        childComponent={Size}
-                                        addNewModalWidth="w-[30%] h-[45%]"
-                                    />
-                                </td>
-
-                                <td className="border border-gray-300">
-                                    <FxSelectWithAdd
-                                        value={item.gsmId}
-                                        onChange={(val) => handleInputChange(val, index, "gsmId")}
-                                        options={
-                                            gsmList?.data
-                                                ?.filter((p) => p.active)
-                                                .map((p) => ({ label: p.name, value: p.id })) || []
-                                        }
-                                        readOnly={readOnly} // Read-only from Order Entry
-                                        placeholder=""
-                                        disabled={true}
-                                        addNew={true}
-                                        childComponent={Gsm}
-                                        addNewModalWidth="w-[30%] h-[45%]"
-                                    />
-                                </td> */}
-                                <td className="border border-gray-300">
-                                    <FxSelectWithAdd
+                                <td className="border border-gray-300 text-[11px] px-2">
+                                    {/* <FxSelectWithAdd
                                         value={item.hsnId}
                                         onChange={(val) => handleInputChange(val, index, "hsnId")}
                                         options={
@@ -293,16 +261,19 @@ const ProformaInvoiceItems = ({
                                                 ?.filter((p) => p.active)
                                                 .map((p) => ({ label: p.name, value: p.id })) || []
                                         }
-                                        readOnly={readOnly} // Read-only from Order Entry
+                                        readOnly={true} // Read-only from Order Entry
                                         disabled={true}
                                         placeholder=""
                                         addNew={true}
                                         childComponent={HsnMaster}
                                         addNewModalWidth="w-[30%] h-[45%]"
-                                    />
+                                    /> */}
+                                    <span className="">
+                                        {findFromList(item.hsnId, hsnList?.data, "name") || ""}
+                                    </span>
                                 </td>
-                                <td className="border border-gray-300 ">
-                                    <FxSelectWithAdd
+                                <td className="border border-gray-300 text-[11px] px-2">
+                                    {/* <FxSelectWithAdd
                                         value={item.uomId}
                                         onChange={(val) => handleInputChange(val, index, "uomId")}
                                         options={
@@ -310,13 +281,16 @@ const ProformaInvoiceItems = ({
                                                 ?.filter((p) => p.active)
                                                 .map((p) => ({ label: p.name, value: p.id })) || []
                                         }
-                                        readOnly={readOnly} // Read-only from Order Entry
+                                        readOnly={true} // Read-only from Order Entry
                                         disabled={true}
                                         placeholder=""
                                         addNew={true}
                                         childComponent={UomMaster}
                                         addNewModalWidth="w-[30%] h-[45%]"
-                                    />
+                                    /> */}
+                                    <span>
+                                        {findFromList(item.uomId, uomList?.data, "name") || ""}
+                                    </span>
                                 </td>
                                 {/* <td className="border border-gray-300 outline-none p-0">
                                     <input

@@ -114,7 +114,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
   };
 
   const validateData = (data) => {
-    if (data.name && data.itemGroupId && data?.uomId) {
+    if (data.name && data.itemGroupId && data?.uomId && data?.hsnId) {
       return true;
     }
     return false;
@@ -394,6 +394,27 @@ export default function Form({ onSuccess, defaultName = "" }) {
                   />
                 </div>
                 <div className="mb-3">
+                  <DropdownWithModal
+                    name="Hsn"
+                    options={dropDownListObject(
+                      id
+                        ? hsnList?.data
+                        : hsnList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={hsnId}
+                    setValue={setHsnId}
+                    readOnly={readOnly}
+                    className={`w-[150px]`}
+                    disabled={childRecord.current > 0}
+                    addNewLabel="+ Add New Hsn"
+                    childComponent={HsnMaster}
+                    addNewModalWidth="w-[40%] h-[50%]"
+                    required={true}
+                  />
+                </div>
+                <div className="mb-3">
                   {/* <DropdownInput
                             name="UOM"
                             options={dropDownListObject(
@@ -451,62 +472,6 @@ export default function Form({ onSuccess, defaultName = "" }) {
                     addNewLabel="+ Add New Size Template"
                     childComponent={SizeTemplate}
                     addNewModalWidth="w-[40%] h-[62%]"
-                  />
-                  {/* <DropdownInput
-                            name="Size Template"
-                            options={dropDownListObject(
-                              id
-                                ? sizeTemplateList?.data
-                                : sizeTemplateList?.data?.filter(
-                                    (item) => item.active,
-                                  ),
-                              "name",
-                              "id",
-                            )}
-                            value={sizeTemplateId}
-                            setValue={(value) => {
-                              setSizeTemplateId(value);
-                            }}
-                            readOnly={readOnly}
-                            clear={true}
-                            disabled={childRecord.current > 0}
-                          /> */}
-                </div>
-                <div className="mb-3">
-                  {/* <DropdownInput
-                            name="HSN"
-                            options={dropDownListObject(
-                              id
-                                ? hsnList?.data
-                                : hsnList?.data?.filter((item) => item.active),
-                              "name",
-                              "id",
-                            )}
-                            value={hsnId}
-                            setValue={(value) => {
-                              setHsnId(value);
-                            }}
-                            readOnly={readOnly}
-                            clear={true}
-                            disabled={childRecord.current > 0}
-                          /> */}
-                  <DropdownWithModal
-                    name="Hsn"
-                    options={dropDownListObject(
-                      id
-                        ? hsnList?.data
-                        : hsnList?.data?.filter((item) => item?.active),
-                      "name",
-                      "id",
-                    )}
-                    value={hsnId}
-                    setValue={setHsnId}
-                    readOnly={readOnly}
-                    className={`w-[150px]`}
-                    disabled={childRecord.current > 0}
-                    addNewLabel="+ Add New Hsn"
-                    childComponent={HsnMaster}
-                    addNewModalWidth="w-[40%] h-[50%]"
                   />
                 </div>
                 <div className="mb-3">
