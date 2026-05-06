@@ -33,6 +33,19 @@ const OrderEntryApi = createApi({
       },
       providesTags: ["orderEntry"],
     }),
+    getRefList: builder.query({
+      query: ({ params }) => {
+        return {
+          url: ORDER_ENTRY_API + "/refList",
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+          params,
+        };
+      },
+      providesTags: ["orderEntry"],
+    }),
     getOrderEntryById: builder.query({
       query: (id) => {
         return {
@@ -76,6 +89,7 @@ const OrderEntryApi = createApi({
 export const {
   useGetOrderEntryQuery,
   useGetOrderEntryByIdQuery,
+  useGetRefListQuery,
   useLazyGetOrderEntryByIdQuery,
   useAddOrderEntryMutation,
   useUpdateOrderEntryMutation,

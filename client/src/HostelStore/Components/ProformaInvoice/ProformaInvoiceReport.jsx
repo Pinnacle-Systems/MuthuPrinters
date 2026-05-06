@@ -397,10 +397,19 @@ const ProformaInvoiceReport = ({
                                                             </svg>
                                                         </button>
                                                     </Tooltip>
-                                                    <Tooltip title="Delete" arrow>
+                                                    <Tooltip title={
+                                                        item.childRecord > 0
+                                                            ? "Cannot Delete. Child Record Exists"
+                                                            : "Delete"
+                                                    } arrow>
                                                         <button
-                                                            className="flex items-center gap-1 px-1 rounded transition bg-red-50 text-red-800 hover:bg-red-100"
+                                                            className={`flex items-center gap-1 px-1 rounded transition
+  ${item.childRecord > 0
+                                                                    ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
+                                                                    : "bg-red-50 text-red-800 hover:bg-red-100"
+                                                                }`}
                                                             onClick={() => onDelete(item.id)}
+                                                            disabled={item.childRecord > 0}
                                                         >
                                                             <svg
                                                                 xmlns="http://www.w3.org/2000/svg"

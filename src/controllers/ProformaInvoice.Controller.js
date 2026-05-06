@@ -1,15 +1,25 @@
 import { Prisma } from "../lib/prisma.js";
 import {
   get as _get,
+  getPIList as _getPIList,
   getOne as _getOne,
   create as _create,
   update as _update,
   remove as _remove,
-} from "../services/proformaInvoice.service.js";
+} from "../services/proformaInvoice.Service.js";
 
 async function get(req, res, next) {
   try {
     res.json(await _get(req));
+  } catch (err) {
+    console.error(`Error `, err.message);
+    res.status(500).json({ statusCode: 1, message: err.message });
+  }
+}
+
+async function getPIList(req, res, next) {
+  try {
+    res.json(await _getPIList(req));
   } catch (err) {
     console.error(`Error `, err.message);
     res.status(500).json({ statusCode: 1, message: err.message });
@@ -80,4 +90,4 @@ async function remove(req, res, next) {
   }
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove, getPIList };

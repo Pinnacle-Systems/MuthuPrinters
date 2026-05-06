@@ -6,389 +6,1313 @@ import {
     Image,
     StyleSheet,
 } from "@react-pdf/renderer";
-// import Logo from "../../../assets/NationalPrintLogo.jpeg";
+import Logo from "../../../assets/mplogo.png";
 import moment from "moment";
 
+// ─── COLOR PALETTE ────────────────────────────────────────────────────────────
+const DARK = "#1a1a2e";
+const DARK2 = "#2d2d44";
+const LIGHT_BG = "#fafafa";
+const BORDER = "#b0b0b8";
+const BORDER_LIGHT = "#ddd";
+const BORDER_ROW = "#c8c8d0";
+
 const styles = StyleSheet.create({
+    borderBox: { border: `1 solid #ccc`, margin: 0, padding: 0 },
     page: {
         fontFamily: "Helvetica",
-        fontSize: 7,
-        padding: 20,
-        paddingBottom: 60,
+        fontSize: 8,
+        padding: 0,
+        paddingBottom: 52,
         backgroundColor: "#fff",
     },
-    topBar: { height: 4, backgroundColor: "#1a1a2e", marginBottom: 10 },
+
+    // ── TOP ACCENT BAR ──
+    topBar: { height: 4, backgroundColor: DARK },
+
+    // ── HEADER ──
     header: {
         flexDirection: "row",
-        justifyContent: "space-between",
         alignItems: "center",
-        paddingBottom: 15,
-        borderBottom: "1.5 solid #1a1a2e",
-        marginBottom: 15,
+        justifyContent: "space-between",
+        paddingHorizontal: 20,
+        paddingTop: 14,
+        paddingBottom: 10,
+        borderBottom: `1.5 solid ${DARK}`,
     },
-    logoContainer: { width: 140, alignItems: "flex-start" },
-    logo: { height: 80, width: 80 },
-    companyCenter: { flex: 1, alignItems: "center" },
+    logo: { height: 52, width: 52 },
+    companyCenter: { alignItems: "center", flex: 1 },
     companyName: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: "#1a1a2e",
-        marginBottom: 4,
+        fontSize: 18,
+        fontFamily: "Helvetica-Bold",
+        color: DARK,
+        letterSpacing: 0.5,
     },
-    companyAddr: {
-        fontSize: 8,
-        color: "#444",
+    companyAddress: {
+        fontSize: 7.5,
+        color: "#555",
         textAlign: "center",
-        lineHeight: 1.3,
+        marginTop: 2,
     },
-    companyRight: { width: 140, alignItems: "flex-end" },
-    companyRightRow: {
-        flexDirection: "row",
-        justifyContent: "flex-end",
-        marginBottom: 3,
-    },
-    companyLabel: { fontSize: 8, color: "#888", marginRight: 4 },
-    companyValue: { fontSize: 8, color: "#1a1a2e", fontWeight: "bold" },
 
     titleBand: {
-        backgroundColor: "#1a1a2e",
+        backgroundColor: DARK,
         color: "#fff",
         textAlign: "center",
-        fontSize: 12,
-        fontWeight: "bold",
-        letterSpacing: 2,
-        paddingVertical: 5,
-        marginBottom: 15,
+        fontSize: 13,
+        fontFamily: "Helvetica-Bold",
+        letterSpacing: 3,
+        paddingVertical: 6,
+        marginBottom: 8,
     },
 
-    infoGrid: {
+    // ── META PILLS ──
+    metaRow: {
         flexDirection: "row",
-        marginBottom: 15,
-        gap: 20,
+        justifyContent: "flex-end",
+        paddingHorizontal: 20,
+        paddingTop: 4,
+        paddingBottom: 6,
+        gap: 6,
     },
-    billToBox: {
-        flex: 1,
-        border: "1 solid #eee",
-        borderRadius: 4,
+    metaPill: {
+        flexDirection: "row",
+        backgroundColor: "#f4f4f6",
+        border: `1 solid ${BORDER_LIGHT}`,
+        borderLeft: `2 solid ${DARK}`,
+        paddingHorizontal: 7,
+        paddingVertical: 3,
+        borderRadius: 2,
     },
-    piDetailsBox: {
-        width: 160,
-        border: "1 solid #eee",
-        borderRadius: 4,
+    metaLabel: { fontSize: 7.5, color: "#888", marginRight: 3 },
+    metaValue: { fontSize: 7.5, fontFamily: "Helvetica-Bold", color: DARK },
+
+    // ── FROM / TO SECTION ──
+    twoCol: {
+        flexDirection: "row",
+        marginHorizontal: 20,
+        marginBottom: 8,
+        border: `1 solid ${BORDER_LIGHT}`,
+        borderRadius: 3,
     },
+    colHalf: { flex: 1 },
     sectionHeader: {
-        backgroundColor: "#f8f9fa",
-        borderBottom: "1 solid #eee",
-        padding: "4 8",
-        fontSize: 8,
-        fontWeight: "bold",
-        color: "#1a1a2e",
+        backgroundColor: DARK2,
+        color: "#e8e8f0",
+        fontSize: 7.5,
+        fontFamily: "Helvetica-Bold",
+        letterSpacing: 1,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
     },
     sectionBody: { padding: 8 },
     partyName: {
-        fontSize: 10,
-        fontWeight: "bold",
-        color: "#000",
-        marginBottom: 4,
+        fontSize: 9,
+        fontFamily: "Helvetica-Bold",
+        color: DARK,
+        marginBottom: 3,
     },
-    partyAddr: { fontSize: 8, color: "#555", lineHeight: 1.4, marginBottom: 6 },
-    labelValueRow: { flexDirection: "row", marginBottom: 2 },
-    label: { width: 50, fontSize: 7.5, color: "#888" },
-    value: { flex: 1, fontSize: 7.5, color: "#000", fontWeight: "bold" },
-
-    table: {
-        marginTop: 10,
-        border: "1 solid #eee",
-        borderRadius: 4,
-        overflow: "hidden",
-    },
-    tableHeader: {
-        flexDirection: "row",
-        backgroundColor: "#1a1a2e",
-        color: "#fff",
-        padding: "6 4",
+    partyAddr: {
         fontSize: 7.5,
-        fontWeight: "bold",
+        color: "#555",
+        textTransform: "uppercase",
+        marginBottom: 4,
+        lineHeight: 1.5,
     },
-    tableRow: {
-        flexDirection: "row",
-        borderBottom: "1 solid #f0f0f0",
-        padding: "6 4",
-        alignItems: "center",
-    },
-    colSno: { width: 25, textAlign: "center" },
-    colDesc: { flex: 1, paddingRight: 10 },
-    colSize: { width: 45, textAlign: "center" },
-    colGSM: { width: 40, textAlign: "center" },
-    colHSN: { width: 45, textAlign: "center" },
-    colUOM: { width: 40, textAlign: "center" },
-    colQty: { width: 40, textAlign: "center" },
-    colPrice: { width: 55, textAlign: "right" },
-    colGross: { width: 65, textAlign: "right" },
+    partyRow: { flexDirection: "row", marginBottom: 2 },
+    partyLabel: { fontSize: 7.5, color: "#888", width: 72 },
+    partyValue: { fontSize: 7.5, color: "#222", fontFamily: "Helvetica-Bold" },
 
-    summaryContainer: {
+    // ── EXPORT DETAILS GRID ──
+    exportGrid: {
+        marginHorizontal: 20,
+        marginBottom: 8,
+        border: `1 solid ${BORDER_LIGHT}`,
+        borderRadius: 3,
         flexDirection: "row",
-        justifyContent: "flex-end",
-        marginTop: 15,
+        backgroundColor: LIGHT_BG,
+    },
+    exportCol: { flex: 1, padding: 8, borderRight: `1 solid ${BORDER_LIGHT}` },
+    exportItem: { flexDirection: "row", marginBottom: 4 },
+    exportLabel: { fontSize: 7.5, color: "#888", width: 88 },
+    exportValue: {
+        fontSize: 7.5,
+        color: DARK,
+        fontFamily: "Helvetica-Bold",
+        flex: 1,
+    },
+
+    // ── TABLE ──
+    tableWrap: { marginHorizontal: 20, border: `1 solid ${BORDER}` },
+    tableHeader: { flexDirection: "row", backgroundColor: DARK },
+    th: {
+        fontSize: 7.5,
+        fontFamily: "Helvetica-Bold",
+        color: "#fff",
+        textAlign: "center",
+        borderRight: `1 solid #4a4a60`,
+        paddingVertical: 5,
+        paddingHorizontal: 3,
+    },
+    trOdd: {
+        flexDirection: "row",
+        borderBottom: `1 solid ${BORDER_ROW}`,
+        backgroundColor: "#fff",
+    },
+    trEven: {
+        flexDirection: "row",
+        borderBottom: `1 solid ${BORDER_ROW}`,
+        backgroundColor: LIGHT_BG,
+    },
+    td: {
+        fontSize: 7.5,
+        color: "#333",
+        textAlign: "center",
+        borderRight: `1 solid ${BORDER_ROW}`,
+        paddingVertical: 4,
+        paddingHorizontal: 3,
+    },
+
+    // ── TOTALS ROW ──
+    totalRow: {
+        flexDirection: "row",
+        marginHorizontal: 20,
+        backgroundColor: "#e8e8ec",
+        borderLeft: `1 solid ${BORDER}`,
+        borderRight: `1 solid ${BORDER}`,
+        borderBottom: `1 solid ${BORDER}`,
+    },
+
+    // ── BANK + SUMMARY ──
+    bankSummaryRow: {
+        flexDirection: "row",
+        marginHorizontal: 20,
+        marginTop: 8,
+        gap: 8,
+    },
+    bankBox: {
+        flex: 1,
+        border: `1 solid ${BORDER_LIGHT}`,
+        borderRadius: 3,
     },
     summaryBox: {
-        width: 180,
-        border: "1 solid #eee",
-        borderRadius: 4,
-        overflow: "hidden",
+        width: 200,
+        border: `1 solid ${BORDER_LIGHT}`,
+        borderRadius: 3,
     },
     summaryRow: {
         flexDirection: "row",
-        justifyContent: "space-between",
-        padding: "4 8",
-        borderBottom: "1 solid #f9f9f9",
+        borderBottom: `1 solid ${BORDER_LIGHT}`,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
     },
-    grandTotalRow: {
-        backgroundColor: "#1a1a2e",
-        color: "#fff",
-        fontWeight: "bold",
+    summaryLabel: { fontSize: 7.5, color: "#888", flex: 1 },
+    summaryValue: {
+        fontSize: 7.5,
+        fontFamily: "Helvetica-Bold",
+        color: DARK,
+        textAlign: "right",
     },
 
-    notesSection: {
-        marginTop: 20,
+    // ── TAX BREAKUP (domestic) ──
+    taxBox: {
+        marginHorizontal: 20,
+        marginTop: 8,
+        border: `1 solid ${BORDER_LIGHT}`,
+        borderRadius: 3,
+    },
+
+    // ── BOTTOM SECTION ──
+    bottomSection: {
+        marginHorizontal: 20,
+        marginTop: 8,
         flexDirection: "row",
-        gap: 15,
+        gap: 8,
     },
-    noteBox: {
+    remarksBox: {
         flex: 1,
-        border: "1 solid #eee",
-        borderRadius: 4,
+        border: `1 solid ${BORDER_LIGHT}`,
+        borderRadius: 3,
     },
-    noteContent: { padding: 8, fontSize: 7.5, color: "#555", lineHeight: 1.4 },
+    termsBox: {
+        flex: 2,
+        border: `1 solid ${BORDER_LIGHT}`,
+        borderRadius: 3,
+    },
 
-    pageFooter: {
+    // ── FOOTER ──
+    footerBar: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "center",
+        paddingHorizontal: 20,
+        paddingVertical: 8,
         position: "absolute",
-        bottom: 20,
-        left: 20,
-        right: 20,
-        borderTop: "1 solid #eee",
-        paddingTop: 10,
-        textAlign: "center",
-        fontSize: 7,
-        color: "#999",
+        bottom: 10,
+        left: 0,
+        right: 0,
     },
+    footerRight: { fontSize: 8, color: DARK, fontFamily: "Helvetica-Bold" },
 });
 
+// ── TABLE COLUMNS ─────────────────────────────────────────────────────────────
+const getColumns = (isExport) => [
+    { label: "S.No", flex: 0.4 },
+    { label: "Description of Goods", flex: 3 },
+    { label: "HSN", flex: 1.2 },
+    { label: "UOM", flex: 0.8 },
+    { label: "Qty", flex: 0.8 },
+    { label: "Dozen", flex: 0.8 },
+    { label: "Price", flex: 1 },
+    { label: "Gross Amount", flex: 1.2 },
+    ...(!isExport ? [{ label: "Tax %", flex: 0.7 }, { label: "Net Amount", flex: 1.2 }] : []),
+];
+
+const ROWS_PAGE_1 = 14;
+const ROWS_PAGE_CONT = 22;
+
+const chunkItems = (items) => {
+    const pages = [];
+    let rem = [...items];
+    pages.push(rem.splice(0, ROWS_PAGE_1));
+    while (rem.length > 0) pages.push(rem.splice(0, ROWS_PAGE_CONT));
+    return pages;
+};
+
+const TableHeader = ({ isExport, currencySymbol }) => {
+    const cols = getColumns(isExport);
+    return (
+        <View style={styles.tableHeader}>
+            {cols.map(({ label, flex }, i) => (
+                <Text
+                    key={label}
+                    style={[
+                        styles.th,
+                        { flex },
+                        i === cols.length - 1 && { borderRight: "none" },
+                    ]}
+                >
+                    {label === "Price" && currencySymbol ? `Price (${currencySymbol})` : label}
+                    {label === "Gross Amount" && currencySymbol ? `\n(${currencySymbol})` : ""}
+                </Text>
+            ))}
+        </View>
+    );
+};
+
+const ContinuationBar = ({ docId, branchName }) => (
+    <View
+        style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            backgroundColor: DARK,
+            paddingHorizontal: 20,
+            paddingVertical: 6,
+        }}
+    >
+        <Text
+            style={{
+                fontSize: 9,
+                fontFamily: "Helvetica-Bold",
+                color: "#fff",
+                letterSpacing: 2,
+            }}
+        >
+            PROFORMA INVOICE — Continued
+        </Text>
+        <Text style={{ fontSize: 8, color: "rgba(255,255,255,0.7)" }}>
+            PI No: {docId}  |  {branchName}
+        </Text>
+    </View>
+);
+
+// ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 const ProformaInvoicePrintFormat = ({ data }) => {
     if (!data) return null;
 
-    const items = data.items || [];
+    const isExport = data?.customer?.isCustomerExport || false;
 
-    // Calculations
-    const subTotal = items.reduce(
-        (acc, item) =>
-            acc + parseFloat(item.qty || 0) * parseFloat(item.price || 0),
-        0,
-    );
+    // Currency symbol from data (passed via currencyId lookup — we just use what's available)
+    const currencySymbol = data?.Currency?.symbol || data?.currency?.symbol || "";
 
-    const totalDiscount = items.reduce((acc, item) => {
-        const rowGross = parseFloat(item.qty || 0) * parseFloat(item.price || 0);
-        let disc = 0;
-        if (item.discountType === "PERCENTAGE") {
-            disc = rowGross * (parseFloat(item.discountValue || 0) / 100);
-        } else {
-            disc = parseFloat(item.discountValue || 0);
-        }
-        return acc + disc;
-    }, 0);
+    const branch = data?.Branch || {};
+    const customer = data?.customer || {};
+    const bank = data?.Bank || {};
 
-    const taxableAmount = subTotal - totalDiscount;
+    // Filter only real items
+    const allItems = (data?.items || []).filter((i) => i.styleItemId);
 
-    const totalTax = items.reduce((acc, item) => {
-        const rowGross = parseFloat(item.qty || 0) * parseFloat(item.price || 0);
-        let disc = 0;
-        if (item.discountType === "PERCENTAGE") {
-            disc = rowGross * (parseFloat(item.discountValue || 0) / 100);
-        } else {
-            disc = parseFloat(item.discountValue || 0);
-        }
-        const rowTaxable = rowGross - disc;
-        return acc + rowTaxable * (parseFloat(item.taxPercent || 0) / 100);
-    }, 0);
+    // Totals
+    const totalQty = allItems.reduce((s, i) => s + (parseFloat(i.qty) || 0), 0);
+    const totalDozen = allItems.reduce((s, i) => s + (parseFloat(i.dozen) || 0), 0);
+    const totalPrice = allItems.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+    const totalGross = allItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+    const carriageCharge = parseFloat(data?.carriageCharge) || 0;
+    const grandTotal = isExport ? totalGross + carriageCharge : totalGross;
 
-    const grandTotal = taxableAmount + totalTax;
+    // Tax breakup (domestic)
+    const taxBreakup = !isExport
+        ? allItems.reduce((acc, item) => {
+            const taxPct = parseFloat(item.taxPercent) || parseFloat(item?.Hsn?.tax) || 0;
+            const gross = parseFloat(item.amount) || 0;
+            const taxAmt = (gross * taxPct) / 100;
+            const existing = acc.find((a) => a.taxPct === taxPct);
+            if (existing) {
+                existing.taxableAmt += gross;
+                existing.taxAmt += taxAmt;
+            } else {
+                acc.push({ taxPct, taxableAmt: gross, taxAmt });
+            }
+            return acc;
+        }, [])
+        : [];
+
+    const totalTax = taxBreakup.reduce((s, t) => s + t.taxAmt, 0);
+    const netAmount = totalGross + totalTax;
+
+    // City lookup helpers — data should have LoadingCity / DeliveryCity populated, 
+    // or we fallback to ids
+    const loadingPort =
+        data?.LoadingCity?.name || data?.loadingCity?.name || data?.loadingId || "";
+    const deliveryPort =
+        data?.DeliveryCity?.name || data?.deliveryCity?.name || data?.deliveryId || "";
+
+    // Pagination
+    const pageChunks = chunkItems(allItems);
+    const renderChunks = pageChunks.length === 0 ? [[]] : pageChunks;
+    const totalPg = renderChunks.length;
+    const pageOffsets = renderChunks.reduce((acc, chunk, i) => {
+        acc.push(i === 0 ? 0 : acc[i - 1] + renderChunks[i - 1].length);
+        return acc;
+    }, []);
+
+    const cols = getColumns(isExport);
 
     return (
         <Document>
-            <Page size="A4" style={styles.page}>
-                <View style={styles.topBar} />
+            {renderChunks.map((chunkRows, pageIndex) => {
+                const isFirstPage = pageIndex === 0;
+                const isLastPage = pageIndex === renderChunks.length - 1;
+                const globalOffset = pageOffsets[pageIndex] || 0;
+                const minRows = isFirstPage ? ROWS_PAGE_1 : ROWS_PAGE_CONT;
+                const emptyCount = Math.max(0, minRows - chunkRows.length);
 
-                {/* Header */}
-                <View style={styles.header}>
-                    <View style={styles.logoContainer}>
-                        {/* <Image src={Logo} style={styles.logo} /> */}
-                    </View>
-                    <View style={styles.companyCenter}>
-                        <Text style={styles.companyName}>{data.Branch?.companyName}</Text>
-                        <Text style={styles.companyAddr}>
-                            {data.Branch?.address || "N/A"}
-                        </Text>
-                    </View>
-                    <View style={styles.companyRight}>
-                        <View style={styles.companyRightRow}>
-                            <Text style={styles.companyLabel}>GSTIN :</Text>
-                            <Text style={styles.companyValue}>
-                                {data.Branch?.gstNo || "33BHEPC9190H1ZE"}
-                            </Text>
-                        </View>
-                        <View style={styles.companyRightRow}>
-                            <Text style={styles.companyLabel}>Mobile :</Text>
-                            <Text style={styles.companyValue}>
-                                {data.Branch?.contactMobile || "N/A"}
-                            </Text>
-                        </View>
-                    </View>
-                </View>
+                return (
+                    <Page key={pageIndex} size="A4" style={styles.borderBox}>
+                        <View style={styles.page}>
+                            {/* TOP ACCENT BAR */}
+                            <View style={styles.topBar} />
 
-                <Text style={styles.titleBand}>PROFORMA INVOICE</Text>
+                            {isFirstPage ? (
+                                <>
+                                    {/* ── HEADER ── */}
+                                    <View style={styles.header}>
+                                        <View style={{ width: 60 }}>
+                                            <Image src={Logo} style={styles.logo} />
+                                        </View>
+                                        <View style={styles.companyCenter}>
+                                            <Text style={styles.companyName}>
+                                                {branch?.branchName || "MUTHU PRINTERS"}
+                                            </Text>
+                                            <Text style={styles.companyAddress}>
+                                                {branch?.address || ""}
+                                            </Text>
+                                            {branch?.contactEmail ? (
+                                                <Text style={{ fontSize: 7.5, color: "#555", marginTop: 1 }}>
+                                                    {branch.contactEmail}
+                                                    {branch?.contactMobile
+                                                        ? `  |  ${branch.contactMobile}`
+                                                        : ""}
+                                                </Text>
+                                            ) : null}
+                                        </View>
+                                        <View style={{ width: 60 }} />
+                                    </View>
 
-                {/* Info Grid */}
-                <View style={styles.infoGrid}>
-                    <View style={styles.billToBox}>
-                        <Text style={styles.sectionHeader}>BILL TO</Text>
-                        <View style={styles.sectionBody}>
-                            <Text style={styles.partyName}>{data.customer?.name}</Text>
-                            <Text style={styles.partyAddr}>{data.customer?.address}</Text>
-                            <View style={styles.labelValueRow}>
-                                <Text style={styles.label}>GSTIN</Text>
-                                <Text style={styles.value}>
-                                    : {data.customer?.gstNo || "N/A"}
-                                </Text>
+                                    {/* TITLE BAND */}
+                                    <Text style={styles.titleBand}>PROFORMA INVOICE</Text>
+
+                                    {/* INTRO TEXT */}
+                                    <View
+                                        style={{
+                                            marginHorizontal: 20,
+                                            marginBottom: 6,
+                                            backgroundColor: "#f9f9fb",
+                                            border: `1 solid ${BORDER_LIGHT}`,
+                                            borderRadius: 3,
+                                            padding: 8,
+                                        }}
+                                    >
+                                        {isExport && (
+                                            <Text
+                                                style={{
+                                                    fontSize: 7.5,
+                                                    color: DARK,
+                                                    fontFamily: "Helvetica-Bold",
+                                                    marginBottom: 3,
+                                                    letterSpacing: 0.3,
+                                                }}
+                                            >
+                                                Accessories For 100% Export Oriented Ready Made Garments Industry
+                                            </Text>
+                                        )}
+                                        <Text style={{ fontSize: 7.5, color: "#555", marginBottom: 2 }}>
+                                            Herewith we are giving our rate quotation for the following items.
+                                        </Text>
+                                        <Text style={{ fontSize: 7.5, color: "#555" }}>
+                                            If you have any questions about the rate quotations, please contact us.
+                                        </Text>
+                                    </View>
+
+                                    {/* META PILLS */}
+                                    <View style={styles.metaRow}>
+                                        {[
+                                            { label: "PI No", value: data?.docId },
+                                            {
+                                                label: "PI Date",
+                                                value: data?.docDate
+                                                    ? moment(data.docDate).format("DD-MM-YYYY")
+                                                    : "",
+                                            },
+                                            {
+                                                label: "Valid To",
+                                                value: data?.validityTo
+                                                    ? moment(data.validityTo).format("DD-MM-YYYY")
+                                                    : "",
+                                            },
+                                            {
+                                                label: "Delivery Date",
+                                                value: data?.deliveryDate
+                                                    ? moment(data.deliveryDate).format("DD-MM-YYYY")
+                                                    : "",
+                                            },
+                                        ].map(({ label, value }) => (
+                                            <View key={label} style={styles.metaPill}>
+                                                <Text style={styles.metaLabel}>{label}:</Text>
+                                                <Text style={styles.metaValue}>{value}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+
+                                    {/* FROM / TO */}
+                                    <View style={styles.twoCol}>
+                                        {/* FROM */}
+                                        <View
+                                            style={[styles.colHalf, { borderRight: `1 solid ${BORDER_LIGHT}` }]}
+                                        >
+                                            <Text style={styles.sectionHeader}>FROM</Text>
+                                            <View style={styles.sectionBody}>
+                                                <Text style={styles.partyName}>
+                                                    {branch?.branchName || "MUTHU PRINTERS"}
+                                                </Text>
+                                                <Text style={styles.partyAddr}>
+                                                    {branch?.address || ""}
+                                                </Text>
+                                                {[
+                                                    { label: "Mobile No", value: branch?.contactMobile },
+                                                    { label: "Email", value: branch?.contactEmail },
+                                                ].map(({ label, value }) =>
+                                                    value ? (
+                                                        <View key={label} style={styles.partyRow}>
+                                                            <Text style={styles.partyLabel}>{label}</Text>
+                                                            <Text style={styles.partyValue}>: {value}</Text>
+                                                        </View>
+                                                    ) : null
+                                                )}
+                                                {isExport && (
+                                                    <View style={styles.partyRow}>
+                                                        <Text style={styles.partyLabel}>Country of Origin</Text>
+                                                        <Text style={styles.partyValue}>: INDIA</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </View>
+                                        {/* TO */}
+                                        <View style={styles.colHalf}>
+                                            <Text style={styles.sectionHeader}>CUSTOMER DETAILS</Text>
+                                            <View style={styles.sectionBody}>
+                                                <Text style={styles.partyName}>
+                                                    {customer?.name || "N/A"}
+                                                </Text>
+                                                <Text style={styles.partyAddr}>
+                                                    {customer?.address || ""}
+                                                </Text>
+                                                {[
+                                                    {
+                                                        label: "Contact Person",
+                                                        value: customer?.contactPersonName,
+                                                    },
+                                                    {
+                                                        label: "Mobile No",
+                                                        value: customer?.contactNumber,
+                                                    },
+                                                    {
+                                                        label: "GST No",
+                                                        value: customer?.gstNo,
+                                                    },
+                                                ].map(({ label, value }) =>
+                                                    value ? (
+                                                        <View key={label} style={styles.partyRow}>
+                                                            <Text style={styles.partyLabel}>{label}</Text>
+                                                            <Text style={styles.partyValue}>: {value}</Text>
+                                                        </View>
+                                                    ) : null
+                                                )}
+                                            </View>
+                                        </View>
+                                    </View>
+
+                                    {/* EXPORT DETAILS GRID */}
+                                    {isExport && (
+                                        <View style={styles.exportGrid}>
+                                            <View style={styles.exportCol}>
+                                                <View style={styles.exportItem}>
+                                                    <Text style={styles.exportLabel}>Country of Origin</Text>
+                                                    <Text style={styles.exportValue}>: INDIA</Text>
+                                                </View>
+                                                <View style={styles.exportItem}>
+                                                    <Text style={styles.exportLabel}>Port of Loading</Text>
+                                                    <Text style={styles.exportValue}>
+                                                        : {loadingPort || "—"}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            <View style={[styles.exportCol, { borderRight: "none" }]}>
+                                                <View style={styles.exportItem}>
+                                                    <Text style={styles.exportLabel}>Port of Delivery</Text>
+                                                    <Text style={styles.exportValue}>
+                                                        : {deliveryPort || "—"}
+                                                    </Text>
+                                                </View>
+                                                <View style={styles.exportItem}>
+                                                    <Text style={styles.exportLabel}>Weight (KG)</Text>
+                                                    <Text style={styles.exportValue}>
+                                                        :{" "}
+                                                        {data?.weightInKg
+                                                            ? parseFloat(data.weightInKg).toFixed(3)
+                                                            : "—"}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    )}
+                                </>
+                            ) : (
+                                <ContinuationBar
+                                    docId={data?.docId}
+                                    branchName={branch?.branchName || ""}
+                                />
+                            )}
+
+                            {/* ── TABLE ── */}
+                            <View style={styles.tableWrap}>
+                                <TableHeader isExport={isExport} currencySymbol={currencySymbol} />
+
+                                {/* Item rows */}
+                                {chunkRows.map((row, index) => {
+                                    const rowStyle =
+                                        index % 2 === 0 ? styles.trOdd : styles.trEven;
+                                    const gross = parseFloat(row.amount) || 0;
+                                    const taxPct =
+                                        parseFloat(row.taxPercent) ||
+                                        parseFloat(row?.Hsn?.tax) ||
+                                        0;
+                                    const netAmt = gross + (gross * taxPct) / 100;
+                                    return (
+                                        <View key={globalOffset + index} style={rowStyle}>
+                                            <Text style={[styles.td, { flex: 0.4 }]}>
+                                                {globalOffset + index + 1}
+                                            </Text>
+                                            <Text
+                                                style={[styles.td, { flex: 3, textAlign: "left" }]}
+                                            >
+                                                {row?.StyleItem?.name || ""}
+                                            </Text>
+                                            <Text style={[styles.td, { flex: 1.2 }]}>
+                                                {row?.Hsn?.name || ""}
+                                            </Text>
+                                            <Text style={[styles.td, { flex: 0.8 }]}>
+                                                {row?.Uom?.name || ""}
+                                            </Text>
+                                            <Text
+                                                style={[styles.td, { flex: 0.8, textAlign: "right" }]}
+                                            >
+                                                {row.qty
+                                                    ? parseFloat(row.qty).toFixed(3)
+                                                    : ""}
+                                            </Text>
+                                            <Text
+                                                style={[styles.td, { flex: 0.8, textAlign: "right" }]}
+                                            >
+                                                {row.dozen
+                                                    ? parseFloat(row.dozen).toFixed(2)
+                                                    : ""}
+                                            </Text>
+                                            <Text
+                                                style={[styles.td, { flex: 1, textAlign: "right" }]}
+                                            >
+                                                {row.price
+                                                    ? `${currencySymbol} ${parseFloat(row.price).toFixed(2)}`
+                                                    : ""}
+                                            </Text>
+                                            <Text
+                                                style={[
+                                                    styles.td,
+                                                    { flex: 1.2, textAlign: "right" },
+                                                    isExport && { borderRight: "none" },
+                                                ]}
+                                            >
+                                                {gross
+                                                    ? `${currencySymbol} ${gross.toFixed(2)}`
+                                                    : ""}
+                                            </Text>
+                                            {!isExport && (
+                                                <>
+                                                    <Text
+                                                        style={[styles.td, { flex: 0.7, textAlign: "right" }]}
+                                                    >
+                                                        {taxPct ? `${taxPct}%` : ""}
+                                                    </Text>
+                                                    <Text
+                                                        style={[
+                                                            styles.td,
+                                                            {
+                                                                flex: 1.2,
+                                                                textAlign: "right",
+                                                                borderRight: "none",
+                                                            },
+                                                        ]}
+                                                    >
+                                                        {gross ? netAmt.toFixed(2) : ""}
+                                                    </Text>
+                                                </>
+                                            )}
+                                        </View>
+                                    );
+                                })}
+
+                                {/* Empty filler rows */}
+                                {Array.from({ length: emptyCount }).map((_, i) => {
+                                    const rowStyle =
+                                        (chunkRows.length + i) % 2 === 0
+                                            ? styles.trOdd
+                                            : styles.trEven;
+                                    return (
+                                        <View key={`empty-${i}`} style={rowStyle}>
+                                            {cols.map(({ flex }, ci) => (
+                                                <Text
+                                                    key={ci}
+                                                    style={[
+                                                        styles.td,
+                                                        { flex },
+                                                        ci === cols.length - 1 && { borderRight: "none" },
+                                                    ]}
+                                                >
+                                                    {" "}
+                                                </Text>
+                                            ))}
+                                        </View>
+                                    );
+                                })}
                             </View>
-                            <View style={styles.labelValueRow}>
-                                <Text style={styles.label}>Contact</Text>
-                                <Text style={styles.value}>
-                                    : {data.customer?.contactNumber || "N/A"}
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
-                    <View style={styles.piDetailsBox}>
-                        <Text style={styles.sectionHeader}>INVOICE DETAILS</Text>
-                        <View style={styles.sectionBody}>
-                            <View style={styles.labelValueRow}>
-                                <Text style={styles.label}>PI NO</Text>
-                                <Text style={styles.value}>: {data.docId}</Text>
-                            </View>
-                            <View style={styles.labelValueRow}>
-                                <Text style={styles.label}>PI Date</Text>
-                                <Text style={styles.value}>
-                                    : {moment(data.docDate).format("DD-MM-YYYY")}
-                                </Text>
-                            </View>
-                            <View style={styles.labelValueRow}>
-                                <Text style={styles.label}>Order No</Text>
-                                <Text style={styles.value}>
-                                    : {data.OrderEntry?.docId || "-"}
-                                </Text>
-                            </View>
-                            {data.quoteVersion > 1 && (
-                                <View style={styles.labelValueRow}>
-                                    <Text style={styles.label}>Revised PI</Text>
-                                    <Text style={[styles.value, { color: "#b91c1c" }]}>
-                                        : v{data.quoteVersion}
+
+                            {/* ── TOTALS ROW ── */}
+                            {isLastPage && (
+                                <>
+                                    <View style={styles.totalRow}>
+                                        <Text
+                                            style={{
+                                                flex: 0.4,
+                                                fontSize: 8,
+                                                paddingVertical: 4,
+                                                borderRight: `1 solid #bbbbc8`,
+                                                color: "transparent",
+                                            }}
+                                        >
+                                            {" "}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                flex: 3,
+                                                fontSize: 8,
+                                                fontFamily: "Helvetica-Bold",
+                                                color: DARK,
+                                                paddingVertical: 4,
+                                                paddingRight: 5,
+                                                textAlign: "right",
+                                                borderRight: `1 solid #bbbbc8`,
+                                            }}
+                                        >
+                                            TOTAL
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                flex: 1.2,
+                                                fontSize: 8,
+                                                color: "transparent",
+                                                paddingVertical: 4,
+                                                borderRight: `1 solid #bbbbc8`,
+                                            }}
+                                        >
+                                            {" "}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                flex: 0.8,
+                                                fontSize: 8,
+                                                color: "transparent",
+                                                paddingVertical: 4,
+                                                borderRight: `1 solid #bbbbc8`,
+                                            }}
+                                        >
+                                            {" "}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                flex: 0.8,
+                                                fontSize: 8,
+                                                fontFamily: "Helvetica-Bold",
+                                                color: DARK,
+                                                textAlign: "right",
+                                                paddingVertical: 4,
+                                                paddingRight: 2,
+                                                borderRight: `1 solid #bbbbc8`,
+                                            }}
+                                        >
+                                            {totalQty.toFixed(3)}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                flex: 0.8,
+                                                fontSize: 8,
+                                                fontFamily: "Helvetica-Bold",
+                                                color: DARK,
+                                                textAlign: "right",
+                                                paddingVertical: 4,
+                                                paddingRight: 2,
+                                                borderRight: `1 solid #bbbbc8`,
+                                            }}
+                                        >
+                                            {totalDozen.toFixed(2)}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                flex: 1,
+                                                fontSize: 8,
+                                                color: "transparent",
+                                                paddingVertical: 4,
+                                                borderRight: `1 solid #bbbbc8`,
+                                            }}
+                                        >
+                                            {" "}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                flex: 1.2,
+                                                fontSize: 8,
+                                                fontFamily: "Helvetica-Bold",
+                                                color: DARK,
+                                                textAlign: "right",
+                                                paddingVertical: 4,
+                                                paddingRight: 3,
+                                                borderRight: !isExport ? `1 solid #bbbbc8` : "none",
+                                            }}
+                                        >
+                                            {currencySymbol} {totalGross.toFixed(2)}
+                                        </Text>
+                                        {!isExport && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        flex: 0.7,
+                                                        fontSize: 8,
+                                                        color: "transparent",
+                                                        paddingVertical: 4,
+                                                        borderRight: `1 solid #bbbbc8`,
+                                                    }}
+                                                >
+                                                    {" "}
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        flex: 1.2,
+                                                        fontSize: 8,
+                                                        fontFamily: "Helvetica-Bold",
+                                                        color: DARK,
+                                                        textAlign: "right",
+                                                        paddingVertical: 4,
+                                                        paddingRight: 3,
+                                                    }}
+                                                >
+                                                    {netAmount.toFixed(2)}
+                                                </Text>
+                                            </>
+                                        )}
+                                    </View>
+
+                                    {/* ── EXPORT: CARRIAGE + GRAND TOTAL ── */}
+                                    {isExport && carriageCharge > 0 && (
+                                        <>
+                                            <View
+                                                style={{
+                                                    flexDirection: "row",
+                                                    marginHorizontal: 20,
+                                                    backgroundColor: "#f4f4f6",
+                                                    borderLeft: `1 solid ${BORDER}`,
+                                                    borderRight: `1 solid ${BORDER}`,
+                                                    borderBottom: `1 solid ${BORDER}`,
+                                                    paddingVertical: 4,
+                                                    paddingHorizontal: 8,
+                                                    justifyContent: "flex-end",
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontSize: 7.5,
+                                                        color: "#555",
+                                                        marginRight: 24,
+                                                    }}
+                                                >
+                                                    Carriage and Air Freight
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        fontSize: 7.5,
+                                                        fontFamily: "Helvetica-Bold",
+                                                        color: DARK,
+                                                        minWidth: 70,
+                                                        textAlign: "right",
+                                                    }}
+                                                >
+                                                    {currencySymbol} {carriageCharge.toFixed(2)}
+                                                </Text>
+                                            </View>
+                                            <View
+                                                style={{
+                                                    flexDirection: "row",
+                                                    marginHorizontal: 20,
+                                                    backgroundColor: DARK,
+                                                    borderLeft: `1 solid ${BORDER}`,
+                                                    borderRight: `1 solid ${BORDER}`,
+                                                    borderBottom: `1 solid ${BORDER}`,
+                                                    paddingVertical: 5,
+                                                    paddingHorizontal: 8,
+                                                    justifyContent: "flex-end",
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontSize: 8,
+                                                        color: "#ccc",
+                                                        marginRight: 24,
+                                                        fontFamily: "Helvetica-Bold",
+                                                    }}
+                                                >
+                                                    Grand Total
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        fontSize: 8,
+                                                        fontFamily: "Helvetica-Bold",
+                                                        color: "#fff",
+                                                        minWidth: 70,
+                                                        textAlign: "right",
+                                                    }}
+                                                >
+                                                    {currencySymbol} {grandTotal.toFixed(2)}
+                                                </Text>
+                                            </View>
+                                        </>
+                                    )}
+
+                                    {/* ── DOMESTIC: TAX BREAKUP ── */}
+                                    {!isExport && taxBreakup.length > 0 && (
+                                        <View style={styles.taxBox}>
+                                            <Text style={styles.sectionHeader}>TAX SUMMARY</Text>
+                                            <View style={{ flexDirection: "row", backgroundColor: "#f4f4f6", borderBottom: `1 solid ${BORDER_LIGHT}` }}>
+                                                {["HSN Tax %", "Taxable Amount", "Tax Amount", "Net Amount"].map(
+                                                    (h, i) => (
+                                                        <Text
+                                                            key={h}
+                                                            style={{
+                                                                flex: 1,
+                                                                fontSize: 7.5,
+                                                                fontFamily: "Helvetica-Bold",
+                                                                color: DARK,
+                                                                textAlign: "center",
+                                                                paddingVertical: 4,
+                                                                borderRight:
+                                                                    i < 3
+                                                                        ? `1 solid ${BORDER_LIGHT}`
+                                                                        : "none",
+                                                            }}
+                                                        >
+                                                            {h}
+                                                        </Text>
+                                                    )
+                                                )}
+                                            </View>
+                                            {taxBreakup.map((t, i) => (
+                                                <View
+                                                    key={i}
+                                                    style={{
+                                                        flexDirection: "row",
+                                                        borderBottom: `1 solid ${BORDER_LIGHT}`,
+                                                    }}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            flex: 1,
+                                                            fontSize: 7.5,
+                                                            textAlign: "center",
+                                                            paddingVertical: 3,
+                                                            borderRight: `1 solid ${BORDER_LIGHT}`,
+                                                            color: "#333",
+                                                        }}
+                                                    >
+                                                        {t.taxPct}%
+                                                    </Text>
+                                                    <Text
+                                                        style={{
+                                                            flex: 1,
+                                                            fontSize: 7.5,
+                                                            textAlign: "right",
+                                                            paddingVertical: 3,
+                                                            paddingRight: 6,
+                                                            borderRight: `1 solid ${BORDER_LIGHT}`,
+                                                            color: "#333",
+                                                        }}
+                                                    >
+                                                        {t.taxableAmt.toFixed(2)}
+                                                    </Text>
+                                                    <Text
+                                                        style={{
+                                                            flex: 1,
+                                                            fontSize: 7.5,
+                                                            textAlign: "right",
+                                                            paddingVertical: 3,
+                                                            paddingRight: 6,
+                                                            borderRight: `1 solid ${BORDER_LIGHT}`,
+                                                            color: "#333",
+                                                        }}
+                                                    >
+                                                        {t.taxAmt.toFixed(2)}
+                                                    </Text>
+                                                    <Text
+                                                        style={{
+                                                            flex: 1,
+                                                            fontSize: 7.5,
+                                                            textAlign: "right",
+                                                            paddingVertical: 3,
+                                                            paddingRight: 6,
+                                                            color: "#333",
+                                                        }}
+                                                    >
+                                                        {(t.taxableAmt + t.taxAmt).toFixed(2)}
+                                                    </Text>
+                                                </View>
+                                            ))}
+                                            {/* Totals row */}
+                                            <View
+                                                style={{
+                                                    flexDirection: "row",
+                                                    backgroundColor: "#e8e8ec",
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        flex: 1,
+                                                        fontSize: 7.5,
+                                                        fontFamily: "Helvetica-Bold",
+                                                        textAlign: "center",
+                                                        paddingVertical: 3,
+                                                        borderRight: `1 solid ${BORDER_LIGHT}`,
+                                                        color: DARK,
+                                                    }}
+                                                >
+                                                    TOTAL
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        flex: 1,
+                                                        fontSize: 7.5,
+                                                        fontFamily: "Helvetica-Bold",
+                                                        textAlign: "right",
+                                                        paddingVertical: 3,
+                                                        paddingRight: 6,
+                                                        borderRight: `1 solid ${BORDER_LIGHT}`,
+                                                        color: DARK,
+                                                    }}
+                                                >
+                                                    {totalGross.toFixed(2)}
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        flex: 1,
+                                                        fontSize: 7.5,
+                                                        fontFamily: "Helvetica-Bold",
+                                                        textAlign: "right",
+                                                        paddingVertical: 3,
+                                                        paddingRight: 6,
+                                                        borderRight: `1 solid ${BORDER_LIGHT}`,
+                                                        color: DARK,
+                                                    }}
+                                                >
+                                                    {totalTax.toFixed(2)}
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        flex: 1,
+                                                        fontSize: 7.5,
+                                                        fontFamily: "Helvetica-Bold",
+                                                        textAlign: "right",
+                                                        paddingVertical: 3,
+                                                        paddingRight: 6,
+                                                        color: DARK,
+                                                    }}
+                                                >
+                                                    {netAmount.toFixed(2)}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    )}
+
+                                    {/* ── BANK + SUMMARY ── */}
+                                    <View style={styles.bankSummaryRow}>
+                                        {/* Advising Bank — export only */}
+                                        {isExport && bank?.name ? (
+                                            <View style={styles.bankBox}>
+                                                <Text style={styles.sectionHeader}>ADVISING BANK</Text>
+                                                <View style={styles.sectionBody}>
+                                                    <Text style={styles.partyName}>{bank.name}</Text>
+                                                    {bank?.Branch?.name && (
+                                                        <Text style={{ fontSize: 7.5, color: "#555", marginBottom: 2 }}>
+                                                            Branch: {bank.Branch.name}
+                                                        </Text>
+                                                    )}
+                                                    {[
+                                                        { label: "A/c No", value: bank.accNo },
+                                                        { label: "IFSC", value: bank.ifsc },
+                                                        { label: "Swift Code", value: bank.swiftCode },
+                                                    ].map(({ label, value }) =>
+                                                        value ? (
+                                                            <View key={label} style={styles.partyRow}>
+                                                                <Text style={styles.partyLabel}>{label}</Text>
+                                                                <Text style={styles.partyValue}>: {value}</Text>
+                                                            </View>
+                                                        ) : null
+                                                    )}
+                                                </View>
+                                            </View>
+                                        ) : (
+                                            <View style={{ flex: 1 }} />
+                                        )}
+
+                                        {/* Summary box */}
+                                        <View style={styles.summaryBox}>
+                                            <Text style={styles.sectionHeader}>SUMMARY</Text>
+                                            <View style={styles.summaryRow}>
+                                                <Text style={styles.summaryLabel}>Total Qty</Text>
+                                                <Text style={styles.summaryValue}>
+                                                    {totalQty.toFixed(3)}
+                                                </Text>
+                                            </View>
+                                            <View style={styles.summaryRow}>
+                                                <Text style={styles.summaryLabel}>Total Dozen</Text>
+                                                <Text style={styles.summaryValue}>
+                                                    {totalDozen.toFixed(2)}
+                                                </Text>
+                                            </View>
+                                            <View style={styles.summaryRow}>
+                                                <Text style={styles.summaryLabel}>Gross Amount</Text>
+                                                <Text style={styles.summaryValue}>
+                                                    {currencySymbol} {totalGross.toFixed(2)}
+                                                </Text>
+                                            </View>
+                                            {isExport && carriageCharge > 0 && (
+                                                <View style={styles.summaryRow}>
+                                                    <Text style={styles.summaryLabel}>
+                                                        Carriage & Air Freight
+                                                    </Text>
+                                                    <Text style={styles.summaryValue}>
+                                                        {currencySymbol} {carriageCharge.toFixed(2)}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                            {!isExport && (
+                                                <View style={styles.summaryRow}>
+                                                    <Text style={styles.summaryLabel}>Tax Amount</Text>
+                                                    <Text style={styles.summaryValue}>
+                                                        {totalTax.toFixed(2)}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                            <View
+                                                style={[
+                                                    styles.summaryRow,
+                                                    {
+                                                        backgroundColor: DARK,
+                                                        borderBottom: "none",
+                                                        borderRadius: 2,
+                                                    },
+                                                ]}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.summaryLabel,
+                                                        {
+                                                            color: "#ccc",
+                                                            fontFamily: "Helvetica-Bold",
+                                                        },
+                                                    ]}
+                                                >
+                                                    {isExport ? "Grand Total" : "Net Amount"}
+                                                </Text>
+                                                <Text
+                                                    style={[
+                                                        styles.summaryValue,
+                                                        { color: "#fff" },
+                                                    ]}
+                                                >
+                                                    {currencySymbol} {grandTotal.toFixed(2)}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    </View>
+
+                                    {/* ── REMARKS & TERMS ── */}
+                                    <View style={styles.bottomSection}>
+                                        <View style={styles.remarksBox}>
+                                            <Text style={styles.sectionHeader}>REMARKS</Text>
+                                            <View style={styles.sectionBody}>
+                                                <Text style={{ fontSize: 7.5, color: "#555" }}>
+                                                    {data?.remarks || "N/A"}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        {data?.termsAndCondition ? (
+                                            <View style={styles.termsBox}>
+                                                <Text style={styles.sectionHeader}>
+                                                    TERMS &amp; CONDITIONS
+                                                </Text>
+                                                <View style={styles.sectionBody}>
+                                                    <Text style={{ fontSize: 7.5, color: "#555", lineHeight: 1.5 }}>
+                                                        {data.termsAndCondition}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        ) : null}
+                                    </View>
+
+                                    {/* ── SIGNATURES ── */}
+                                    <View
+                                        style={{
+                                            marginHorizontal: 20,
+                                            marginTop: 14,
+                                            marginBottom: 8,
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                textAlign: "right",
+                                                fontSize: 8,
+                                                fontFamily: "Helvetica-Bold",
+                                                color: DARK,
+                                                marginBottom: 20,
+                                            }}
+                                        >
+                                            For {branch?.branchName || ""}
+                                        </Text>
+                                        <View
+                                            style={{
+                                                flexDirection: "row",
+                                                justifyContent: "space-between",
+                                                borderTop: `1 solid ${BORDER_LIGHT}`,
+                                                paddingTop: 4,
+                                            }}
+                                        >
+                                            {[
+                                                "Prepared By",
+                                                "Checked By",
+                                                "Approved By",
+                                                "Customer Sign",
+                                            ].map((role) => (
+                                                <Text
+                                                    key={role}
+                                                    style={{
+                                                        flex: 1,
+                                                        textAlign: "center",
+                                                        fontSize: 7.5,
+                                                        color: "#555",
+                                                        fontFamily: "Helvetica-Bold",
+                                                    }}
+                                                >
+                                                    {role}
+                                                </Text>
+                                            ))}
+                                        </View>
+                                    </View>
+                                </>
+                            )}
+
+                            {/* ── SUB-TOTAL (non-last pages) ── */}
+                            {!isLastPage && (
+                                <View
+                                    style={{
+                                        flexDirection: "row",
+                                        marginHorizontal: 20,
+                                        backgroundColor: "#f4f4f6",
+                                        borderLeft: `1 solid ${BORDER}`,
+                                        borderRight: `1 solid ${BORDER}`,
+                                        borderBottom: `1 solid ${BORDER}`,
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            flex: 5,
+                                            fontSize: 7.5,
+                                            color: "#888",
+                                            fontStyle: "italic",
+                                            textAlign: "right",
+                                            paddingVertical: 4,
+                                            paddingRight: 8,
+                                        }}
+                                    >
+                                        Sub Total (Continued on next page...)
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            flex: 1.2,
+                                            fontSize: 8,
+                                            fontFamily: "Helvetica-Bold",
+                                            color: DARK,
+                                            textAlign: "right",
+                                            paddingVertical: 4,
+                                            paddingRight: 3,
+                                        }}
+                                    >
+                                        {currencySymbol}{" "}
+                                        {chunkRows
+                                            .reduce((s, r) => s + (parseFloat(r.amount) || 0), 0)
+                                            .toFixed(2)}
                                     </Text>
                                 </View>
                             )}
                         </View>
-                    </View>
-                </View>
 
-                {/* Table */}
-                <View style={styles.table}>
-                    <View style={styles.tableHeader}>
-                        <Text style={styles.colSno}>S.No</Text>
-                        <Text style={styles.colDesc}>Description of Goods</Text>
-                        <Text style={styles.colSize}>Size</Text>
-                        <Text style={styles.colGSM}>GSM</Text>
-                        <Text style={styles.colHSN}>HSN</Text>
-                        <Text style={styles.colUOM}>UOM</Text>
-                        <Text style={styles.colQty}>Qty</Text>
-                        <Text style={styles.colPrice}>Price</Text>
-                        <Text style={styles.colGross}>Gross</Text>
-                    </View>
-                    {items.map((item, index) => {
-                        const gross =
-                            parseFloat(item.qty || 0) * parseFloat(item.price || 0);
-                        return (
-                            <View key={index} style={styles.tableRow}>
-                                <Text style={styles.colSno}>{index + 1}</Text>
-                                <Text style={[styles.colDesc, { fontWeight: "bold" }]}>
-                                    {item.StyleItem?.name || "N/A"}
-                                </Text>
-                                <Text style={styles.colSize}>{item.Size?.name || "-"}</Text>
-                                <Text style={styles.colGSM}>{item.Gsm?.name || "-"}</Text>
-                                <Text style={styles.colHSN}>{item.Hsn?.name || "-"}</Text>
-                                <Text style={styles.colUOM}>{item.Uom?.name || "-"}</Text>
-                                <Text style={styles.colQty}>{item.qty?.toFixed(3)}</Text>
-                                <Text style={styles.colPrice}>
-                                    Rs. {parseFloat(item.price || 0).toFixed(2)}
-                                </Text>
-                                <Text style={styles.colGross}>Rs. {gross.toFixed(2)}</Text>
-                            </View>
-                        );
-                    })}
-                </View>
-
-                {/* Summary Section */}
-                <View style={styles.summaryContainer}>
-                    <View style={styles.summaryBox}>
-                        <View style={styles.summaryRow}>
-                            <Text style={{ fontSize: 8 }}>Total Gross</Text>
-                            <Text style={{ fontSize: 8, fontWeight: "bold" }}>
-                                Rs. {subTotal.toFixed(2)}
-                            </Text>
+                        {/* FOOTER BAR */}
+                        <View style={styles.footerBar} fixed>
+                            <Text
+                                style={styles.footerRight}
+                                render={({ pageNumber, totalPages }) =>
+                                    `Page ${pageNumber} of ${totalPages}`
+                                }
+                            />
                         </View>
-                        <View style={styles.summaryRow}>
-                            <Text style={{ fontSize: 8 }}>Discount</Text>
-                            <Text style={{ fontSize: 8, fontWeight: "bold" }}>
-                                (-) Rs. {totalDiscount.toFixed(2)}
-                            </Text>
-                        </View>
-                        <View style={styles.summaryRow}>
-                            <Text style={{ fontSize: 8 }}>Taxable Value</Text>
-                            <Text style={{ fontSize: 8, fontWeight: "bold" }}>
-                                Rs. {taxableAmount.toFixed(2)}
-                            </Text>
-                        </View>
-                        <View style={styles.summaryRow}>
-                            <Text style={{ fontSize: 8 }}>GST Total</Text>
-                            <Text style={{ fontSize: 8, fontWeight: "bold" }}>
-                                (+) Rs. {totalTax.toFixed(2)}
-                            </Text>
-                        </View>
-                        <View style={[styles.summaryRow, styles.grandTotalRow]}>
-                            <Text style={{ fontSize: 9 }}>GRAND TOTAL</Text>
-                            <Text style={{ fontSize: 9 }}>Rs. {grandTotal.toFixed(2)}</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Terms and Remarks */}
-                <View style={styles.notesSection}>
-                    <View style={styles.noteBox}>
-                        <Text style={styles.sectionHeader}>TERMS & CONDITIONS</Text>
-                        <View style={styles.noteContent}>
-                            <Text>{data.termsAndCondition || "N/A"}</Text>
-                        </View>
-                    </View>
-                    <View style={styles.noteBox}>
-                        <Text style={styles.sectionHeader}>REMARKS</Text>
-                        <View style={styles.noteContent}>
-                            <Text>{data.remarks || "N/A"}</Text>
-                        </View>
-                    </View>
-                </View>
-
-                <Text style={styles.pageFooter} fixed>
-                    Generated on {moment().format("DD-MM-YYYY HH:mm")}
-                </Text>
-            </Page>
+                    </Page>
+                );
+            })}
         </Document>
     );
 };

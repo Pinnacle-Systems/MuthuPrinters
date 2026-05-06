@@ -104,7 +104,6 @@ async function get(req) {
       const hasBulk = item.orderEntries?.some(
         (entry) => entry.productionType === "BULK",
       );
-      console.log(item.orderEntries, "orderEntries");
       return {
         ...item,
         childRecord: item?._count?.orderEntries || 0,
@@ -112,6 +111,49 @@ async function get(req) {
       };
     }),
     totalCount,
+  };
+}
+
+async function getPIList(req) {
+  const { branchId } = req.query;
+
+  const data = await prisma.proformaInvoice.findMany({
+    where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
+    },
+    select: {
+      id: true,
+      customerId: true,
+      docId: true,
+      customer: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+
+      orderEntries: {
+        select: {
+          id: true,
+          productionType: true,
+        },
+      },
+    },
+    orderBy: { id: "desc" },
+  });
+
+  return {
+    statusCode: 0,
+    data: data.map((item) => {
+      const hasBulk = item.orderEntries?.some(
+        (entry) => entry.productionType === "BULK",
+      );
+
+      return {
+        ...item,
+        hasBulk,
+      };
+    }),
   };
 }
 
@@ -130,11 +172,23 @@ async function getOne(id) {
       },
       attachments: true,
       Branch: true,
+      Bank: true,
       customer: true,
+      _count: {
+        select: {
+          orderEntries: true,
+        },
+      },
     },
   });
   if (!data) return NoRecordFound("Proforma Invoice");
-  return { statusCode: 0, data };
+  return {
+    statusCode: 0,
+    data: {
+      ...data,
+      childRecord: data?._count?.orderEntries || 0,
+    },
+  };
 }
 
 async function create(body) {
@@ -481,4 +535,4 @@ async function remove(id) {
   return { statusCode: 0, data };
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove, getPIList };

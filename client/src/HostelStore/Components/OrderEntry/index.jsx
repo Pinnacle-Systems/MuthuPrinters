@@ -10,6 +10,8 @@ import { FaPlus } from "react-icons/fa";
 import OrderEntryReport from "./OrderEntryReport.jsx";
 import OrderEntryForm from "./OrderEntryForm.jsx";
 import { useIsApprover } from "../../../CustomHooks/userIsApprover.js";
+import ProformaInvoiceApi from "../../../redux/uniformService/ProformaInvoiceService.js";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -33,6 +35,7 @@ const index = () => {
         isLoading,
         isFetching,
     } = useGetTermsandCondtionsQuery({ params });
+    const [dispatchInvalidate] = useInvalidateTags();
 
     const { data: userData } = useGetUserByIdQuery(userId)
     const { canApprove } = useIsApprover("ORDER ENTRY", userData?.data?.id);
@@ -58,6 +61,8 @@ const index = () => {
 
             try {
                 let deldata = await removeData(id).unwrap();
+                dispatch(ProformaInvoiceApi.util.invalidateTags(["proformaInvoice"]));
+                dispatchInvalidate();
                 if (deldata?.statusCode == 1) {
                     Swal.fire({
                         icon: "error",
@@ -73,8 +78,6 @@ const index = () => {
                     timer: 1000,
                 });
                 setShowForm(false);
-                dispatchInvalidate();
-                invalidatePurchaseModule();
             } catch (error) {
                 Swal.fire({
                     icon: "error",

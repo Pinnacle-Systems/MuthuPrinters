@@ -281,6 +281,20 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
         setOrderItems(Array.from({ length: 14 }, () => ({ ...EMPTY_ROW })));
     };
 
+    const handleCloseAndFocusNextRow = () => {
+        setSizeModalOpen(false);
+
+        setTimeout(() => {
+            const nextRowInput = document.querySelector(
+                `#styleItemId-input-${activeRowIndex + 1}`
+            );
+
+            if (nextRowInput) {
+                nextRowInput.focus();
+            }
+        }, 100);
+    };
+
     return (
         <>
             <div className="w-full h-full overflow-y-auto bg-white">
@@ -369,12 +383,12 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                         readOnly={readOnly}
                                         placeholder=""
                                     /> */}
-                                    <span>
+                                    <span className='px-1'>
                                         {findFromList(row.itemGroupId, itemGroupList?.data, "name") || ""}
                                     </span>
                                 </td>
                                 <td className="border border-gray-300 text-[11px]">
-                                    <span>
+                                    <span className='px-1'>
                                         {findFromList(row.hsnId, hsnList?.data, "name") || ""}
                                     </span>
                                 </td>
@@ -449,7 +463,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                         childComponent={UomMaster}
                                         addNewModalWidth="w-[30%] h-[45%]"
                                     /> */}
-                                    <span>
+                                    <span className='px-1'>
                                         {findFromList(row.uomId, uomList?.data, "name") || ""}
                                     </span>
                                 </td>
@@ -499,7 +513,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                 "orderQty",
                                             );
                                         }}
-                                        disabled={readOnly}
+                                        disabled={readOnly || row.trackingType !== "None"}
                                     />
                                 </td>
                                 {/* <td className="w-2 border border-gray-300">
@@ -589,7 +603,9 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
             {sizeModalOpen && activeRowIndex !== null && (
                 <Modal
                     isOpen={sizeModalOpen}
-                    onClose={() => setSizeModalOpen(false)}
+                    onClose={() => {
+                        handleCloseAndFocusNextRow()
+                    }}
                     widthClass="w-[750px]"
                 >
                     <div className="bg-slate-100 p-3 rounded-lg">
@@ -606,7 +622,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                             <div className="flex gap-2">
                                 <button
                                     className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold transition-colors flex items-center gap-1 shadow-sm"
-                                    onClick={() => setSizeModalOpen(false)}
+                                    onClick={() => handleCloseAndFocusNextRow()}
                                 >
                                     Done
                                 </button>
@@ -675,6 +691,10 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                 }
                                                                 disabled={readOnly}
                                                                 placeholder="From"
+                                                                onFocus={(e) => {
+                                                                    e.target.select()
+                                                                }}
+                                                                autoFocus={idx == 0}
                                                             />
                                                         </td>
                                                         <td className="border-b border-r border-slate-200 px-1 py-0">
@@ -703,6 +723,9 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                 }}
                                                                 disabled={readOnly}
                                                                 placeholder="To"
+                                                                onFocus={(e) => {
+                                                                    e.target.select()
+                                                                }}
                                                             />
                                                         </td>
                                                         <td className="border-b border-r border-slate-200 px-1 py-0">
@@ -737,6 +760,9 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                     }
                                                                 }}
                                                                 placeholder="0"
+                                                                onFocus={(e) => {
+                                                                    e.target.select()
+                                                                }}
                                                             />
                                                         </td>
                                                     </tr>
@@ -797,6 +823,10 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                         handleSizeBreakupChange(idx, "qty", value);
                                                                     }}
                                                                     placeholder="0"
+                                                                    onFocus={(e) => {
+                                                                        e.target.select()
+                                                                    }}
+                                                                    autoFocus={idx == 0}
                                                                 />
                                                             </td>
                                                         </tr>
@@ -857,6 +887,11 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                     }
                                                                     disabled={readOnly}
                                                                     placeholder="From"
+                                                                    onFocus={(e) => {
+                                                                        e.target.select()
+                                                                    }}
+                                                                    autoFocus={idx == 0}
+
                                                                 />
                                                             </td>
                                                             <td className="border-b border-r border-slate-200 px-1 py-0">
@@ -873,6 +908,9 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                     }
                                                                     disabled={readOnly}
                                                                     placeholder="To"
+                                                                    onFocus={(e) => {
+                                                                        e.target.select()
+                                                                    }}
                                                                 />
                                                             </td>
                                                             <td className="border-b border-r border-slate-200 px-1 py-0">
@@ -895,6 +933,9 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                         handleSizeBreakupChange(idx, "qty", value);
                                                                     }}
                                                                     placeholder="0"
+                                                                    onFocus={(e) => {
+                                                                        e.target.select()
+                                                                    }}
                                                                 />
                                                             </td>
                                                         </tr>

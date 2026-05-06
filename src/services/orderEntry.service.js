@@ -293,6 +293,29 @@ async function get(req) {
   };
 }
 
+async function getRefList(req) {
+  const { branchId, companyId } = req.query;
+
+  let data;
+
+  data = await prisma.orderEntry.findMany({
+    where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
+    },
+    select: {
+      id: true,
+      refNo: true,
+      customerId: true,
+    },
+    distinct: ["refNo"],
+    orderBy: {
+      refNo: "asc",
+    },
+  });
+
+  return { statusCode: 0, data };
+}
+
 async function getOne(id) {
   const data = await prisma.orderEntry.findUnique({
     where: {
@@ -302,11 +325,6 @@ async function getOne(id) {
       attachments: true,
       orderItems: {
         include: {
-          // StyleItem: true,
-          // Uom: true,
-          // Hsn: true,
-          // ItemGroup: true,
-          // SizeTemplate: true,
           sizeBreakup: true,
         },
       },
@@ -327,6 +345,8 @@ async function getOne(id) {
       },
     },
   });
+  console.log(data);
+
   if (!data) return NoRecordFound("Purchase Inward");
   const { module, hasApproval } = await getModuleApprovalSetup(
     REFERENCE_PAGE,
@@ -357,7 +377,7 @@ async function getOne(id) {
       const activeConfigs = await prisma.approvalConfig.findMany({
         where: {
           moduleId: module.id,
-          branchId: parseInt(branchId || data.branchId),
+          branchId: parseInt(data.branchId),
           active: true,
         },
         include: {
@@ -814,4 +834,4 @@ async function remove(id) {
   return { statusCode: 0, data };
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove, getRefList };

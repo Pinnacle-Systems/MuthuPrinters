@@ -30,7 +30,7 @@ import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import Modal from "../../../UiComponents/Modal/index.js";
 import { getImageUrlPath } from "../../../Constants/index.js";
 import { Plus } from "lucide-react";
-import { useAddOrderEntryMutation, useGetOrderEntryByIdQuery, useGetOrderEntryQuery, useUpdateOrderEntryMutation } from "../../../redux/uniformService/OrderEntryService.js";
+import { useAddOrderEntryMutation, useGetOrderEntryByIdQuery, useGetOrderEntryQuery, useGetRefListQuery, useUpdateOrderEntryMutation } from "../../../redux/uniformService/OrderEntryService.js";
 import { QRCodeCanvas } from "qrcode.react";
 import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFooter.jsx";
 import { PDFViewer } from "@react-pdf/renderer";
@@ -39,13 +39,12 @@ import { FiFileText, FiPrinter } from "react-icons/fi";
 import OrderItems from "./OrderItems.jsx";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
-import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoServices.js";
 import { useGetUomQuery } from "../../../redux/services/UomMasterService.js";
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
-import ProformaInvoiceApi, { useGetProformaInvoiceQuery } from "../../../redux/uniformService/ProformaInvoiceService.js";
+import ProformaInvoiceApi, { useGetPIListQuery, useLazyGetProformaInvoiceByIdQuery } from "../../../redux/uniformService/ProformaInvoiceService.js";
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
 import { useGetSizeTemplateQuery } from "../../../redux/services/SizeTemplateMaster.js";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
@@ -65,7 +64,6 @@ const OrderEntryForm = ({
     branchData
 }) => {
     const today = new Date();
-
     const [docDate, setDocDate] = useState(
         moment.utc(today).format("YYYY-MM-DD"),
     );
@@ -102,19 +100,14 @@ const OrderEntryForm = ({
     const childRecord = useRef(0);
     const requirementRef = useRef(null);
 
+    const [dispatchInvalidate] = useInvalidateTags();
     const { userId, finYearId, branchId, companyId } = getCommonParams();
     const params = {
         branchId,
         companyId,
         finYearId,
     };
-    const {
-        data: allData,
-        isFetching,
-        isLoading,
-    } = useGetOrderEntryQuery({
-        params: params,
-    });
+
     const {
         data: singleData,
         isFetching: isSingleFetching,
@@ -126,18 +119,21 @@ const OrderEntryForm = ({
     const { data: uomList } = useGetUomQuery({ params });
     const { data: sizeList } = useGetSizeMasterQuery({ params });
     const { data: gsmList } = useGetGsmMasterQuery({ params });
-    const { data: PIList } = useGetProformaInvoiceQuery({
-        params: { companyId, branchId },
-    });
+    const { data: PIList } = useGetPIListQuery({ params: { companyId, branchId } });
     const { data: itemGroupList } = useGetItemGroupMasterQuery({ params });
     const { data: sizeTemplateList } = useGetSizeTemplateQuery({
         params: { companyId },
     });
     const { data: hsnList } = useGetHsnMasterQuery({ params });
+    const { data: refList } = useGetRefListQuery({
+        params: { branchId },
+    });
 
     const [addData] = useAddOrderEntryMutation();
     const [updateData] = useUpdateOrderEntryMutation();
     const [addApprovalStatus] = useAddApprovalStausMutation();
+    const [getPIById] = useLazyGetProformaInvoiceByIdQuery();
+
     const status = singleData?.data?.approvalStatus?.status;
     const isDisabled = (status === "APPROVED" || status === "PENDING") && !canApprove;
 
@@ -298,19 +294,31 @@ const OrderEntryForm = ({
 
     const validateRows = (items) => {
         const errors = [];
-
+        const seen = new Set();
         items.forEach((item, index) => {
-            if (!item.orderQty || Number(item.orderQty) <= 0) {
-                errors.push(`Row ${index + 1}: Order Qty must be greater than 0`);
-            }
+
             if (!item.styleItemId) {
                 errors.push(`Row ${index + 1}: Style is required`);
             }
-
+            if (!item.itemGroupId) {
+                errors.push(`Row ${index + 1}: Item Group is required`);
+            }
+            if (!item.hsnId) {
+                errors.push(`Row ${index + 1}: HSN is required`);
+            }
             if (!item.uomId) {
                 errors.push(`Row ${index + 1}: UOM is required`);
             }
 
+            if (!item.orderQty || Number(item.orderQty) <= 0) {
+                errors.push(`Row ${index + 1}: Order Qty must be greater than 0`);
+            }
+            const key = `${item.styleItemId}_${item.uomId}_${item.itemGroupId}`;
+            if (seen.has(key)) {
+                errors.push(`Row ${index + 1}: Duplicate item found`);
+            } else {
+                seen.add(key);
+            }
         });
 
         return errors;
@@ -490,6 +498,36 @@ const OrderEntryForm = ({
             setActionLoading(false);
         }
     };
+
+    const fillWithDefaultRows = (items, total = 14) => {
+        const EMPTY_ROW = {
+            styleItemId: "",
+            uomId: "",
+            hsnId: "",
+            orderQty: "",
+            itemGroupId: "",
+            type: "",
+            sizeBreakup: [],
+            trackingType: "None",
+        };
+
+        const filled = [...items];
+
+        if (filled.length < total) {
+            const remaining = total - filled.length;
+            for (let i = 0; i < remaining; i++) {
+                filled.push({ ...EMPTY_ROW });
+            }
+        }
+
+        return filled;
+    };
+
+    // useEffect(() => {
+    //     if (!id) {
+    //         setOrderItems(fillWithDefaultRows([]));
+    //     }
+    // }, [id]);
 
     return (
         <>
@@ -971,6 +1009,9 @@ const OrderEntryForm = ({
                                     required={true}
                                     readOnly={readOnly}
                                     disabled={childRecord.current > 0 || readOnly}
+                                    beforeChange={() => {
+                                        setProFormaId("");
+                                    }}
                                 />
                                 <div className="col-span-1">
 
@@ -983,10 +1024,40 @@ const OrderEntryForm = ({
                                         readOnly={readOnly || orderType === "GENERAL"}
                                         disabled={readOnly || orderType === "GENERAL"}
                                         otherField={"docId"}
+                                        beforeChange={async (selectedValue) => {
+                                            if (!selectedValue) {
+                                                setOrderItems(fillWithDefaultRows([]));
+                                                return;
+                                            }
+
+                                            const res = await getPIById(selectedValue).unwrap();
+
+                                            const mappedItems = Object.values(
+                                                (res?.data?.items || []).reduce((acc, item) => {
+                                                    const key = item.styleItemId;
+
+                                                    if (!acc[key] || acc[key].quoteVersion < item.quoteVersion) {
+                                                        acc[key] = item;
+                                                    }
+
+                                                    return acc;
+                                                }, {})
+                                            ).sort((a, b) => a.id - b.id).map((item) => ({
+                                                styleItemId: item.styleItemId,
+                                                orderQty: item.qty || "",
+                                                sizeId: item.sizeId || "",
+                                                uomId: item.uomId || "",
+                                                gsmId: item.gsmId || "",
+                                                hsnId: item.hsnId || "",
+                                                sizeBreakup: [],
+                                                trackingType: "None",
+                                                itemGroupId: item.StyleItem?.itemGroupId,
+                                            })) || [];
+
+                                            setOrderItems(fillWithDefaultRows(mappedItems));
+                                        }}
                                     />
                                 </div>
-
-
                                 <DropdownInput
                                     name="Production Type"
                                     options={productionTypes}
@@ -1011,13 +1082,14 @@ const OrderEntryForm = ({
                                     ) : (
                                         <DropdownNew
                                             name="Ref No"
-                                            dataList={PIList?.data?.filter((item) => id ? item?.customerId === customerId : isRepeatedPI ? item?.customerId === customerId && item?.hasBulk : item?.customerId === customerId && !item?.hasBulk)}
+                                            dataList={refList?.data?.filter((item) => item?.customerId === customerId)}
                                             value={refNo}
                                             setValue={setRefNo}
                                             required={productionType === "BULK"}
                                             readOnly={readOnly}
                                             disabled={readOnly}
                                             otherField={"refNo"}
+                                            otherValue={"refNo"}
                                         />
                                     )
                                 }
@@ -1111,36 +1183,43 @@ const OrderEntryForm = ({
                         <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
                             {/* Left Buttons */}
                             <div className="flex gap-2 flex-wrap">
-                                <button
-                                    onClick={() => saveData("close")}
-                                    disabled={readOnly || isDisabled}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            saveData("close");
-                                            e.stopPropagation();
-                                        }
-                                    }}
-                                    className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                                >
-                                    <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                                    Save & Close
-                                </button>
-                                <button
-                                    onClick={() => saveData("new")}
-                                    disabled={readOnly || isDisabled}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            saveData("new");
-                                        }
-                                    }}
-                                    className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                                >
-                                    <FiSave className="w-4 h-4 mr-2" />
-                                    Save & New
-                                </button>
+                                {
+                                    !isDisabled && (
+                                        <>
+
+                                            <button
+                                                onClick={() => saveData("close")}
+                                                disabled={readOnly || isDisabled}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        saveData("close");
+                                                        e.stopPropagation();
+                                                    }
+                                                }}
+                                                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                            >
+                                                <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                                                Save & Close
+                                            </button>
+                                            <button
+                                                onClick={() => saveData("new")}
+                                                disabled={readOnly || isDisabled}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        saveData("new");
+                                                    }
+                                                }}
+                                                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                            >
+                                                <FiSave className="w-4 h-4 mr-2" />
+                                                Save & New
+                                            </button>
+                                        </>
+                                    )
+                                }
                                 {
                                     status === "REJECTED" && (
 
@@ -1219,7 +1298,7 @@ const OrderEntryForm = ({
                                             Edit
                                         </button>
                                     ))}
-                                {id && (
+                                {id && (status === "APPROVED" || status === "NOT_CONFIGURED") && (
                                     <button
                                         onClick={() => {
                                             if (qrRef.current) {

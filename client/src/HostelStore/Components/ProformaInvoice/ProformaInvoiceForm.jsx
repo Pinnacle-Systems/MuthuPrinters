@@ -104,12 +104,13 @@ const ProformaInvoiceForm = ({
     const [selectedQuoteVersion, setSelectedQuoteVersion] = useState("Latest");
     const [availableVersions, setAvailableVersions] = useState([]);
     const [bankId, setBankId] = useState("");
+    const childRecord = useRef(0);
 
     const customerRef = useRef(null);
     const termsRef = useRef(null);
 
     const isOldVersion = selectedQuoteVersion !== "Latest";
-    const effectiveReadOnly = readOnly || isOldVersion;
+    const effectiveReadOnly = readOnly || isOldVersion || childRecord.current > 0;
 
     const [customerDetails, setCustomerDetails] = useState({
         name: "",
@@ -170,6 +171,8 @@ const ProformaInvoiceForm = ({
             setCarriageCharge(parseFloat(data.carriageCharge).toFixed(2) || "");
             setWeightInKg(parseFloat(data.weightInKg).toFixed(3) || "");
             setBankId(data.bankId || "");
+            childRecord.current = data?.childRecord ? data?.childRecord : 0;
+
             let loadedVersions = [];
             if (data.items?.length > 0) {
                 loadedVersions = [...new Set(data.items.map(i => i.quoteVersion).filter(Boolean))].sort((a, b) => b - a);
@@ -267,16 +270,16 @@ const ProformaInvoiceForm = ({
             if (!item.styleItemId) {
                 errors.push(`Row ${index + 1}: Style is required`);
             }
-            if (!item.uomId) {
-                errors.push(`Row ${index + 1}: UOM is required`);
-            }
             if (!item.hsnId) {
                 errors.push(`Row ${index + 1}: HSN is required`);
+            }
+            if (!item.uomId) {
+                errors.push(`Row ${index + 1}: UOM is required`);
             }
             if (!item.qty || Number(item.qty) <= 0) {
                 errors.push(`Row ${index + 1}: Qty is required`);
             }
-            const key = `${item.styleItemId}_${item.uomId}_${item.hsnId}`;
+            const key = `${item.styleItemId}_${item.uomId}`;
             if (seen.has(key)) {
                 errors.push(`Row ${index + 1}: Duplicate item found`);
             } else {
@@ -332,7 +335,7 @@ const ProformaInvoiceForm = ({
             return;
         }
 
-        if (!isCustomerExport && !bankId) {
+        if (isCustomerExport && !bankId) {
             Swal.fire({ title: "Warning", text: "Bank is required", icon: "warning", confirmButtonColor: "#3085d6" });
             return;
         }
@@ -621,7 +624,7 @@ const ProformaInvoiceForm = ({
                                         )}
                                         value={loadingId}
                                         setValue={setLoadingId}
-                                        readOnly={effectiveReadOnly}
+                                        readOnly={readOnly}
                                         required={true}
                                     />
                                     <DropdownInput
@@ -633,7 +636,7 @@ const ProformaInvoiceForm = ({
                                         )}
                                         value={deliveryId}
                                         setValue={setDeliveryId}
-                                        readOnly={effectiveReadOnly}
+                                        readOnly={readOnly}
                                         required={true}
                                     />
                                 </>
@@ -643,7 +646,7 @@ const ProformaInvoiceForm = ({
                             name="Delivery Date"
                             value={deliveryDate}
                             setValue={setDeliveryDate}
-                            disabled={effectiveReadOnly}
+                            disabled={readOnly}
                             type="date"
                             required={true}
                         />
@@ -651,7 +654,7 @@ const ProformaInvoiceForm = ({
                             name="WeightInKg (KG)"
                             value={weightInKg}
                             setValue={setWeightInKg}
-                            disabled={effectiveReadOnly}
+                            disabled={readOnly}
                             type="number"
                             min="0"
                             className="text-right"
@@ -671,7 +674,7 @@ const ProformaInvoiceForm = ({
                                     name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
                                     value={carriageCharge}
                                     setValue={setCarriageCharge}
-                                    disabled={effectiveReadOnly}
+                                    disabled={readOnly}
                                     type="number"
                                     min="0"
                                     className="text-right"
@@ -788,7 +791,7 @@ const ProformaInvoiceForm = ({
                                     addNewLabel="+ Add New Customer"
                                     childComponent={PartyMaster}
                                     addNewModalWidth="w-[90%] h-[95%]"
-                                    disabled={readOnly}
+                                    disabled={readOnly || childRecord.current > 0}
                                     openOnFocus={true}
                                     // autoFocus={true}
                                     ref={customerRef}
@@ -858,7 +861,7 @@ const ProformaInvoiceForm = ({
                                     name="Valid To"
                                     value={validityTo}
                                     setValue={setValidityTo}
-                                    disabled={effectiveReadOnly}
+                                    disabled={readOnly}
                                     required={true}
                                     type="date"
                                 />
@@ -979,7 +982,7 @@ const ProformaInvoiceForm = ({
                 setRemarks={setRemarks}
                 terms={termsAndCondition}
                 setTerms={setTermsAndCondition}
-                readOnly={effectiveReadOnly}
+                readOnly={readOnly}
                 showTermSelect={true}
                 termsRef={termsRef}
                 termValue={termsId}

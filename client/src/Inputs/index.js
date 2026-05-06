@@ -3998,6 +3998,7 @@ export const DropdownNew = forwardRef(
       otherValue,
       onKeyDown,
       autoFocus,
+      beforeChange = () => {},
     },
     ref,
   ) => {
@@ -4034,14 +4035,17 @@ export const DropdownNew = forwardRef(
           ref={ref}
           options={options}
           value={selectedOption}
-          onChange={(selected) => setValue(selected?.value || "")}
+          onChange={(selected) => {
+            beforeChange(selected?.value || "");
+            setValue(selected?.value || "");
+          }}
           isDisabled={disabled || readonly}
           isSearchable
           isClearable={false}
           menuShouldScrollIntoView={false}
           maxMenuHeight={170} // <-- Reduce height here
           onInputChange={(value) => value.toUpperCase()}
-          className="w-full px-1 -ml-1 h-7 text-xs rounded-lg
+          className="w-full -ml-1 h-7 text-xs rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm"
           placeholder={placeholder}

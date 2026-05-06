@@ -23,6 +23,19 @@ const ProformaInvoiceApi = createApi({
       },
       providesTags: ["proformaInvoice"],
     }),
+    getPIList: builder.query({
+      query: ({ params }) => {
+        return {
+          url: `${PROFORMA_INVOICE_API}/proFormaList`,
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+          params,
+        };
+      },
+      providesTags: ["proformaInvoice"],
+    }),
     getProformaInvoiceById: builder.query({
       query: (id) => {
         return {
@@ -65,7 +78,9 @@ const ProformaInvoiceApi = createApi({
 
 export const {
   useGetProformaInvoiceQuery,
+  useGetPIListQuery,
   useGetProformaInvoiceByIdQuery,
+  useLazyGetProformaInvoiceByIdQuery,
   useAddProformaInvoiceMutation,
   useUpdateProformaInvoiceMutation,
   useDeleteProformaInvoiceMutation,
