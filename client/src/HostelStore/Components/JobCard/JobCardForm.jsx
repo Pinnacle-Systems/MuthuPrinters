@@ -767,7 +767,7 @@ const JobCardForm = ({
                     <div className="flex gap-2 items-start">
 
                         {/* ══ COL 5 — BASIC DETAILS ══════════════════════ */}
-                        <Col title="Basic Details" className="w-[420px]">
+                        <Col title="Basic DetailsSS" className="w-[420px]">
 
                             <SectionCard title="Basic Details">
                                 <div className="grid grid-cols-2 gap-x-2 gap-y-2">
