@@ -15,6 +15,7 @@ import { useGetDieMasterQuery } from "../../../redux/services/DieMasterService.j
 import OrderEntryApi from "../../../redux/uniformService/OrderEntryService.js";
 import { invalidateOrderEntryModule } from "../../../redux/Dispatch/OrderInvalidateTags.js";
 import { useIsApprover } from "../../../CustomHooks/userIsApprover.js";
+import { useGetEmployeeQuery } from "../../../redux/services/EmployeeMasterService.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -106,11 +107,11 @@ const index = () => {
 
     const { data: customerList } = useGetPartyQuery({ params: { ...params } });
     const { data: branchList } = useGetBranchQuery({ params: { ...params } });
+    const { data: employeeList } = useGetEmployeeQuery({ params: { ...params } });
 
     const tabParams = useSelector((state) =>
         state.openTabs.tabs.find((t) => t.name === "JOB CARD")?.params
     );
-    console.log(tabParams, "tabparams");
 
     const lastProcessedTimestamp = useRef(null);
 
@@ -204,6 +205,7 @@ const index = () => {
                         fromOrderQty={fromOrderQty}
                         setFromOrderQty={setFromOrderQty}
                         canApprove={canApprove}
+                        employeeList={employeeList}
                     />
                 </div>
             )}

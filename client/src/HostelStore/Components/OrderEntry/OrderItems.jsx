@@ -283,16 +283,18 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
 
     const handleCloseAndFocusNextRow = () => {
         setSizeModalOpen(false);
+        if (!id) {
 
-        setTimeout(() => {
-            const nextRowInput = document.querySelector(
-                `#styleItemId-input-${activeRowIndex + 1}`
-            );
+            setTimeout(() => {
+                const nextRowInput = document.querySelector(
+                    `#styleItemId-input-${activeRowIndex + 1}`
+                );
 
-            if (nextRowInput) {
-                nextRowInput.focus();
-            }
-        }, 100);
+                if (nextRowInput) {
+                    nextRowInput.focus();
+                }
+            }, 100);
+        }
     };
 
     return (

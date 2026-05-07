@@ -15,9 +15,6 @@ import {
 } from "../utils/approvalHelper.js";
 const REFERENCE_PAGE = "JOB CARD";
 
-// ─────────────────────────────────────────────
-// Doc ID Generator
-// ─────────────────────────────────────────────
 async function getNextDocId(branchId, shortCode, startTime, endTime) {
   const lastObject = await prisma.jobCard.findFirst({
     where: {
@@ -38,9 +35,6 @@ async function getNextDocId(branchId, shortCode, startTime, endTime) {
   return newDocId;
 }
 
-// ─────────────────────────────────────────────
-// GET ALL
-// ─────────────────────────────────────────────
 async function get(req) {
   const {
     branchId,
@@ -184,9 +178,6 @@ async function get(req) {
   return { statusCode: 0, data: resolvedData, nextDocId: newDocId, totalCount };
 }
 
-// ─────────────────────────────────────────────
-// GET ONE
-// ─────────────────────────────────────────────
 async function getOne(id) {
   const data = await prisma.jobCard.findUnique({
     where: { id: parseInt(id) },
@@ -214,6 +205,7 @@ async function getOne(id) {
       processRoute: {
         include: { Process: { select: { id: true, name: true } } },
       },
+      jobCardSizeDetails: true,
     },
   });
 
@@ -302,9 +294,7 @@ function safeArray(val) {
   // fallback
   return [];
 }
-// ─────────────────────────────────────────────
-// CREATE
-// ─────────────────────────────────────────────
+
 async function create(body) {
   try {
     const {
@@ -318,9 +308,9 @@ async function create(body) {
       customerId,
       gsmId,
       boardId,
-      fullBoard,
+      fullBoardId,
       noOfPockets,
-      cuttingSize,
+      cuttingSizeId,
       runningQty,
       isFourColor,
       isCutColor,
@@ -332,12 +322,21 @@ async function create(body) {
       isFrontBackMachine,
       plateId,
       dieId,
-      totalPlateSet,
+      // totalPlateSets,
       remarks,
       designerId,
       tagCardUps,
       jobRunTime,
-
+      productionType,
+      styleItemId,
+      itemGroupId,
+      itemType,
+      followUpId,
+      labelQuality,
+      block,
+      labelQty,
+      rollQty,
+      cutAndSeal,
       // Arrays
       boardItems,
       selectedProcesses,
@@ -345,6 +344,8 @@ async function create(body) {
       varnishes,
       selectedMachines,
       processRoute,
+      trackingType,
+      jobCardSizeDetails,
     } = body;
 
     // ─────────────────────────────
@@ -356,6 +357,7 @@ async function create(body) {
     const safeVarnishes = safeArray(varnishes);
     const safeMachines = safeArray(selectedMachines);
     const safeProcessRoute = safeArray(processRoute);
+    const safeJobCardSizeDetails = safeArray(jobCardSizeDetails);
 
     // ─────────────────────────────
     // FIN YEAR + DOC ID
@@ -399,9 +401,9 @@ async function create(body) {
           gsmId: gsmId ? Number(gsmId) : null,
           boardId: boardId ? Number(boardId) : null,
 
-          fullBoard: fullBoard ? Number(fullBoard) : null,
+          fullBoardId: fullBoardId ? Number(fullBoardId) : null,
           noOfPockets: noOfPockets ? Number(noOfPockets) : null,
-          cuttingSize: cuttingSize || null,
+          cuttingSizeId: cuttingSizeId ? Number(cuttingSizeId) : null,
           runningQty: runningQty ? Number(runningQty) : null,
 
           isFourColor: !!isFourColor,
@@ -416,16 +418,23 @@ async function create(body) {
 
           plateId: plateId ? Number(plateId) : null,
           dieId: dieId ? Number(dieId) : null,
-          totalPlateSet: totalPlateSet ? Number(totalPlateSet) : null,
+          // totalPlateSets: totalPlateSets || null,
 
           remarks: remarks || null,
           designerId: designerId ? Number(designerId) : null,
           tagCardUps: tagCardUps || null,
           jobRunTime: jobRunTime || null,
-
-          // ─────────────────────────────
-          // RELATIONS
-          // ─────────────────────────────
+          productionType: productionType || null,
+          styleItemId: styleItemId ? Number(styleItemId) : null,
+          itemGroupId: itemGroupId ? Number(itemGroupId) : null,
+          itemType: itemType || null,
+          followUpId: followUpId ? Number(followUpId) : null,
+          labelQuality: labelQuality || null,
+          block: block || null,
+          labelQty: labelQty ? Number(labelQty) : null,
+          rollQty: rollQty ? Number(rollQty) : null,
+          cutAndSeal: cutAndSeal || null,
+          trackingType: trackingType || null,
 
           boardQualities: safeBoardItems.length
             ? {
@@ -494,6 +503,19 @@ async function create(body) {
                 },
               }
             : undefined,
+
+          jobCardSizeDetails: safeJobCardSizeDetails.length
+            ? {
+                createMany: {
+                  data: safeJobCardSizeDetails.map((s) => ({
+                    sizeId: s.sizeId ? Number(s.sizeId) : null,
+                    qty: s.qty ? Number(s.qty) : null,
+                    barcodeFrom: s.barcodeFrom || null,
+                    barcodeTo: s.barcodeTo || null,
+                  })),
+                },
+              }
+            : undefined,
         },
       });
       if (hasApproval && module) {
@@ -527,9 +549,6 @@ async function create(body) {
   }
 }
 
-// ─────────────────────────────────────────────
-// UPDATE
-// ─────────────────────────────────────────────
 async function update(id, body) {
   try {
     const {
@@ -542,9 +561,9 @@ async function update(id, body) {
       customerId,
       gsmId,
       boardId,
-      fullBoard,
+      fullBoardId,
       noOfPockets,
-      cuttingSize,
+      cuttingSizeId,
       runningQty,
       isFourColor,
       isCutColor,
@@ -556,7 +575,7 @@ async function update(id, body) {
       isFrontBackMachine,
       plateId,
       dieId,
-      totalPlateSet,
+      // totalPlateSets,
       remarks,
       designerId,
       tagCardUps,
@@ -568,8 +587,19 @@ async function update(id, body) {
       selectedMachines,
       processRoute,
       submitApproval,
+      productionType,
+      styleItemId,
+      itemGroupId,
+      itemType,
+      followUpId,
+      labelQuality,
+      block,
+      labelQty,
+      rollQty,
+      cutAndSeal,
+      trackingType,
+      jobCardSizeDetails,
     } = body;
-
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
     });
@@ -601,6 +631,9 @@ async function update(id, body) {
         where: { jobCardId: parseInt(id) },
       });
       await tx.processRoute.deleteMany({ where: { jobCardId: parseInt(id) } });
+      await tx.jobCardSizeBreakup.deleteMany({
+        where: { jobCardId: parseInt(id) },
+      });
       data = await tx.jobCard.update({
         where: { id: parseInt(id) },
         data: {
@@ -613,9 +646,9 @@ async function update(id, body) {
           customerId: customerId ? parseInt(customerId) : null,
           gsmId: gsmId ? parseInt(gsmId) : null,
           boardId: boardId ? parseInt(boardId) : null,
-          fullBoard: fullBoard ? parseInt(fullBoard) : null,
+          fullBoardId: fullBoardId ? parseInt(fullBoardId) : null,
           noOfPockets: noOfPockets ? parseInt(noOfPockets) : null,
-          cuttingSize: cuttingSize || null,
+          cuttingSizeId: cuttingSizeId ? Number(cuttingSizeId) : null,
           runningQty: runningQty ? parseInt(runningQty) : null,
           isFourColor: Boolean(isFourColor),
           isCutColor: Boolean(isCutColor),
@@ -627,11 +660,22 @@ async function update(id, body) {
           isFrontBackMachine: Boolean(isFrontBackMachine),
           plateId: plateId ? parseInt(plateId) : null,
           dieId: dieId ? parseInt(dieId) : null,
-          totalPlateSet: totalPlateSet ? parseInt(totalPlateSet) : null,
+          // totalPlateSets: totalPlateSets || null,
           remarks: remarks || null,
           designerId: designerId ? parseInt(designerId) : null,
           tagCardUps: tagCardUps || null,
           jobRunTime: jobRunTime || null,
+          productionType: productionType || null,
+          styleItemId: styleItemId ? Number(styleItemId) : null,
+          itemGroupId: itemGroupId ? Number(itemGroupId) : null,
+          itemType: itemType || null,
+          followUpId: followUpId ? Number(followUpId) : null,
+          labelQuality: labelQuality || null,
+          block: block || null,
+          labelQty: labelQty ? Number(labelQty) : null,
+          rollQty: rollQty ? Number(rollQty) : null,
+          cutAndSeal: cutAndSeal || null,
+          trackingType: trackingType || null,
 
           boardQualities:
             boardItems.length > 0
@@ -705,6 +749,18 @@ async function update(id, body) {
                 },
               }
             : undefined,
+          jobCardSizeDetails: jobCardSizeDetails.length
+            ? {
+                createMany: {
+                  data: jobCardSizeDetails.map((s) => ({
+                    sizeId: s.sizeId ? Number(s.sizeId) : null,
+                    qty: s.qty ? Number(s.qty) : null,
+                    barcodeFrom: s.barcodeFrom || null,
+                    barcodeTo: s.barcodeTo || null,
+                  })),
+                },
+              }
+            : undefined,
         },
       });
       if (submitApproval && hasApproval && module) {
@@ -765,7 +821,4 @@ async function remove(id) {
   }
 }
 
-// ─────────────────────────────────────────────
-// Helper
-// ─────────────────────────────────────────────
 export { get, getOne, create, update, remove };

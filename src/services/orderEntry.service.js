@@ -294,24 +294,112 @@ async function get(req) {
 }
 
 async function getRefList(req) {
-  const { branchId, companyId } = req.query;
+  const { branchId, companyId, isRefDistinct } = req.query;
 
-  let data;
-
-  data = await prisma.orderEntry.findMany({
+  let data = await prisma.orderEntry.findMany({
     where: {
       branchId: branchId ? parseInt(branchId) : undefined,
     },
     select: {
       id: true,
       refNo: true,
+      docId: true,
       customerId: true,
     },
-    distinct: ["refNo"],
+    distinct: isRefDistinct === "true" ? ["refNo"] : ["docId"],
     orderBy: {
       refNo: "asc",
     },
   });
+
+  // ── only for non-distinct ref mode ─────────────────────────
+  if (isRefDistinct !== "true") {
+    const { module, hasApproval } = await getModuleApprovalSetup(
+      REFERENCE_PAGE,
+      branchId,
+    );
+
+    const orderIds = data.map((o) => o.id);
+
+    const approvalLogs = await prisma.approvalLog.findMany({
+      where: {
+        referencePage: REFERENCE_PAGE,
+        referenceId: { in: orderIds },
+      },
+      select: {
+        id: true,
+        referenceId: true,
+        status: true,
+        remarks: true,
+        currentLevel: true,
+        LevelLogs: {
+          select: {
+            action: true,
+            levelNo: true,
+            userId: true,
+            createdAt: true,
+            User: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+    });
+
+    const approvalLogMap = approvalLogs.reduce((acc, log) => {
+      acc[log.referenceId] = log;
+      return acc;
+    }, {});
+
+    const activeConfigs =
+      hasApproval && module
+        ? await prisma.approvalConfig.findMany({
+            where: {
+              moduleId: module.id,
+              branchId: parseInt(branchId),
+              active: true,
+            },
+            include: {
+              ConfigConditions: {
+                include: {
+                  Field: true,
+                  Operator: true,
+                  CompareField: true,
+                },
+              },
+              approvalLevels: {
+                include: {
+                  LevelUsers: true,
+                },
+                orderBy: {
+                  levelNo: "asc",
+                },
+              },
+            },
+          })
+        : [];
+
+    data = data.map((order) => {
+      const log = approvalLogMap[order.id] ?? null;
+
+      let shouldTrigger = false;
+
+      if (!log && hasApproval && activeConfigs.length > 0) {
+        shouldTrigger = evaluateConfigs(activeConfigs, order);
+      }
+
+      return {
+        ...order,
+        approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+      };
+    });
+  }
 
   return { statusCode: 0, data };
 }
@@ -326,6 +414,11 @@ async function getOne(id) {
       orderItems: {
         include: {
           sizeBreakup: true,
+          ItemGroup: {
+            select: {
+              name: true,
+            },
+          },
         },
       },
       Branch: {

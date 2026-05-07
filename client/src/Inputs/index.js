@@ -1758,10 +1758,10 @@ export const ReusableTable = ({
                               {onView && (
                                 <button
                                   className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
-                                  // onClick={() =>
-                                  //   hasPermission(() => onView(item.id), "read")
-                                  // }
-                                  onClick={() => onView(item.id)}
+                                  onClick={() =>
+                                    hasPermission(() => onView(item.id), "read")
+                                  }
+                                  // onClick={() => onView(item.id)}
                                 >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1781,10 +1781,10 @@ export const ReusableTable = ({
                               {onEdit && (
                                 <button
                                   className="text-green-600 gap-1 px-1   bg-green-50 rounded"
-                                  // onClick={() =>
-                                  //   hasPermission(() => onEdit(item.id), "edit")
-                                  // }
-                                  onClick={() => onEdit(item.id)}
+                                  onClick={() =>
+                                    hasPermission(() => onEdit(item.id), "edit")
+                                  }
+                                  // onClick={() => onEdit(item.id)}
                                 >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1825,9 +1825,15 @@ export const ReusableTable = ({
                                     //   }
                                     // }}
                                     onClick={() => {
-                                      if (!hasChildRecords) {
-                                        onDelete(item.id, item?.childRecord);
-                                      }
+                                      // if (!hasChildRecords) {
+                                      //   onDelete(item.id, item?.childRecord);
+                                      // }
+                                      hasPermission(
+                                        () =>
+                                          onDelete(item.id, item?.childRecord),
+                                        "delete",
+                                        item?.childRecord,
+                                      );
                                     }}
                                     disabled={hasChildRecords}
                                   >
@@ -4036,7 +4042,8 @@ export const DropdownNew = forwardRef(
           options={options}
           value={selectedOption}
           onChange={(selected) => {
-            beforeChange(selected?.value || "");
+            const item = dataList?.find((i) => i.id === selected?.value);
+            beforeChange(item);
             setValue(selected?.value || "");
           }}
           isDisabled={disabled || readonly}

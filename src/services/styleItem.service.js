@@ -25,6 +25,11 @@ async function get(req) {
           },
         },
       },
+      ItemGroup: {
+        select: {
+          name: true,
+        },
+      },
     },
   });
   return {

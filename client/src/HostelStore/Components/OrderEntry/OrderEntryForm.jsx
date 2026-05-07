@@ -126,7 +126,7 @@ const OrderEntryForm = ({
     });
     const { data: hsnList } = useGetHsnMasterQuery({ params });
     const { data: refList } = useGetRefListQuery({
-        params: { branchId },
+        params: { branchId, isRefDistinct: "true" },
     });
 
     const [addData] = useAddOrderEntryMutation();
@@ -1030,7 +1030,7 @@ const OrderEntryForm = ({
                                                 return;
                                             }
 
-                                            const res = await getPIById(selectedValue).unwrap();
+                                            const res = await getPIById(selectedValue?.id).unwrap();
 
                                             const mappedItems = Object.values(
                                                 (res?.data?.items || []).reduce((acc, item) => {
@@ -1129,7 +1129,7 @@ const OrderEntryForm = ({
                     <OrderItems
                         orderItems={orderItems}
                         setOrderItems={setOrderItems}
-                        readOnly={readOnly || childRecord.current > 0}
+                        readOnly={readOnly}
                         styleItemList={styleItemList}
                         sizeList={sizeList}
                         uomList={uomList}

@@ -261,8 +261,9 @@ model Employee {
   updatedAt          DateTime?         @updatedAt
   employeeId         String?
 
-  User    User[]
-  JobCard JobCard[]
+  User            User[]
+  JobCardFollowUp JobCard[] @relation("followup")
+  JobCardDesigner JobCard[] @relation("design")
 }
 
 model FinYear {
@@ -951,6 +952,7 @@ model StyleItem {
   purchaseBillEntryItems PurchaseBillEntryItems[]
   orderItems             OrderItems[]
   proformaInvoiceItems   ProformaInvoiceItem[]
+  JobCards               JobCard[]
 }
 
 model DeliveryChallan {
@@ -1593,6 +1595,9 @@ model Size {
   orderItems             OrderItems[]
   proformaInvoiceItems   ProformaInvoiceItem[]
   orderSizeBreakups      OrderSizeBreakup[]
+  jobCardFullBoardSize   JobCard[]                @relation("fullBoardSize")
+  jobCardCuttingSize     JobCard[]                @relation("cuttingSizeDtl")
+  jobCardSizeDetails     JobCardSizeBreakup[]
 }
 
 model Gsm {
@@ -1630,6 +1635,7 @@ model ItemGroup {
   inwardItems            InwardItems[]
   stocks                 Stock[]
   orderItems             OrderItems[]
+  jobCards               JobCard[]
 }
 
 model SizeTemplate {
@@ -1922,17 +1928,36 @@ model JobCard {
   totalPlateSet      Int?
   remarks            String?
   designerId         Int?
-  Designer           Employee?   @relation(fields: [designerId], references: [id])
+  Designer           Employee?   @relation("design", fields: [designerId], references: [id])
+  followUpId         Int?
+  FollowUp           Employee?   @relation("followup", fields: [followUpId], references: [id])
   tagCardUps         String?
+  totalPlatesets     String?
   jobRunTime         String?
   productionType     String?
+  fullBoardId        Int?
+  FullBoardSize      Size?       @relation("fullBoardSize", fields: [fullBoardId], references: [id])
+  cuttingSizeId      Int?
+  CuttingSizeDtl     Size?       @relation("cuttingSizeDtl", fields: [cuttingSizeId], references: [id])
+  itemGroupId        Int?
+  ItemGroup          ItemGroup?  @relation(fields: [itemGroupId], references: [id])
+  itemType           String?
+  styleItemId        Int?
+  StyleItem          StyleItem?  @relation(fields: [styleItemId], references: [id])
+  trackingType       String?
+  labelQty           Int?
+  rollQty            Int?
+  cutAndSeal         String?
+  labelQuality       String?
+  block              String?
 
-  boardQualities    BoardQuality[]
-  processDetails    ProcessDetails[]
-  laminationDetails LaminationDetails[]
-  varnishDetails    VarnishDetails[]
-  machineDetails    MachineDetails[]
-  processRoute      ProcessRoute[]
+  boardQualities     BoardQuality[]
+  processDetails     ProcessDetails[]
+  laminationDetails  LaminationDetails[]
+  varnishDetails     VarnishDetails[]
+  machineDetails     MachineDetails[]
+  processRoute       ProcessRoute[]
+  jobCardSizeDetails JobCardSizeBreakup[]
 }
 
 model BoardQuality {
@@ -2008,6 +2033,17 @@ model OrderSizeBreakup {
   OrderItem   OrderItems @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
   sizeId      Int?
   Size        Size?      @relation(fields: [sizeId], references: [id])
+  qty         Int?
+  barcodeFrom String?
+  barcodeTo   String?
+}
+
+model JobCardSizeBreakup {
+  id          Int     @id @default(autoincrement())
+  jobCardId   Int
+  JobCard     JobCard @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  sizeId      Int?
+  Size        Size?   @relation(fields: [sizeId], references: [id])
   qty         Int?
   barcodeFrom String?
   barcodeTo   String?
