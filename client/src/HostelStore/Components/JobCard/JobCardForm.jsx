@@ -59,7 +59,7 @@ const JobCardForm = ({
     const [isCutColMachine, setIsCutColMachine] = useState(false);
     const [isFrontMachine, setIsFrontMachine] = useState(false);
     const [isFrontBackMachine, setIsFrontBackMachine] = useState(false);
-    const [totalPlateSets, setTotalPlateSets] = useState("");
+    const [totalPlatesets, setTotalPlatesets] = useState("");
     const [plateId, setPlateId] = useState("");
     const [dieId, setDieId] = useState("");
     const [boardItems, setBoardItems] = useState([]);
@@ -92,6 +92,9 @@ const JobCardForm = ({
     const [orderStyleItems, setOrderStyleItems] = useState([]);
     const [jobCardSizeDetails, setJobCardSizeDetails] = useState([]);
     const [selectedOrderData, setSelectedOrderData] = useState(null);
+    const [trackingType, setTrackingType] = useState("Barcode");
+    const [sizeModalOpen, setSizeModalOpen] = useState(false);
+
     const qrRef = useRef(null);
 
     const params = { companyId: secureLocalStorage.getItem(sessionStorage.getItem("sessionId") + "userCompanyId") };
@@ -147,7 +150,7 @@ const JobCardForm = ({
         setIsFrontBackMachine(data?.isFrontBackMachine || false);
         setPlateId(data?.plateId || "");
         setDieId(data?.dieId || "");
-        setTotalPlateSets(data?.totalPlateSets || "");
+        setTotalPlatesets(data?.totalPlatesets || "");
         setBoardItems(data?.boardQualities?.map((b) => b.boardId) || []);
         setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
         setLaminations(data?.laminationDetails?.map((l) => ({ processId: l.laminationId, isFront: l.isFront, isFrontAndBack: l.isFrontAndBack })) || []);
@@ -174,6 +177,7 @@ const JobCardForm = ({
         setRollQty(data?.rollQty || "");
         setCutAndSeal(data?.cutAndSeal || "");
         setJobCardSizeDetails(data?.jobCardSizeDetails || []);
+        setTrackingType(data?.trackingType || "");
     }, []);
 
     useEffect(() => {
@@ -193,11 +197,11 @@ const JobCardForm = ({
         boardItems, gsmId, boardId, remarks, fullBoardId, noOfPockets, cuttingSizeId,
         runningQty, isFourColor, isCutColor, isFront, isFrontAndBack, isCMYK,
         isCutColMachine, isFrontMachine, isFrontBackMachine, plateId, dieId,
-        totalPlateSets, selectedProcesses, laminations, varnishes, selectedMachines,
+        totalPlatesets, selectedProcesses, laminations, varnishes, selectedMachines,
         orderEntryId, jobRunTime, processRoute: routeKeysToDb(processRoute),
         productionType, styleItemId, tagCardUps, itemGroupId, itemType, followUpId, designerId,
         labelQuality, block, labelQty, rollQty, cutAndSeal,
-        jobCardSizeDetails
+        jobCardSizeDetails, trackingType
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -227,11 +231,16 @@ const JobCardForm = ({
 
     const validateData = (d) => {
         const checks = [
-            { condition: !d.orderEntryId, title: "Order No is required!" },
+            { condition: !d.customerId, title: "Customer is required!" },
             { condition: !d.docDate, title: "Document Date is required!" },
             { condition: !d.orderType, title: "Order Type is required!" },
+            { condition: !d.orderEntryId, title: "Order No is required!" },
+            { condition: !d.productionType, title: "Production Type is required!" },
+            { condition: !d.styleItemId, title: "Item Description is required!" },
             { condition: !d.orderQty, title: "Order Quantity is required!" },
             { condition: !d.customerId, title: "Customer is required!" },
+            { condition: !d.followUpId, title: "Follow-Up is required!" },
+            { condition: !d.designerId, title: "Designer is required!" }
         ];
         const failed = checks.find((c) => c.condition);
         if (failed) { Swal.fire({ icon: "warning", title: failed.title, timer: 1500, showConfirmButton: false }); return false; }
@@ -338,7 +347,16 @@ const JobCardForm = ({
 
                                 const res = await getOrderById(selectedValue?.id).unwrap();
                                 setSelectedOrderData(res?.data);
-
+                                setItemGroupId("");
+                                setItemType("");
+                                setStyleItemId("");
+                                setOrderQty("");
+                                setJobCardSizeDetails([]);
+                                setBoardItems([]);
+                                setSelectedProcesses([]);
+                                setSelectedMachines([]);
+                                setLaminations([]);
+                                setVarnishes([]);
                                 setProductionType(res?.data?.productionType);
                                 setOrderStyleItems(res?.data?.orderItems?.map(item => item?.styleItemId) || []);
                             }}
@@ -363,7 +381,7 @@ const JobCardForm = ({
 
                                     // ✅ SET ORDER QTY
                                     setOrderQty(selectedOrderItem?.orderQty || "");
-
+                                    setTrackingType(selectedOrderItem?.trackingType || "");
                                     // ✅ SET SIZE BREAKUP
                                     setJobCardSizeDetails(
                                         selectedOrderItem?.sizeBreakup?.map((s) => ({
@@ -373,6 +391,11 @@ const JobCardForm = ({
                                             barcodeTo: s.barcodeTo || "",
                                         })) || []
                                     );
+                                    setBoardItems([]);
+                                    setSelectedProcesses([]);
+                                    setSelectedMachines([]);
+                                    setLaminations([]);
+                                    setVarnishes([]);
 
                                 }
                             }
@@ -388,7 +411,7 @@ const JobCardForm = ({
                                         onBlur={(e) => setOrderQty(e.target.value ? Number(e.target.value).toFixed(3) : "")} />
                                 </div>
                                 <div className="w-28">
-                                    <TextInput name="Tag/Card Ups" value={tagCardUps} setValue={setTagCardUps} readOnly={readOnly} className="w-full" onFocus={(e) => e.target.select()} />
+                                    <TextInput name="Tag/Card Ups" value={tagCardUps} setValue={setTagCardUps} readOnly={readOnly} className="w-full text-right" onFocus={(e) => e.target.select()} />
                                 </div>
                                 <div className="w-28">
                                     <TextInput name="Job Run Time" value={jobRunTime} setValue={setJobRunTime} readOnly={readOnly} className="w-full" onFocus={(e) => e.target.select()} />
@@ -424,7 +447,7 @@ const JobCardForm = ({
                     </div>
                 ) : (
                     <div className="flex justify-center items-center mt-2 gap-2 w-28">
-                        <div className="w-20 h-20 flex items-center justify-center border border-dashed border-slate-300 rounded text-slate-400 text-xs text-center px-2">
+                        <div className="w-20 h-20 flex items-center m-auto justify-center border border-dashed border-slate-300 rounded text-slate-400 text-xs text-center px-2">
                             QR appears after save
                         </div>
                     </div>
@@ -437,10 +460,10 @@ const JobCardForm = ({
         <div className="h-full overflow-auto">
             {
                 itemType !== "LABEL" && (
-                    <div className="flex  gap-x-2 items-start min-w-max">
+                    <div className="grid grid-cols-4  gap-x-2 items-start min-w-max">
 
                         {/* COL 1 — Board */}
-                        <div className="flex flex-col gap-2 w-[350px]">
+                        <div className="flex flex-col gap-2">
                             <SectionCard title="Board Quality">
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-3">
                                     {boardList?.map((item) => (
@@ -486,7 +509,7 @@ const JobCardForm = ({
                         </div>
 
                         {/* COL 2 — Process */}
-                        <div className="flex flex-col gap-2 w-[350px]">
+                        <div className="flex flex-col gap-2">
                             <SectionCard title="Process Details">
                                 <div className="grid grid-cols-2 gap-y-4 min-h-[165px]">
                                     {defaultList?.map((item) => (
@@ -503,7 +526,7 @@ const JobCardForm = ({
                         </div>
 
                         {/* COL 3 — Lamination + Varnish */}
-                        <div className="flex flex-col gap-2 w-[350px]">
+                        <div className="flex flex-col gap-2">
 
                             <SectionCard title="Varnish Details">
                                 {varnishList?.length > 0
@@ -521,7 +544,7 @@ const JobCardForm = ({
                         </div>
 
                         {/* COL 4 — Machine */}
-                        <div className="flex flex-col gap-2 w-[350px]">
+                        <div className="flex flex-col gap-2">
 
                             <SectionCard title="Machine Specifications">
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-4">
@@ -544,44 +567,20 @@ const JobCardForm = ({
                                     <div className="col-span-2">
 
                                         <Field label="Total Plate Sets">
-                                            <TextInput name="" value={totalPlateSets} setValue={setTotalPlateSets} readOnly={readOnly} className=" w-full" />
+                                            <TextInput name="" value={totalPlatesets} setValue={setTotalPlatesets} readOnly={readOnly} className=" w-full" />
                                         </Field>
                                     </div>
                                 </div>
                             </SectionCard>
-                            <SectionCard>
-                                <div className="flex-1 min-w-[120px]">
-                                    <label
-                                        className={`md:text-start block text-[11px] font-bold text-slate-700 mb-1`}
-                                    >
-                                        Remarks
-                                    </label>
-                                    <textarea name="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} readOnly={readOnly} className="w-full h-full focus:outline-none border-slate-300 border focus:ring-1 text-sm px-1 rounded-md focus:border-indigo-500" rows={3} />
+                            <SectionCard title="Size Details">
+                                <div className="flex-1 min-w-[120px] h-[70px] justify-center items-center">
+                                    <button onClick={() => setSizeModalOpen(true)} className="border w-auto  rounded-md text-[10px] bg-green-700 font-semibold uppercase tracking-wider text-white p-1">
+                                        View Size Details
+                                    </button>
                                 </div>
                             </SectionCard>
                         </div>
 
-                        {/* <div className="flex flex-col gap-2 ">
-                    <SectionCard title="QR Code">
-                        {docId && docId !== "New" ? (
-                            <div className="flex justify-center items-center gap-2">
-                                <QRCodeCanvas
-                                    ref={qrRef}
-                                    value={JSON.stringify({ id, docId })}
-                                    size={100}
-                                    className="border border-slate-200 rounded"
-                                />
-                                <span className="text-xs text-slate-400">Scan to identify order</span>
-                            </div>
-                        ) : (
-                            <div className="flex justify-center items-center gap-2">
-                                <div className="w-24 h-24 flex items-center justify-center border border-dashed border-slate-300 rounded text-slate-400 text-xs text-center px-2">
-                                    QR appears after save
-                                </div>
-                            </div>
-                        )}
-                    </SectionCard>
-                </div> */}
                     </div>
 
                 )
@@ -589,43 +588,288 @@ const JobCardForm = ({
             {
                 itemType === "LABEL" && (
                     <div className="flex items-start min-w-max mx-2">
-                        <div className="w-[400px]">
-                            <SectionCard title="Label Details">
-                                <div className="grid grid-cols-1 gap-x-3 gap-y-2 h-full">
-                                    <div className="w-40">
+                        <div className="w-full h-full">
+                            <SectionCard title="Label Details" className="max-w-full">
+                                <div className="flex gap-16">
 
-                                        <Field label="Label Quality">
-                                            <TextInput name="" value={labelQuality} setValue={setLabelQuality} readOnly={readOnly} className="w-full" />
-                                        </Field>
-                                    </div>
-                                    <div className="w-40">
-                                        <Field label="Block">
-                                            <TextInput name="" value={block} setValue={setBlock} readOnly={readOnly} className="w-full" />
-                                        </Field>
-                                    </div>
-                                    <div className="w-40">
-                                        <Field label="Label Qty">
-                                            <TextInput name="" value={orderQty} setValue={setOrderQty} readOnly={readOnly} type="number" className="w-full text-right" />
-                                        </Field>
-                                    </div>
-                                    <div className="w-40">
-                                        <Field label="Roll Qty">
-                                            <TextInput name="" value={rollQty} setValue={setRollQty} readOnly={readOnly} type="number" className="w-full text-right" />
-                                        </Field>
-                                    </div>
-                                    <div className="w-40">
+                                    <div className="grid grid-cols-1 gap-x-3 gap-y-2 h-full">
+                                        <div className="w-40">
 
-                                        <Field label="Cut & Seal">
-                                            <TextInput name="" value={cutAndSeal} setValue={setCutAndSeal} readOnly={readOnly} className="w-full" />
-                                        </Field>
+
+                                            <TextInput name="Label Quality" value={labelQuality} setValue={setLabelQuality} readOnly={readOnly} className="w-full" />
+
+                                        </div>
+                                        <div className="w-40">
+
+                                            <TextInput name="Block" value={block} setValue={setBlock} readOnly={readOnly} className="w-full" />
+
+                                        </div>
+                                        <div className="w-40">
+
+                                            <TextInput name="Label Qty" value={orderQty} setValue={setOrderQty} readOnly={true} type="number" className="w-full text-right" />
+
+                                        </div>
+                                        <div className="w-40">
+
+                                            <TextInput name="Roll Qty" value={rollQty} setValue={setRollQty} readOnly={readOnly} type="number" className="w-full text-right" />
+
+                                        </div>
+                                        <div className="w-40">
+
+
+                                            <TextInput name="Cut & Seal" value={cutAndSeal} setValue={setCutAndSeal} readOnly={readOnly} className="w-full" />
+
+                                        </div>
+
                                     </div>
-                                    <div className="flex-1 min-w-[120px]">
-                                        <label
-                                            className={`md:text-start block text-[11px] font-bold text-slate-700 mb-1`}
-                                        >
-                                            Remarks
-                                        </label>
-                                        <textarea name="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} readOnly={readOnly} className="w-full h-full focus:outline-none border-slate-300 border focus:ring-1 text-sm px-1 rounded-md focus:border-indigo-500" rows={3} />
+                                    <div>
+                                        {/* Main content area */}
+                                        <div className="bg-white px-4 py-1 shadow-sm">
+                                            <h3 className="text-[12px] font-medium text-slate-700 mb-3">
+                                                {trackingType === "Barcode"
+                                                    ? "Barcode wise Details"
+                                                    : trackingType ===
+                                                        "SizeTemplateBarcode"
+                                                        ? "Size + Barcode wise Details"
+                                                        : "Size wise Details"}
+                                            </h3>
+                                            <div className=" overflow-y-auto">
+                                                {/* --- BARCODE TYPE TABLE --- */}
+                                                {trackingType === "Barcode" && (
+                                                    <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
+                                                        <thead>
+                                                            <tr>
+                                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-11">
+                                                                    S.No
+                                                                </th>
+                                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
+                                                                    Barcode From
+                                                                </th>
+                                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
+                                                                    Barcode To
+                                                                </th>
+                                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-24">
+                                                                    Qty
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {jobCardSizeDetails?.map(
+                                                                (item, idx) => (
+                                                                    <tr
+                                                                        key={idx}
+                                                                        className="hover:bg-slate-50 transition-colors"
+
+                                                                    >
+                                                                        <td className="border-b border-r border-slate-200 px-1 py-0.5 text-center text-[11px] text-slate-500 font-medium">
+                                                                            {idx + 1}
+                                                                        </td>
+                                                                        <td className="border-b border-r border-slate-200 px-1">
+                                                                            <input
+                                                                                type="text"
+                                                                                className="w-full border-none bg-transparent px-2 text-[11px] outline-none focus:bg-white"
+                                                                                value={item.barcodeFrom}
+                                                                                disabled={true}
+                                                                                placeholder="From"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                                            <input
+                                                                                type="text"
+                                                                                className="w-full h-7 border-none bg-transparent px-2 text-[11px] outline-none focus:bg-white"
+                                                                                value={item.barcodeTo}
+                                                                                disabled={true}
+                                                                                placeholder="To"
+
+                                                                            />
+                                                                        </td>
+                                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                                            <input
+                                                                                type="number"
+                                                                                className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
+                                                                                value={item.qty}
+                                                                                disabled={true}
+                                                                            />
+                                                                        </td>
+                                                                    </tr>
+                                                                ),
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                )}
+
+                                                {/* --- SIZE TEMPLATE TYPE TABLE --- */}
+                                                {trackingType ===
+                                                    "SizeTemplate" && (
+                                                        <table className="w-[450px] border-separate border-spacing-0 border-t border-l border-slate-200">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-6">
+                                                                        S.No
+                                                                    </th>
+                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-40 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
+                                                                        Size
+                                                                    </th>
+                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
+                                                                        Qty
+                                                                    </th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {jobCardSizeDetails?.map(
+                                                                    (item, idx) => (
+                                                                        <tr
+                                                                            key={idx}
+                                                                            className="h-8 hover:bg-slate-50 transition-colors"
+                                                                        >
+                                                                            <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">
+                                                                                {idx + 1}
+                                                                            </td>
+                                                                            <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
+                                                                                {sizeList?.data?.find((s) => s.id === item.sizeId)
+                                                                                    ?.name || "All Items"}
+                                                                            </td>
+                                                                            <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                                                <input
+                                                                                    type="number"
+                                                                                    className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
+                                                                                    value={item.qty}
+                                                                                    disabled={true}
+
+                                                                                />
+                                                                            </td>
+                                                                        </tr>
+                                                                    ),
+                                                                )}
+                                                            </tbody>
+                                                        </table>
+                                                    )}
+
+                                                {/* --- SIZE TEMPLATE + BARCODE TYPE TABLE --- */}
+                                                {trackingType ===
+                                                    "SizeTemplateBarcode" && (
+                                                        <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-10">
+                                                                        S.No
+                                                                    </th>
+                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-28">
+                                                                        Size
+                                                                    </th>
+                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-32">
+                                                                        From
+                                                                    </th>
+                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-32">
+                                                                        To
+                                                                    </th>
+                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-20">
+                                                                        Qty
+                                                                    </th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {jobCardSizeDetails?.map(
+                                                                    (item, idx) => (
+                                                                        <tr
+                                                                            key={idx}
+                                                                            className="h-8 hover:bg-slate-50 transition-colors"
+                                                                        >
+                                                                            <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black ">
+                                                                                {idx + 1}
+                                                                            </td>
+                                                                            <td className="border-b border-r border-slate-200 px-2 py-0 text-[11px]  text-black truncate ">
+                                                                                {sizeList?.data?.find((s) => s.id === item.sizeId)
+                                                                                    ?.name || "All Items"}
+                                                                            </td>
+                                                                            <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                                                <input
+                                                                                    type="text"
+                                                                                    className="w-full h-7 border-none bg-transparent px-1 text-[11px] outline-none focus:bg-white"
+                                                                                    value={item.barcodeFrom}
+                                                                                    onChange={(e) =>
+                                                                                        handleSizeBreakupChange(
+                                                                                            idx,
+                                                                                            "barcodeFrom",
+                                                                                            e.target.value,
+                                                                                        )
+                                                                                    }
+                                                                                    disabled={readOnly}
+                                                                                    placeholder="From"
+                                                                                    onFocus={(e) => {
+                                                                                        e.target.select()
+                                                                                    }}
+                                                                                    autoFocus={idx == 0}
+
+                                                                                />
+                                                                            </td>
+                                                                            <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                                                <input
+                                                                                    type="text"
+                                                                                    className="w-full h-7 border-none bg-transparent px-1 text-[11px] outline-none focus:bg-white"
+                                                                                    value={item.barcodeTo}
+                                                                                    onChange={(e) =>
+                                                                                        handleSizeBreakupChange(
+                                                                                            idx,
+                                                                                            "barcodeTo",
+                                                                                            e.target.value,
+                                                                                        )
+                                                                                    }
+                                                                                    disabled={readOnly}
+                                                                                    placeholder="To"
+                                                                                    onFocus={(e) => {
+                                                                                        e.target.select()
+                                                                                    }}
+                                                                                />
+                                                                            </td>
+                                                                            <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                                                <input
+                                                                                    type="number"
+                                                                                    className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
+                                                                                    value={item.qty}
+                                                                                    onChange={(e) =>
+                                                                                        handleSizeBreakupChange(
+                                                                                            idx,
+                                                                                            "qty",
+                                                                                            e.target.value,
+                                                                                        )
+                                                                                    }
+                                                                                    disabled={readOnly}
+                                                                                    onBlur={(e) => {
+                                                                                        const value = parseFloat(
+                                                                                            e.target.value || 0,
+                                                                                        ).toFixed(3);
+                                                                                        handleSizeBreakupChange(idx, "qty", value);
+                                                                                    }}
+                                                                                    placeholder="0"
+                                                                                    onFocus={(e) => {
+                                                                                        e.target.select()
+                                                                                    }}
+                                                                                />
+                                                                            </td>
+                                                                        </tr>
+                                                                    ),
+                                                                )}
+                                                            </tbody>
+                                                        </table>
+                                                    )}
+
+                                                {(!jobCardSizeDetails ||
+                                                    jobCardSizeDetails.length === 0) && (
+                                                        <div className="text-center p-8 text-slate-400 text-sm font-medium italic">
+                                                            No items found for this tracking mode.
+                                                        </div>
+                                                    )}
+                                            </div>
+                                            <div className="flex-1 min-w-[120px] mt-5">
+                                                <label
+                                                    className={`md:text-start block text-[11px] font-bold text-slate-700 mb-1`}
+                                                >
+                                                    Remarks
+                                                </label>
+                                                <textarea name="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} readOnly={readOnly} className="w-full h-full focus:outline-none border-slate-300 border focus:ring-1 text-[11px] p-1 rounded-md focus:border-indigo-500 " rows={3} />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </SectionCard>
@@ -640,21 +884,71 @@ const JobCardForm = ({
     const footerContent = (
         <>{
             itemType !== "LABEL" && (
+                <div className="flex gap-2">
+                    <div className="w-3/4">
 
-                <ProcessRoutePanel
-                    selectedProcesses={selectedProcesses} laminations={laminations} varnishes={varnishes}
-                    defaultList={defaultList} laminationList={laminationList} varnishList={varnishList}
-                    processRoute={processRoute} setProcessRoute={setProcessRoute} readOnly={readOnly}
-                />
+                        <ProcessRoutePanel
+                            selectedProcesses={selectedProcesses} laminations={laminations} varnishes={varnishes}
+                            defaultList={defaultList} laminationList={laminationList} varnishList={varnishList}
+                            processRoute={processRoute} setProcessRoute={setProcessRoute} readOnly={readOnly}
+                        />
+                    </div>
+                    <div className="border border-slate-200 p-1 bg-white rounded-md shadow-sm w-1/4">
+                        <h2 className="font-medium text-indigo-600 text-[11px]">
+                            REMARKS
+                        </h2>
+                        <textarea
+                            readOnly={readOnly}
+                            value={remarks}
+                            onChange={(e) => {
+                                setRemarks(e.target.value);
+                            }}
+                            className="w-full h-11 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
+                            placeholder="Additional Remarks..."
+                            onKeyDown={(e) => {
+                                if (e.ctrlKey && e.key === "Enter") {
+                                    e.preventDefault();
+
+                                    const textarea = e.target;
+                                    const start = textarea.selectionStart;
+                                    const end = textarea.selectionEnd;
+
+                                    const newValue =
+                                        remarks.substring(0, start) + "\n" + remarks.substring(end);
+
+                                    setRemarks(newValue);
+
+                                    // ✅ Restore focus + cursor properly
+                                    requestAnimationFrame(() => {
+                                        textarea.focus();
+                                        textarea.setSelectionRange(start + 1, start + 1);
+                                    });
+                                }
+                            }}
+                        />
+                    </div>
+
+                </div>
+
             )
         }
             <div className="flex justify-between items-center mt-2">
                 <div className="flex gap-2 flex-wrap">
-                    <button onClick={() => saveData("close")} disabled={readOnly || isDisabled}
+                    <button onClick={() => saveData("close")} onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault()
+                            saveData("close")
+                        }
+                    }} disabled={readOnly || isDisabled}
                         className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium">
                         <HiOutlineRefresh className="w-3.5 h-3.5" /> Save & Close
                     </button>
-                    <button onClick={() => saveData("new")} disabled={readOnly || isDisabled}
+                    <button onClick={() => saveData("new")} onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault()
+                            saveData("new")
+                        }
+                    }} disabled={readOnly || isDisabled}
                         className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium">
                         <FiSave className="w-3.5 h-3.5" /> Save & New
                     </button>
@@ -680,11 +974,23 @@ const JobCardForm = ({
                 <div className="flex gap-2">
                     {id && readOnly && (
                         <button disabled={status === "PENDING" && !canApprove} onClick={() => setReadOnly(false)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault()
+                                    setReadOnly(false)
+                                }
+                            }}
                             className="bg-amber-500 text-white px-3 py-1.5 rounded hover:bg-amber-600 flex items-center gap-1.5 text-xs font-medium">
                             <FiEdit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                     )}
                     <button onClick={() => setPrintModalOpen(true)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                e.preventDefault()
+                                setPrintModalOpen(true)
+                            }
+                        }}
                         className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs">
                         <FiPrinter className="w-4 h-4 mr-2" /> Print
                     </button>
@@ -695,6 +1001,235 @@ const JobCardForm = ({
 
     return (
         <>
+            <Modal
+                isOpen={sizeModalOpen}
+                onClose={() => {
+                    setSizeModalOpen(false)
+                }}
+                widthClass="w-[750px]"
+            >
+                <div className="bg-slate-100 p-3 rounded-lg">
+                    {/* Header section like the reference image */}
+                    <div className="bg-white p-3 rounded-lg flex justify-between items-center mb-3 shadow-sm">
+                        <h3 className="text-[16px] font-bold text-slate-800">
+                            {trackingType === "Barcode"
+                                ? "Barcode wise Details"
+                                : trackingType ===
+                                    "SizeTemplateBarcode"
+                                    ? "Size + Barcode wise Details"
+                                    : "Size Wise Details"}
+                        </h3>
+                        <div className="flex gap-2">
+                            <button
+                                className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold transition-colors flex items-center gap-1 shadow-sm"
+                                onClick={() => setSizeModalOpen(false)}
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Main content area */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                        <div className="h-[220px] overflow-y-auto">
+                            {/* --- BARCODE TYPE TABLE --- */}
+                            {trackingType === "Barcode" && (
+                                <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
+                                    <thead>
+                                        <tr>
+                                            <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-11">
+                                                S.No
+                                            </th>
+                                            <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
+                                                Barcode From
+                                            </th>
+                                            <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
+                                                Barcode To
+                                            </th>
+                                            <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-24">
+                                                Qty
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {jobCardSizeDetails?.map(
+                                            (item, idx) => (
+                                                <tr
+                                                    key={idx}
+                                                    className="hover:bg-slate-50 transition-colors"
+                                                >
+                                                    <td className="border-b border-r border-slate-200 px-1 py-0.5 text-center text-[11px] text-slate-500 font-medium">
+                                                        {idx + 1}
+                                                    </td>
+                                                    <td className="border-b border-r border-slate-200 px-1">
+                                                        <input
+                                                            type="text"
+                                                            className="w-full border-none bg-transparent px-2 text-[11px] outline-none focus:bg-white"
+                                                            value={item.barcodeFrom}
+                                                            disabled={true}
+                                                            placeholder="From"
+                                                        />
+                                                    </td>
+                                                    <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                        <input
+                                                            type="text"
+                                                            className="w-full h-7 border-none bg-transparent px-2 text-[11px] outline-none focus:bg-white"
+                                                            value={item.barcodeTo}
+                                                            disabled={true}
+                                                        />
+                                                    </td>
+                                                    <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                        <input
+                                                            type="number"
+                                                            className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
+                                                            value={item.qty}
+                                                            disabled={true}
+                                                            placeholder="0"
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            ),
+                                        )}
+                                    </tbody>
+                                </table>
+                            )}
+
+                            {/* --- SIZE TEMPLATE TYPE TABLE --- */}
+                            {trackingType ===
+                                "SizeTemplate" && (
+                                    <table className="w-[450px] border-separate border-spacing-0 border-t border-l border-slate-200">
+                                        <thead>
+                                            <tr>
+                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-6">
+                                                    S.No
+                                                </th>
+                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-40 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
+                                                    Size
+                                                </th>
+                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
+                                                    Qty
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {jobCardSizeDetails?.map(
+                                                (item, idx) => (
+                                                    <tr
+                                                        key={idx}
+                                                        className="h-8 hover:bg-slate-50 transition-colors"
+                                                    >
+                                                        <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">
+                                                            {idx + 1}
+                                                        </td>
+                                                        <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
+                                                            {sizeList?.data?.find((s) => s.id === item.sizeId)
+                                                                ?.name || "All Items"}
+                                                        </td>
+                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                            <input
+                                                                type="number"
+                                                                className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
+                                                                value={item.qty}
+                                                                disabled={true}
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                ),
+                                            )}
+                                        </tbody>
+                                    </table>
+                                )}
+
+                            {/* --- SIZE TEMPLATE + BARCODE TYPE TABLE --- */}
+                            {trackingType ===
+                                "SizeTemplateBarcode" && (
+                                    <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
+                                        <thead>
+                                            <tr>
+                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-10">
+                                                    S.No
+                                                </th>
+                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-28">
+                                                    Size
+                                                </th>
+                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-32">
+                                                    From
+                                                </th>
+                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-32">
+                                                    To
+                                                </th>
+                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-20">
+                                                    Qty
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {jobCardSizeDetails?.map(
+                                                (item, idx) => (
+                                                    <tr
+                                                        key={idx}
+                                                        className="h-8 hover:bg-slate-50 transition-colors"
+                                                    >
+                                                        <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black ">
+                                                            {idx + 1}
+                                                        </td>
+                                                        <td className="border-b border-r border-slate-200 px-2 py-0 text-[11px]  text-black truncate ">
+                                                            {sizeList?.data?.find((s) => s.id === item.sizeId)
+                                                                ?.name || "All Items"}
+                                                        </td>
+                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                            <input
+                                                                type="text"
+                                                                className="w-full h-7 border-none bg-transparent px-1 text-[11px] outline-none focus:bg-white"
+                                                                value={item.barcodeFrom}
+                                                                onChange={(e) =>
+                                                                    handleSizeBreakupChange(
+                                                                        idx,
+                                                                        "barcodeFrom",
+                                                                        e.target.value,
+                                                                    )
+                                                                }
+                                                                disabled={readOnly}
+                                                                placeholder="From"
+                                                                onFocus={(e) => {
+                                                                    e.target.select()
+                                                                }}
+                                                                autoFocus={idx == 0}
+
+                                                            />
+                                                        </td>
+                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                            <input
+                                                                type="text"
+                                                                className="w-full h-7 border-none bg-transparent px-1 text-[11px] outline-none focus:bg-white"
+                                                                value={item.barcodeTo}
+                                                                disabled={true}
+                                                            />
+                                                        </td>
+                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                            <input
+                                                                type="number"
+                                                                className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
+                                                                value={item.qty}
+                                                                disabled={true}
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                ),
+                                            )}
+                                        </tbody>
+                                    </table>
+                                )}
+
+                            {!jobCardSizeDetails && (
+                                <div className="text-center p-8 text-slate-400 text-sm font-medium italic">
+                                    No size Details found for this Item.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </Modal>
             <Modal isOpen={approvalModal} onClose={() => setApprovalModal(false)} widthClass="w-[420px]">
                 <div className="space-y-4">
                     <h2 className={`text-base font-semibold ${actionType === "APPROVE" ? "text-green-700" : "text-blue-700"}`}>

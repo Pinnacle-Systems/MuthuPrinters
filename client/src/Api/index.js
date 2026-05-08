@@ -64,3 +64,4 @@ export const BOARD_API = "board";
 export const PROFORMA_INVOICE_API = "proformaInvoice";
 export const CURRENCY_API = "currency";
 export const BANK_API = "bank";
+export const PRODUCTION_ALLOCATION_API = "productionAllocation";

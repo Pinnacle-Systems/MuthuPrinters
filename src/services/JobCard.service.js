@@ -43,7 +43,7 @@ async function get(req) {
     dataPerPage,
     searchDocNo,
     searchDocDate,
-    searchOrderType,
+    searchProductionType,
     finYearId,
     searchCustomer,
   } = req.query;
@@ -73,7 +73,9 @@ async function get(req) {
           ]
         : undefined,
       docId: searchDocNo ? { contains: searchDocNo } : undefined,
-      orderType: searchOrderType ? { contains: searchOrderType } : undefined,
+      productionType: searchProductionType
+        ? { contains: searchProductionType }
+        : undefined,
       customer: {
         name: searchCustomer ? { contains: searchCustomer } : undefined,
       },
@@ -322,7 +324,7 @@ async function create(body) {
       isFrontBackMachine,
       plateId,
       dieId,
-      // totalPlateSets,
+      totalPlatesets,
       remarks,
       designerId,
       tagCardUps,
@@ -418,7 +420,7 @@ async function create(body) {
 
           plateId: plateId ? Number(plateId) : null,
           dieId: dieId ? Number(dieId) : null,
-          // totalPlateSets: totalPlateSets || null,
+          totalPlatesets: totalPlatesets || null,
 
           remarks: remarks || null,
           designerId: designerId ? Number(designerId) : null,
@@ -575,7 +577,7 @@ async function update(id, body) {
       isFrontBackMachine,
       plateId,
       dieId,
-      // totalPlateSets,
+      totalPlatesets,
       remarks,
       designerId,
       tagCardUps,
@@ -660,7 +662,7 @@ async function update(id, body) {
           isFrontBackMachine: Boolean(isFrontBackMachine),
           plateId: plateId ? parseInt(plateId) : null,
           dieId: dieId ? parseInt(dieId) : null,
-          // totalPlateSets: totalPlateSets || null,
+          totalPlatesets: totalPlatesets || null,
           remarks: remarks || null,
           designerId: designerId ? parseInt(designerId) : null,
           tagCardUps: tagCardUps || null,
