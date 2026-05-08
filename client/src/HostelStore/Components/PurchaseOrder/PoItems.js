@@ -109,8 +109,6 @@ const PoItems = ({
   termsRef,
   gsmList,
 }) => {
-  console.log(poItems, "poItemscheck");
-
   const gridWrapperRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -139,7 +137,6 @@ const PoItems = ({
   const visibleRows = poItems
     .map((row, originalIndex) => ({ row, originalIndex }))
     .filter(({ row }) => isVisibleRow(row));
-  console.log(visibleRows, "visibleRows");
 
   const syncRowPatch = (index, patch) => {
     setPoItems((prevRows) => {

@@ -33,7 +33,7 @@ const JobCardReport = ({
     const [serachDocNo, setSerachDocNo] = useState("");
     const [searchDate, setSearchDate] = useState("");
     const [searchCustomer, setSearchCustomer] = useState("");
-    const [searchOrderType, setSearchOrderType] = useState("");
+    const [searchProductionType, setSearchProductionType] = useState("");
 
     const [totalCount, setTotalCount] = useState(0);
     const [currentPageNumber, setCurrentPageNumber] = useState(1);
@@ -50,7 +50,7 @@ const JobCardReport = ({
         serachDocNo,
         searchDate,
         searchCustomer,
-        searchOrderType,
+        searchProductionType,
     };
 
     useEffect(() => {
@@ -59,7 +59,7 @@ const JobCardReport = ({
         serachDocNo,
         searchDate,
         searchCustomer,
-        searchOrderType,
+        searchProductionType,
     ]);
 
     const companyId = secureLocalStorage.getItem(
@@ -357,14 +357,14 @@ const JobCardReport = ({
                                         </th>
 
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
-                                            <div>Order No</div>
+                                            <div>Job Card No</div>
 
                                         </th>
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
-                                            <div>Order Date</div>
+                                            <div>Job Card Date</div>
                                         </th>
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-40">
-                                            <div>Order Type</div>
+                                            <div>Production Type</div>
                                         </th>
 
                                         <th className="w-80  px-3   font-medium text-[13px] text-gray-900  text-center ">
@@ -430,9 +430,9 @@ const JobCardReport = ({
                                                 type="text"
                                                 className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
                                                 placeholder="Search"
-                                                value={searchOrderType}
+                                                value={searchProductionType}
                                                 onChange={(e) => {
-                                                    setSearchOrderType(e.target.value);
+                                                    setSearchProductionType(e.target.value);
                                                 }}
                                             />
                                         </th>
@@ -483,7 +483,7 @@ const JobCardReport = ({
                                                         {getDateFromDateTimeToDisplay(dataObj.docDate)}
                                                     </td>
                                                     <td className="py-1.5 text-left  ">
-                                                        {dataObj.orderType}{" "}
+                                                        {dataObj.productionType}{" "}
                                                     </td>
 
                                                     <td className="py-1.5 text-left">

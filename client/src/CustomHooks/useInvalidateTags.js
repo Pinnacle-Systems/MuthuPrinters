@@ -182,6 +182,14 @@ const useInvalidateTags = () => {
       type: `approvalMaster/invalidateTags`,
       payload: ["Approval"],
     },
+    {
+      type: `currencyMaster/invalidateTags`,
+      payload: ["Currencies"],
+    },
+    {
+      type: `bankMaster/invalidateTags`,
+      payload: ["bank"],
+    },
   ];
 
   function dispatchInvalidate() {

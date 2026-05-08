@@ -5,11 +5,20 @@ import {
   create as _create,
   update as _update,
   remove as _remove,
+  getRefList as _getRefList,
 } from "../services/orderEntry.service.js";
 
 async function get(req, res, next) {
   try {
     res.json(await _get(req));
+  } catch (err) {
+    console.error(`Error `, err.message);
+  }
+}
+
+async function getRefList(req, res, next) {
+  try {
+    res.json(await _getRefList(req));
   } catch (err) {
     console.error(`Error `, err.message);
   }
@@ -81,4 +90,4 @@ async function remove(req, res, next) {
   }
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove, getRefList };

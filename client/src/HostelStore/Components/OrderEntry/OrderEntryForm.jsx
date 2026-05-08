@@ -1,8 +1,11 @@
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 
 import {
+    CheckBox,
+    CheckBoxNew,
     DateInputNew,
     DropdownInput,
+    DropdownNew,
     ReusableInput,
     TextInput,
 } from "../../../Inputs";
@@ -19,6 +22,7 @@ import { toast } from "react-toastify";
 import { FiCheck, FiEdit2, FiSave, FiSend } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
+import { TransactionLayout } from "../../../Basic/components/Reuseable";
 import { dropDownListObject } from "../../../Utils/contructObject";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { PartyMaster } from "../index.js";
@@ -26,7 +30,7 @@ import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import Modal from "../../../UiComponents/Modal/index.js";
 import { getImageUrlPath } from "../../../Constants/index.js";
 import { Plus } from "lucide-react";
-import { useAddOrderEntryMutation, useGetOrderEntryByIdQuery, useUpdateOrderEntryMutation } from "../../../redux/uniformService/OrderEntryService.js";
+import { useAddOrderEntryMutation, useGetOrderEntryByIdQuery, useGetOrderEntryQuery, useGetRefListQuery, useUpdateOrderEntryMutation } from "../../../redux/uniformService/OrderEntryService.js";
 import { QRCodeCanvas } from "qrcode.react";
 import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFooter.jsx";
 import { PDFViewer } from "@react-pdf/renderer";
@@ -35,12 +39,16 @@ import { FiFileText, FiPrinter } from "react-icons/fi";
 import OrderItems from "./OrderItems.jsx";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
-import { useGetUnitOfMeasurementMasterQuery } from "../../../redux/uniformService/UnitOfMeasurementServices.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoServices.js";
 import { useGetUomQuery } from "../../../redux/services/UomMasterService.js";
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
+import ProformaInvoiceApi, { useGetPIListQuery, useLazyGetProformaInvoiceByIdQuery } from "../../../redux/uniformService/ProformaInvoiceService.js";
+import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
+import { useGetSizeTemplateQuery } from "../../../redux/services/SizeTemplateMaster.js";
+import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
+import { useDispatch } from "react-redux";
 
 const OrderEntryForm = ({
     onClose,
@@ -56,7 +64,6 @@ const OrderEntryForm = ({
     branchData
 }) => {
     const today = new Date();
-
     const [docDate, setDocDate] = useState(
         moment.utc(today).format("YYYY-MM-DD"),
     );
@@ -84,12 +91,16 @@ const OrderEntryForm = ({
     const [actionType, setActionType] = useState("");
     const [approvalRemarks, setApprovalRemarks] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
+    const [proFormaId, setProFormaId] = useState("");
+    const [refNo, setRefNo] = useState("");
+    const [isRepeatedPI, setIsRepeatedPI] = useState(false);
+    const dispatch = useDispatch();
     const qrRef = useRef(null);
     const customerRef = useRef(null);
     const childRecord = useRef(0);
+    const requirementRef = useRef(null);
 
     const [dispatchInvalidate] = useInvalidateTags();
-
     const { userId, finYearId, branchId, companyId } = getCommonParams();
     const params = {
         branchId,
@@ -108,10 +119,21 @@ const OrderEntryForm = ({
     const { data: uomList } = useGetUomQuery({ params });
     const { data: sizeList } = useGetSizeMasterQuery({ params });
     const { data: gsmList } = useGetGsmMasterQuery({ params });
+    const { data: PIList } = useGetPIListQuery({ params: { companyId, branchId } });
+    const { data: itemGroupList } = useGetItemGroupMasterQuery({ params });
+    const { data: sizeTemplateList } = useGetSizeTemplateQuery({
+        params: { companyId },
+    });
+    const { data: hsnList } = useGetHsnMasterQuery({ params });
+    const { data: refList } = useGetRefListQuery({
+        params: { branchId, isRefDistinct: "true" },
+    });
 
     const [addData] = useAddOrderEntryMutation();
     const [updateData] = useUpdateOrderEntryMutation();
     const [addApprovalStatus] = useAddApprovalStausMutation();
+    const [getPIById] = useLazyGetProformaInvoiceByIdQuery();
+
     const status = singleData?.data?.approvalStatus?.status;
     const isDisabled = (status === "APPROVED" || status === "PENDING") && !canApprove;
 
@@ -140,8 +162,10 @@ const OrderEntryForm = ({
             setTermsId(data?.termsId || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
             setOrderItems(data?.orderItems || []);
-            // setReadOnly((["PENDING", "APPROVED"].includes(status) && !canApprove) || readOnly);
             setProductionType(data?.productionType || "SAMPLE");
+            setProFormaId(data?.proFormaId || "");
+            setRefNo(data?.refNo || "");
+            setIsRepeatedPI(data?.isRepeatedPI || false);
         },
         [id],
     );
@@ -173,6 +197,9 @@ const OrderEntryForm = ({
         termsId,
         docId,
         orderItems: orderItems?.filter((i) => i.styleItemId),
+        proFormaId,
+        refNo,
+        isRepeatedPI
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -238,6 +265,7 @@ const OrderEntryForm = ({
                         }
                     },
                 });
+                dispatch(ProformaInvoiceApi.util.invalidateTags(["proformaInvoice"]));
             }
         } catch (error) {
             console.log("handle", error);
@@ -266,21 +294,31 @@ const OrderEntryForm = ({
 
     const validateRows = (items) => {
         const errors = [];
-
+        const seen = new Set();
         items.forEach((item, index) => {
-            if (!item.orderQty || Number(item.orderQty) <= 0) {
-                errors.push(`Row ${index + 1}: Order Qty must be greater than 0`);
-            }
+
             if (!item.styleItemId) {
                 errors.push(`Row ${index + 1}: Style is required`);
             }
-            if (!item.sizeId) {
-                errors.push(`Row ${index + 1}: Size is required`);
+            if (!item.itemGroupId) {
+                errors.push(`Row ${index + 1}: Item Group is required`);
+            }
+            if (!item.hsnId) {
+                errors.push(`Row ${index + 1}: HSN is required`);
             }
             if (!item.uomId) {
                 errors.push(`Row ${index + 1}: UOM is required`);
             }
 
+            if (!item.orderQty || Number(item.orderQty) <= 0) {
+                errors.push(`Row ${index + 1}: Order Qty must be greater than 0`);
+            }
+            const key = `${item.styleItemId}_${item.uomId}_${item.itemGroupId}`;
+            if (seen.has(key)) {
+                errors.push(`Row ${index + 1}: Duplicate item found`);
+            } else {
+                seen.add(key);
+            }
         });
 
         return errors;
@@ -289,10 +327,12 @@ const OrderEntryForm = ({
     const validateData = (data) => {
         const items = data?.orderItems || [];
         const checks = [
-            { condition: !data.orderType, title: "Order Type is required!" },
-            { condition: !data.productionType, title: "Production Type is required!" },
-            { condition: !data.deliveryDate, title: "Delivery Date is required!" },
             { condition: !data.customerId, title: "Customer is required!" },
+            { condition: !data.orderType, title: "Order Type is required!" },
+            { condition: data.orderType === "AGAINSTPI" && !data.proFormaId, title: "PI No is required!" },
+            { condition: !data.productionType, title: "Production Type is required!" },
+            { condition: data.productionType === "BULK" && !data.refNo, title: "RefNo is required!" },
+            { condition: !data.deliveryDate, title: "Delivery Date is required!" },
             { condition: items.length === 0, title: "Order Items are required!" },
             {}
         ];
@@ -458,6 +498,36 @@ const OrderEntryForm = ({
             setActionLoading(false);
         }
     };
+
+    const fillWithDefaultRows = (items, total = 14) => {
+        const EMPTY_ROW = {
+            styleItemId: "",
+            uomId: "",
+            hsnId: "",
+            orderQty: "",
+            itemGroupId: "",
+            type: "",
+            sizeBreakup: [],
+            trackingType: "None",
+        };
+
+        const filled = [...items];
+
+        if (filled.length < total) {
+            const remaining = total - filled.length;
+            for (let i = 0; i < remaining; i++) {
+                filled.push({ ...EMPTY_ROW });
+            }
+        }
+
+        return filled;
+    };
+
+    // useEffect(() => {
+    //     if (!id) {
+    //         setOrderItems(fillWithDefaultRows([]));
+    //     }
+    // }, [id]);
 
     return (
         <>
@@ -854,352 +924,411 @@ const OrderEntryForm = ({
                     </PDFViewer>
                 </Modal>
             )}
-            <div className="w-full  mx-auto rounded-md shadow-lg px-2 py-1 overflow-y-auto">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-lg font-bold flex items-center gap-2">
-                        Order Entry
-                        <ModeChip id={id} readOnly={readOnly} />
-                    </h1>
-                    <button
-                        onClick={() => {
-                            onClose();
-                        }}
-                        className="text-indigo-600 hover:text-indigo-700"
-                        title="Back to Report"
-                    >
-                        <IoArrowBackCircleSharp className="w-7 h-7" />
-                    </button>
-                </div>
-            </div>
-            <div className="space-y-2 py-2" onKeyDown={handleKeyDown}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">Basic Details</h2>
-                        <div className="grid grid-cols-2 gap-1">
-                            <ReusableInput
-                                label="Order Entry No"
-                                readOnly
-                                value={docId}
-                            />
-                            <ReusableInput
-                                label="Order Entry Date"
-                                value={docDate}
-                                type={"date"}
-                                required={true}
-                                readOnly={true}
-                                disabled
-                            />
-
-                        </div>
-                    </div>
-
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">Order Details</h2>
-                        <div className="grid grid-cols-2 gap-1 ">
-                            <DropdownInput
-                                name="Order Type"
-                                options={orderTypes}
-                                value={orderType}
-                                setValue={(value) => {
-                                    setOrderType(value);
-                                }}
-                                required={true}
-                                readOnly={readOnly}
-                                disabled={childRecord.current > 0 || readOnly}
-                                ref={customerRef}
-                            />
-                            <DropdownInput
-                                name="Production Type"
-                                options={productionTypes}
-                                value={productionType}
-                                setValue={(value) => {
-                                    setProductionType(value);
-                                }}
-                                required={true}
-                                readOnly={readOnly}
-                                disabled={childRecord.current > 0 || readOnly}
-                            />
-
-                            <div className="w-28">
-                                <DateInputNew
-                                    name="Delivery Date"
-                                    value={deliveryDate}
-                                    setValue={setDeliveryDate}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    type={"date"}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">
-                            Customer Details
-                        </h2>
-                        <div className="grid grid-cols-2 gap-1">
-                            <div className="col-span-2">
-                                <DropdownWithModal
-                                    name="Customer"
-                                    options={dropDownListObject(
-                                        id
-                                            ? customerList?.data?.filter((item) => item?.isCustomer)
-                                            : customerList?.data?.filter(
-                                                (item) => item?.active && item?.isCustomer,
-                                            ),
-                                        "name",
-                                        "id",
-                                    )}
-                                    value={customerId}
-                                    setValue={setCustomerId}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    className={`w-[150px]`}
-                                    addNewLabel="+ Add New Customer"
-                                    childComponent={PartyMaster}
-                                    addNewModalWidth="w-[90%] h-[95%]"
-                                    disabled={childRecord.current > 0 || readOnly}
-                                />
-                            </div>
-                            <TextInput
-                                name="Contact Person"
-                                placeholder="Contact name"
-                                value={findFromList(
-                                    customerId,
-                                    customerList?.data,
-                                    "contactPersonName",
-                                )}
-                                disabled={true}
-                            />
-
-                            <TextInput
-                                name="Phone"
-                                placeholder="Contact name"
-                                value={findFromList(
-                                    customerId,
-                                    customerList?.data,
-                                    "contactNumber",
-                                )}
-                                disabled={true}
-                            />
-                        </div>
-                    </div>
-                    <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm col-span-1">
-                        <h2 className="font-medium text-slate-700 mb-1 text-xs">QR Code</h2>
-                        <div className="flex flex-col items-center justify-center gap-2">
-                            {docId && docId !== "New" ? (
-                                <>
-                                    <QRCodeCanvas
-                                        ref={qrRef}
-                                        value={JSON.stringify({ id, docId })}
-                                        size={90}
-                                        className="border border-slate-200 rounded"
-                                    />
-                                    <span className="text-xs text-slate-400">Scan to identify order</span>
-                                </>
-                            ) : (
-                                <div className="w-24 h-24 flex items-center justify-center border border-dashed border-slate-300 rounded text-slate-400 text-xs text-center px-2">
-                                    QR appears after save
+            <TransactionLayout
+                title="Order Entry"
+                badge={<ModeChip id={id} readOnly={readOnly} />}
+                closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
+                onClose={onClose}
+                onKeyDown={handleKeyDown}
+                header={
+                    <div className="flex flex-col xl:flex-row gap-1">
+                        <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                            <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Basic Details</h2>
+                            <div className="flex gap-2">
+                                <div className="w-36">
+                                    <TextInput name="ORD No" value={docId} disabled={true} />
                                 </div>
-                            )}
+                                <div className="w-32">
+                                    <DateInputNew
+                                        name="ORD Date"
+                                        value={docDate}
+                                        setValue={setDocDate}
+                                        disabled={true}
+                                        required={true}
+                                        type="date"
+                                    />
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div className="border border-slate-200 p-2 py-3 bg-white rounded-md shadow-sm gap-x-4 flex">
-                    <div className="w-1/2 px-2">
-                        <fieldset className="">
-                            <legend className="font-medium text-slate-700 mb-2 text-xs">Goods Details</legend>
-                            <OrderItems
-                                orderItems={orderItems}
-                                setOrderItems={setOrderItems}
-                                readOnly={readOnly || childRecord.current > 0}
-                                styleItemList={styleItemList}
-                                sizeList={sizeList}
-                                uomList={uomList}
-                                gsmList={gsmList}
-                                id={id}
-                            />
-                        </fieldset>
-                    </div>
+                        <div className=" w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                            <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                                Customer Details
+                            </h2>
+                            <div className="grid grid-cols-2 md:grid-cols-2 gap-2">
+                                <div className="md:col-span-2">
+                                    <DropdownWithModal
+                                        name="Customer"
+                                        options={dropDownListObject(
+                                            id
+                                                ? customerList?.data?.filter((item) => item?.isCustomer)
+                                                : customerList?.data?.filter((item) => item?.active && item?.isCustomer),
+                                            "name",
+                                            "id",
+                                        )}
+                                        value={customerId}
+                                        setValue={setCustomerId}
+                                        required={true}
+                                        readOnly={readOnly}
+                                        className={`w-full`}
+                                        addNewLabel="+ Add New Customer"
+                                        childComponent={PartyMaster}
+                                        addNewModalWidth="w-[90%] h-[95%]"
+                                        disabled={childRecord.current > 0 || readOnly}
+                                        ref={customerRef}
+                                        openOnFocus={true}
+                                    />
+                                </div>
+                                <div className="">
+                                    <TextInput
+                                        name="Contact Person"
+                                        placeholder="Contact name"
+                                        value={findFromList(customerId, customerList?.data, "contactPersonName")}
+                                        disabled={true}
+                                    />
+                                </div>
+                                <div className="">
+                                    <TextInput
+                                        name="Phone"
+                                        placeholder="Contact number"
+                                        value={findFromList(customerId, customerList?.data, "contactNumber")}
+                                        disabled={true}
+                                        className="w-20"
+                                    />
+                                </div>
+                            </div>
+                        </div>
 
-                </div>
+                        <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                            <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Order Details</h2>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                <DropdownInput
+                                    name="Order Type"
+                                    options={orderTypes}
+                                    value={orderType}
+                                    setValue={(value) => setOrderType(value)}
+                                    required={true}
+                                    readOnly={readOnly}
+                                    disabled={childRecord.current > 0 || readOnly}
+                                    beforeChange={() => {
+                                        setProFormaId("");
+                                    }}
+                                />
+                                <div className="col-span-1">
 
-            </div>
-            <ReusableFormFooter
-                sections={[
-                    {
-                        title: "Customer Requirements",
-                        value: requirements,
-                        onChange: setRequirements,
-                        placeholder: "Enter requirements...",
-                        readOnly: readOnly
-                    },
-                    {
-                        title: "Remarks",
-                        value: remarks,
-                        onChange: setRemarks,
-                        placeholder: "Additional notes...",
-                        readOnly: readOnly
-                    },
-                ]}
-                hasSummaryTitle="Summary"
-                totalsRows={[
-                    {
-                        key: "orderType",
-                        label: "Order Type",
-                        value: orderType,
-                        summaryColumn: "left",
-                    },
-                    {
-                        key: "orderQty",
-                        label: "Order Qty",
-                        value: orderItems?.reduce((acc, item) => {
-                            const qty = parseFloat(item.orderQty) || 0;
-                            return acc + qty;
-                        }, 0).toFixed(2),
-                        summaryColumn: "left",
-                    },
-                ]}
-            />
-            <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
-                {/* Left Buttons */}
-                <div className="flex gap-2 flex-wrap">
-                    <button
-                        onClick={() => saveData("close")}
-                        disabled={readOnly || isDisabled}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                e.preventDefault();
-                                saveData("close");
-                                e.stopPropagation();
-                            }
-                        }}
-                        className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                    >
-                        <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                        Save & Close
-                    </button>
-                    <button
-                        onClick={() => saveData("new")}
-                        disabled={readOnly || isDisabled}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                saveData("new");
-                            }
-                        }}
-                        className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                    >
-                        <FiSave className="w-4 h-4 mr-2" />
-                        Save & New
-                    </button>
-                    {
-                        status === "REJECTED" && (
+                                    <DropdownNew
+                                        name="PI No"
+                                        dataList={PIList?.data?.filter((item) => id ? item?.customerId === customerId : isRepeatedPI ? item?.customerId === customerId && item?.hasBulk : item?.customerId === customerId && !item?.hasBulk)}
+                                        value={proFormaId}
+                                        setValue={setProFormaId}
+                                        required={orderType === "AGAINSTPI"}
+                                        readOnly={readOnly || orderType === "GENERAL"}
+                                        disabled={readOnly || orderType === "GENERAL"}
+                                        otherField={"docId"}
+                                        beforeChange={async (selectedValue) => {
+                                            if (!selectedValue) {
+                                                setOrderItems(fillWithDefaultRows([]));
+                                                return;
+                                            }
 
-                            <button
-                                onClick={() => saveData("close", { submitApproval: true })}
-                                disabled={readOnly}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        saveData("close", { submitApproval: true });
-                                    }
-                                }}
-                                title="Submit Approval"
-                                className="bg-green-700 text-white px-2 py-1 rounded hover:bg-green-800 flex items-center text-xs"
-                            >
-                                <FiSend className="w-4 h-4" />
+                                            const res = await getPIById(selectedValue?.id).unwrap();
 
-                            </button>
-                        )
-                    }
-                    {
-                        (id && status === "PENDING" && canApprove) && (
-                            <button
-                                onClick={() => {
-                                    handleApprovalAction("REJECT")
-                                }}
-                                disabled={readOnly}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleApprovalAction("REJECT");
-                                    }
-                                }}
-                                title="Send Back for Review"
-                                className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center text-xs"
-                            >
-                                <MdKeyboardDoubleArrowLeft className="w-4 h-4" />
-                            </button>
-                        )
-                    }
-                    {
-                        (id && status === "PENDING" && canApprove) && (
-                            <button
-                                onClick={() => {
-                                    handleApprovalAction("APPROVE")
-                                }}
-                                disabled={readOnly}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleApprovalAction("APPROVE");
-                                    }
-                                }}
-                                title="Approve"
-                                className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 flex items-center text-xs"
-                            >
-                                <FiCheck className="w-4 h-4" />
-                            </button>
-                        )
-                    }
+                                            const mappedItems = Object.values(
+                                                (res?.data?.items || []).reduce((acc, item) => {
+                                                    const key = item.styleItemId;
 
-                </div>
+                                                    if (!acc[key] || acc[key].quoteVersion < item.quoteVersion) {
+                                                        acc[key] = item;
+                                                    }
 
-                <div className="flex gap-2 flex-wrap">
-                    {!id ||
-                        (readOnly && (
-                            <button
-                                className="bg-yellow-600 text-white px-4 py-1 rounded hover:bg-yellow-700 flex items-center text-xs"
-                                onClick={() => setReadOnly(false)}
-                                disabled={isDisabled}
-                            >
-                                <FiEdit2 className="w-4 h-4 mr-2" />
-                                Edit
-                            </button>
-                        ))}
-                    {id && (
-                        <button
-                            onClick={() => {
-                                if (qrRef.current) {
-                                    setQrCodeDataUrl(qrRef.current.toDataURL("image/png"));
+                                                    return acc;
+                                                }, {})
+                                            ).sort((a, b) => a.id - b.id).map((item) => ({
+                                                styleItemId: item.styleItemId,
+                                                orderQty: item.qty || "",
+                                                sizeId: item.sizeId || "",
+                                                uomId: item.uomId || "",
+                                                gsmId: item.gsmId || "",
+                                                hsnId: item.hsnId || "",
+                                                sizeBreakup: [],
+                                                trackingType: "None",
+                                                itemGroupId: item.StyleItem?.itemGroupId,
+                                            })) || [];
+
+                                            setOrderItems(fillWithDefaultRows(mappedItems));
+                                        }}
+                                    />
+                                </div>
+                                <DropdownInput
+                                    name="Production Type"
+                                    options={productionTypes}
+                                    value={productionType}
+                                    setValue={(value) => setProductionType(value)}
+                                    required={true}
+                                    readOnly={readOnly}
+                                    disabled={childRecord.current > 0 || readOnly}
+                                    beforeChange={() => {
+                                        setRefNo("");
+                                    }}
+                                />
+                                {
+                                    productionType === "SAMPLE" ? (
+                                        <TextInput
+                                            name="Ref No"
+                                            value={refNo}
+                                            setValue={setRefNo}
+                                            disabled={readOnly || productionType === "SAMPLE"}
+                                            required={productionType === "BULK"}
+                                        />
+                                    ) : (
+                                        <DropdownNew
+                                            name="Ref No"
+                                            dataList={refList?.data?.filter((item) => item?.customerId === customerId)}
+                                            value={refNo}
+                                            setValue={setRefNo}
+                                            required={productionType === "BULK"}
+                                            readOnly={readOnly}
+                                            disabled={readOnly}
+                                            otherField={"refNo"}
+                                            otherValue={"refNo"}
+                                        />
+                                    )
                                 }
-                                setPrintModalOpen(true);
-                            }}
-                            className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs"
-                        >
-                            <FiFileText className="w-4 h-4 mr-2" />
-                            PDF Export
-                        </button>
-                    )}
-                    {
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setSelectedAttachmentIndex(null);
-                                setAttachmentModal(true);
-                            }}
-                            className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
-                        >
-                            📎 Upload
-                        </button>
-                    }
-                </div>
-            </div>
+
+                                <div className="w-28">
+
+                                    <DateInputNew
+                                        name="Delivery Date"
+                                        value={deliveryDate}
+                                        setValue={setDeliveryDate}
+                                        required={true}
+                                        readOnly={readOnly}
+                                        type={"date"}
+                                    />
+                                </div>
+
+                                <div className="m-2 p-0">
+
+                                    <CheckBoxNew
+                                        name="Repeated PI"
+                                        readOnly={readOnly}
+                                        value={isRepeatedPI}
+                                        setValue={setIsRepeatedPI}
+                                        disabled={readOnly || childRecord.current > 0}
+                                        className="text-[11px] font-medium"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+                }
+                detailsLayout="default"
+                detailsLayouts={["default"]}
+                gridItems={
+                    <OrderItems
+                        orderItems={orderItems}
+                        setOrderItems={setOrderItems}
+                        readOnly={readOnly}
+                        styleItemList={styleItemList}
+                        sizeList={sizeList}
+                        uomList={uomList}
+                        gsmList={gsmList}
+                        id={id}
+                        itemGroupList={itemGroupList}
+                        sizeTemplateList={sizeTemplateList}
+                        hsnList={hsnList}
+                        requirementRef={requirementRef}
+                    />
+                }
+                footer={
+                    <>
+                        <ReusableFormFooter
+                            sections={[
+                                {
+                                    title: "Customer Requirements",
+                                    value: requirements,
+                                    onChange: setRequirements,
+                                    placeholder: "Enter requirements...",
+                                    readOnly: readOnly,
+                                    ref: requirementRef
+                                },
+                                {
+                                    title: "Remarks",
+                                    value: remarks,
+                                    onChange: setRemarks,
+                                    placeholder: "Additional notes...",
+                                    readOnly: readOnly
+                                },
+                            ]}
+                            hasSummaryTitle="Summary"
+                            totalsRows={[
+                                {
+                                    key: "orderType",
+                                    label: "Order Type",
+                                    value: orderType,
+                                    summaryColumn: "left",
+                                },
+                                {
+                                    key: "orderQty",
+                                    label: "Order Qty",
+                                    value: orderItems?.reduce((acc, item) => {
+                                        const qty = parseFloat(item.orderQty) || 0;
+                                        return acc + qty;
+                                    }, 0).toFixed(2),
+                                    summaryColumn: "left",
+                                },
+                            ]}
+                        />
+                        <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
+                            {/* Left Buttons */}
+                            <div className="flex gap-2 flex-wrap">
+                                {
+                                    !isDisabled && (
+                                        <>
+
+                                            <button
+                                                onClick={() => saveData("close")}
+                                                disabled={readOnly || isDisabled}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        saveData("close");
+                                                        e.stopPropagation();
+                                                    }
+                                                }}
+                                                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                            >
+                                                <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                                                Save & Close
+                                            </button>
+                                            <button
+                                                onClick={() => saveData("new")}
+                                                disabled={readOnly || isDisabled}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        saveData("new");
+                                                    }
+                                                }}
+                                                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                            >
+                                                <FiSave className="w-4 h-4 mr-2" />
+                                                Save & New
+                                            </button>
+                                        </>
+                                    )
+                                }
+                                {
+                                    status === "REJECTED" && (
+
+                                        <button
+                                            onClick={() => saveData("close", { submitApproval: true })}
+                                            disabled={readOnly}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    saveData("close", { submitApproval: true });
+                                                }
+                                            }}
+                                            title="Submit Approval"
+                                            className="bg-green-700 text-white px-2 py-1 rounded hover:bg-green-800 flex items-center text-xs"
+                                        >
+                                            <FiSend className="w-4 h-4" />
+
+                                        </button>
+                                    )
+                                }
+                                {
+                                    (id && status === "PENDING" && canApprove) && (
+                                        <button
+                                            onClick={() => {
+                                                handleApprovalAction("REJECT")
+                                            }}
+                                            disabled={readOnly}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    handleApprovalAction("REJECT");
+                                                }
+                                            }}
+                                            title="Send Back for Review"
+                                            className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center text-xs"
+                                        >
+                                            <MdKeyboardDoubleArrowLeft className="w-4 h-4" />
+                                        </button>
+                                    )
+                                }
+                                {
+                                    (id && status === "PENDING" && canApprove) && (
+                                        <button
+                                            onClick={() => {
+                                                handleApprovalAction("APPROVE")
+                                            }}
+                                            disabled={readOnly}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    handleApprovalAction("APPROVE");
+                                                }
+                                            }}
+                                            title="Approve"
+                                            className="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 flex items-center text-xs"
+                                        >
+                                            <FiCheck className="w-4 h-4" />
+                                        </button>
+                                    )
+                                }
+
+                            </div>
+
+                            <div className="flex gap-2 flex-wrap">
+                                {!id ||
+                                    (readOnly && (
+                                        <button
+                                            className="bg-yellow-600 text-white px-4 py-1 rounded hover:bg-yellow-700 flex items-center text-xs"
+                                            onClick={() => setReadOnly(false)}
+                                            disabled={isDisabled}
+                                        >
+                                            <FiEdit2 className="w-4 h-4 mr-2" />
+                                            Edit
+                                        </button>
+                                    ))}
+                                {id && (status === "APPROVED" || status === "NOT_CONFIGURED") && (
+                                    <button
+                                        onClick={() => {
+                                            if (qrRef.current) {
+                                                setQrCodeDataUrl(qrRef.current.toDataURL("image/png"));
+                                            }
+                                            setPrintModalOpen(true);
+                                        }}
+                                        className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs"
+                                    >
+                                        <FiFileText className="w-4 h-4 mr-2" />
+                                        PDF Export
+                                    </button>
+                                )}
+                                {
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedAttachmentIndex(null);
+                                            setAttachmentModal(true);
+                                        }}
+                                        className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                                    >
+                                        📎 Upload
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </>
+                }
+            />
         </>
     );
 };

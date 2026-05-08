@@ -6,3 +6,5 @@ export { default as purchaseCancelApi } from "./PurchaseCancelService";
 export { default as purchaseBillEntryApi } from "./PurchaseBillEntryService";
 export { default as ApprovalMasterApi } from "./ApprovalMasterServices";
 export { default as JobCardApi } from "./JobCardService";
+export { default as ProformaInvoiceApi } from "./ProformaInvoiceService";
+export { default as ProductionAllocationApi } from "./ProductionAllocationService";

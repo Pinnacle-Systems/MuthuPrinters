@@ -20,6 +20,8 @@ import {
   ApprovalRuleOperator,
   ApprovalRuleField,
   ApprovalRuleModule,
+  CurrencyMaster,
+  BankMaster,
 } from "..";
 
 import { CLOSE_ICON, DOUBLE_NEXT_ICON } from "../../../icons";
@@ -78,6 +80,7 @@ import {
   PlateMaster,
   DieMaster,
   BoardMaster,
+  ProformaInvoice,
 } from "../../../HostelStore/Components";
 
 const ActiveTabList = () => {
@@ -160,6 +163,9 @@ const ActiveTabList = () => {
     "PLATE MASTER": <PlateMaster />,
     "DIE MASTER": <DieMaster />,
     "BOARD MASTER": <BoardMaster />,
+    "PROFORMA INVOICE": <ProformaInvoice />,
+    "CURRENCY MASTER": <CurrencyMaster />,
+    "BANK MASTER": <BankMaster />,
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

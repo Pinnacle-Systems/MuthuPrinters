@@ -13,6 +13,7 @@ async function get(req) {
       _count: {
         select: {
           pos: true,
+          proformaInvoices: true,
         },
       },
     },
@@ -22,7 +23,7 @@ async function get(req) {
     data: data.map((item) => {
       return {
         ...item,
-        childRecord: item._count.pos,
+        childRecord: item._count.pos + item._count.proformaInvoices,
       };
     }),
   };

@@ -6,12 +6,10 @@ import { useGetPagePermissionsByIdQuery } from "../redux/services/PageMasterServ
 export function UserPermissions() {
   const openTabs = useSelector((state) => state.openTabs);
   const activeTab = openTabs?.tabs?.find((tab) => tab.active);
-  const currentPageId = activeTab?.id;
-
+  const currentPageId = activeTab?.pageId;
   const userRoleId = secureLocalStorage.getItem(
     sessionStorage.getItem("sessionId") + "userRoleId",
   );
-
   const {
     data: currentPagePermissions,
     isLoading,

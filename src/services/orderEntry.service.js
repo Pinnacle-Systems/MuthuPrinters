@@ -293,6 +293,117 @@ async function get(req) {
   };
 }
 
+async function getRefList(req) {
+  const { branchId, companyId, isRefDistinct } = req.query;
+
+  let data = await prisma.orderEntry.findMany({
+    where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
+    },
+    select: {
+      id: true,
+      refNo: true,
+      docId: true,
+      customerId: true,
+    },
+    distinct: isRefDistinct === "true" ? ["refNo"] : ["docId"],
+    orderBy: {
+      refNo: "asc",
+    },
+  });
+
+  // ── only for non-distinct ref mode ─────────────────────────
+  if (isRefDistinct !== "true") {
+    const { module, hasApproval } = await getModuleApprovalSetup(
+      REFERENCE_PAGE,
+      branchId,
+    );
+
+    const orderIds = data.map((o) => o.id);
+
+    const approvalLogs = await prisma.approvalLog.findMany({
+      where: {
+        referencePage: REFERENCE_PAGE,
+        referenceId: { in: orderIds },
+      },
+      select: {
+        id: true,
+        referenceId: true,
+        status: true,
+        remarks: true,
+        currentLevel: true,
+        LevelLogs: {
+          select: {
+            action: true,
+            levelNo: true,
+            userId: true,
+            createdAt: true,
+            User: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+    });
+
+    const approvalLogMap = approvalLogs.reduce((acc, log) => {
+      acc[log.referenceId] = log;
+      return acc;
+    }, {});
+
+    const activeConfigs =
+      hasApproval && module
+        ? await prisma.approvalConfig.findMany({
+            where: {
+              moduleId: module.id,
+              branchId: parseInt(branchId),
+              active: true,
+            },
+            include: {
+              ConfigConditions: {
+                include: {
+                  Field: true,
+                  Operator: true,
+                  CompareField: true,
+                },
+              },
+              approvalLevels: {
+                include: {
+                  LevelUsers: true,
+                },
+                orderBy: {
+                  levelNo: "asc",
+                },
+              },
+            },
+          })
+        : [];
+
+    data = data.map((order) => {
+      const log = approvalLogMap[order.id] ?? null;
+
+      let shouldTrigger = false;
+
+      if (!log && hasApproval && activeConfigs.length > 0) {
+        shouldTrigger = evaluateConfigs(activeConfigs, order);
+      }
+
+      return {
+        ...order,
+        approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+      };
+    });
+  }
+
+  return { statusCode: 0, data };
+}
+
 async function getOne(id) {
   const data = await prisma.orderEntry.findUnique({
     where: {
@@ -300,7 +411,16 @@ async function getOne(id) {
     },
     include: {
       attachments: true,
-      orderItems: true,
+      orderItems: {
+        include: {
+          sizeBreakup: true,
+          ItemGroup: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
       Branch: {
         select: {
           branchName: true,
@@ -318,6 +438,8 @@ async function getOne(id) {
       },
     },
   });
+  console.log(data);
+
   if (!data) return NoRecordFound("Purchase Inward");
   const { module, hasApproval } = await getModuleApprovalSetup(
     REFERENCE_PAGE,
@@ -348,7 +470,7 @@ async function getOne(id) {
       const activeConfigs = await prisma.approvalConfig.findMany({
         where: {
           moduleId: module.id,
-          branchId: parseInt(branchId || data.branchId),
+          branchId: parseInt(data.branchId),
           active: true,
         },
         include: {
@@ -397,6 +519,9 @@ async function create(body) {
     termsId,
     orderItems,
     productionType,
+    proFormaId,
+    refNo,
+    isRepeatedPI,
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
@@ -426,15 +551,43 @@ async function create(body) {
     parsedOrderItems?.length > 0
       ? parsedOrderItems.map((item) => ({
           styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
+          itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+          trackingType: item?.trackingType,
           orderQty:
             item?.orderQty && !isNaN(Number(item.orderQty))
               ? parseInt(item.orderQty)
               : null,
-          sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
           uomId: item?.uomId ? parseInt(item.uomId) : null,
-          gsmId: item?.gsmId ? parseInt(item.gsmId) : null,
+          hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
+          sizeTemplateId: item?.sizeTemplateId
+            ? parseInt(item.sizeTemplateId)
+            : null,
+          sizeBreakup:
+            item?.sizeBreakup?.length > 0
+              ? {
+                  create: item.sizeBreakup.map((s) => ({
+                    sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                    qty: s.qty ? parseInt(s.qty) : null,
+                    barcodeFrom: s.barcodeFrom,
+                    barcodeTo: s.barcodeTo,
+                  })),
+                }
+              : undefined,
+          // sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
         }))
       : [];
+  let finalRefNo = refNo || null;
+  if (productionType === "SAMPLE" && newDocId) {
+    const parts = newDocId.split("/");
+    // ["MP", "26-27", "ORD", "1"]
+
+    if (parts.length >= 4) {
+      const finYear = parts[1]; // 26-27
+      const number = parts[3]; // 1
+
+      finalRefNo = `${finYear}/SAM/${number}`;
+    }
+  }
   await prisma.$transaction(async (tx) => {
     data = await tx.orderEntry.create({
       data: {
@@ -448,9 +601,11 @@ async function create(body) {
         deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
         remarks,
         requirements,
-        // orderQty: safeorderQty,
         termsId: termsId ? parseInt(termsId) : null,
         termsAndCondition,
+        proFormaId: proFormaId ? parseInt(proFormaId) : null,
+        isRepeatedPI: isRepeatedPI === true || isRepeatedPI === "true",
+        refNo: finalRefNo ?? "",
         orderItems:
           safeOrderItems.length > 0
             ? {
@@ -514,6 +669,9 @@ async function update(id, body, files) {
     orderItems,
     submitApproval,
     productionType,
+    proFormaId,
+    refNo,
+    isRepeatedPI,
   } = await body;
 
   const safeorderQty =
@@ -575,7 +733,16 @@ async function update(id, body, files) {
 
   // Delete old files for attachments where file was replaced
   updatedAttachmentsWithNewFile.forEach((att) => unlinkFile(att.filePath));
+  let finalRefNo = refNo || null;
+  if (productionType === "SAMPLE" && dataFound.docId) {
+    const parts = dataFound.docId.split("/");
+    if (parts.length >= 4) {
+      const finYear = parts[1];
+      const number = parts[3];
 
+      finalRefNo = `${finYear}/SAM/${number}`;
+    }
+  }
   await prisma.$transaction(async (tx) => {
     data = await tx.orderEntry.update({
       where: {
@@ -594,6 +761,9 @@ async function update(id, body, files) {
         orderQty: safeorderQty,
         termsAndCondition,
         termsId: termsId ? parseInt(termsId) : null,
+        proFormaId: proFormaId ? parseInt(proFormaId) : null,
+        isRepeatedPI: isRepeatedPI === true || isRepeatedPI === "true",
+        refNo: finalRefNo ?? "",
         orderItems: {
           deleteMany: incomingItemIds.length
             ? { id: { notIn: incomingItemIds } }
@@ -606,10 +776,31 @@ async function update(id, body, files) {
                 styleItemId: item.styleItemId
                   ? parseInt(item.styleItemId)
                   : null,
+                itemGroupId: item.itemGroupId
+                  ? parseInt(item.itemGroupId)
+                  : null,
+                trackingType: item.trackingType,
+                sizeTemplateId: item.sizeTemplateId
+                  ? parseInt(item.sizeTemplateId)
+                  : null,
+                hsnId: item.hsnId ? parseInt(item.hsnId) : null,
+
                 orderQty: item.orderQty ? parseInt(item.orderQty) : null,
                 sizeId: item.sizeId ? parseInt(item.sizeId) : null,
                 uomId: item.uomId ? parseInt(item.uomId) : null,
                 gsmId: item.gsmId ? parseInt(item.gsmId) : null,
+                sizeBreakup: {
+                  deleteMany: {},
+                  create:
+                    item.sizeBreakup?.length > 0
+                      ? item.sizeBreakup.map((s) => ({
+                          sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                          qty: s.qty ? parseInt(s.qty) : null,
+                          barcodeFrom: s.barcodeFrom,
+                          barcodeTo: s.barcodeTo,
+                        }))
+                      : [],
+                },
               },
             })),
 
@@ -617,10 +808,27 @@ async function update(id, body, files) {
             .filter((item) => !item.id)
             .map((item) => ({
               styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
+              itemGroupId: item.itemGroupId ? parseInt(item.itemGroupId) : null,
+              trackingType: item.trackingType,
+              sizeTemplateId: item.sizeTemplateId
+                ? parseInt(item.sizeTemplateId)
+                : null,
+              hsnId: item.hsnId ? parseInt(item.hsnId) : null,
               orderQty: item.orderQty ? parseInt(item.orderQty) : null,
               sizeId: item.sizeId ? parseInt(item.sizeId) : null,
               uomId: item.uomId ? parseInt(item.uomId) : null,
               gsmId: item.gsmId ? parseInt(item.gsmId) : null,
+              sizeBreakup:
+                item.sizeBreakup?.length > 0
+                  ? {
+                      create: item.sizeBreakup.map((s) => ({
+                        sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                        qty: s.qty ? parseInt(s.qty) : null,
+                        barcodeFrom: s.barcodeFrom,
+                        barcodeTo: s.barcodeTo,
+                      })),
+                    }
+                  : undefined,
             })),
         },
         attachments: {
@@ -719,4 +927,4 @@ async function remove(id) {
   return { statusCode: 0, data };
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove, getRefList };

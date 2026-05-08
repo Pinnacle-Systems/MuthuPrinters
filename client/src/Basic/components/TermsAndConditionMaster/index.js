@@ -34,6 +34,7 @@ export default function Form({
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
   const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
+  const [showHint, setShowHint] = useState(false);
 
   const params = {
     companyId: secureLocalStorage.getItem(
@@ -309,6 +310,13 @@ export default function Form({
               />
             </div>
             <div className="mt-3">
+              {showHint && (
+                <div className="mb-1 text-[11px] text-indigo-600 font-medium">
+                  ⌨️ Use <span className="font-semibold">Ctrl + Enter</span> for
+                  next row
+                </div>
+              )}
+
               <label className="block text-xs font-bold text-gray-600 mb-1">
                 Description <span className="text-red-500">*</span>
               </label>
@@ -341,6 +349,8 @@ export default function Form({
                     });
                   }
                 }}
+                onFocus={() => setShowHint(true)}
+                onBlur={() => setShowHint(false)}
               />
             </div>
             <div className="mt-5">

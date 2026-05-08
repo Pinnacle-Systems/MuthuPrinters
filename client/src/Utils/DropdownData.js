@@ -163,7 +163,7 @@ export const partyType = [
 
 export const orderTypes = [
   { show: "GENERAL", value: "GENERAL" },
-  { show: "ORDER", value: "ORDER" },
+  { show: "AGAINST PI", value: "AGAINSTPI" },
 ];
 
 export const productionTypes = [
@@ -175,4 +175,18 @@ export const jobTypes = [
   { show: "Internal", value: "Internal" },
   { show: "External", value: "External" },
   { show: "Both", value: "Both" },
+];
+
+export const currencySymbolList = [
+  { code: "INR", show: "₹ (INR)", value: "₹" },
+  { code: "USD", show: "$ (USD)", value: "$" },
+  { code: "EUR", show: "€ (EUR)", value: "€" },
+  { code: "GBP", show: "£ (GBP)", value: "£" },
+  { code: "JPY", show: "¥ (JPY)", value: "¥" },
+  { code: "CNY", show: "¥ (CNY)", value: "¥" },
+  { code: "AED", show: "د.إ (AED)", value: "د.إ" },
+  { code: "SAR", show: "﷼ (SAR)", value: "﷼" },
+  { code: "SGD", show: "$ (SGD)", value: "$" },
+  { code: "AUD", show: "$ (AUD)", value: "$" },
+  { code: "CAD", show: "$ (CAD)", value: "$" },
 ];

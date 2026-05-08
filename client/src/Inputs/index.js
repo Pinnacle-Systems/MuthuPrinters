@@ -822,7 +822,7 @@ export const CheckBoxNew = ({
   return (
     <label
       className={`inline-flex items-center gap-1.5 cursor-pointer select-none
-        text-xs font-medium text-slate-700 leading-none
+        text-xs font-medium text-slate-800 leading-none
         ${readOnly || disabled ? "opacity-50 cursor-not-allowed" : "hover:text-indigo-600"}
         ${className || ""}`}
     >
@@ -842,7 +842,7 @@ export const CheckBoxNew = ({
           disabled:cursor-not-allowed
         "
       />
-      <span>{name}</span>
+      <span className="mt-1">{name}</span>
     </label>
   );
 };
@@ -1436,6 +1436,34 @@ export const TextInputNew = forwardRef(
               setValue(digits);
             } else if (type === "number") {
               setValue(e.target.value);
+            } else if (type === "acc_no") {
+              const digits = e.target.value.replace(/\D/g, "").slice(0, 18);
+              setValue(digits);
+            } else if (type === "ifsc") {
+              const raw = e.target.value
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, "");
+              let formatted = "";
+
+              for (let i = 0; i < Math.min(raw.length, 11); i++) {
+                if (i < 4) {
+                  if (/[A-Z]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                } else if (i === 4) {
+                  if (raw[i] === "0") formatted += raw[i];
+                  else break;
+                } else {
+                  if (/[A-Z0-9]/.test(raw[i])) formatted += raw[i];
+                  else break;
+                }
+              }
+
+              setValue(formatted);
+            } else if (type === "swift") {
+              const raw = e.target.value
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, "");
+              setValue(raw.slice(0, 11)); // max 11 chars
             } else {
               handleOnChange(e, setValue);
             }
@@ -1529,7 +1557,7 @@ export const DropdownInputNew = forwardRef(
           defaultValue={defaultValue}
           required={required}
           className={`w-full px-3 py-1.5 border border-gray-300 rounded-lg
-          focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+          focus:outline-none outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm ${readOnly || disabled ? "bg-slate-100" : ""}
           ${FORM_INPUT_TEXT_CLASS} ${className}`}
           value={value}
@@ -1730,10 +1758,10 @@ export const ReusableTable = ({
                               {onView && (
                                 <button
                                   className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
-                                  // onClick={() =>
-                                  //   hasPermission(() => onView(item.id), "read")
-                                  // }
-                                  onClick={() => onView(item.id)}
+                                  onClick={() =>
+                                    hasPermission(() => onView(item.id), "read")
+                                  }
+                                  // onClick={() => onView(item.id)}
                                 >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1753,10 +1781,10 @@ export const ReusableTable = ({
                               {onEdit && (
                                 <button
                                   className="text-green-600 gap-1 px-1   bg-green-50 rounded"
-                                  // onClick={() =>
-                                  //   hasPermission(() => onEdit(item.id), "edit")
-                                  // }
-                                  onClick={() => onEdit(item.id)}
+                                  onClick={() =>
+                                    hasPermission(() => onEdit(item.id), "edit")
+                                  }
+                                  // onClick={() => onEdit(item.id)}
                                 >
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1797,9 +1825,15 @@ export const ReusableTable = ({
                                     //   }
                                     // }}
                                     onClick={() => {
-                                      if (!hasChildRecords) {
-                                        onDelete(item.id, item?.childRecord);
-                                      }
+                                      // if (!hasChildRecords) {
+                                      //   onDelete(item.id, item?.childRecord);
+                                      // }
+                                      hasPermission(
+                                        () =>
+                                          onDelete(item.id, item?.childRecord),
+                                        "delete",
+                                        item?.childRecord,
+                                      );
                                     }}
                                     disabled={hasChildRecords}
                                   >
@@ -1977,7 +2011,7 @@ export const TextInputNew1 = forwardRef(
           tabIndex={tabIndex ?? undefined}
           max={max ? String(max) : undefined}
           className={`w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg
-          focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+          focus:outline-none outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm ${readOnly || disabled ? "bg-slate-100" : ""}
           ${className}`}
           onKeyDown={onKeyDown}
@@ -3645,22 +3679,26 @@ export default function FxSelect({
   );
 }
 
-export function FxSelectWithAdd({
-  value,
-  onChange,
-  options,
-  placeholder = "",
-  readOnly = false,
-  onBlur,
-  onKeyDown,
-  inputId,
-  addNew = false,
-  childComponent = null,
-  addNewModalWidth = "w-[40%] h-[48%]",
-  nextRef,
-  advanceOnEnter = false,
-  advanceOnSelect = true,
-}) {
+export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
+  {
+    value,
+    onChange,
+    options,
+    placeholder,
+    readOnly,
+    onBlur,
+    onKeyDown,
+    inputId,
+    addNew,
+    childComponent,
+    addNewModalWidth,
+    nextRef,
+    advanceOnEnter,
+    advanceOnSelect,
+    disabled,
+  },
+  ref,
+) {
   const [showAddNewModal, setShowAddNewModal] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [menuIsOpen, setMenuIsOpen] = useState(false);
@@ -3668,6 +3706,21 @@ export function FxSelectWithAdd({
   const pendingAdvanceRef = useRef(false);
 
   const CREATE_NEW_VALUE = "__CREATE_NEW__";
+
+  useImperativeHandle(ref, () => ({
+    focus() {
+      // react-select exposes focus() on the instance
+      selectRef.current?.focus?.();
+    },
+  }));
+
+  const focusNextSafe = (ref, retries = 10) => {
+    if (ref?.current) {
+      ref.current.focus();
+    } else if (retries > 0) {
+      setTimeout(() => focusNextSafe(ref, retries - 1), 50);
+    }
+  };
 
   // ✅ Helper function to focus next field
   const focusNextField = () => {
@@ -3677,7 +3730,7 @@ export function FxSelectWithAdd({
     focusNextGridField({
       currentElement: current,
       onReachGridEnd: () => {
-        nextRef?.current?.focus?.();
+        focusNextSafe(nextRef);
       },
     });
   };
@@ -3799,7 +3852,7 @@ export function FxSelectWithAdd({
 
             if (!value && nextRef) {
               e.preventDefault();
-              nextRef?.current?.focus();
+              focusNextSafe(nextRef);
             }
             return;
           }
@@ -3852,7 +3905,7 @@ export function FxSelectWithAdd({
       )}
     </>
   );
-}
+});
 
 export const customSelectStyles = {
   control: (base, state) => ({
@@ -3951,6 +4004,7 @@ export const DropdownNew = forwardRef(
       otherValue,
       onKeyDown,
       autoFocus,
+      beforeChange = () => {},
     },
     ref,
   ) => {
@@ -3987,14 +4041,18 @@ export const DropdownNew = forwardRef(
           ref={ref}
           options={options}
           value={selectedOption}
-          onChange={(selected) => setValue(selected?.value || "")}
+          onChange={(selected) => {
+            const item = dataList?.find((i) => i.id === selected?.value);
+            beforeChange(item);
+            setValue(selected?.value || "");
+          }}
           isDisabled={disabled || readonly}
           isSearchable
           isClearable={false}
           menuShouldScrollIntoView={false}
           maxMenuHeight={170} // <-- Reduce height here
           onInputChange={(value) => value.toUpperCase()}
-          className="w-full px-1 -ml-1 h-7 text-xs rounded-lg
+          className="w-full -ml-1 h-7 text-xs rounded-lg
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
           transition-all duration-150 shadow-sm"
           placeholder={placeholder}

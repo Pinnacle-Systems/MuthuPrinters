@@ -127,7 +127,7 @@ const TaxDetailsFullTemplate = ({
                 autoFocus
                 ref={discountTypeRef}
                 disabled={readOnly}
-                className="text-left w-full rounded h-8"
+                className="text-left w-full rounded h-8 new-data-input"
                 value={discountType}
                 onChange={(e) =>
                   handleInputChange(e.target.value, index, "discountType")
@@ -152,7 +152,7 @@ const TaxDetailsFullTemplate = ({
                 ref={discountValueRef}
                 type="text"
                 disabled={readOnly || !discountType}
-                className="h-7 w-full text-right"
+                className="h-7 w-full text-righ table-data-input px-1"
                 value={discountValue}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) =>
@@ -177,7 +177,7 @@ const TaxDetailsFullTemplate = ({
                 ref={taxPercentRef}
                 type="text"
                 disabled={readOnly}
-                className="h-7 w-full text-right"
+                className="h-7 w-full text-right new-data-input px-1"
                 value={taxPercent}
                 onChange={(e) => {
                   handleInputChange(e.target.value, index, "taxPercent");

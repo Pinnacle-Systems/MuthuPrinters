@@ -67,6 +67,9 @@ model Company {
   boards              Board[]
   plates              Plate[]
   dies                Die[]
+  proformaInvoices    ProformaInvoice[]
+  currencies          Currency[]
+  bank                Bank[]
 }
 
 model Subscription {
@@ -120,6 +123,7 @@ model Branch {
   approvalConfigs       ApprovalConfig[]
   orderEntries          OrderEntry[]
   jobCards              JobCard[]
+  proformaInvoices      ProformaInvoice[]
 }
 
 model UserOnBranch {
@@ -205,6 +209,8 @@ model User {
   orderEntriesUpdatedBy          OrderEntry[]           @relation(name: "updatedBy")
   jobCardsCreatedBy              JobCard[]              @relation(name: "createdBy")
   jobCardsUpdatedBy              JobCard[]              @relation(name: "updatedBy")
+  proformaInvoicesCreatedBy      ProformaInvoice[]      @relation(name: "proformaCreatedBy")
+  proformaInvoicesUpdatedBy      ProformaInvoice[]      @relation(name: "proformaUpdatedBy")
 }
 
 model Employee {
@@ -255,8 +261,9 @@ model Employee {
   updatedAt          DateTime?         @updatedAt
   employeeId         String?
 
-  User    User[]
-  JobCard JobCard[]
+  User            User[]
+  JobCardFollowUp JobCard[] @relation("followup")
+  JobCardDesigner JobCard[] @relation("design")
 }
 
 model FinYear {
@@ -270,6 +277,7 @@ model FinYear {
   DeliveryInvoice     DeliveryInvoice[]
   openingBalances     OpeningBalance[]
   purchaseBillEntries PurchaseBillEntry[]
+  proformaInvoices    ProformaInvoice[]
 }
 
 model EmployeeCategory {
@@ -305,16 +313,19 @@ model State {
 }
 
 model City {
-  id              Int           @id @default(autoincrement())
-  name            String
-  code            String
-  state           State         @relation(fields: [stateId], references: [id])
-  stateId         Int
-  active          Boolean       @default(true)
-  doctorLocalCity Employee[]    @relation(name: "localCity")
-  doctorPermCity  Employee[]    @relation(name: "permCity")
-  Party           Party[]
-  PartyBranch     PartyBranch[]
+  id                      Int               @id @default(autoincrement())
+  name                    String
+  code                    String
+  state                   State             @relation(fields: [stateId], references: [id])
+  stateId                 Int
+  active                  Boolean           @default(true)
+  doctorLocalCity         Employee[]        @relation(name: "localCity")
+  doctorPermCity          Employee[]        @relation(name: "permCity")
+  Party                   Party[]
+  PartyBranch             PartyBranch[]
+  bank                    Bank[]
+  proformaInvoiceDelivery ProformaInvoice[] @relation(name: "delivery")
+  proformaInvoiceLoading  ProformaInvoice[] @relation(name: "loading")
 }
 
 model Department {
@@ -458,6 +469,7 @@ model Party {
   purchaseLedgers       PurchaseLedger[]
   orderEntries          OrderEntry[]
   JobCard               JobCard[]
+  proformaInvoices      ProformaInvoice[]
 }
 
 model PartyBranch {
@@ -588,6 +600,7 @@ model Uom {
   styles                 Style[]
   styleItems             StyleItem[]
   orderItems             OrderItems[]
+  proformaInvoiceItems   ProformaInvoiceItem[]
 }
 
 model ProductUomPriceDetails {
@@ -938,6 +951,8 @@ model StyleItem {
   purchaseCancelItems    PurchaseCancelItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
   orderItems             OrderItems[]
+  proformaInvoiceItems   ProformaInvoiceItem[]
+  JobCards               JobCard[]
 }
 
 model DeliveryChallan {
@@ -1120,6 +1135,7 @@ model TaxTemplate {
   pos                 Po[]
   purchaseBillEntries PurchaseBillEntry[]
   purchaseInwards     PurchaseInward[]
+  proformaInvoices    ProformaInvoice[]
 }
 
 model TaxTemplateDetails {
@@ -1147,6 +1163,8 @@ model Hsn {
   purchaseReturnItems    PurchaseReturnItems[]
   purchaseCancelItems    PurchaseCancelItems[]
   purchaseBillEntryItems PurchaseBillEntryItems[]
+  proformaInvoiceItems   ProformaInvoiceItem[]
+  orderItems             OrderItems[]
 }
 
 model BranchType {
@@ -1265,19 +1283,21 @@ model TermsAndConditions {
   purchaseInwardReturns PurchaseInwardReturn[]
   purchaseCancels       PurchaseCancel[]
   orderEntries          OrderEntry[]
+  proformaInvoices      ProformaInvoice[]
 }
 
 model PayTerm {
-  id        Int      @id @default(autoincrement())
-  name      String?
-  days      Int?
-  years     Int?
-  months    Int?
-  Company   Company? @relation(fields: [companyId], references: [id])
-  companyId Int?
-  active    Boolean  @default(true)
-  aliasName String?
-  pos       Po[]
+  id               Int               @id @default(autoincrement())
+  name             String?
+  days             Int?
+  years            Int?
+  months           Int?
+  Company          Company?          @relation(fields: [companyId], references: [id])
+  companyId        Int?
+  active           Boolean           @default(true)
+  aliasName        String?
+  pos              Po[]
+  proformaInvoices ProformaInvoice[]
 }
 
 model PurchaseInward {
@@ -1573,6 +1593,11 @@ model Size {
   inwardItems            InwardItems[]
   stocks                 Stock[]
   orderItems             OrderItems[]
+  proformaInvoiceItems   ProformaInvoiceItem[]
+  orderSizeBreakups      OrderSizeBreakup[]
+  jobCardFullBoardSize   JobCard[]                @relation("fullBoardSize")
+  jobCardCuttingSize     JobCard[]                @relation("cuttingSizeDtl")
+  jobCardSizeDetails     JobCardSizeBreakup[]
 }
 
 model Gsm {
@@ -1590,6 +1615,7 @@ model Gsm {
   purchaseBillEntryItems PurchaseBillEntryItems[]
   stocks                 Stock[]
   orderItems             OrderItems[]
+  proformaInvoiceItems   ProformaInvoiceItem[]
 
   jobCards JobCard[]
 }
@@ -1608,6 +1634,8 @@ model ItemGroup {
   purchaseReturnItems    PurchaseReturnItems[]
   inwardItems            InwardItems[]
   stocks                 Stock[]
+  orderItems             OrderItems[]
+  jobCards               JobCard[]
 }
 
 model SizeTemplate {
@@ -1619,6 +1647,7 @@ model SizeTemplate {
   SizeTemplateList SizeTemplateList[]
   styles           Style[]
   styleItems       StyleItem[]
+  orderItems       OrderItems[]
 }
 
 model SizeTemplateList {
@@ -1787,6 +1816,10 @@ model OrderEntry {
   termsAndCondition String?
   Terms             TermsAndConditions? @relation(fields: [termsId], references: [id])
   termsId           Int?
+  Proforma          ProformaInvoice?    @relation(fields: [proFormaId], references: [id])
+  proFormaId        Int?
+  refNo             String?
+  isRepeatedPI      Boolean?            @default(false)
   attachments       attachments[]
   JobCard           JobCard[]
 
@@ -1895,16 +1928,36 @@ model JobCard {
   totalPlateSet      Int?
   remarks            String?
   designerId         Int?
-  Designer           Employee?   @relation(fields: [designerId], references: [id])
+  Designer           Employee?   @relation("design", fields: [designerId], references: [id])
+  followUpId         Int?
+  FollowUp           Employee?   @relation("followup", fields: [followUpId], references: [id])
   tagCardUps         String?
+  totalPlatesets     String?
   jobRunTime         String?
+  productionType     String?
+  fullBoardId        Int?
+  FullBoardSize      Size?       @relation("fullBoardSize", fields: [fullBoardId], references: [id])
+  cuttingSizeId      Int?
+  CuttingSizeDtl     Size?       @relation("cuttingSizeDtl", fields: [cuttingSizeId], references: [id])
+  itemGroupId        Int?
+  ItemGroup          ItemGroup?  @relation(fields: [itemGroupId], references: [id])
+  itemType           String?
+  styleItemId        Int?
+  StyleItem          StyleItem?  @relation(fields: [styleItemId], references: [id])
+  trackingType       String?
+  labelQty           Int?
+  rollQty            Int?
+  cutAndSeal         String?
+  labelQuality       String?
+  block              String?
 
-  boardQualities    BoardQuality[]
-  processDetails    ProcessDetails[]
-  laminationDetails LaminationDetails[]
-  varnishDetails    VarnishDetails[]
-  machineDetails    MachineDetails[]
-  processRoute      ProcessRoute[]
+  boardQualities     BoardQuality[]
+  processDetails     ProcessDetails[]
+  laminationDetails  LaminationDetails[]
+  varnishDetails     VarnishDetails[]
+  machineDetails     MachineDetails[]
+  processRoute       ProcessRoute[]
+  jobCardSizeDetails JobCardSizeBreakup[]
 }
 
 model BoardQuality {
@@ -1952,18 +2005,48 @@ model MachineDetails {
 }
 
 model OrderItems {
-  id           Int         @id @default(autoincrement())
-  orderEntryId Int?
-  OrderEntry   OrderEntry? @relation(fields: [orderEntryId], references: [id], onDelete: Cascade)
-  styleItemId  Int?
-  StyleItem    StyleItem?  @relation(fields: [styleItemId], references: [id])
-  orderQty     Int?
-  sizeId       Int?
-  Size         Size?       @relation(fields: [sizeId], references: [id])
-  uomId        Int?
-  Uom          Uom?        @relation(fields: [uomId], references: [id])
-  gsmId        Int?
-  Gsm          Gsm?        @relation(fields: [gsmId], references: [id])
+  id             Int                @id @default(autoincrement())
+  orderEntryId   Int?
+  OrderEntry     OrderEntry?        @relation(fields: [orderEntryId], references: [id], onDelete: Cascade)
+  styleItemId    Int?
+  StyleItem      StyleItem?         @relation(fields: [styleItemId], references: [id])
+  orderQty       Int?
+  sizeId         Int?
+  Size           Size?              @relation(fields: [sizeId], references: [id])
+  uomId          Int?
+  Uom            Uom?               @relation(fields: [uomId], references: [id])
+  gsmId          Int?
+  Gsm            Gsm?               @relation(fields: [gsmId], references: [id])
+  itemGroupId    Int?
+  ItemGroup      ItemGroup?         @relation(fields: [itemGroupId], references: [id])
+  hsnId          Int?
+  Hsn            Hsn?               @relation(fields: [hsnId], references: [id])
+  sizeTemplateId Int?
+  SizeTemplate   SizeTemplate?      @relation(fields: [sizeTemplateId], references: [id])
+  trackingType   String?
+  sizeBreakup    OrderSizeBreakup[]
+}
+
+model OrderSizeBreakup {
+  id          Int        @id @default(autoincrement())
+  orderItemId Int
+  OrderItem   OrderItems @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  sizeId      Int?
+  Size        Size?      @relation(fields: [sizeId], references: [id])
+  qty         Int?
+  barcodeFrom String?
+  barcodeTo   String?
+}
+
+model JobCardSizeBreakup {
+  id          Int     @id @default(autoincrement())
+  jobCardId   Int
+  JobCard     JobCard @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  sizeId      Int?
+  Size        Size?   @relation(fields: [sizeId], references: [id])
+  qty         Int?
+  barcodeFrom String?
+  barcodeTo   String?
 }
 
 model ProcessRoute {
@@ -1976,4 +2059,116 @@ model ProcessRoute {
   sequence       Int
   isFront        Boolean  @default(false)
   isFrontAndBack Boolean  @default(false)
+}
+
+model ProformaInvoice {
+  id                Int                   @id @default(autoincrement())
+  docId             String
+  docDate           DateTime?
+  userDate          DateTime?
+  deliveryDate      DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  createdBy         User?                 @relation("proformaCreatedBy", fields: [createdById], references: [id])
+  createdById       Int?
+  updatedBy         User?                 @relation("proformaUpdatedBy", fields: [updatedById], references: [id])
+  updatedById       Int?
+  Branch            Branch?               @relation(fields: [branchId], references: [id])
+  branchId          Int?
+  Company           Company?              @relation(fields: [companyId], references: [id])
+  companyId         Int?
+  customer          Party?                @relation(fields: [customerId], references: [id])
+  customerId        Int?
+  finYear           FinYear?              @relation(fields: [finYearId], references: [id])
+  finYearId         Int?
+  remarks           String?
+  termsAndCondition String?
+  Terms             TermsAndConditions?   @relation(fields: [termsId], references: [id])
+  termsId           Int?
+  items             ProformaInvoiceItem[]
+  attachments       ProformaAttachments[]
+  TaxTemplate       TaxTemplate?          @relation(fields: [taxTemplateId], references: [id])
+  taxTemplateId     Int?
+  quoteVersion      Int                   @default(1)
+  discountType      String?
+  discountValue     Float?
+  PayTerm           PayTerm?              @relation(fields: [payTermId], references: [id])
+  payTermId         Int?
+  isApproved        Boolean               @default(false)
+  approvalStatus    String                @default("PENDING")
+  validityTo        DateTime?
+  Currency          Currency?             @relation(fields: [currencyId], references: [id])
+  currencyId        Int?
+  weightInKg        Float?
+  Loading           City?                 @relation("loading", fields: [loadingId], references: [id])
+  loadingId         Int?
+  Delivery          City?                 @relation("delivery", fields: [deliveryId], references: [id])
+  deliveryId        Int?
+  carriageCharge    Float?
+  bankId            Int?
+  Bank              Bank?                 @relation(fields: [bankId], references: [id])
+  orderEntries      OrderEntry[]
+}
+
+model ProformaInvoiceItem {
+  id                Int             @id @default(autoincrement())
+  ProformaInvoice   ProformaInvoice @relation(fields: [proformaInvoiceId], references: [id], onDelete: Cascade)
+  proformaInvoiceId Int
+  styleItemId       Int?
+  StyleItem         StyleItem?      @relation(fields: [styleItemId], references: [id])
+  qty               Float?
+  price             Float?
+  taxPercent        Float?
+  discountType      String?
+  discountValue     Float?
+  amount            Float?
+  sizeId            Int?
+  Size              Size?           @relation(fields: [sizeId], references: [id])
+  uomId             Int?
+  Uom               Uom?            @relation(fields: [uomId], references: [id])
+  gsmId             Int?
+  Gsm               Gsm?            @relation(fields: [gsmId], references: [id])
+  hsnId             Int?
+  Hsn               Hsn?            @relation(fields: [hsnId], references: [id])
+  quoteVersion      Int             @default(1)
+  dozen             Float?
+}
+
+model ProformaAttachments {
+  id                Int              @id @default(autoincrement())
+  ProformaInvoice   ProformaInvoice? @relation(fields: [proformaInvoiceId], references: [id], onDelete: Cascade)
+  proformaInvoiceId Int?
+  date              DateTime?
+  name              String?
+  fileName          String?
+  filePath          String?
+}
+
+model Currency {
+  id             Int      @id @default(autoincrement())
+  name           String
+  code           String?
+  symbol         String?
+  isBaseCurrency Boolean  @default(false)
+  exchangeRate   Float?
+  Company        Company? @relation(fields: [companyId], references: [id])
+  companyId      Int?
+  active         Boolean  @default(true)
+
+  proformaInvoices ProformaInvoice[]
+}
+
+model Bank {
+  id        Int      @id @default(autoincrement())
+  companyId Int?
+  Company   Company? @relation(fields: [companyId], references: [id])
+  name      String?
+  accNo     String?
+  ifsc      String?
+  swiftCode String?
+  branchId  Int?
+  Branch    City?    @relation(fields: [branchId], references: [id])
+  active    Boolean  @default(true)
+
+  proformaInvoices ProformaInvoice[]
 }

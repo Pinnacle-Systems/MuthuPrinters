@@ -73,11 +73,13 @@ const CommonFormFooter = ({
   stacked = false,
   hasSummaryTitle = false,
   remarksReadOnly = null,
+  termsRef = null,
 }) => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const termsTextareaRef = React.useRef(null);
   const templateOptionsRefs = React.useRef([]);
+  const [showTermsHint, setShowTermsHint] = useState(false);
 
   const resolvedTotalsRows =
     totalsRows && totalsRows.length > 0
@@ -162,7 +164,7 @@ const CommonFormFooter = ({
         key={row.key || row.label || index}
         className={[
           "flex items-center justify-between gap-2 py-0.5 text-[12px]",
-          row.emphasized ? "border-t border-slate-100 pt-1.5" : "",
+          row.emphasized ? "border-t border-slate-100 " : "",
           row.className || "",
         ]
           .filter(Boolean)
@@ -171,7 +173,7 @@ const CommonFormFooter = ({
         <span
           className={[
             "shrink-0",
-            row.emphasized ? "font-semibold text-slate-700" : "text-slate-600",
+            row.emphasized ? "font-semibold text-slate-800" : "text-slate-800",
             row.labelClassName || "",
           ]
             .filter(Boolean)
@@ -318,6 +320,11 @@ const CommonFormFooter = ({
               <h2 className="text-[12px] font-bold text-slate-700">
                 Terms & Conditions
               </h2>
+              {showTermsHint && (
+                <div className="text-[10px] text-indigo-600 font-medium mb-1">
+                  ⌨️ Use <span className="font-semibold">Ctrl + Enter</span> to move next
+                </div>
+              )}
               {showTemplateControl ? (
                 <button
                   type="button"
@@ -328,13 +335,49 @@ const CommonFormFooter = ({
                 </button>
               ) : null}
             </div>
+
+
             <textarea
-              ref={termsTextareaRef}
-              disabled={readOnly}
+              ref={(el) => {
+                termsTextareaRef.current = el;
+
+                // ✅ attach external ref
+                if (termsRef) {
+                  if (typeof termsRef === "function") {
+                    termsRef(el);
+                  } else {
+                    termsRef.current = el;
+                  }
+                }
+              }}
+              readOnly={readOnly}
               className="min-h-[2.5rem] flex-1 w-full overflow-auto focus:outline-none rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
               value={terms || ""}
               onChange={(e) => setTerms(e.target.value)}
               placeholder={termsPlaceholder}
+              onFocus={() => setShowTermsHint(true)}
+              onBlur={() => setShowTermsHint(false)}
+              onKeyDown={(e) => {
+                if (e.ctrlKey && e.key === "Enter") {
+                  e.preventDefault();
+
+                  const textarea = e.target; // ✅ correct
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+
+                  const newValue =
+                    (terms || "").substring(0, start) +
+                    "\n" +
+                    (terms || "").substring(end);
+
+                  setTerms(newValue);
+
+                  requestAnimationFrame(() => {
+                    textarea.focus();
+                    textarea.setSelectionRange(start + 1, start + 1);
+                  });
+                }
+              }}
             />
           </div>
         </div>
@@ -354,6 +397,29 @@ const CommonFormFooter = ({
             onChange={(e) => setRemarks(e.target.value)}
             className="min-h-[2.5rem] focus:outline-none flex-1 w-full overflow-auto rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
             placeholder={remarksPlaceholder}
+            onKeyDown={(e) => {
+              if (e.ctrlKey && e.key === "Enter") {
+                e.preventDefault();
+
+                const textarea = e.target; // ✅ DOM element
+                const value = textarea.value; // ✅ string value
+
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+
+                const newValue =
+                  value.substring(0, start) +
+                  "\n" +
+                  value.substring(end);
+
+                setRemarks(newValue);
+
+                requestAnimationFrame(() => {
+                  textarea.focus();
+                  textarea.setSelectionRange(start + 1, start + 1);
+                });
+              }
+            }}
           />
         </div>
 
