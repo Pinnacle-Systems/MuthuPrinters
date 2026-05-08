@@ -7,6 +7,7 @@ import { Tooltip } from "@mui/material";
 import { useGetBranchByIdQuery } from "../../../redux/services/BranchMasterService";
 import { CheckCircle, XCircle } from "lucide-react";
 import { toast } from "react-toastify";
+import { useGetProductionAllocationQuery } from "../../../redux/uniformService/ProductionAllocationService";
 
 const ProductionAllocationReport = ({
     onView,
@@ -42,7 +43,7 @@ const ProductionAllocationReport = ({
         data: allData,
         isFetching,
         isLoading,
-    } = useGetProformaInvoiceQuery({
+    } = useGetProductionAllocationQuery({
         params: {
             branchId,
             ...searchFields,
@@ -140,10 +141,10 @@ const ProductionAllocationReport = ({
                                     <div className="">S No</div>
                                 </th>
                                 <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
-                                    <div>Production Allocation No</div>
+                                    <div> Allocation No</div>
                                 </th>
                                 <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
-                                    <div>Date</div>
+                                    <div>Allocation Date</div>
                                 </th>
                                 <th className="w-80  px-3   font-medium text-[13px] text-gray-900  text-center ">
                                     <div>Notes</div>

@@ -211,6 +211,8 @@ model User {
   jobCardsUpdatedBy              JobCard[]              @relation(name: "updatedBy")
   proformaInvoicesCreatedBy      ProformaInvoice[]      @relation(name: "proformaCreatedBy")
   proformaInvoicesUpdatedBy      ProformaInvoice[]      @relation(name: "proformaUpdatedBy")
+  productionAllocationsCreatedBy ProductionAllocation[] @relation(name: "AllocationCreatedBy")
+  productionAllocationsUpdatedBy ProductionAllocation[] @relation(name: "AllocationUpdatedBy")
 }
 
 model Employee {
@@ -953,6 +955,7 @@ model StyleItem {
   orderItems             OrderItems[]
   proformaInvoiceItems   ProformaInvoiceItem[]
   JobCards               JobCard[]
+  productionAllocations  ProductionAllocation[]
 }
 
 model DeliveryChallan {
@@ -1832,13 +1835,15 @@ model Process {
   active           Boolean?           @default(true)
   Company          Company?           @relation(fields: [companyId], references: [id])
   companyId        Int?
+  isOutsideJob     Boolean?           @default(false)
   processGroupList ProcessGroupList[]
 
-  laminationDetails LaminationDetails[]
-  varnishDetails    VarnishDetails[]
-  machineDetails    MachineDetails[]
-  processDetails    ProcessDetails[]
-  processRoute      ProcessRoute[]
+  laminationDetails       LaminationDetails[]
+  varnishDetails          VarnishDetails[]
+  machineDetails          MachineDetails[]
+  processDetails          ProcessDetails[]
+  processRoute            ProcessRoute[]
+  ProductionAllocationDtl ProductionAllocationDtl[]
 }
 
 model ProcessGroup {
@@ -1951,13 +1956,14 @@ model JobCard {
   labelQuality       String?
   block              String?
 
-  boardQualities     BoardQuality[]
-  processDetails     ProcessDetails[]
-  laminationDetails  LaminationDetails[]
-  varnishDetails     VarnishDetails[]
-  machineDetails     MachineDetails[]
-  processRoute       ProcessRoute[]
-  jobCardSizeDetails JobCardSizeBreakup[]
+  boardQualities        BoardQuality[]
+  processDetails        ProcessDetails[]
+  laminationDetails     LaminationDetails[]
+  varnishDetails        VarnishDetails[]
+  machineDetails        MachineDetails[]
+  processRoute          ProcessRoute[]
+  jobCardSizeDetails    JobCardSizeBreakup[]
+  productionAllocations ProductionAllocation[]
 }
 
 model BoardQuality {
@@ -2171,4 +2177,35 @@ model Bank {
   active    Boolean  @default(true)
 
   proformaInvoices ProformaInvoice[]
+}
+
+model ProductionAllocation {
+  id          Int        @id @default(autoincrement())
+  docId       String
+  docDate     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  createdById Int?
+  createdBy   User?      @relation("AllocationCreatedBy", fields: [createdById], references: [id])
+  updatedById Int?
+  updatedBy   User?      @relation("AllocationUpdatedBy", fields: [updatedById], references: [id])
+  jobCardId   Int
+  JobCard     JobCard    @relation(fields: [jobCardId], references: [id])
+  remarks     String?
+  styleItemId Int?
+  StyleItem   StyleItem? @relation(fields: [styleItemId], references: [id])
+
+  allocationDetails ProductionAllocationDtl[]
+}
+
+model ProductionAllocationDtl {
+  id                     Int                  @id @default(autoincrement())
+  productionAllocationId Int
+  ProductionAllocation   ProductionAllocation @relation(fields: [productionAllocationId], references: [id], onDelete: Cascade)
+  isInHouse              Boolean              @default(false)
+  isOutSide              Boolean              @default(false)
+  processId              Int?
+  Process                Process?             @relation(fields: [processId], references: [id])
+  type                   String?
+  sequence               Int?
 }

@@ -180,6 +180,29 @@ async function get(req) {
   return { statusCode: 0, data: resolvedData, nextDocId: newDocId, totalCount };
 }
 
+async function getJobCardList(req) {
+  const { branchId, companyId } = req.query;
+
+  let data = await prisma.jobCard.findMany({
+    where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
+    },
+    select: {
+      id: true,
+      docId: true,
+      orderQty: true,
+      styleItemId: true,
+      customer: { select: { id: true, name: true } },
+      processRoute: true,
+    },
+    orderBy: {
+      docId: "desc",
+    },
+  });
+
+  return { statusCode: 0, data };
+}
+
 async function getOne(id) {
   const data = await prisma.jobCard.findUnique({
     where: { id: parseInt(id) },
@@ -823,4 +846,4 @@ async function remove(id) {
   }
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove, getJobCardList };
