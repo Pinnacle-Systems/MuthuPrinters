@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Swal from "sweetalert2";
 import { TextInput, DropdownInput, DateInputNew, DropdownNew, CheckBoxNew } from "../../../Inputs";
 import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
@@ -45,17 +45,20 @@ const ProductionAllocationForm = ({
     const [jobCardId, setJobCardId] = useState("");
     const [styleItemId, setStyleItemId] = useState("");
     const [orderQty, setOrderQty] = useState("");
+    const [orderNo, setOrderNo] = useState("");
+    const [customerName, setCustomerName] = useState("");
     const [remarks, setRemarks] = useState("");
     const [printModalOpen, setPrintModalOpen] = useState(false);
+    const DEFAULT_ROWS = Array.from({ length: 5 }, (_, index) => ({
+        seqNo: index + 1,
+        processId: "",
+        processName: "",
+        type: "",
+        isInHouse: false,
+        isOutSide: false,
+    }));
     const [allocationDetails, setAllocationDetails] = useState(
-        Array.from({ length: 5 }, (_, index) => ({
-            seqNo: index + 1,
-            processId: "",
-            processName: "",
-            type: "",
-            isInHouse: false,
-            isOutSide: false,
-        }))
+        DEFAULT_ROWS
     );
     const childRecord = useRef(0);
 
@@ -72,7 +75,7 @@ const ProductionAllocationForm = ({
     const { data: allData } = useGetProductionAllocationQuery({
         params: { branchId },
     });
-    const { data: singleData } = useGetProductionAllocationByIdQuery(id, {
+    const { data: singleData, isFetching: isSingleFetching, isLoading: isSingleLoading } = useGetProductionAllocationByIdQuery(id, {
         skip: !id,
     });
     const { data: supplierData } = useGetPartyByIdQuery(customerId, {
@@ -93,35 +96,43 @@ const ProductionAllocationForm = ({
     const [updateData] = useUpdateProductionAllocationMutation();
     const [removeData] = useDeleteProductionAllocationMutation();
 
+    const syncFormWithDb = useCallback((data) => {
+        setDocId(data?.docId || "New");
+        setDocDate(moment(data?.docDate || new Date()).format("YYYY-MM-DD"));
+        setCustomerId(data?.customerId || "");
+        setJobCardId(data?.jobCardId || "");
+        setRemarks(data?.remarks || "");
+        setStyleItemId(data?.styleItemId || "");
+        setOrderQty(data?.orderQty || "");
+        setAllocationDetails(
+            data?.allocationDetails?.map((item, index) => ({
+                id: item.id,
+                seqNo: item.sequence || index + 1,
+                processId: item.processId || "",
+                type: item.type || "",
+                isInHouse: item.isInHouse || false,
+                isOutSide: item.isOutSide || false,
+            })) || DEFAULT_ROWS);
+        childRecord.current = data?.childRecord ? data?.childRecord : 0;
+    }, []);
+
     useEffect(() => {
-        if (id && singleData?.data) {
-            const data = singleData.data;
-            setDocId(data.docId);
-            setDocDate(moment(data.docDate).format("YYYY-MM-DD"));
-            setCustomerId(data.customerId);
-            setJobCardId(data.jobCardId || "");
-            setRemarks(data.remarks || "");
-            setStyleItemId(data.styleItemId || "");
-            setOrderQty(data.orderQty || "");
-            setAllocationDetails(data.allocationDetails || []);
-            childRecord.current = data?.childRecord ? data?.childRecord : 0;
-
-
-            const cust = data.customer || data.OrderEntry?.customer;
-            if (cust) {
-                setCustomerDetails({
-                    name: cust.name || "",
-                    contactPerson: cust.contactPersonName || "",
-                    phone: cust.contactNumber || "",
-                });
-            }
-        }
-    }, [id, singleData]);
+        if (id && singleData?.data) syncFormWithDb(singleData.data);
+        else syncFormWithDb(undefined);
+    }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
 
     useEffect(() => {
         customerRef.current?.focus();
     }, []);
+
+    const handleSaveAndClose = async () => {
+        await handleSave("close");
+    };
+
+    const handleSaveAndNew = async () => {
+        await handleSave("new");
+    };
 
     const handleSave = async (pendingAction = null) => {
         const payload = {
@@ -183,10 +194,9 @@ const ProductionAllocationForm = ({
         setReadOnly(false);
         setDocId("New");
         setDocDate(moment().format("YYYY-MM-DD"));
-        setCustomerId("");
-        // setJobCardId("");
+        setJobCardId("");
         setRemarks("");
-        setCustomerDetails({ name: "", contactPerson: "", phone: "" });
+        setAllocationDetails(DEFAULT_ROWS);
     };
 
     const handleJobCardChange = (item) => {
@@ -194,20 +204,22 @@ const ProductionAllocationForm = ({
 
         setJobCardId(item.id || "");
         setStyleItemId(item.styleItemId || "");
-        setOrderQty(item.orderQty || "");
 
         const routes = item.processRoute || [];
 
         const mappedRows = Array.from({ length: 5 }, (_, index) => {
             const route = routes[index];
-
+            const processData = processList?.data?.find(
+                (p) => p.id === route?.processId
+            );
+            const isOutside = processData?.isOutsideJob || false;
             return {
                 seqNo: route?.sequence || index + 1,
                 processId: route?.processId || "",
                 processName: route?.Process?.name || "",
                 type: route?.type || "",
-                isInHouse: false,
-                isOutSide: false,
+                isInHouse: route?.processId ? !isOutside : false,
+                isOutSide: route?.processId ? isOutside : false,
             };
         });
 
@@ -215,7 +227,7 @@ const ProductionAllocationForm = ({
     };
 
     const actionButtonClass =
-        "px-3 py-2 rounded-md flex items-center justify-center text-sm text-white transition";
+        "px-2 py-1 rounded flex items-center justify-center text-xs gap-2 text-white transition";
 
     const leftActions = [
         ...(!effectiveReadOnly
@@ -224,18 +236,18 @@ const ProductionAllocationForm = ({
                     key: "saveAndClose",
                     icon: (
                         <span className="flex items-center gap-1">
-                            <FiSave className="h-4 w-4" />
-                            <HiX className="h-4 w-4" />
+                            {/* <FiSave className="h-4 w-4" /> */}
+                            <HiOutlineRefresh className="h-4 w-4" />
                         </span>
                     ),
                     hoverLabel: "Save & Close",
-                    iconOnly: true,
-                    onClick: () => handleSave("close"),
+                    label: "Save & Close",
+                    iconOnly: false,
+                    onClick: handleSaveAndClose,
                     onKeyDown: (e) => {
                         if (e.key === "Enter") {
                             e.preventDefault();
-                            e.stopPropagation();
-                            handleSave("close");
+                            handleSaveAndClose();
                         }
                     },
                     className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
@@ -245,17 +257,17 @@ const ProductionAllocationForm = ({
                     icon: (
                         <span className="flex items-center gap-1">
                             <FiSave className="h-4 w-4" />
-                            <HiOutlineRefresh className="h-4 w-4" />
+                            {/* <HiOutlineRefresh className="h-4 w-4" /> */}
                         </span>
                     ),
                     hoverLabel: "Save & New",
-                    iconOnly: true,
-                    onClick: () => handleSave("new"),
+                    label: "Save & New",
+                    iconOnly: false,
+                    onClick: handleSaveAndNew,
                     onKeyDown: (e) => {
                         if (e.key === "Enter") {
                             e.preventDefault();
-                            e.stopPropagation();
-                            handleSave("new");
+                            handleSaveAndNew();
                         }
                     },
                     className: `bg-indigo-600 hover:bg-indigo-700 ${actionButtonClass}`,
@@ -269,8 +281,15 @@ const ProductionAllocationForm = ({
             key: "edit",
             icon: <FiEdit2 className="h-4 w-4" />,
             hoverLabel: "Edit",
-            iconOnly: true,
+            label: "Edit",
+            iconOnly: false,
             onClick: () => setReadOnly(false),
+            onKeyDown: (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    setReadOnly(false);
+                }
+            },
             className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
             hidden: !readOnly || !id,
         },
@@ -278,7 +297,8 @@ const ProductionAllocationForm = ({
             key: "print",
             icon: <FiPrinter className="h-4 w-4" />,
             hoverLabel: "Print",
-            iconOnly: true,
+            label: "Print PDF",
+            iconOnly: false,
             onClick: () => setPrintModalOpen(true),
             onKeyDown: (e) => {
                 if (e.key === "Enter") {
@@ -317,7 +337,7 @@ const ProductionAllocationForm = ({
 
                         </div>
                     </div>
-                    <div className="flex-1 w-auto border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                    <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                         <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
                             Job Card Details
                         </h2>
@@ -340,18 +360,33 @@ const ProductionAllocationForm = ({
 
 
                             </div>
-                            <div className="w-48">
+                            <div className="w-64">
                                 <DropdownNew name="Item Description" dataList={styleItemList?.data} value={styleItemId} setValue={setStyleItemId} required readOnly={true} disabled={true}
                                 />
                             </div>
-                            <div className="w-20">
-                                <TextInput name="Order Qty" value={orderQty} setValue={setOrderQty} readOnly={true} required type="number"
-                                    className="text-right w-full" />
-                            </div>
+
                         </div>
                     </div>
+                    <div className="flex-1 w-auto border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                            Order Details
+                        </h2>
+                        <div className="flex gap-2 ">
+                            <div className="w-44">
+                                <TextInput name="Order No" value={findFromList(jobCardId, jobCardList?.data, "orderEntryDocId")} readOnly={true} required
+                                    className=" w-full" />
+                            </div>
+                            <div className="w-20">
+                                <TextInput name="Order Qty" value={findFromList(jobCardId, jobCardList?.data, "orderQty")} readOnly={true} required type="number"
+                                    className="text-right w-full" />
+                            </div>
+                            <div className="w-64">
+                                <TextInput name="Customer" value={findFromList(jobCardId, jobCardList?.data, "customerName")} readOnly={true} required
+                                    className=" w-full" />
+                            </div>
 
-
+                        </div>
+                    </div>
                 </div>
 
             </div>

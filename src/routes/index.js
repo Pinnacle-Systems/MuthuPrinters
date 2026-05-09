@@ -66,3 +66,4 @@ export { default as ProformaInvoice } from "./ProformaInvoice.route.js";
 export { default as currency } from "./currency.route.js";
 export { default as bank } from "./bank.route.js";
 export { default as productionAllocation } from "./productionAllocation.route.js";
+export { default as notification } from "./notification.route.js";

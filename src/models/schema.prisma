@@ -70,6 +70,7 @@ model Company {
   proformaInvoices    ProformaInvoice[]
   currencies          Currency[]
   bank                Bank[]
+  machines            Machine[]
 }
 
 model Subscription {
@@ -1823,6 +1824,8 @@ model OrderEntry {
   proFormaId        Int?
   refNo             String?
   isRepeatedPI      Boolean?            @default(false)
+  validDays         Int?
+  validTo           DateTime?
   attachments       attachments[]
   JobCard           JobCard[]
 
@@ -1955,6 +1958,8 @@ model JobCard {
   cutAndSeal         String?
   labelQuality       String?
   block              String?
+  orderItemId        Int?
+  OrderItems         OrderItems? @relation(fields: [orderItemId], references: [id])
 
   boardQualities        BoardQuality[]
   processDetails        ProcessDetails[]
@@ -2031,6 +2036,8 @@ model OrderItems {
   SizeTemplate   SizeTemplate?      @relation(fields: [sizeTemplateId], references: [id])
   trackingType   String?
   sizeBreakup    OrderSizeBreakup[]
+
+  jobCards JobCard[]
 }
 
 model OrderSizeBreakup {
@@ -2208,4 +2215,29 @@ model ProductionAllocationDtl {
   Process                Process?             @relation(fields: [processId], references: [id])
   type                   String?
   sequence               Int?
+}
+
+model Machine {
+  id        Int      @id @default(autoincrement())
+  name      String?
+  active    Boolean? @default(true)
+  Company   Company? @relation(fields: [companyId], references: [id])
+  companyId Int?
+}
+
+model Notification {
+  id Int @id @default(autoincrement())
+
+  title   String
+  message String
+  type    String?
+
+  userId Int?
+  isRead Boolean @default(false)
+
+  referenceId   Int?
+  referencePage String?
+
+  createdAt  DateTime @default(now())
+  isResolved Boolean  @default(false)
 }

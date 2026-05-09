@@ -8,10 +8,11 @@ import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 import { useAddProcessMasterMutation, useDeleteProcessMasterMutation, useGetProcessMasterByIdQuery, useGetProcessMasterQuery, useLazyGetProcessMasterByIdQuery, useUpdateProcessMasterMutation } from "../../../redux/services/ProcessMasterService";
+import { Checkbox } from "@mui/material";
 
 export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
     const [form, setForm] = useState(false);
-
+    const [isOutsideJob, setIsOutsideJob] = useState(false);
     const [readOnly, setReadOnly] = useState(false);
     const [id, setId] = useState("");
     const [name, setName] = useState("");
@@ -46,6 +47,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         (data) => {
             setName(data?.name ? data.name : "");
             setActive(id ? (data?.active ? data.active : false) : true);
+            setIsOutsideJob(data?.isOutsideJob ? data?.isOutsideJob : false);
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
         },
         [id],
@@ -62,6 +64,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         companyId: secureLocalStorage.getItem(
             sessionStorage.getItem("sessionId") + "userCompanyId",
         ),
+        isOutsideJob,
     };
 
     const validateData = (data) => {
@@ -250,8 +253,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                     <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
                         <div className="space-y-4 ">
                             <fieldset className=" rounded mt-2">
-                                <div className="grid grid-cols-2 my-2">
-                                    <div className="w-[50%">
+                                <div className="flex gap-x-8 my-2">
+                                    <div className="w-[50%]">
                                         <TextInputNew
                                             name="Process"
                                             value={name}
@@ -261,6 +264,20 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                                             disabled={childRecord.current > 0}
                                             ref={countryNameRef}
                                         />
+                                    </div>
+                                    <div className="flex items-center">
+                                        <Checkbox
+                                            checked={isOutsideJob}
+                                            onChange={(e) => setIsOutsideJob(e.target.checked)}
+                                            disabled={readOnly}
+                                            size="small"
+                                            className="mt-1"
+                                            readOnly={readOnly}
+                                        />
+
+                                        <label className="text-[14px] text-slate-700 font-medium">
+                                            IsOutside
+                                        </label>
                                     </div>
                                 </div>
                                 <ToggleButton

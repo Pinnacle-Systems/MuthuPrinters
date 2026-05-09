@@ -22,8 +22,8 @@ const ProductionAllocationReport = ({
     const [dataPerPage, setDataPerPage] = useState("10");
     const [serachDocNo, setSerachDocNo] = useState("");
     const [searchDocDate, setSearchDocDate] = useState("");
-    const [searchCustomer, setSearchCustomer] = useState("");
-    const [searchOrderNo, setSearchOrderNo] = useState("");
+    const [searchJobCard, setSearchJobCard] = useState("");
+    const [searchStyleItem, setSearchStyleItem] = useState("");
 
     const [totalCount, setTotalCount] = useState(0);
     const [currentPageNumber, setCurrentPageNumber] = useState(1);
@@ -31,13 +31,13 @@ const ProductionAllocationReport = ({
     const searchFields = {
         serachDocNo,
         searchDocDate,
-        searchCustomer,
-        searchOrderNo,
+        searchJobCard,
+        searchStyleItem,
     };
 
     useEffect(() => {
         setCurrentPageNumber(1);
-    }, [serachDocNo, searchDocDate, searchCustomer, searchOrderNo]);
+    }, [serachDocNo, searchDocDate, searchJobCard, searchStyleItem]);
 
     const {
         data: allData,
@@ -146,8 +146,11 @@ const ProductionAllocationReport = ({
                                 <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
                                     <div>Allocation Date</div>
                                 </th>
+                                <th className="w-40  px-3   font-medium text-[13px] text-gray-900  text-center ">
+                                    <div>Job Card No</div>
+                                </th>
                                 <th className="w-80  px-3   font-medium text-[13px] text-gray-900  text-center ">
-                                    <div>Notes</div>
+                                    <div>Item Description</div>
                                 </th>
                                 <th className="w-14   px-3  font-medium text-[13px]  text-gray-900  text-center ">
                                     <div>Actions</div>
@@ -175,13 +178,22 @@ const ProductionAllocationReport = ({
                                         onChange={(e) => setSearchDocDate(e.target.value)}
                                     />
                                 </th>
-                                <th className="w-80  px-1 font-medium text-[13px]  text-gray-900  text-center ">
+                                <th className="w-40  px-1 font-medium text-[13px]  text-gray-900  text-center ">
                                     <input
                                         type="text"
                                         className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
                                         placeholder="Search"
-                                        value={searchCustomer}
-                                        onChange={(e) => setSearchCustomer(e.target.value)}
+                                        value={searchJobCard}
+                                        onChange={(e) => setSearchJobCard(e.target.value)}
+                                    />
+                                </th>
+                                <th className="w-40  px-1 font-medium text-[13px]  text-gray-900  text-center ">
+                                    <input
+                                        type="text"
+                                        className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
+                                        placeholder="Search"
+                                        value={searchStyleItem}
+                                        onChange={(e) => setSearchStyleItem(e.target.value)}
                                     />
                                 </th>
                                 <th className=" px-3 w-36  font-medium text-[13px]  text-gray-900  text-center "></th>
@@ -225,7 +237,10 @@ const ProductionAllocationReport = ({
                                                 {getDateFromDateTimeToDisplay(item.docDate)}
                                             </td>
                                             <td className="py-1.5 text-left">
-                                                {item.customer?.name}
+                                                {item.JobCard?.docId}
+                                            </td>
+                                            <td className="py-1.5 text-left">
+                                                {item.StyleItem?.name}
                                             </td>
 
                                             <td className="px-2 py-1">

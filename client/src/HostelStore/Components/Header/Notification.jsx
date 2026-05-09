@@ -9,6 +9,7 @@ import {
   useMarkNotificationAsReadMutation, // ✅ NEW
 } from "../../../redux/uniformService/ApprovalMasterServices";
 import { TICK_ICON, VIEW } from "../../../icons";
+import { useGetNotificationsQuery } from "../../../redux/uniformService/NotificationService";
 
 const STATUS_DISPLAY = {
   APPROVED: { label: "✅ Approved", isSelfResult: true },
@@ -37,7 +38,19 @@ const Notification = () => {
     { params: { userId } },
     { pollingInterval: 30000, skip: !userId }, // ✅ Poll every 30s
   );
-  const pending = data?.data ?? [];
+  const { data: jobCardNotifications } = useGetNotificationsQuery(
+    { params: { userId } },
+    { skip: !userId }
+  );
+
+  const jobCardPending = jobCardNotifications?.data || [];
+
+  const approvalNotifications = data?.data ?? [];
+  const pending = [
+    ...approvalNotifications,
+    ...jobCardPending,
+  ];
+
 
   // ✅ NEW — split into action-required and result notifications
   const actionRequired = pending.filter((log) => {
@@ -60,6 +73,18 @@ const Notification = () => {
     useMarkNotificationAsReadMutation();
 
   function openRecord(log) {
+    if (log.referencePage === "JOB_CARD_PENDING") {
+
+      dispatch(push({
+        name: "ORDER ENTRY",
+        previewId: log.referenceId,
+      }));
+
+      setOpen(false);
+
+      return;
+    }
+
     dispatch(push({ name: log.referencePage, previewId: log.referenceId }));
     setOpen(false);
   }

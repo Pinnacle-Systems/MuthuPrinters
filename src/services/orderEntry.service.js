@@ -419,6 +419,11 @@ async function getOne(id) {
               name: true,
             },
           },
+          Hsn: {
+            select: {
+              name: true,
+            },
+          },
         },
       },
       Branch: {

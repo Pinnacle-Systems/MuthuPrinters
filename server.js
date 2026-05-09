@@ -69,6 +69,7 @@ import {
   currency,
   bank,
   productionAllocation,
+  notification,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -170,6 +171,7 @@ app.use("/proformaInvoice", ProformaInvoice);
 app.use("/currency", currency);
 app.use("/bank", bank);
 app.use("/productionAllocation", productionAllocation);
+app.use("/notification", notification);
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;
