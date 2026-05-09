@@ -13,6 +13,7 @@ import {
   getApprovalStatus,
   getModuleApprovalSetup,
 } from "../utils/approvalHelper.js";
+import { orderEntry } from "../routes/index.js";
 const REFERENCE_PAGE = "JOB CARD";
 
 async function getNextDocId(branchId, shortCode, startTime, endTime) {
@@ -83,6 +84,11 @@ async function get(req) {
     include: {
       customer: { select: { id: true, name: true } },
       gsm: { select: { id: true, name: true } },
+      _count: {
+        select: {
+          productionAllocations: true,
+        },
+      },
     },
     orderBy: { id: "desc" },
   });
@@ -167,6 +173,7 @@ async function get(req) {
     return {
       ...jobCard,
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+      childRecord: jobCard._count.productionAllocations,
     };
   });
 
@@ -178,6 +185,43 @@ async function get(req) {
   }
 
   return { statusCode: 0, data: resolvedData, nextDocId: newDocId, totalCount };
+}
+
+async function getJobCardList(req) {
+  const { branchId, companyId } = req.query;
+
+  let result = await prisma.jobCard.findMany({
+    where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
+    },
+    select: {
+      id: true,
+      docId: true,
+      orderQty: true,
+      styleItemId: true,
+      customer: { select: { name: true } },
+      processRoute: true,
+      OrderEntry: { select: { docId: true } },
+    },
+    orderBy: {
+      docId: "desc",
+    },
+  });
+
+  const data = result.map((item) => ({
+    id: item.id,
+    docId: item.docId,
+    orderQty: item.orderQty,
+    styleItemId: item.styleItemId,
+
+    customerName: item.customer?.name || "",
+
+    orderEntryDocId: item.OrderEntry?.docId || "",
+
+    processRoute: item.processRoute || [],
+  }));
+
+  return { statusCode: 0, data };
 }
 
 async function getOne(id) {
@@ -208,6 +252,11 @@ async function getOne(id) {
         include: { Process: { select: { id: true, name: true } } },
       },
       jobCardSizeDetails: true,
+      _count: {
+        select: {
+          productionAllocations: true,
+        },
+      },
     },
   });
 
@@ -266,6 +315,7 @@ async function getOne(id) {
       ...data,
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
       approvalLog: log,
+      childRecord: data._count.productionAllocations,
     },
   };
 }
@@ -823,4 +873,4 @@ async function remove(id) {
   }
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove, getJobCardList };

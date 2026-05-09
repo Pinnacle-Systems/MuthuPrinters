@@ -94,6 +94,8 @@ const JobCardForm = ({
     const [selectedOrderData, setSelectedOrderData] = useState(null);
     const [trackingType, setTrackingType] = useState("Barcode");
     const [sizeModalOpen, setSizeModalOpen] = useState(false);
+    const childRecord = useRef(0);
+    const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
 
     const qrRef = useRef(null);
 
@@ -178,6 +180,8 @@ const JobCardForm = ({
         setCutAndSeal(data?.cutAndSeal || "");
         setJobCardSizeDetails(data?.jobCardSizeDetails || []);
         setTrackingType(data?.trackingType || "");
+        childRecord.current = data?.childRecord ? data?.childRecord : 0;
+
     }, []);
 
     useEffect(() => {
@@ -204,6 +208,13 @@ const JobCardForm = ({
         jobCardSizeDetails, trackingType
     };
 
+    const openPrintModal = () => {
+        if (qrRef.current) {
+            setQrCodeDataUrl(qrRef.current.toDataURL("image/png"));
+        }
+        setPrintModalOpen(true);
+    };
+
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
         try {
             const returnData = await callback(data).unwrap();
@@ -215,7 +226,7 @@ const JobCardForm = ({
                         if (!id) {
                             Swal.fire({ icon: "question", title: "Do You Want to Print?", showCancelButton: true, confirmButtonText: "Yes, Print", cancelButtonText: "No [Esc]", confirmButtonColor: "#3085d6", cancelButtonColor: "#6b7280", focusConfirm: true, allowEnterKey: true, allowEscapeKey: true })
                                 .then((result) => {
-                                    if (result.isConfirmed) { setPrintModalOpen(true); if (returnData?.data?.id) setId(returnData.data.id); setPendingAction(nextProcess); }
+                                    if (result.isConfirmed) { openPrintModal(); if (returnData?.data?.id) setId(returnData.data.id); setPendingAction(nextProcess); }
                                     else { if (nextProcess === "new") { syncFormWithDb(undefined); setId(""); setDocId("New"); setTimeout(() => customerRef.current?.focus(), 300); } if (nextProcess === "close") onClose(); }
                                 });
                         } else {
@@ -316,7 +327,7 @@ const JobCardForm = ({
                 <div className="w-64 px-1">
                     <DropdownNew name="Customer"
                         dataList={id ? customerList?.data?.filter((i) => i?.isCustomer) : customerList?.data?.filter((i) => i?.active && i?.isCustomer)}
-                        value={customerId} setValue={setCustomerId} required readOnly={readOnly} disabled={readOnly} ref={customerRef} />
+                        value={customerId} setValue={setCustomerId} required readOnly={readOnly} disabled={readOnly || childRecord.current > 0} ref={customerRef} />
 
                 </div>
             </div>
@@ -331,7 +342,7 @@ const JobCardForm = ({
                                     item?.approvalStatus?.status
                                 ) &&
                                 item?.customerId === customerId
-                            )} value={orderEntryId} setValue={setOrderEntryId} required readOnly={readOnly} disabled={readOnly} otherField={"docId"}
+                            )} value={orderEntryId} setValue={setOrderEntryId} required readOnly={readOnly} disabled={readOnly || childRecord.current > 0} otherField={"docId"}
                             beforeChange={async (selectedValue) => {
                                 if (!selectedValue) {
                                     setProductionType("SAMPLE");
@@ -369,7 +380,7 @@ const JobCardForm = ({
                     <div className="w-48">
                         <DropdownNew name="Item Description" dataList={styleItemList?.data?.filter(item =>
                             orderStyleItems ? orderStyleItems.includes(item.id) : true
-                        )} value={styleItemId} setValue={setStyleItemId} required readOnly={readOnly} disabled={readOnly}
+                        )} value={styleItemId} setValue={setStyleItemId} required readOnly={readOnly} disabled={readOnly || childRecord.current > 0}
                             beforeChange={
                                 (selectedValue) => {
                                     setItemGroupId(selectedValue?.itemGroupId);
@@ -984,11 +995,11 @@ const JobCardForm = ({
                             <FiEdit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                     )}
-                    <button onClick={() => setPrintModalOpen(true)}
+                    <button onClick={() => openPrintModal()}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") {
                                 e.preventDefault()
-                                setPrintModalOpen(true)
+                                openPrintModal()
                             }
                         }}
                         className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs">
@@ -1280,6 +1291,9 @@ const JobCardForm = ({
                         gsmList={gsmList} machineList={machineList} plateList={plateList} dieList={dieList}
                         defaultList={defaultList} laminationList={laminationList} varnishList={varnishList}
                         branchData={branchData?.data} orderList={orderList}
+                        sizeList={sizeList} styleItemList={styleItemList}
+                        qrCodeDataUrl={qrCodeDataUrl}
+                        employeeList={employeeList}
                     />
                 </PDFViewer>
             </Modal>

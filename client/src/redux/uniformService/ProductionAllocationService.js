@@ -50,6 +50,9 @@ const ProductionAllocationApi = createApi({
         url: PRODUCTION_ALLOCATION_API,
         method: "POST",
         body: payload,
+        headers: {
+          "Content-type": "application/json; charset=UTF-8",
+        },
       }),
       invalidatesTags: ["productionAllocation"],
     }),

@@ -33,6 +33,19 @@ const JobCardApi = createApi({
       },
       providesTags: ["jobCard"],
     }),
+    getJobCardList: builder.query({
+      query: ({ params }) => {
+        return {
+          url: JOB_CARD_API + "/jobCardList",
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+          params,
+        };
+      },
+      providesTags: ["jobCard"],
+    }),
     getJobCardById: builder.query({
       query: (id) => {
         return {
@@ -78,6 +91,7 @@ const JobCardApi = createApi({
 
 export const {
   useGetJobCardQuery,
+  useGetJobCardListQuery,
   useGetJobCardByIdQuery,
   useLazyGetJobCardByIdQuery,
   useAddJobCardMutation,

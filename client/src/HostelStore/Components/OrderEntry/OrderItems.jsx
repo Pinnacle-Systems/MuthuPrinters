@@ -6,7 +6,7 @@ import { useLazyGetSizeTemplateByIdQuery } from '../../../redux/services/SizeTem
 import Modal from '../../../UiComponents/Modal';
 import { findFromList } from '../../../Utils/helper';
 
-const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeList, uomList, id, requirementRef, itemGroupList, sizeTemplateList, hsnList }) => {
+const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeList, uomList, id, requirementRef, itemGroupList, sizeTemplateList, hsnList, childRecord }) => {
     const EMPTY_ROW = {
         styleItemId: "",
         uomId: "",
@@ -40,7 +40,6 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
             const selectedItem = styleItemList?.data?.find(
                 (item) => item.id === value,
             );
-            console.log(selectedItem, "selectedItem")
             if (selectedItem) {
                 updatedRow = {
                     ...updatedRow,
@@ -48,8 +47,8 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                     uomId: selectedItem.uomId || "",
                     hsnId: selectedItem.hsnId || "",
                     sizeTemplateId: selectedItem.sizeTemplateId || "",
-                    sizeBreakup: [],
-                    orderQty: "",
+                    sizeBreakup: id ? [...(updatedRow.sizeBreakup || [])] : [],
+                    orderQty: id ? updatedRow.orderQty : "",
                 };
             }
         }
@@ -357,7 +356,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                 label: item.name,
                                                 value: item.id,
                                             }))}
-                                        readOnly={readOnly}
+                                        readOnly={readOnly || childRecord?.current > 0}
                                         placeholder=""
                                         onBlur={() =>
                                             handleInputChange(row.styleItemId, index, "styleItemId")
@@ -409,7 +408,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                 value: "SizeTemplateBarcode",
                                             },
                                         ]}
-                                        readOnly={readOnly}
+                                        readOnly={readOnly || childRecord?.current > 0}
                                         placeholder=""
                                     />
                                 </td>
@@ -501,7 +500,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                             focusedField === `${index}`
                                                 ? (row?.orderQty ?? "")
                                                 : row?.orderQty
-                                                    ? Number(row.orderQty).toFixed(2)
+                                                    ? Number(row.orderQty)
                                                     : ""
                                         }
                                         onChange={(e) =>
@@ -510,12 +509,12 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                         onBlur={(e) => {
                                             const val = e.target.value;
                                             handleInputChange(
-                                                val ? Number(val).toFixed(2) : "",
+                                                val ? Number(val) : "",
                                                 index,
                                                 "orderQty",
                                             );
                                         }}
-                                        disabled={readOnly || row.trackingType !== "None"}
+                                        disabled={readOnly || row.trackingType !== "None" || childRecord?.current > 0}
                                     />
                                 </td>
                                 {/* <td className="w-2 border border-gray-300">
@@ -557,7 +556,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                         (sum, row) => sum + (Number(row.orderQty) || 0),
                                         0,
                                     )
-                                    .toFixed(2)}
+                                }
                             </td>
                         </tr>
                     </tfoot>
@@ -691,7 +690,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                         e.target.value,
                                                                     )
                                                                 }
-                                                                disabled={readOnly}
+                                                                disabled={readOnly || childRecord?.current > 0}
                                                                 placeholder="From"
                                                                 onFocus={(e) => {
                                                                     e.target.select()
@@ -723,7 +722,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                         addModalRow();
                                                                     }
                                                                 }}
-                                                                disabled={readOnly}
+                                                                disabled={readOnly || childRecord?.current > 0}
                                                                 placeholder="To"
                                                                 onFocus={(e) => {
                                                                     e.target.select()
@@ -742,11 +741,11 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                         e.target.value,
                                                                     )
                                                                 }
-                                                                disabled={readOnly}
+                                                                disabled={readOnly || childRecord?.current > 0}
                                                                 onBlur={(e) => {
                                                                     const value = parseFloat(
                                                                         e.target.value || 0,
-                                                                    ).toFixed(3);
+                                                                    );
                                                                     handleSizeBreakupChange(idx, "qty", value);
                                                                 }}
                                                                 onKeyDown={(e) => {
@@ -817,11 +816,11 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                             e.target.value,
                                                                         )
                                                                     }
-                                                                    disabled={readOnly}
+                                                                    disabled={readOnly || childRecord?.current > 0}
                                                                     onBlur={(e) => {
                                                                         const value = parseFloat(
                                                                             e.target.value || 0,
-                                                                        ).toFixed(3);
+                                                                        );
                                                                         handleSizeBreakupChange(idx, "qty", value);
                                                                     }}
                                                                     placeholder="0"
@@ -887,7 +886,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                             e.target.value,
                                                                         )
                                                                     }
-                                                                    disabled={readOnly}
+                                                                    disabled={readOnly || childRecord?.current > 0}
                                                                     placeholder="From"
                                                                     onFocus={(e) => {
                                                                         e.target.select()
@@ -908,7 +907,7 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                             e.target.value,
                                                                         )
                                                                     }
-                                                                    disabled={readOnly}
+                                                                    disabled={readOnly || childRecord?.current > 0}
                                                                     placeholder="To"
                                                                     onFocus={(e) => {
                                                                         e.target.select()
@@ -927,11 +926,11 @@ const OrderItems = ({ orderItems, setOrderItems, readOnly, styleItemList, sizeLi
                                                                             e.target.value,
                                                                         )
                                                                     }
-                                                                    disabled={readOnly}
+                                                                    disabled={readOnly || childRecord?.current > 0}
                                                                     onBlur={(e) => {
                                                                         const value = parseFloat(
                                                                             e.target.value || 0,
-                                                                        ).toFixed(3);
+                                                                        );
                                                                         handleSizeBreakupChange(idx, "qty", value);
                                                                     }}
                                                                     placeholder="0"

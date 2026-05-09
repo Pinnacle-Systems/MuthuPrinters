@@ -722,8 +722,8 @@ const ProformaInvoiceForm = ({
 
     const headerContent = (
         <>
-            <div className="flex flex-col md:flex-row gap-1">
-                <div className="flex flex-col md:flex-row gap-1">
+            <div className="flex flex-col md:flex-row gap-1 w-full">
+                <div className="flex flex-col md:flex-row gap-1 w-full">
 
                     <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                         <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">

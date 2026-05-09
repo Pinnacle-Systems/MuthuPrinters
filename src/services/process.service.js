@@ -41,23 +41,23 @@ async function getOne(id) {
     },
   });
   if (!data) return NoRecordFound("process");
-  const childRecord = 0;
-  //   await prisma.processGroupList.count({
-  //     where: {
-  //       processId: parseInt(id),
-  //     },
-  //   });
-  return { statusCode: 0, data: { ...data, ...{ childRecord } } };
+  const processCount = await prisma.processGroupList.count({
+    where: {
+      processId: parseInt(id),
+    },
+  });
+  return { statusCode: 0, data: { ...data, ...{ childRecord: processCount } } };
 }
 
 async function create(body) {
-  const { name, companyId, active = true } = await body;
+  const { name, companyId, active = true, isOutsideJob } = await body;
 
   const data = await prisma.process.create({
     data: {
       name,
       active,
       companyId: parseInt(companyId),
+      isOutsideJob: Boolean(isOutsideJob),
     },
   });
 
@@ -65,7 +65,7 @@ async function create(body) {
 }
 
 async function update(id, body) {
-  const { name, active, companyId } = await body;
+  const { name, active, companyId, isOutsideJob } = await body;
   const dataFound = await prisma.process.findUnique({
     where: {
       id: parseInt(id),
@@ -80,6 +80,7 @@ async function update(id, body) {
       name,
       active,
       companyId: parseInt(companyId),
+      isOutsideJob: Boolean(isOutsideJob),
     },
   });
   return { statusCode: 0, data };

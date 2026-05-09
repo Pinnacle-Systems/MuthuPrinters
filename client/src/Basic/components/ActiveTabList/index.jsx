@@ -81,6 +81,7 @@ import {
   DieMaster,
   BoardMaster,
   ProformaInvoice,
+  ProductionAllocation,
 } from "../../../HostelStore/Components";
 
 const ActiveTabList = () => {
@@ -166,6 +167,7 @@ const ActiveTabList = () => {
     "PROFORMA INVOICE": <ProformaInvoice />,
     "CURRENCY MASTER": <CurrencyMaster />,
     "BANK MASTER": <BankMaster />,
+    "PRODUCTION ALLOCATION": <ProductionAllocation />,
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

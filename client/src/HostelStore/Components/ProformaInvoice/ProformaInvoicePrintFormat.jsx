@@ -183,6 +183,39 @@ const styles = StyleSheet.create({
         borderBottom: `1 solid ${BORDER}`,
     },
 
+    // ── PO-STYLE TAX BOX ──
+    taxBox: {
+        width: 160,
+        marginTop: 8,
+        marginRight: 20,
+        alignSelf: "flex-end",
+        border: `1 solid ${BORDER_LIGHT}`,
+        borderRadius: 3,
+        overflow: "hidden",
+    },
+    taxHeader: {
+        backgroundColor: DARK2,
+        color: "#e8e8f0",
+        textAlign: "center",
+        fontSize: 7.5,
+        fontFamily: "Helvetica-Bold",
+        letterSpacing: 1,
+        paddingVertical: 4,
+    },
+    taxRow: {
+        flexDirection: "row",
+        borderTop: `1 solid #ebebeb`,
+    },
+    taxRowNet: {
+        flexDirection: "row",
+        borderTop: `1 solid ${DARK}`,
+        backgroundColor: DARK,
+    },
+    taxLabel: { flex: 1, fontSize: 7.5, color: "#333", padding: 4 },
+    taxValue: { fontSize: 7.5, color: "#333", textAlign: "right", padding: 4, minWidth: 55 },
+    taxLabelNet: { flex: 1, fontSize: 7.5, color: "#fff", fontFamily: "Helvetica-Bold", padding: 4 },
+    taxValueNet: { fontSize: 7.5, color: "#fff", fontFamily: "Helvetica-Bold", textAlign: "right", padding: 4, minWidth: 55 },
+
     // ── BANK + SUMMARY ──
     bankSummaryRow: {
         flexDirection: "row",
@@ -212,14 +245,6 @@ const styles = StyleSheet.create({
         fontFamily: "Helvetica-Bold",
         color: DARK,
         textAlign: "right",
-    },
-
-    // ── TAX BREAKUP (domestic) ──
-    taxBox: {
-        marginHorizontal: 20,
-        marginTop: 8,
-        border: `1 solid ${BORDER_LIGHT}`,
-        borderRadius: 3,
     },
 
     // ── BOTTOM SECTION ──
@@ -256,6 +281,8 @@ const styles = StyleSheet.create({
 });
 
 // ── TABLE COLUMNS ─────────────────────────────────────────────────────────────
+// For export: no Tax% or Net Amount columns
+// For domestic: include Tax% and Net Amount
 const getColumns = (isExport) => [
     { label: "S.No", flex: 0.4 },
     { label: "Description of Goods", flex: 3 },
@@ -265,6 +292,7 @@ const getColumns = (isExport) => [
     { label: "Dozen", flex: 0.8 },
     { label: "Price", flex: 1 },
     { label: "Gross Amount", flex: 1.2 },
+    // Tax% and Net Amount only for domestic
     ...(!isExport ? [{ label: "Tax %", flex: 0.7 }, { label: "Net Amount", flex: 1.2 }] : []),
 ];
 
@@ -311,14 +339,7 @@ const ContinuationBar = ({ docId, branchName }) => (
             paddingVertical: 6,
         }}
     >
-        <Text
-            style={{
-                fontSize: 9,
-                fontFamily: "Helvetica-Bold",
-                color: "#fff",
-                letterSpacing: 2,
-            }}
-        >
+        <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", color: "#fff", letterSpacing: 2 }}>
             PROFORMA INVOICE — Continued
         </Text>
         <Text style={{ fontSize: 8, color: "rgba(255,255,255,0.7)" }}>
@@ -332,8 +353,6 @@ const ProformaInvoicePrintFormat = ({ data }) => {
     if (!data) return null;
 
     const isExport = data?.customer?.isCustomerExport || false;
-
-    // Currency symbol from data (passed via currencyId lookup — we just use what's available)
     const currencySymbol = data?.Currency?.symbol || data?.currency?.symbol || "";
 
     const branch = data?.Branch || {};
@@ -346,42 +365,39 @@ const ProformaInvoicePrintFormat = ({ data }) => {
     // Totals
     const totalQty = allItems.reduce((s, i) => s + (parseFloat(i.qty) || 0), 0);
     const totalDozen = allItems.reduce((s, i) => s + (parseFloat(i.dozen) || 0), 0);
-    const totalPrice = allItems.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
     const totalGross = allItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
     const carriageCharge = parseFloat(data?.carriageCharge) || 0;
     const grandTotal = isExport ? totalGross + carriageCharge : totalGross;
 
-    // Tax breakup (domestic)
-    const taxBreakup = !isExport
+    // ── DOMESTIC TAX: per-slab breakup (mirrors PurchaseOrderPrintFormat taxBox) ──
+    // Each item carries taxPercent; group by slab, sum taxable + tax amounts
+    const taxSlabBreakup = !isExport
         ? allItems.reduce((acc, item) => {
             const taxPct = parseFloat(item.taxPercent) || parseFloat(item?.Hsn?.tax) || 0;
             const gross = parseFloat(item.amount) || 0;
             const taxAmt = (gross * taxPct) / 100;
-            const existing = acc.find((a) => a.taxPct === taxPct);
+            const label = `Tax ${taxPct}%`;
+            const existing = acc.find((a) => a.label === label);
             if (existing) {
                 existing.taxableAmt += gross;
                 existing.taxAmt += taxAmt;
             } else {
-                acc.push({ taxPct, taxableAmt: gross, taxAmt });
+                acc.push({ label, taxPct, taxableAmt: gross, taxAmt });
             }
             return acc;
         }, [])
         : [];
 
-    const totalTax = taxBreakup.reduce((s, t) => s + t.taxAmt, 0);
-    const netAmount = totalGross + totalTax;
+    const totalTaxAmt = taxSlabBreakup.reduce((s, t) => s + t.taxAmt, 0);
+    const taxableTotal = taxSlabBreakup.reduce((s, t) => s + t.taxableAmt, 0);
+    const netAmount = totalGross + totalTaxAmt; // gross + tax
 
-    // City lookup helpers — data should have LoadingCity / DeliveryCity populated, 
-    // or we fallback to ids
-    const loadingPort =
-        data?.LoadingCity?.name || data?.loadingCity?.name || data?.loadingId || "";
-    const deliveryPort =
-        data?.DeliveryCity?.name || data?.deliveryCity?.name || data?.deliveryId || "";
+    const loadingPort = data?.LoadingCity?.name || data?.loadingCity?.name || data?.loadingId || "";
+    const deliveryPort = data?.DeliveryCity?.name || data?.deliveryCity?.name || data?.deliveryId || "";
 
     // Pagination
     const pageChunks = chunkItems(allItems);
     const renderChunks = pageChunks.length === 0 ? [[]] : pageChunks;
-    const totalPg = renderChunks.length;
     const pageOffsets = renderChunks.reduce((acc, chunk, i) => {
         acc.push(i === 0 ? 0 : acc[i - 1] + renderChunks[i - 1].length);
         return acc;
@@ -412,18 +428,11 @@ const ProformaInvoicePrintFormat = ({ data }) => {
                                             <Image src={Logo} style={styles.logo} />
                                         </View>
                                         <View style={styles.companyCenter}>
-                                            <Text style={styles.companyName}>
-                                                {branch?.branchName || "MUTHU PRINTERS"}
-                                            </Text>
-                                            <Text style={styles.companyAddress}>
-                                                {branch?.address || ""}
-                                            </Text>
+                                            <Text style={styles.companyName}>{branch?.branchName || "MUTHU PRINTERS"}</Text>
+                                            <Text style={styles.companyAddress}>{branch?.address || ""}</Text>
                                             {branch?.contactEmail ? (
                                                 <Text style={{ fontSize: 7.5, color: "#555", marginTop: 1 }}>
-                                                    {branch.contactEmail}
-                                                    {branch?.contactMobile
-                                                        ? `  |  ${branch.contactMobile}`
-                                                        : ""}
+                                                    {branch.contactEmail}{branch?.contactMobile ? `  |  ${branch.contactMobile}` : ""}
                                                 </Text>
                                             ) : null}
                                         </View>
@@ -434,26 +443,9 @@ const ProformaInvoicePrintFormat = ({ data }) => {
                                     <Text style={styles.titleBand}>PROFORMA INVOICE</Text>
 
                                     {/* INTRO TEXT */}
-                                    <View
-                                        style={{
-                                            marginHorizontal: 20,
-                                            marginBottom: 6,
-                                            backgroundColor: "#f9f9fb",
-                                            border: `1 solid ${BORDER_LIGHT}`,
-                                            borderRadius: 3,
-                                            padding: 8,
-                                        }}
-                                    >
+                                    <View style={{ marginHorizontal: 20, marginBottom: 6, backgroundColor: "#f9f9fb", border: `1 solid ${BORDER_LIGHT}`, borderRadius: 3, padding: 8 }}>
                                         {isExport && (
-                                            <Text
-                                                style={{
-                                                    fontSize: 7.5,
-                                                    color: DARK,
-                                                    fontFamily: "Helvetica-Bold",
-                                                    marginBottom: 3,
-                                                    letterSpacing: 0.3,
-                                                }}
-                                            >
+                                            <Text style={{ fontSize: 7.5, color: DARK, fontFamily: "Helvetica-Bold", marginBottom: 3, letterSpacing: 0.3 }}>
                                                 Accessories For 100% Export Oriented Ready Made Garments Industry
                                             </Text>
                                         )}
@@ -469,24 +461,9 @@ const ProformaInvoicePrintFormat = ({ data }) => {
                                     <View style={styles.metaRow}>
                                         {[
                                             { label: "PI No", value: data?.docId },
-                                            {
-                                                label: "PI Date",
-                                                value: data?.docDate
-                                                    ? moment(data.docDate).format("DD-MM-YYYY")
-                                                    : "",
-                                            },
-                                            {
-                                                label: "Valid To",
-                                                value: data?.validityTo
-                                                    ? moment(data.validityTo).format("DD-MM-YYYY")
-                                                    : "",
-                                            },
-                                            {
-                                                label: "Delivery Date",
-                                                value: data?.deliveryDate
-                                                    ? moment(data.deliveryDate).format("DD-MM-YYYY")
-                                                    : "",
-                                            },
+                                            { label: "PI Date", value: data?.docDate ? moment(data.docDate).format("DD-MM-YYYY") : "" },
+                                            { label: "Valid To", value: data?.validityTo ? moment(data.validityTo).format("DD-MM-YYYY") : "" },
+                                            { label: "Delivery Date", value: data?.deliveryDate ? moment(data.deliveryDate).format("DD-MM-YYYY") : "" },
                                         ].map(({ label, value }) => (
                                             <View key={label} style={styles.metaPill}>
                                                 <Text style={styles.metaLabel}>{label}:</Text>
@@ -497,29 +474,20 @@ const ProformaInvoicePrintFormat = ({ data }) => {
 
                                     {/* FROM / TO */}
                                     <View style={styles.twoCol}>
-                                        {/* FROM */}
-                                        <View
-                                            style={[styles.colHalf, { borderRight: `1 solid ${BORDER_LIGHT}` }]}
-                                        >
+                                        <View style={[styles.colHalf, { borderRight: `1 solid ${BORDER_LIGHT}` }]}>
                                             <Text style={styles.sectionHeader}>FROM</Text>
                                             <View style={styles.sectionBody}>
-                                                <Text style={styles.partyName}>
-                                                    {branch?.branchName || "MUTHU PRINTERS"}
-                                                </Text>
-                                                <Text style={styles.partyAddr}>
-                                                    {branch?.address || ""}
-                                                </Text>
+                                                <Text style={styles.partyName}>{branch?.branchName || "MUTHU PRINTERS"}</Text>
+                                                <Text style={styles.partyAddr}>{branch?.address || ""}</Text>
                                                 {[
                                                     { label: "Mobile No", value: branch?.contactMobile },
                                                     { label: "Email", value: branch?.contactEmail },
-                                                ].map(({ label, value }) =>
-                                                    value ? (
-                                                        <View key={label} style={styles.partyRow}>
-                                                            <Text style={styles.partyLabel}>{label}</Text>
-                                                            <Text style={styles.partyValue}>: {value}</Text>
-                                                        </View>
-                                                    ) : null
-                                                )}
+                                                ].map(({ label, value }) => value ? (
+                                                    <View key={label} style={styles.partyRow}>
+                                                        <Text style={styles.partyLabel}>{label}</Text>
+                                                        <Text style={styles.partyValue}>: {value}</Text>
+                                                    </View>
+                                                ) : null)}
                                                 {isExport && (
                                                     <View style={styles.partyRow}>
                                                         <Text style={styles.partyLabel}>Country of Origin</Text>
@@ -528,37 +496,21 @@ const ProformaInvoicePrintFormat = ({ data }) => {
                                                 )}
                                             </View>
                                         </View>
-                                        {/* TO */}
                                         <View style={styles.colHalf}>
                                             <Text style={styles.sectionHeader}>CUSTOMER DETAILS</Text>
                                             <View style={styles.sectionBody}>
-                                                <Text style={styles.partyName}>
-                                                    {customer?.name || "N/A"}
-                                                </Text>
-                                                <Text style={styles.partyAddr}>
-                                                    {customer?.address || ""}
-                                                </Text>
+                                                <Text style={styles.partyName}>{customer?.name || "N/A"}</Text>
+                                                <Text style={styles.partyAddr}>{customer?.address || ""}</Text>
                                                 {[
-                                                    {
-                                                        label: "Contact Person",
-                                                        value: customer?.contactPersonName,
-                                                    },
-                                                    {
-                                                        label: "Mobile No",
-                                                        value: customer?.contactNumber,
-                                                    },
-                                                    {
-                                                        label: "GST No",
-                                                        value: customer?.gstNo,
-                                                    },
-                                                ].map(({ label, value }) =>
-                                                    value ? (
-                                                        <View key={label} style={styles.partyRow}>
-                                                            <Text style={styles.partyLabel}>{label}</Text>
-                                                            <Text style={styles.partyValue}>: {value}</Text>
-                                                        </View>
-                                                    ) : null
-                                                )}
+                                                    { label: "Contact Person", value: customer?.contactPersonName },
+                                                    { label: "Mobile No", value: customer?.contactNumber },
+                                                    { label: "GST No", value: customer?.gstNo },
+                                                ].map(({ label, value }) => value ? (
+                                                    <View key={label} style={styles.partyRow}>
+                                                        <Text style={styles.partyLabel}>{label}</Text>
+                                                        <Text style={styles.partyValue}>: {value}</Text>
+                                                    </View>
+                                                ) : null)}
                                             </View>
                                         </View>
                                     </View>
@@ -573,36 +525,24 @@ const ProformaInvoicePrintFormat = ({ data }) => {
                                                 </View>
                                                 <View style={styles.exportItem}>
                                                     <Text style={styles.exportLabel}>Port of Loading</Text>
-                                                    <Text style={styles.exportValue}>
-                                                        : {loadingPort || "—"}
-                                                    </Text>
+                                                    <Text style={styles.exportValue}>: {loadingPort || "—"}</Text>
                                                 </View>
                                             </View>
                                             <View style={[styles.exportCol, { borderRight: "none" }]}>
                                                 <View style={styles.exportItem}>
                                                     <Text style={styles.exportLabel}>Port of Delivery</Text>
-                                                    <Text style={styles.exportValue}>
-                                                        : {deliveryPort || "—"}
-                                                    </Text>
+                                                    <Text style={styles.exportValue}>: {deliveryPort || "—"}</Text>
                                                 </View>
                                                 <View style={styles.exportItem}>
                                                     <Text style={styles.exportLabel}>Weight (KG)</Text>
-                                                    <Text style={styles.exportValue}>
-                                                        :{" "}
-                                                        {data?.weightInKg
-                                                            ? parseFloat(data.weightInKg).toFixed(3)
-                                                            : "—"}
-                                                    </Text>
+                                                    <Text style={styles.exportValue}>: {data?.weightInKg ? parseFloat(data.weightInKg).toFixed(3) : "—"}</Text>
                                                 </View>
                                             </View>
                                         </View>
                                     )}
                                 </>
                             ) : (
-                                <ContinuationBar
-                                    docId={data?.docId}
-                                    branchName={branch?.branchName || ""}
-                                />
+                                <ContinuationBar docId={data?.docId} branchName={branch?.branchName || ""} />
                             )}
 
                             {/* ── TABLE ── */}
@@ -611,81 +551,27 @@ const ProformaInvoicePrintFormat = ({ data }) => {
 
                                 {/* Item rows */}
                                 {chunkRows.map((row, index) => {
-                                    const rowStyle =
-                                        index % 2 === 0 ? styles.trOdd : styles.trEven;
+                                    const rowStyle = index % 2 === 0 ? styles.trOdd : styles.trEven;
                                     const gross = parseFloat(row.amount) || 0;
-                                    const taxPct =
-                                        parseFloat(row.taxPercent) ||
-                                        parseFloat(row?.Hsn?.tax) ||
-                                        0;
+                                    const taxPct = parseFloat(row.taxPercent) || parseFloat(row?.Hsn?.tax) || 0;
                                     const netAmt = gross + (gross * taxPct) / 100;
                                     return (
                                         <View key={globalOffset + index} style={rowStyle}>
-                                            <Text style={[styles.td, { flex: 0.4 }]}>
-                                                {globalOffset + index + 1}
+                                            <Text style={[styles.td, { flex: 0.4 }]}>{globalOffset + index + 1}</Text>
+                                            <Text style={[styles.td, { flex: 3, textAlign: "left" }]}>{row?.StyleItem?.name || ""}</Text>
+                                            <Text style={[styles.td, { flex: 1.2 }]}>{row?.Hsn?.name || ""}</Text>
+                                            <Text style={[styles.td, { flex: 0.8 }]}>{row?.Uom?.name || ""}</Text>
+                                            <Text style={[styles.td, { flex: 0.8, textAlign: "right" }]}>{row.qty ? parseFloat(row.qty).toFixed(3) : ""}</Text>
+                                            <Text style={[styles.td, { flex: 0.8, textAlign: "right" }]}>{row.dozen ? parseFloat(row.dozen).toFixed(2) : ""}</Text>
+                                            <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>{row.price ? `${currencySymbol} ${parseFloat(row.price).toFixed(2)}` : ""}</Text>
+                                            <Text style={[styles.td, { flex: 1.2, textAlign: "right" }, isExport && { borderRight: "none" }]}>
+                                                {gross ? `${currencySymbol} ${gross.toFixed(2)}` : ""}
                                             </Text>
-                                            <Text
-                                                style={[styles.td, { flex: 3, textAlign: "left" }]}
-                                            >
-                                                {row?.StyleItem?.name || ""}
-                                            </Text>
-                                            <Text style={[styles.td, { flex: 1.2 }]}>
-                                                {row?.Hsn?.name || ""}
-                                            </Text>
-                                            <Text style={[styles.td, { flex: 0.8 }]}>
-                                                {row?.Uom?.name || ""}
-                                            </Text>
-                                            <Text
-                                                style={[styles.td, { flex: 0.8, textAlign: "right" }]}
-                                            >
-                                                {row.qty
-                                                    ? parseFloat(row.qty).toFixed(3)
-                                                    : ""}
-                                            </Text>
-                                            <Text
-                                                style={[styles.td, { flex: 0.8, textAlign: "right" }]}
-                                            >
-                                                {row.dozen
-                                                    ? parseFloat(row.dozen).toFixed(2)
-                                                    : ""}
-                                            </Text>
-                                            <Text
-                                                style={[styles.td, { flex: 1, textAlign: "right" }]}
-                                            >
-                                                {row.price
-                                                    ? `${currencySymbol} ${parseFloat(row.price).toFixed(2)}`
-                                                    : ""}
-                                            </Text>
-                                            <Text
-                                                style={[
-                                                    styles.td,
-                                                    { flex: 1.2, textAlign: "right" },
-                                                    isExport && { borderRight: "none" },
-                                                ]}
-                                            >
-                                                {gross
-                                                    ? `${currencySymbol} ${gross.toFixed(2)}`
-                                                    : ""}
-                                            </Text>
+                                            {/* Tax % and Net Amount — domestic only */}
                                             {!isExport && (
                                                 <>
-                                                    <Text
-                                                        style={[styles.td, { flex: 0.7, textAlign: "right" }]}
-                                                    >
-                                                        {taxPct ? `${taxPct}%` : ""}
-                                                    </Text>
-                                                    <Text
-                                                        style={[
-                                                            styles.td,
-                                                            {
-                                                                flex: 1.2,
-                                                                textAlign: "right",
-                                                                borderRight: "none",
-                                                            },
-                                                        ]}
-                                                    >
-                                                        {gross ? netAmt.toFixed(2) : ""}
-                                                    </Text>
+                                                    <Text style={[styles.td, { flex: 0.7, textAlign: "right" }]}>{taxPct ? `${taxPct}%` : ""}</Text>
+                                                    <Text style={[styles.td, { flex: 1.2, textAlign: "right", borderRight: "none" }]}>{gross ? netAmt.toFixed(2) : ""}</Text>
                                                 </>
                                             )}
                                         </View>
@@ -694,23 +580,11 @@ const ProformaInvoicePrintFormat = ({ data }) => {
 
                                 {/* Empty filler rows */}
                                 {Array.from({ length: emptyCount }).map((_, i) => {
-                                    const rowStyle =
-                                        (chunkRows.length + i) % 2 === 0
-                                            ? styles.trOdd
-                                            : styles.trEven;
+                                    const rowStyle = (chunkRows.length + i) % 2 === 0 ? styles.trOdd : styles.trEven;
                                     return (
                                         <View key={`empty-${i}`} style={rowStyle}>
                                             {cols.map(({ flex }, ci) => (
-                                                <Text
-                                                    key={ci}
-                                                    style={[
-                                                        styles.td,
-                                                        { flex },
-                                                        ci === cols.length - 1 && { borderRight: "none" },
-                                                    ]}
-                                                >
-                                                    {" "}
-                                                </Text>
+                                                <Text key={ci} style={[styles.td, { flex }, ci === cols.length - 1 && { borderRight: "none" }]}> </Text>
                                             ))}
                                         </View>
                                     );
@@ -720,389 +594,83 @@ const ProformaInvoicePrintFormat = ({ data }) => {
                             {/* ── TOTALS ROW ── */}
                             {isLastPage && (
                                 <>
+                                    {/* Totals bar */}
                                     <View style={styles.totalRow}>
-                                        <Text
-                                            style={{
-                                                flex: 0.4,
-                                                fontSize: 8,
-                                                paddingVertical: 4,
-                                                borderRight: `1 solid #bbbbc8`,
-                                                color: "transparent",
-                                            }}
-                                        >
-                                            {" "}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                flex: 3,
-                                                fontSize: 8,
-                                                fontFamily: "Helvetica-Bold",
-                                                color: DARK,
-                                                paddingVertical: 4,
-                                                paddingRight: 5,
-                                                textAlign: "right",
-                                                borderRight: `1 solid #bbbbc8`,
-                                            }}
-                                        >
-                                            TOTAL
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                flex: 1.2,
-                                                fontSize: 8,
-                                                color: "transparent",
-                                                paddingVertical: 4,
-                                                borderRight: `1 solid #bbbbc8`,
-                                            }}
-                                        >
-                                            {" "}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                flex: 0.8,
-                                                fontSize: 8,
-                                                color: "transparent",
-                                                paddingVertical: 4,
-                                                borderRight: `1 solid #bbbbc8`,
-                                            }}
-                                        >
-                                            {" "}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                flex: 0.8,
-                                                fontSize: 8,
-                                                fontFamily: "Helvetica-Bold",
-                                                color: DARK,
-                                                textAlign: "right",
-                                                paddingVertical: 4,
-                                                paddingRight: 2,
-                                                borderRight: `1 solid #bbbbc8`,
-                                            }}
-                                        >
-                                            {totalQty.toFixed(3)}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                flex: 0.8,
-                                                fontSize: 8,
-                                                fontFamily: "Helvetica-Bold",
-                                                color: DARK,
-                                                textAlign: "right",
-                                                paddingVertical: 4,
-                                                paddingRight: 2,
-                                                borderRight: `1 solid #bbbbc8`,
-                                            }}
-                                        >
-                                            {totalDozen.toFixed(2)}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                flex: 1,
-                                                fontSize: 8,
-                                                color: "transparent",
-                                                paddingVertical: 4,
-                                                borderRight: `1 solid #bbbbc8`,
-                                            }}
-                                        >
-                                            {" "}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                flex: 1.2,
-                                                fontSize: 8,
-                                                fontFamily: "Helvetica-Bold",
-                                                color: DARK,
-                                                textAlign: "right",
-                                                paddingVertical: 4,
-                                                paddingRight: 3,
-                                                borderRight: !isExport ? `1 solid #bbbbc8` : "none",
-                                            }}
-                                        >
+                                        <Text style={{ flex: 0.4, fontSize: 8, color: "transparent", paddingVertical: 4, borderRight: `1 solid #bbbbc8` }}> </Text>
+                                        <Text style={{ flex: 3, fontSize: 8, fontFamily: "Helvetica-Bold", color: DARK, paddingVertical: 4, paddingRight: 5, textAlign: "right", borderRight: `1 solid #bbbbc8` }}>TOTAL</Text>
+                                        <Text style={{ flex: 1.2, fontSize: 8, color: "transparent", paddingVertical: 4, borderRight: `1 solid #bbbbc8` }}> </Text>
+                                        <Text style={{ flex: 0.8, fontSize: 8, color: "transparent", paddingVertical: 4, borderRight: `1 solid #bbbbc8` }}> </Text>
+                                        <Text style={{ flex: 0.8, fontSize: 8, fontFamily: "Helvetica-Bold", color: DARK, textAlign: "right", paddingVertical: 4, paddingRight: 2, borderRight: `1 solid #bbbbc8` }}>{totalQty.toFixed(3)}</Text>
+                                        <Text style={{ flex: 0.8, fontSize: 8, fontFamily: "Helvetica-Bold", color: DARK, textAlign: "right", paddingVertical: 4, paddingRight: 2, borderRight: `1 solid #bbbbc8` }}>{totalDozen.toFixed(2)}</Text>
+                                        <Text style={{ flex: 1, fontSize: 8, color: "transparent", paddingVertical: 4, borderRight: `1 solid #bbbbc8` }}> </Text>
+                                        <Text style={{ flex: 1.2, fontSize: 8, fontFamily: "Helvetica-Bold", color: DARK, textAlign: "right", paddingVertical: 4, paddingRight: 3, borderRight: !isExport ? `1 solid #bbbbc8` : "none" }}>
                                             {currencySymbol} {totalGross.toFixed(2)}
                                         </Text>
                                         {!isExport && (
                                             <>
-                                                <Text
-                                                    style={{
-                                                        flex: 0.7,
-                                                        fontSize: 8,
-                                                        color: "transparent",
-                                                        paddingVertical: 4,
-                                                        borderRight: `1 solid #bbbbc8`,
-                                                    }}
-                                                >
-                                                    {" "}
-                                                </Text>
-                                                <Text
-                                                    style={{
-                                                        flex: 1.2,
-                                                        fontSize: 8,
-                                                        fontFamily: "Helvetica-Bold",
-                                                        color: DARK,
-                                                        textAlign: "right",
-                                                        paddingVertical: 4,
-                                                        paddingRight: 3,
-                                                    }}
-                                                >
+                                                <Text style={{ flex: 0.7, fontSize: 8, color: "transparent", paddingVertical: 4, borderRight: `1 solid #bbbbc8` }}> </Text>
+                                                <Text style={{ flex: 1.2, fontSize: 8, fontFamily: "Helvetica-Bold", color: DARK, textAlign: "right", paddingVertical: 4, paddingRight: 3 }}>
                                                     {netAmount.toFixed(2)}
                                                 </Text>
                                             </>
                                         )}
                                     </View>
 
-                                    {/* ── EXPORT: CARRIAGE + GRAND TOTAL ── */}
-                                    {isExport && carriageCharge > 0 && (
-                                        <>
-                                            <View
-                                                style={{
-                                                    flexDirection: "row",
-                                                    marginHorizontal: 20,
-                                                    backgroundColor: "#f4f4f6",
-                                                    borderLeft: `1 solid ${BORDER}`,
-                                                    borderRight: `1 solid ${BORDER}`,
-                                                    borderBottom: `1 solid ${BORDER}`,
-                                                    paddingVertical: 4,
-                                                    paddingHorizontal: 8,
-                                                    justifyContent: "flex-end",
-                                                }}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        fontSize: 7.5,
-                                                        color: "#555",
-                                                        marginRight: 24,
-                                                    }}
-                                                >
-                                                    Carriage and Air Freight
-                                                </Text>
-                                                <Text
-                                                    style={{
-                                                        fontSize: 7.5,
-                                                        fontFamily: "Helvetica-Bold",
-                                                        color: DARK,
-                                                        minWidth: 70,
-                                                        textAlign: "right",
-                                                    }}
-                                                >
-                                                    {currencySymbol} {carriageCharge.toFixed(2)}
-                                                </Text>
-                                            </View>
-                                            <View
-                                                style={{
-                                                    flexDirection: "row",
-                                                    marginHorizontal: 20,
-                                                    backgroundColor: DARK,
-                                                    borderLeft: `1 solid ${BORDER}`,
-                                                    borderRight: `1 solid ${BORDER}`,
-                                                    borderBottom: `1 solid ${BORDER}`,
-                                                    paddingVertical: 5,
-                                                    paddingHorizontal: 8,
-                                                    justifyContent: "flex-end",
-                                                }}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        fontSize: 8,
-                                                        color: "#ccc",
-                                                        marginRight: 24,
-                                                        fontFamily: "Helvetica-Bold",
-                                                    }}
-                                                >
-                                                    Grand Total
-                                                </Text>
-                                                <Text
-                                                    style={{
-                                                        fontSize: 8,
-                                                        fontFamily: "Helvetica-Bold",
-                                                        color: "#fff",
-                                                        minWidth: 70,
-                                                        textAlign: "right",
-                                                    }}
-                                                >
-                                                    {currencySymbol} {grandTotal.toFixed(2)}
-                                                </Text>
-                                            </View>
-                                        </>
-                                    )}
-
-                                    {/* ── DOMESTIC: TAX BREAKUP ── */}
-                                    {!isExport && taxBreakup.length > 0 && (
+                                    {/* ── DOMESTIC: PO-STYLE TAX DETAILS BOX ── */}
+                                    {!isExport && taxSlabBreakup.length > 0 && (
                                         <View style={styles.taxBox}>
-                                            <Text style={styles.sectionHeader}>TAX SUMMARY</Text>
-                                            <View style={{ flexDirection: "row", backgroundColor: "#f4f4f6", borderBottom: `1 solid ${BORDER_LIGHT}` }}>
-                                                {["HSN Tax %", "Taxable Amount", "Tax Amount", "Net Amount"].map(
-                                                    (h, i) => (
-                                                        <Text
-                                                            key={h}
-                                                            style={{
-                                                                flex: 1,
-                                                                fontSize: 7.5,
-                                                                fontFamily: "Helvetica-Bold",
-                                                                color: DARK,
-                                                                textAlign: "center",
-                                                                paddingVertical: 4,
-                                                                borderRight:
-                                                                    i < 3
-                                                                        ? `1 solid ${BORDER_LIGHT}`
-                                                                        : "none",
-                                                            }}
-                                                        >
-                                                            {h}
-                                                        </Text>
-                                                    )
-                                                )}
+                                            <Text style={styles.taxHeader}>TAX DETAILS</Text>
+                                            <View style={styles.taxRow}>
+                                                <Text style={styles.taxLabel}>Taxable Amt</Text>
+                                                <Text style={styles.taxValue}>{taxableTotal.toFixed(2)}</Text>
                                             </View>
-                                            {taxBreakup.map((t, i) => (
-                                                <View
-                                                    key={i}
-                                                    style={{
-                                                        flexDirection: "row",
-                                                        borderBottom: `1 solid ${BORDER_LIGHT}`,
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            flex: 1,
-                                                            fontSize: 7.5,
-                                                            textAlign: "center",
-                                                            paddingVertical: 3,
-                                                            borderRight: `1 solid ${BORDER_LIGHT}`,
-                                                            color: "#333",
-                                                        }}
-                                                    >
-                                                        {t.taxPct}%
-                                                    </Text>
-                                                    <Text
-                                                        style={{
-                                                            flex: 1,
-                                                            fontSize: 7.5,
-                                                            textAlign: "right",
-                                                            paddingVertical: 3,
-                                                            paddingRight: 6,
-                                                            borderRight: `1 solid ${BORDER_LIGHT}`,
-                                                            color: "#333",
-                                                        }}
-                                                    >
-                                                        {t.taxableAmt.toFixed(2)}
-                                                    </Text>
-                                                    <Text
-                                                        style={{
-                                                            flex: 1,
-                                                            fontSize: 7.5,
-                                                            textAlign: "right",
-                                                            paddingVertical: 3,
-                                                            paddingRight: 6,
-                                                            borderRight: `1 solid ${BORDER_LIGHT}`,
-                                                            color: "#333",
-                                                        }}
-                                                    >
-                                                        {t.taxAmt.toFixed(2)}
-                                                    </Text>
-                                                    <Text
-                                                        style={{
-                                                            flex: 1,
-                                                            fontSize: 7.5,
-                                                            textAlign: "right",
-                                                            paddingVertical: 3,
-                                                            paddingRight: 6,
-                                                            color: "#333",
-                                                        }}
-                                                    >
-                                                        {(t.taxableAmt + t.taxAmt).toFixed(2)}
-                                                    </Text>
+                                            {taxSlabBreakup.map((slab) => (
+                                                <View key={slab.label} style={styles.taxRow}>
+                                                    <Text style={styles.taxLabel}>{slab.label}</Text>
+                                                    <Text style={styles.taxValue}>{slab.taxAmt.toFixed(2)}</Text>
                                                 </View>
                                             ))}
-                                            {/* Totals row */}
-                                            <View
-                                                style={{
-                                                    flexDirection: "row",
-                                                    backgroundColor: "#e8e8ec",
-                                                }}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        flex: 1,
-                                                        fontSize: 7.5,
-                                                        fontFamily: "Helvetica-Bold",
-                                                        textAlign: "center",
-                                                        paddingVertical: 3,
-                                                        borderRight: `1 solid ${BORDER_LIGHT}`,
-                                                        color: DARK,
-                                                    }}
-                                                >
-                                                    TOTAL
-                                                </Text>
-                                                <Text
-                                                    style={{
-                                                        flex: 1,
-                                                        fontSize: 7.5,
-                                                        fontFamily: "Helvetica-Bold",
-                                                        textAlign: "right",
-                                                        paddingVertical: 3,
-                                                        paddingRight: 6,
-                                                        borderRight: `1 solid ${BORDER_LIGHT}`,
-                                                        color: DARK,
-                                                    }}
-                                                >
-                                                    {totalGross.toFixed(2)}
-                                                </Text>
-                                                <Text
-                                                    style={{
-                                                        flex: 1,
-                                                        fontSize: 7.5,
-                                                        fontFamily: "Helvetica-Bold",
-                                                        textAlign: "right",
-                                                        paddingVertical: 3,
-                                                        paddingRight: 6,
-                                                        borderRight: `1 solid ${BORDER_LIGHT}`,
-                                                        color: DARK,
-                                                    }}
-                                                >
-                                                    {totalTax.toFixed(2)}
-                                                </Text>
-                                                <Text
-                                                    style={{
-                                                        flex: 1,
-                                                        fontSize: 7.5,
-                                                        fontFamily: "Helvetica-Bold",
-                                                        textAlign: "right",
-                                                        paddingVertical: 3,
-                                                        paddingRight: 6,
-                                                        color: DARK,
-                                                    }}
-                                                >
-                                                    {netAmount.toFixed(2)}
-                                                </Text>
+                                            <View style={styles.taxRowNet}>
+                                                <Text style={styles.taxLabelNet}>Net Amount</Text>
+                                                <Text style={styles.taxValueNet}>{netAmount.toFixed(2)}</Text>
                                             </View>
                                         </View>
                                     )}
 
+                                    {/* ── EXPORT: CARRIAGE + GRAND TOTAL ── */}
+                                    {isExport && carriageCharge > 0 && (
+                                        <>
+                                            <View style={{ flexDirection: "row", marginHorizontal: 20, backgroundColor: "#f4f4f6", borderLeft: `1 solid ${BORDER}`, borderRight: `1 solid ${BORDER}`, borderBottom: `1 solid ${BORDER}`, paddingVertical: 4, paddingHorizontal: 8, justifyContent: "flex-end" }}>
+                                                <Text style={{ fontSize: 7.5, color: "#555", marginRight: 24 }}>Carriage and Air Freight</Text>
+                                                <Text style={{ fontSize: 7.5, fontFamily: "Helvetica-Bold", color: DARK, minWidth: 70, textAlign: "right" }}>{currencySymbol} {carriageCharge.toFixed(2)}</Text>
+                                            </View>
+                                            <View style={{ flexDirection: "row", marginHorizontal: 20, backgroundColor: DARK, borderLeft: `1 solid ${BORDER}`, borderRight: `1 solid ${BORDER}`, borderBottom: `1 solid ${BORDER}`, paddingVertical: 5, paddingHorizontal: 8, justifyContent: "flex-end" }}>
+                                                <Text style={{ fontSize: 8, color: "#ccc", marginRight: 24, fontFamily: "Helvetica-Bold" }}>Grand Total</Text>
+                                                <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", color: "#fff", minWidth: 70, textAlign: "right" }}>{currencySymbol} {grandTotal.toFixed(2)}</Text>
+                                            </View>
+                                        </>
+                                    )}
+
                                     {/* ── BANK + SUMMARY ── */}
                                     <View style={styles.bankSummaryRow}>
-                                        {/* Advising Bank — export only */}
                                         {isExport && bank?.name ? (
                                             <View style={styles.bankBox}>
                                                 <Text style={styles.sectionHeader}>ADVISING BANK</Text>
                                                 <View style={styles.sectionBody}>
                                                     <Text style={styles.partyName}>{bank.name}</Text>
                                                     {bank?.Branch?.name && (
-                                                        <Text style={{ fontSize: 7.5, color: "#555", marginBottom: 2 }}>
-                                                            Branch: {bank.Branch.name}
-                                                        </Text>
+                                                        <Text style={{ fontSize: 7.5, color: "#555", marginBottom: 2 }}>Branch: {bank.Branch.name}</Text>
                                                     )}
                                                     {[
                                                         { label: "A/c No", value: bank.accNo },
                                                         { label: "IFSC", value: bank.ifsc },
                                                         { label: "Swift Code", value: bank.swiftCode },
-                                                    ].map(({ label, value }) =>
-                                                        value ? (
-                                                            <View key={label} style={styles.partyRow}>
-                                                                <Text style={styles.partyLabel}>{label}</Text>
-                                                                <Text style={styles.partyValue}>: {value}</Text>
-                                                            </View>
-                                                        ) : null
-                                                    )}
+                                                    ].map(({ label, value }) => value ? (
+                                                        <View key={label} style={styles.partyRow}>
+                                                            <Text style={styles.partyLabel}>{label}</Text>
+                                                            <Text style={styles.partyValue}>: {value}</Text>
+                                                        </View>
+                                                    ) : null)}
                                                 </View>
                                             </View>
                                         ) : (
@@ -1114,68 +682,35 @@ const ProformaInvoicePrintFormat = ({ data }) => {
                                             <Text style={styles.sectionHeader}>SUMMARY</Text>
                                             <View style={styles.summaryRow}>
                                                 <Text style={styles.summaryLabel}>Total Qty</Text>
-                                                <Text style={styles.summaryValue}>
-                                                    {totalQty.toFixed(3)}
-                                                </Text>
+                                                <Text style={styles.summaryValue}>{totalQty.toFixed(3)}</Text>
                                             </View>
                                             <View style={styles.summaryRow}>
                                                 <Text style={styles.summaryLabel}>Total Dozen</Text>
-                                                <Text style={styles.summaryValue}>
-                                                    {totalDozen.toFixed(2)}
-                                                </Text>
+                                                <Text style={styles.summaryValue}>{totalDozen.toFixed(2)}</Text>
                                             </View>
                                             <View style={styles.summaryRow}>
                                                 <Text style={styles.summaryLabel}>Gross Amount</Text>
-                                                <Text style={styles.summaryValue}>
-                                                    {currencySymbol} {totalGross.toFixed(2)}
-                                                </Text>
+                                                <Text style={styles.summaryValue}>{currencySymbol} {totalGross.toFixed(2)}</Text>
                                             </View>
                                             {isExport && carriageCharge > 0 && (
                                                 <View style={styles.summaryRow}>
-                                                    <Text style={styles.summaryLabel}>
-                                                        Carriage & Air Freight
-                                                    </Text>
-                                                    <Text style={styles.summaryValue}>
-                                                        {currencySymbol} {carriageCharge.toFixed(2)}
-                                                    </Text>
+                                                    <Text style={styles.summaryLabel}>Carriage & Air Freight</Text>
+                                                    <Text style={styles.summaryValue}>{currencySymbol} {carriageCharge.toFixed(2)}</Text>
                                                 </View>
                                             )}
+                                            {/* Domestic: show tax amount in summary */}
                                             {!isExport && (
                                                 <View style={styles.summaryRow}>
                                                     <Text style={styles.summaryLabel}>Tax Amount</Text>
-                                                    <Text style={styles.summaryValue}>
-                                                        {totalTax.toFixed(2)}
-                                                    </Text>
+                                                    <Text style={styles.summaryValue}>{totalTaxAmt.toFixed(2)}</Text>
                                                 </View>
                                             )}
-                                            <View
-                                                style={[
-                                                    styles.summaryRow,
-                                                    {
-                                                        backgroundColor: DARK,
-                                                        borderBottom: "none",
-                                                        borderRadius: 2,
-                                                    },
-                                                ]}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        styles.summaryLabel,
-                                                        {
-                                                            color: "#ccc",
-                                                            fontFamily: "Helvetica-Bold",
-                                                        },
-                                                    ]}
-                                                >
+                                            <View style={[styles.summaryRow, { backgroundColor: DARK, borderBottom: "none", borderRadius: 2 }]}>
+                                                <Text style={[styles.summaryLabel, { color: "#ccc", fontFamily: "Helvetica-Bold" }]}>
                                                     {isExport ? "Grand Total" : "Net Amount"}
                                                 </Text>
-                                                <Text
-                                                    style={[
-                                                        styles.summaryValue,
-                                                        { color: "#fff" },
-                                                    ]}
-                                                >
-                                                    {currencySymbol} {grandTotal.toFixed(2)}
+                                                <Text style={[styles.summaryValue, { color: "#fff" }]}>
+                                                    {currencySymbol} {isExport ? grandTotal.toFixed(2) : netAmount.toFixed(2)}
                                                 </Text>
                                             </View>
                                         </View>
@@ -1186,68 +721,27 @@ const ProformaInvoicePrintFormat = ({ data }) => {
                                         <View style={styles.remarksBox}>
                                             <Text style={styles.sectionHeader}>REMARKS</Text>
                                             <View style={styles.sectionBody}>
-                                                <Text style={{ fontSize: 7.5, color: "#555" }}>
-                                                    {data?.remarks || "N/A"}
-                                                </Text>
+                                                <Text style={{ fontSize: 7.5, color: "#555" }}>{data?.remarks || "N/A"}</Text>
                                             </View>
                                         </View>
                                         {data?.termsAndCondition ? (
                                             <View style={styles.termsBox}>
-                                                <Text style={styles.sectionHeader}>
-                                                    TERMS &amp; CONDITIONS
-                                                </Text>
+                                                <Text style={styles.sectionHeader}>TERMS &amp; CONDITIONS</Text>
                                                 <View style={styles.sectionBody}>
-                                                    <Text style={{ fontSize: 7.5, color: "#555", lineHeight: 1.5 }}>
-                                                        {data.termsAndCondition}
-                                                    </Text>
+                                                    <Text style={{ fontSize: 7.5, color: "#555", lineHeight: 1.5 }}>{data.termsAndCondition}</Text>
                                                 </View>
                                             </View>
                                         ) : null}
                                     </View>
 
                                     {/* ── SIGNATURES ── */}
-                                    <View
-                                        style={{
-                                            marginHorizontal: 20,
-                                            marginTop: 14,
-                                            marginBottom: 8,
-                                        }}
-                                    >
-                                        <Text
-                                            style={{
-                                                textAlign: "right",
-                                                fontSize: 8,
-                                                fontFamily: "Helvetica-Bold",
-                                                color: DARK,
-                                                marginBottom: 20,
-                                            }}
-                                        >
+                                    <View style={{ marginHorizontal: 20, marginTop: 14, marginBottom: 8 }}>
+                                        <Text style={{ textAlign: "right", fontSize: 8, fontFamily: "Helvetica-Bold", color: DARK, marginBottom: 20 }}>
                                             For {branch?.branchName || ""}
                                         </Text>
-                                        <View
-                                            style={{
-                                                flexDirection: "row",
-                                                justifyContent: "space-between",
-                                                borderTop: `1 solid ${BORDER_LIGHT}`,
-                                                paddingTop: 4,
-                                            }}
-                                        >
-                                            {[
-                                                "Prepared By",
-                                                "Checked By",
-                                                "Approved By",
-                                                "Customer Sign",
-                                            ].map((role) => (
-                                                <Text
-                                                    key={role}
-                                                    style={{
-                                                        flex: 1,
-                                                        textAlign: "center",
-                                                        fontSize: 7.5,
-                                                        color: "#555",
-                                                        fontFamily: "Helvetica-Bold",
-                                                    }}
-                                                >
+                                        <View style={{ flexDirection: "row", justifyContent: "space-between", borderTop: `1 solid ${BORDER_LIGHT}`, paddingTop: 4 }}>
+                                            {["Prepared By", "Checked By", "Approved By", "Customer Sign"].map((role) => (
+                                                <Text key={role} style={{ flex: 1, textAlign: "center", fontSize: 7.5, color: "#555", fontFamily: "Helvetica-Bold" }}>
                                                     {role}
                                                 </Text>
                                             ))}
@@ -1258,44 +752,12 @@ const ProformaInvoicePrintFormat = ({ data }) => {
 
                             {/* ── SUB-TOTAL (non-last pages) ── */}
                             {!isLastPage && (
-                                <View
-                                    style={{
-                                        flexDirection: "row",
-                                        marginHorizontal: 20,
-                                        backgroundColor: "#f4f4f6",
-                                        borderLeft: `1 solid ${BORDER}`,
-                                        borderRight: `1 solid ${BORDER}`,
-                                        borderBottom: `1 solid ${BORDER}`,
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            flex: 5,
-                                            fontSize: 7.5,
-                                            color: "#888",
-                                            fontStyle: "italic",
-                                            textAlign: "right",
-                                            paddingVertical: 4,
-                                            paddingRight: 8,
-                                        }}
-                                    >
+                                <View style={{ flexDirection: "row", marginHorizontal: 20, backgroundColor: "#f4f4f6", borderLeft: `1 solid ${BORDER}`, borderRight: `1 solid ${BORDER}`, borderBottom: `1 solid ${BORDER}` }}>
+                                    <Text style={{ flex: 5, fontSize: 7.5, color: "#888", fontStyle: "italic", textAlign: "right", paddingVertical: 4, paddingRight: 8 }}>
                                         Sub Total (Continued on next page...)
                                     </Text>
-                                    <Text
-                                        style={{
-                                            flex: 1.2,
-                                            fontSize: 8,
-                                            fontFamily: "Helvetica-Bold",
-                                            color: DARK,
-                                            textAlign: "right",
-                                            paddingVertical: 4,
-                                            paddingRight: 3,
-                                        }}
-                                    >
-                                        {currencySymbol}{" "}
-                                        {chunkRows
-                                            .reduce((s, r) => s + (parseFloat(r.amount) || 0), 0)
-                                            .toFixed(2)}
+                                    <Text style={{ flex: 1.2, fontSize: 8, fontFamily: "Helvetica-Bold", color: DARK, textAlign: "right", paddingVertical: 4, paddingRight: 3 }}>
+                                        {currencySymbol} {chunkRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0).toFixed(2)}
                                     </Text>
                                 </View>
                             )}
@@ -1303,12 +765,7 @@ const ProformaInvoicePrintFormat = ({ data }) => {
 
                         {/* FOOTER BAR */}
                         <View style={styles.footerBar} fixed>
-                            <Text
-                                style={styles.footerRight}
-                                render={({ pageNumber, totalPages }) =>
-                                    `Page ${pageNumber} of ${totalPages}`
-                                }
-                            />
+                            <Text style={styles.footerRight} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
                         </View>
                     </Page>
                 );

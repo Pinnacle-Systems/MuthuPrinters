@@ -30,7 +30,7 @@ const JobCardReport = ({
     );
 
     const [dataPerPage, setDataPerPage] = useState("10");
-    const [serachDocNo, setSerachDocNo] = useState("");
+    const [searchDocNo, setSearchDocNo] = useState("");
     const [searchDate, setSearchDate] = useState("");
     const [searchCustomer, setSearchCustomer] = useState("");
     const [searchProductionType, setSearchProductionType] = useState("");
@@ -47,7 +47,7 @@ const JobCardReport = ({
     const [addApprovalStatus] = useAddApprovalStausMutation();
 
     const searchFields = {
-        serachDocNo,
+        searchDocNo,
         searchDate,
         searchCustomer,
         searchProductionType,
@@ -56,7 +56,7 @@ const JobCardReport = ({
     useEffect(() => {
         setCurrentPageNumber(1);
     }, [
-        serachDocNo,
+        searchDocNo,
         searchDate,
         searchCustomer,
         searchProductionType,
@@ -408,9 +408,9 @@ const JobCardReport = ({
                                                 type="text"
                                                 className="text-black h-5   w-full  px-1 focus:outline-none border  border-gray-400 rounded-md"
                                                 placeholder="Search"
-                                                value={serachDocNo}
+                                                value={searchDocNo}
                                                 onChange={(e) => {
-                                                    setSerachDocNo(e.target.value);
+                                                    setSearchDocNo(e.target.value);
                                                 }}
                                             />
                                         </th>

@@ -63,6 +63,7 @@ import {
   JobCardApi,
   ProformaInvoiceApi,
   ProductionAllocationApi,
+  NotificationApi,
 } from "./uniformService";
 import OrderEntryApi from "./uniformService/OrderEntryService";
 import BoardMasterApi from "./services/boardService";
@@ -131,6 +132,7 @@ const commonReducers = {
   currencyMaster: currencyMasterApi.reducer,
   bankMaster: bankMasterApi.reducer,
   productionAllocation: ProductionAllocationApi.reducer,
+  notification: NotificationApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -195,6 +197,7 @@ const commonMiddleware = [
   currencyMasterApi.middleware,
   bankMasterApi.middleware,
   ProductionAllocationApi.middleware,
+  NotificationApi.middleware,
 ];
 
 const store = configureStore({

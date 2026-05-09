@@ -1139,6 +1139,7 @@ const OrderEntryForm = ({
                         sizeTemplateList={sizeTemplateList}
                         hsnList={hsnList}
                         requirementRef={requirementRef}
+                        childRecord={childRecord}
                     />
                 }
                 footer={

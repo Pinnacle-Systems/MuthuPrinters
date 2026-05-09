@@ -8,3 +8,4 @@ export { default as ApprovalMasterApi } from "./ApprovalMasterServices";
 export { default as JobCardApi } from "./JobCardService";
 export { default as ProformaInvoiceApi } from "./ProformaInvoiceService";
 export { default as ProductionAllocationApi } from "./ProductionAllocationService";
+export { default as NotificationApi } from "./NotificationService";

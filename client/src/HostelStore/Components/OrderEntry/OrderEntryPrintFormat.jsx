@@ -165,11 +165,12 @@ const styles = StyleSheet.create({
 // ── TABLE COLUMNS ─────────────────────────────────────────────────────────────
 const COLUMNS = [
     { label: "S.No", flex: 0.4 },
-    { label: "Description of Goods", flex: 3 },
-    { label: "Size", flex: 1.2 },
-    { label: "UOM", flex: 0.8 },
-    { label: "GSM", flex: 1 },
-    { label: "Order Qty", flex: 1 },
+    { label: "Description of Goods", flex: 2.5 },
+    { label: "Item Group", flex: 1.2 },
+    { label: "HSN", flex: 0.8 },
+    { label: "Type", flex: 1.2 },
+    { label: "UOM", flex: 0.7 },
+    { label: "Order Qty", flex: 0.9 },
 ];
 
 const ROWS_PAGE_1 = 15;
@@ -216,7 +217,7 @@ const ContinuationBar = ({ docId, branchName }) => (
 );
 
 // ── COMPONENT ─────────────────────────────────────────────────────────────────
-const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUrl, styleItemList, sizeList, uomList, gsmList }) => {
+const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUrl, styleItemList, sizeList, uomList, itemGroupList, hsnList }) => {
     if (!data) return null;
 
     const orderItems = (data?.orderItems || []).filter(item => item.styleItemId);
@@ -226,7 +227,6 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
 
     // ── Pagination ──
     const pageChunks = chunkItems(orderItems);
-    const totalPg = pageChunks.length || 1; // at least 1 page even if no items
     const pageOffsets = pageChunks.reduce((acc, chunk, i) => {
         acc.push(i === 0 ? 0 : acc[i - 1] + pageChunks[i - 1].length);
         return acc;
@@ -234,6 +234,26 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
 
     // If no items, render a single empty page
     const renderChunks = pageChunks.length === 0 ? [[]] : pageChunks;
+
+    // ── Helper: build size breakup label lines ──
+    const getSizeBreakupText = (row) => {
+        const breakup = row.sizeBreakup?.filter((sb) => (Number(sb.qty) || 0) > 0);
+        if (!breakup || breakup.length === 0) return null;
+
+        return breakup.map((sb) => {
+            const size = findFromList(sb.sizeId, sizeList?.data, "name");
+            const qty = Number(sb.qty);
+            const range = sb.barcodeFrom ? `${sb.barcodeFrom}-${sb.barcodeTo}` : "";
+
+            if (row.trackingType === "Barcode")
+                return `${range} / Qty: ${qty}`;
+            if (row.trackingType === "SizeTemplate")
+                return `${size || "All"}: ${qty}`;
+            if (row.trackingType === "SizeTemplateBarcode")
+                return `${size || "All"} / ${range} / Qty: ${qty}`;
+            return null;
+        }).filter(Boolean).join("  |  ");
+    };
 
     return (
         <Document>
@@ -262,22 +282,6 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
                                             <Text style={styles.companyName}>{branchData?.branchName || "MUTHU PRINTERS"}</Text>
                                         </View>
                                         <View style={styles.companyRight}>
-                                            {/* <Text style={{ fontSize: 7.5, color: "#555", marginBottom: 2, textAlign: "right" }}>
-                                                {branchData?.address || ""}
-                                            </Text>
-                                            {[
-                                                { label: "Mobile", value: branchData?.contactMobile },
-                                                { label: "GST No", value: branchData?.gstNo },
-                                                { label: "Email", value: branchData?.contactEmail },
-                                            ].map(({ label, value }) =>
-                                                value ? (
-                                                    <View key={label} style={styles.companyRightRow}>
-                                                        <Text style={styles.companyLabel}>{label}</Text>
-                                                        <Text style={styles.companyColon}> : </Text>
-                                                        <Text style={styles.companyValue}>{value}</Text>
-                                                    </View>
-                                                ) : null
-                                            )} */}
                                             {qrCodeDataUrl && (
                                                 <View style={{ border: "none", width: 60, height: 60, marginTop: 5, alignSelf: "flex-end", alignItems: "center", justifyContent: "center" }}>
                                                     <Image src={qrCodeDataUrl} style={{ width: 50, height: 50 }} />
@@ -294,15 +298,10 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
                                         {[
                                             { label: "Order No", value: data?.docId },
                                             { label: "Order Date", value: moment(data?.docDate).format("DD-MM-YYYY") },
-                                            {
-                                                label: "Order Type", value: data?.orderType
-                                            },
-                                            {
-                                                label: "Production Type", value: data?.productionType
-                                            },
-                                            {
-                                                label: "Delivery Date", value: moment(data?.deliveryDate).format("DD-MM-YYYY")
-                                            }
+                                            { label: "Order Type", value: data?.orderType },
+                                            { label: "Production Type", value: data?.productionType },
+
+                                            { label: "Delivery Date", value: moment(data?.deliveryDate).format("DD-MM-YYYY") },
                                         ].map(({ label, value }) => (
                                             <View key={label} style={styles.metaPill}>
                                                 <Text style={styles.metaLabel}>{label}:</Text>
@@ -354,38 +353,6 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
                                             </View>
                                         </View>
                                     </View>
-
-                                    {/* ORDER DETAILS GRID */}
-                                    {/* <View style={styles.detailsGrid}>
-                                        <View style={styles.detailsCol}>
-                                            <View style={styles.detailsItem}>
-                                                <Text style={styles.detailsLabel}>Order Type</Text>
-                                                <Text style={styles.detailsValue}>: {data?.orderType}</Text>
-                                            </View>
-                                            <View style={styles.detailsItem}>
-                                                <Text style={styles.detailsLabel}>Production Type</Text>
-                                                <Text style={styles.detailsValue}>: {data?.productionType}</Text>
-                                            </View>
-                                        </View>
-                                        <View style={[styles.detailsCol, { borderRight: "none" }]}>
-                                            <View style={styles.detailsItem}>
-                                                <Text style={styles.detailsLabel}>Delivery Date</Text>
-                                                <Text style={styles.detailsValue}>: {data?.deliveryDate ? moment(data.deliveryDate).format("DD-MM-YYYY") : "N/A"}</Text>
-                                            </View>
-                                        </View>
-                                    </View> */}
-
-                                    {/* ITEMS SECTION HEADER */}
-                                    {/* <View style={{
-                                        backgroundColor: "#2d2d44",
-                                        marginHorizontal: 20,
-                                        paddingHorizontal: 10,
-                                        paddingVertical: 5,
-                                    }}>
-                                        <Text style={{ color: "#e8e8f0", fontSize: 7.5, fontWeight: "bold", letterSpacing: 1 }}>
-                                            ORDER ITEMS
-                                        </Text>
-                                    </View> */}
                                 </>
                             ) : (
                                 <ContinuationBar docId={data?.docId} branchName={branchData?.branchName || ""} />
@@ -398,22 +365,48 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
                                 {/* Item rows */}
                                 {chunkRows.map((row, index) => {
                                     const rowStyle = index % 2 === 0 ? styles.trOdd : styles.trEven;
+                                    const breakupText = getSizeBreakupText(row);
                                     return (
-                                        <View key={globalOffset + index} style={rowStyle}>
-                                            <Text style={[styles.td, { flex: 0.4 }]}>{globalOffset + index + 1}</Text>
-                                            <Text style={[styles.td, { flex: 3, textAlign: "left" }]}>
-                                                {row?.StyleItem?.name || findFromList(row.styleItemId, styleItemList?.data, "name")}
+                                        <View key={globalOffset + index} style={rowStyle} wrap={false}>
+                                            {/* S.No */}
+                                            <Text style={[styles.td, { flex: 0.4 }]}>
+                                                {globalOffset + index + 1}
                                             </Text>
+
+                                            {/* Description + size breakup inline */}
+                                            <View style={[styles.td, { flex: 2.5, textAlign: "left", justifyContent: "center" }]}>
+                                                <Text style={{ fontSize: 7.5, fontWeight: "bold", color: "#1a1a2e" }}>
+                                                    {row?.StyleItem?.name || findFromList(row.styleItemId, styleItemList?.data, "name")}
+                                                </Text>
+                                                {breakupText ? (
+                                                    <Text style={{ fontSize: 6.5, color: "#555", marginTop: 2 }}>
+                                                        {breakupText}
+                                                    </Text>
+                                                ) : null}
+                                            </View>
+
+                                            {/* Item Group */}
                                             <Text style={[styles.td, { flex: 1.2, textAlign: "left" }]}>
-                                                {row?.Size?.name || findFromList(row.sizeId, sizeList?.data, "name")}
+                                                {row?.ItemGroup?.name || findFromList(row.itemGroupId, itemGroupList?.data, "name")}
                                             </Text>
+
+                                            {/* HSN */}
                                             <Text style={[styles.td, { flex: 0.8 }]}>
+                                                {row?.Hsn?.name || findFromList(row.hsnId, hsnList?.data, "name")}
+                                            </Text>
+
+                                            {/* Type */}
+                                            <Text style={[styles.td, { flex: 1.2 }]}>
+                                                {row?.trackingType || "None"}
+                                            </Text>
+
+                                            {/* UOM */}
+                                            <Text style={[styles.td, { flex: 0.7 }]}>
                                                 {row?.Uom?.name || findFromList(row.uomId, uomList?.data, "name")}
                                             </Text>
-                                            <Text style={[styles.td, { flex: 1 }]}>
-                                                {row?.Gsm?.name || findFromList(row.gsmId, gsmList?.data, "name") || ""}
-                                            </Text>
-                                            <Text style={[styles.td, { flex: 1, textAlign: "right", borderRight: "none" }]}>
+
+                                            {/* Order Qty */}
+                                            <Text style={[styles.td, { flex: 0.9, textAlign: "right", borderRight: "none" }]}>
                                                 {row?.orderQty ? parseFloat(row.orderQty).toFixed(2) : ""}
                                             </Text>
                                         </View>
@@ -426,11 +419,12 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
                                     return (
                                         <View key={`empty-${i}`} style={rowStyle}>
                                             <Text style={[styles.td, { flex: 0.4, color: "transparent" }]}> </Text>
-                                            <Text style={[styles.td, { flex: 3 }]}> </Text>
+                                            <Text style={[styles.td, { flex: 2.5 }]}> </Text>
                                             <Text style={[styles.td, { flex: 1.2 }]}> </Text>
                                             <Text style={[styles.td, { flex: 0.8 }]}> </Text>
-                                            <Text style={[styles.td, { flex: 1 }]}> </Text>
-                                            <Text style={[styles.td, { flex: 1, borderRight: "none" }]}> </Text>
+                                            <Text style={[styles.td, { flex: 1.2 }]}> </Text>
+                                            <Text style={[styles.td, { flex: 0.7 }]}> </Text>
+                                            <Text style={[styles.td, { flex: 0.9, borderRight: "none" }]}> </Text>
                                         </View>
                                     );
                                 })}
@@ -447,13 +441,14 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
                                     borderBottom: "1 solid #b0b0b8",
                                 }}>
                                     <Text style={{ flex: 0.4, fontSize: 8, paddingVertical: 5, paddingHorizontal: 2, borderRight: "1 solid #bbbbc8", color: "transparent" }}> </Text>
-                                    <Text style={{ flex: 2.8, fontSize: 8, fontWeight: "bold", color: "#1a1a2e", paddingVertical: 5, paddingRight: 5, borderRight: "1 solid #bbbbc8", textAlign: "right" }}>
+                                    <Text style={{ flex: 2.5, fontSize: 8, fontWeight: "bold", color: "#1a1a2e", paddingVertical: 5, paddingRight: 5, borderRight: "1 solid #bbbbc8", textAlign: "right" }}>
                                         TOTAL
                                     </Text>
                                     <Text style={{ flex: 1.2, fontSize: 8, color: "transparent", paddingVertical: 5, borderRight: "1 solid #bbbbc8" }}> </Text>
                                     <Text style={{ flex: 0.8, fontSize: 8, color: "transparent", paddingVertical: 5, borderRight: "1 solid #bbbbc8" }}> </Text>
-                                    <Text style={{ flex: 1, fontSize: 8, color: "transparent", paddingVertical: 5, borderRight: "1 solid #bbbbc8" }}> </Text>
-                                    <Text style={{ flex: 1, fontSize: 8, fontWeight: "bold", color: "#1a1a2e", textAlign: "right", paddingVertical: 5, paddingRight: 1 }}>
+                                    <Text style={{ flex: 1.2, fontSize: 8, color: "transparent", paddingVertical: 5, borderRight: "1 solid #bbbbc8" }}> </Text>
+                                    <Text style={{ flex: 0.7, fontSize: 8, color: "transparent", paddingVertical: 5, borderRight: "1 solid #bbbbc8" }}> </Text>
+                                    <Text style={{ flex: 0.9, fontSize: 8, fontWeight: "bold", color: "#1a1a2e", textAlign: "right", paddingVertical: 5, paddingRight: 3 }}>
                                         {totalOrderQty.toFixed(2)}
                                     </Text>
                                 </View>
@@ -470,10 +465,10 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
                                     borderBottom: "1 solid #b0b0b8",
                                 }}>
                                     <Text style={{ flex: 0.4, fontSize: 8, color: "transparent", paddingVertical: 4, paddingHorizontal: 3, borderRight: "1 solid #bbbbc8" }}> </Text>
-                                    <Text style={{ flex: 5, fontSize: 7.5, color: "#888", fontStyle: "italic", textAlign: "right", paddingVertical: 4, paddingRight: 8, borderRight: "1 solid #bbbbc8" }}>
+                                    <Text style={{ flex: 5.9, fontSize: 7.5, color: "#888", fontStyle: "italic", textAlign: "right", paddingVertical: 4, paddingRight: 8, borderRight: "1 solid #bbbbc8" }}>
                                         Sub Total (Continued on next page...)
                                     </Text>
-                                    <Text style={{ flex: 1, fontSize: 8, fontWeight: "bold", color: "#1a1a2e", textAlign: "right", paddingVertical: 4, paddingRight: 3 }}>
+                                    <Text style={{ flex: 0.9, fontSize: 8, fontWeight: "bold", color: "#1a1a2e", textAlign: "right", paddingVertical: 4, paddingRight: 3 }}>
                                         {chunkRows.reduce((s, r) => s + (parseFloat(r.orderQty) || 0), 0).toFixed(2)}
                                     </Text>
                                 </View>
@@ -492,7 +487,7 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
                                         </View>
                                     </View>
 
-                                    {/* REMARKS & TERMS */}
+                                    {/* REMARKS */}
                                     <View style={[styles.twoCol, { marginTop: 5 }]}>
                                         <View style={[styles.colHalf, { borderRight: "1 solid #ddd", backgroundColor: "#f8f8f9" }]}>
                                             <Text style={styles.sectionHeader}>REMARKS</Text>
@@ -500,12 +495,6 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
                                                 <Text style={{ fontSize: 7.5, color: "#555" }}>{data?.remarks || "N/A"}</Text>
                                             </View>
                                         </View>
-                                        {/* <View style={styles.colHalf}>
-                                            <Text style={styles.sectionHeader}>TERMS &amp; CONDITIONS</Text>
-                                            <View style={styles.sectionBody}>
-                                                <Text style={{ fontSize: 7.5, color: "#555" }}>{data?.termsAndCondition || "N/A"}</Text>
-                                            </View>
-                                        </View> */}
                                     </View>
 
                                     {/* SIGNATURES */}

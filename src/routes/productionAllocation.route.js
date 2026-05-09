@@ -6,13 +6,11 @@ import {
   create,
   update,
   remove,
-  getJobCardList,
-} from "../controllers/jobCard.controller.js";
+} from "../controllers/productionAllocation.controller.js";
 
 router.post("/", create);
 
 router.get("/", get);
-router.get("/jobCardList", getJobCardList);
 router.put("/:id", update);
 
 router.get("/:id", getOne);
