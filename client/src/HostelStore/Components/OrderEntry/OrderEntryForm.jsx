@@ -94,6 +94,7 @@ const OrderEntryForm = ({
     const [proFormaId, setProFormaId] = useState("");
     const [refNo, setRefNo] = useState("");
     const [isRepeatedPI, setIsRepeatedPI] = useState(false);
+    const [validDays, setValidDays] = useState("")
     const dispatch = useDispatch();
     const qrRef = useRef(null);
     const customerRef = useRef(null);
@@ -166,6 +167,7 @@ const OrderEntryForm = ({
             setProFormaId(data?.proFormaId || "");
             setRefNo(data?.refNo || "");
             setIsRepeatedPI(data?.isRepeatedPI || false);
+            setValidDays(data?.validDays ? data?.validDays : "");
         },
         [id],
     );
@@ -199,7 +201,8 @@ const OrderEntryForm = ({
         orderItems: orderItems?.filter((i) => i.styleItemId),
         proFormaId,
         refNo,
-        isRepeatedPI
+        isRepeatedPI,
+        validDays
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -333,6 +336,7 @@ const OrderEntryForm = ({
             { condition: !data.productionType, title: "Production Type is required!" },
             { condition: data.productionType === "BULK" && !data.refNo, title: "RefNo is required!" },
             { condition: !data.deliveryDate, title: "Delivery Date is required!" },
+            { condition: !data.validDays, title: "Valid To is required!" },
             { condition: items.length === 0, title: "Order Items are required!" },
             {}
         ];
@@ -1105,8 +1109,25 @@ const OrderEntryForm = ({
                                         type={"date"}
                                     />
                                 </div>
-
-                                <div className="m-2 p-0">
+                                <TextInput
+                                    name="ValidDays"
+                                    value={validDays}
+                                    setValue={setValidDays}
+                                    disabled={readOnly}
+                                    type="number"
+                                    min="0"
+                                    className="text-right"
+                                    required={true}
+                                    onBlur={(e) =>
+                                        setValidDays(
+                                            e.target.value ? Number(e.target.value) : "",
+                                        )
+                                    }
+                                    onFocus={(e) => {
+                                        e.target.select();
+                                    }}
+                                />
+                                <div className="m-2 p-0 flex items-center">
 
                                     <CheckBoxNew
                                         name="Repeated PI"
