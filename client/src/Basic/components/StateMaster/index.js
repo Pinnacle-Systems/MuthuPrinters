@@ -32,6 +32,7 @@ import { CountryMaster } from "..";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 const MODEL = "State Master";
 
@@ -50,6 +51,7 @@ export default function Form({
   const [active, setActive] = useState(true);
   const [country, setCountry] = useState("");
   const [gstNo, setGstNo] = useState("");
+  const { hasPermission } = UserPermissions();
 
   const [searchValue, setSearchValue] = useState("");
 

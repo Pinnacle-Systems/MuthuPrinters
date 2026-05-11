@@ -441,7 +441,7 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
                                     borderBottom: "1 solid #b0b0b8",
                                 }}>
                                     <Text style={{ flex: 0.4, fontSize: 8, paddingVertical: 5, paddingHorizontal: 2, borderRight: "1 solid #bbbbc8", color: "transparent" }}> </Text>
-                                    <Text style={{ flex: 2.5, fontSize: 8, fontWeight: "bold", color: "#1a1a2e", paddingVertical: 5, paddingRight: 5, borderRight: "1 solid #bbbbc8", textAlign: "right" }}>
+                                    <Text style={{ flex: 2.4, fontSize: 8, fontWeight: "bold", color: "#1a1a2e", paddingVertical: 5, paddingRight: 1, borderRight: "1 solid #bbbbc8", textAlign: "right" }}>
                                         TOTAL
                                     </Text>
                                     <Text style={{ flex: 1.2, fontSize: 8, color: "transparent", paddingVertical: 5, borderRight: "1 solid #bbbbc8" }}> </Text>

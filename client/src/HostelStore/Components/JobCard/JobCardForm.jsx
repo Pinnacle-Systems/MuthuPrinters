@@ -96,6 +96,7 @@ const JobCardForm = ({
     const [sizeModalOpen, setSizeModalOpen] = useState(false);
     const childRecord = useRef(0);
     const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
+    const [orderItemId, setOrderItemId] = useState("")
 
     const qrRef = useRef(null);
 
@@ -180,6 +181,7 @@ const JobCardForm = ({
         setCutAndSeal(data?.cutAndSeal || "");
         setJobCardSizeDetails(data?.jobCardSizeDetails || []);
         setTrackingType(data?.trackingType || "");
+        setOrderItemId(data?.orderItemId || "");
         childRecord.current = data?.childRecord ? data?.childRecord : 0;
 
     }, []);
@@ -205,7 +207,7 @@ const JobCardForm = ({
         orderEntryId, jobRunTime, processRoute: routeKeysToDb(processRoute),
         productionType, styleItemId, tagCardUps, itemGroupId, itemType, followUpId, designerId,
         labelQuality, block, labelQty, rollQty, cutAndSeal,
-        jobCardSizeDetails, trackingType
+        jobCardSizeDetails, trackingType, orderItemId
     };
 
     const openPrintModal = () => {
@@ -226,8 +228,32 @@ const JobCardForm = ({
                         if (!id) {
                             Swal.fire({ icon: "question", title: "Do You Want to Print?", showCancelButton: true, confirmButtonText: "Yes, Print", cancelButtonText: "No [Esc]", confirmButtonColor: "#3085d6", cancelButtonColor: "#6b7280", focusConfirm: true, allowEnterKey: true, allowEscapeKey: true })
                                 .then((result) => {
-                                    if (result.isConfirmed) { openPrintModal(); if (returnData?.data?.id) setId(returnData.data.id); setPendingAction(nextProcess); }
-                                    else { if (nextProcess === "new") { syncFormWithDb(undefined); setId(""); setDocId("New"); setTimeout(() => customerRef.current?.focus(), 300); } if (nextProcess === "close") onClose(); }
+                                    if (result.isConfirmed) {
+
+                                        if (returnData?.data?.id) {
+                                            setId(returnData.data.id);
+                                        }
+
+                                        setPendingAction(nextProcess);
+
+                                        openPrintModal(); // ✅ correct
+
+                                    } else {
+
+                                        if (nextProcess === "new") {
+                                            syncFormWithDb(undefined);
+                                            setId("");
+                                            setDocId("New");
+
+                                            setTimeout(() => {
+                                                customerRef.current?.focus();
+                                            }, 300);
+                                        }
+
+                                        if (nextProcess === "close") {
+                                            onClose();
+                                        }
+                                    }
                                 });
                         } else {
                             if (nextProcess === "new") { setId(0); setDocId("New"); syncFormWithDb(undefined); setTimeout(() => customerRef.current?.focus(), 100); }
@@ -393,6 +419,7 @@ const JobCardForm = ({
                                     // ✅ SET ORDER QTY
                                     setOrderQty(selectedOrderItem?.orderQty || "");
                                     setTrackingType(selectedOrderItem?.trackingType || "");
+                                    setOrderItemId(selectedOrderItem?.id)
                                     // ✅ SET SIZE BREAKUP
                                     setJobCardSizeDetails(
                                         selectedOrderItem?.sizeBreakup?.map((s) => ({

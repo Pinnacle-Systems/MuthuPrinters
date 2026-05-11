@@ -149,6 +149,28 @@ const ProductionAllocationForm = ({
             allocationDetails: allocationDetails?.filter(item => item?.processId && item?.seqNo)
         };
 
+        if (!jobCardId) {
+            Swal.fire({
+                title: "Error",
+                text: "Job Card No is required",
+                icon: "error",
+                confirmButtonColor: "#d33",
+            });
+            return;
+        }
+
+        if (allocationDetails?.filter(item => item?.processId && item?.seqNo)?.length === 0) {
+            Swal.fire({
+                title: "Error",
+                text: "Allocation Details is required",
+                icon: "error",
+                confirmButtonColor: "#d33",
+            });
+            return;
+        }
+
+
+
         try {
             let savedId = id;
             if (id) {

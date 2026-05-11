@@ -1,4 +1,3 @@
-import { io } from "../../server.js";
 import { prisma } from "../lib/prisma.js";
 const REFERENCE_PAGE = "JOB CARD";
 
@@ -41,7 +40,7 @@ async function checkPendingJobCards(userId) {
 
           type: "WARNING",
 
-          userId,
+          userId: userId,
 
           referenceId: item.id,
 
@@ -53,7 +52,7 @@ async function checkPendingJobCards(userId) {
 }
 
 async function getNotifications(req) {
-  const userId = req.user.id;
+  const userId = req.userId;
 
   await checkPendingJobCards(userId);
 

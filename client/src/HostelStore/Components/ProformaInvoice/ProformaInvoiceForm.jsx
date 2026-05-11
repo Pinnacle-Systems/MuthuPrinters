@@ -1066,7 +1066,12 @@ const ProformaInvoiceForm = ({
                 widthClass={"w-[90%] h-[90%]"}
             >
                 <PDFViewer style={tw("w-full h-full")}>
-                    <ProformaInvoicePrintFormat data={singleData?.data} />
+                    <ProformaInvoicePrintFormat data={singleData?.data}
+                        taxDetails={enrichedData}
+                        isCustomerExport={isCustomerExport}
+                        cityList={cityList}
+                        currencyList={currencyList}
+                    />
                 </PDFViewer>
             </Modal>
 

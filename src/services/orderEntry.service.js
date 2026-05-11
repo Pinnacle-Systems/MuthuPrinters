@@ -18,6 +18,7 @@ import {
   buildIncludeForModule,
   createApprovalLog,
 } from "../utils/approvalHelper.js";
+import moment from "moment";
 const REFERENCE_PAGE = "ORDER ENTRY";
 
 async function getNextDocId(
@@ -527,6 +528,7 @@ async function create(body) {
     proFormaId,
     refNo,
     isRepeatedPI,
+    validDays,
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
@@ -593,6 +595,7 @@ async function create(body) {
       finalRefNo = `${finYear}/SAM/${number}`;
     }
   }
+  const validTo = moment(docDate).add(validDays, "days").endOf("day").toDate();
   await prisma.$transaction(async (tx) => {
     data = await tx.orderEntry.create({
       data: {
@@ -611,6 +614,8 @@ async function create(body) {
         proFormaId: proFormaId ? parseInt(proFormaId) : null,
         isRepeatedPI: isRepeatedPI === true || isRepeatedPI === "true",
         refNo: finalRefNo ?? "",
+        validDays: validDays ? parseInt(validDays) : null,
+        validTo: validTo,
         orderItems:
           safeOrderItems.length > 0
             ? {
@@ -677,6 +682,7 @@ async function update(id, body, files) {
     proFormaId,
     refNo,
     isRepeatedPI,
+    validDays,
   } = await body;
 
   const safeorderQty =
@@ -748,6 +754,7 @@ async function update(id, body, files) {
       finalRefNo = `${finYear}/SAM/${number}`;
     }
   }
+  const validTo = moment(docDate).add(validDays, "days").endOf("day").toDate();
   await prisma.$transaction(async (tx) => {
     data = await tx.orderEntry.update({
       where: {
@@ -769,6 +776,8 @@ async function update(id, body, files) {
         proFormaId: proFormaId ? parseInt(proFormaId) : null,
         isRepeatedPI: isRepeatedPI === true || isRepeatedPI === "true",
         refNo: finalRefNo ?? "",
+        validDays: validDays ? parseInt(validDays) : null,
+        validTo: validTo,
         orderItems: {
           deleteMany: incomingItemIds.length
             ? { id: { notIn: incomingItemIds } }

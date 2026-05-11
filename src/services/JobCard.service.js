@@ -398,6 +398,7 @@ async function create(body) {
       processRoute,
       trackingType,
       jobCardSizeDetails,
+      orderItemId,
     } = body;
 
     // ─────────────────────────────
@@ -448,6 +449,7 @@ async function create(body) {
           orderEntryId: orderEntryId ? Number(orderEntryId) : null,
           orderType: orderType || null,
           orderQty: orderQty ? Number(orderQty) : null,
+          orderItemId: orderItemId ? Number(orderItemId) : null,
           customerId: customerId ? Number(customerId) : null,
 
           gsmId: gsmId ? Number(gsmId) : null,
@@ -651,6 +653,7 @@ async function update(id, body) {
       cutAndSeal,
       trackingType,
       jobCardSizeDetails,
+      orderItemId,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -728,6 +731,7 @@ async function update(id, body) {
           rollQty: rollQty ? Number(rollQty) : null,
           cutAndSeal: cutAndSeal || null,
           trackingType: trackingType || null,
+          orderItemId: orderItemId ? Number(orderItemId) : null,
 
           boardQualities:
             boardItems.length > 0
