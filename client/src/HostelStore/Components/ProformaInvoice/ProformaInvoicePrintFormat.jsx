@@ -329,6 +329,7 @@ const ContinuationBar = ({ docId, branchName }) => (
             backgroundColor: DARK,
             paddingHorizontal: 20,
             paddingVertical: 6,
+            marginBottom: 2
         }}
     >
         <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", color: "#fff", letterSpacing: 2 }}>
@@ -341,14 +342,14 @@ const ContinuationBar = ({ docId, branchName }) => (
 );
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
-const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExportProp, cityList, currencyList }) => {
+const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExportProp, cityList, currencyList, payTermList }) => {
     if (!data) return null;
 
     const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
     const currencySymbol = findFromList(data?.currencyId, currencyList?.data, "symbol") || "";
 
-    const ROWS_PAGE_1 = isExport ? 11 : 14;
-    const ROWS_PAGE_CONT = 20;
+    const ROWS_PAGE_1 = isExport ? 11 : 13;
+    const ROWS_PAGE_CONT = isExport ? 11 : 13;
 
     const chunkItems = (items) => {
         const pages = [];
@@ -461,6 +462,7 @@ const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExpo
                                         {[
                                             { label: "PI No", value: data?.docId },
                                             { label: "PI Date", value: data?.docDate ? moment(data.docDate).format("DD-MM-YYYY") : "" },
+                                            { label: "Payment Term", value: findFromList(data?.payTermId, payTermList?.data, "name") || "" },
                                             { label: "Valid To", value: data?.validityTo ? moment(data.validityTo).format("DD-MM-YYYY") : "" },
                                             { label: "Delivery Date", value: data?.deliveryDate ? moment(data.deliveryDate).format("DD-MM-YYYY") : "" },
                                         ].map(({ label, value }) => (
@@ -480,6 +482,7 @@ const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExpo
                                                 <Text style={styles.partyAddr}>{branch?.address || ""}</Text>
                                                 {[
                                                     { label: "Mobile No", value: branch?.contactMobile },
+                                                    { label: "GST No", value: branch?.company?.gstNo },
                                                     { label: "Email", value: branch?.contactEmail },
                                                 ].map(({ label, value }) => value ? (
                                                     <View key={label} style={styles.partyRow}>
@@ -499,6 +502,7 @@ const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExpo
                                                     { label: "Contact Person", value: customer?.contactPersonName },
                                                     { label: "Mobile No", value: customer?.contactNumber },
                                                     { label: "GST No", value: customer?.gstNo },
+                                                    { label: "Email", value: customer?.contactPersonEmail },
                                                 ].map(({ label, value }) => value ? (
                                                     <View key={label} style={styles.partyRow}>
                                                         <Text style={styles.partyLabel}>{label}</Text>
