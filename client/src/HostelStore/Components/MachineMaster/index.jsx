@@ -7,7 +7,7 @@ import { ReusableTable, TextInputNew, ToggleButton } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
-import { useAddDieMasterMutation, useDeleteDieMasterMutation, useGetDieMasterByIdQuery, useGetDieMasterQuery, useLazyGetDieMasterByIdQuery, useUpdateDieMasterMutation } from "../../../redux/services/DieMasterService";
+import { useAddMachineMasterMutation, useDeleteMachineMasterMutation, useGetMachineMasterByIdQuery, useGetMachineMasterQuery, useLazyGetMachineMasterByIdQuery, useUpdateMachineMasterMutation } from "../../../redux/services/MachineMasterService";
 import { UserPermissions } from "../../../Utils/UserPermissions";
 
 export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
@@ -31,17 +31,17 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         data: allData,
         isLoading,
         isFetching,
-    } = useGetDieMasterQuery({ params, searchParams: searchValue });
+    } = useGetMachineMasterQuery({ params, searchParams: searchValue });
     const {
         data: singleData,
         isFetching: isSingleFetching,
         isLoading: isSingleLoading,
-    } = useGetDieMasterByIdQuery(id, { skip: !id });
-    const [trigger, { data: LazyData }] = useLazyGetDieMasterByIdQuery();
+    } = useGetMachineMasterByIdQuery(id, { skip: !id });
+    const [trigger, { data: LazyData }] = useLazyGetMachineMasterByIdQuery();
 
-    const [addData] = useAddDieMasterMutation();
-    const [updateData] = useUpdateDieMasterMutation();
-    const [removeData] = useDeleteDieMasterMutation();
+    const [addData] = useAddMachineMasterMutation();
+    const [updateData] = useUpdateMachineMasterMutation();
+    const [removeData] = useDeleteMachineMasterMutation();
 
     const { hasPermission } = UserPermissions();
     const handleCreate = () => {
@@ -134,7 +134,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
 
         if (foundItem) {
             Swal.fire({
-                text: "The Die Name already exists.",
+                text: "The Machine Name already exists.",
                 icon: "warning",
                 didClose: () => {
 
@@ -218,7 +218,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         },
 
         {
-            header: "Die",
+            header: "Machine",
             accessor: (item) => item?.name,
             //   cellClass: () => "font-medium  text-gray-900",
             className: "font-medium text-gray-900 text-center uppercase w-72",
@@ -262,7 +262,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                                 <div className="grid grid-cols-2 my-2">
                                     <div className="w-[50%">
                                         <TextInputNew
-                                            name="Die"
+                                            name="Machine"
                                             value={name}
                                             setValue={setName}
                                             required={true}
@@ -317,7 +317,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         return (
             <div className="min-h-[250px] flex flex-col bg-gray-200">
                 <div className="border-b py-2 px-4 mx-3 mt-4 bg-white">
-                    <h2 className="text-lg font-semibold">Delete Die</h2>
+                    <h2 className="text-lg font-semibold">Delete Machine</h2>
                 </div>
 
                 <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 bg-white mx-3 mt-3 rounded mb-3">
@@ -362,7 +362,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             <div onKeyDown={handleKeyDown} className="h-full flex flex-col bg-gray-200">
                 <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
                     <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
-                        {editId ? "Edit Die" : "Add New Die"}
+                        {editId ? "Edit Machine" : "Add New Machine"}
                     </h2>
                     <button
                         type="button"
@@ -384,13 +384,13 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     return (
         <div onKeyDown={handleKeyDown} className="p-1 h-[87%]">
             <div className="w-full flex bg-white p-1 justify-between  items-center">
-                <h5 className="text-lg font-bold text-gray-800">Die Master</h5>
+                <h5 className="text-lg font-bold text-gray-800">Machine Master</h5>
                 <div className="flex items-center">
                     <button
                         onClick={handleCreate}
                         className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
                     >
-                        + Add New Die
+                        + Add New Machine
                     </button>
                 </div>
             </div>
@@ -425,9 +425,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                                     <h2 className="text-lg px-2 py-0.5 font-semibold  text-gray-800">
                                         {id
                                             ? !readOnly
-                                                ? "Edit Die  Master"
-                                                : "Die  Master"
-                                            : "Add New Die  Master"}
+                                                ? "Edit Machine  Master"
+                                                : "Machine  Master"
+                                            : "Add New Machine  Master"}
                                     </h2>
                                 </div>
                                 <div className="flex gap-2">

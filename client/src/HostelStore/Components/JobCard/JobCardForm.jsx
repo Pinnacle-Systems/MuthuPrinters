@@ -30,6 +30,8 @@ import TransactionLayout from "../../../Basic/components/Reuseable/TransactionLa
 import { QRCodeCanvas } from "qrcode.react";
 import { CheckBox, Field, LVHeader, LVRow, SectionCard } from "./Utils.jsx";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
+import { Plus } from "lucide-react";
+import { useGetMachineMasterQuery } from "../../../redux/services/MachineMasterService.js";
 
 const JobCardForm = ({
     onClose, id, setId, readOnly, setReadOnly,
@@ -63,8 +65,10 @@ const JobCardForm = ({
     const [plateId, setPlateId] = useState("");
     const [dieId, setDieId] = useState("");
     const [boardItems, setBoardItems] = useState([]);
+    const [selectedPrinting, setSelectedPrinting] = useState([]);
     const [selectedProcesses, setSelectedProcesses] = useState([]);
     const [selectedMachines, setSelectedMachines] = useState([]);
+    const [selectedFinishing, setSelectedFinishing] = useState([]);
     const [laminations, setLaminations] = useState([]);
     const [varnishes, setVarnishes] = useState([]);
     const [orderEntryId, setOrderEntryId] = useState("");
@@ -94,9 +98,14 @@ const JobCardForm = ({
     const [selectedOrderData, setSelectedOrderData] = useState(null);
     const [trackingType, setTrackingType] = useState("Barcode");
     const [sizeModalOpen, setSizeModalOpen] = useState(false);
+    const [plateModalOpen, setPlateModalOpen] = useState(false);
     const childRecord = useRef(0);
     const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
-    const [orderItemId, setOrderItemId] = useState("")
+    const [orderItemId, setOrderItemId] = useState("");
+    const [plateDetails, setPlateDetails] = useState(
+        Array.from({ length: 6 }, () => ({ plateName: "", qty: "" }))
+    );
+    const [labelSizeId, setLabelSizeId] = useState("")
 
     const qrRef = useRef(null);
 
@@ -108,17 +117,19 @@ const JobCardForm = ({
     const { data: orderList } = useGetRefListQuery({ params: { companyId, branchId } });
     const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { companyId, branchId } });
     const { data: sizeList } = useGetSizeMasterQuery({ params: { companyId, branchId } });
+    const { data: machineList } = useGetMachineMasterQuery({ params: { companyId, branchId } });
 
     const getGroupIds = (groupName) =>
         processGroupList?.data?.find((g) => g.name === groupName)?.processGroupList?.map((i) => i.processId) || [];
     const filterByGroup = (groupName) =>
         processList?.data?.filter((p) => getGroupIds(groupName).includes(p.id)) || [];
 
-    const boardList = boardData?.data || [];
+    const boardList = boardData?.data?.filter((i) => id ? true : i?.active) || [];
+    const printingList = filterByGroup("PRINTING");
     const defaultList = filterByGroup("DEFAULT");
     const laminationList = filterByGroup("LAMINATION");
     const varnishList = filterByGroup("VARNISH");
-    const machineList = filterByGroup("MACHINE");
+    const finishingList = filterByGroup("FINISHING");
 
     const { data: singleData, isFetching: isSingleFetching, isLoading: isSingleLoading } =
         useGetJobCardByIdQuery(id, { skip: !id });
@@ -156,9 +167,11 @@ const JobCardForm = ({
         setTotalPlatesets(data?.totalPlatesets || "");
         setBoardItems(data?.boardQualities?.map((b) => b.boardId) || []);
         setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
+        setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
+        setSelectedFinishing(data?.finishingDetails?.map((f) => f.processId) || []);
         setLaminations(data?.laminationDetails?.map((l) => ({ processId: l.laminationId, isFront: l.isFront, isFrontAndBack: l.isFrontAndBack })) || []);
         setVarnishes(data?.varnishDetails?.map((v) => ({ processId: v.varnishId, isFront: v.isFront, isFrontAndBack: v.isFrontAndBack })) || []);
-        setSelectedMachines(data?.machineDetails?.map((m) => m.machineId) || []);
+        setSelectedMachines(data?.machineDetails?.map((m) => m.macId) || []);
         setOrderEntryId(data?.orderEntryId || "");
         setBoardId(data?.boardId || "");
         setJobRunTime(data?.jobRunTime || "");
@@ -182,6 +195,12 @@ const JobCardForm = ({
         setJobCardSizeDetails(data?.jobCardSizeDetails || []);
         setTrackingType(data?.trackingType || "");
         setOrderItemId(data?.orderItemId || "");
+        setLabelSizeId(data?.labelSizeId || "");
+
+        const rawPlates = data?.plateDetails || [];
+        const paddedPlates = [...rawPlates];
+        while (paddedPlates.length < 6) paddedPlates.push({ plateName: "", qty: "" });
+        setPlateDetails(paddedPlates);
         childRecord.current = data?.childRecord ? data?.childRecord : 0;
 
     }, []);
@@ -207,7 +226,10 @@ const JobCardForm = ({
         orderEntryId, jobRunTime, processRoute: routeKeysToDb(processRoute),
         productionType, styleItemId, tagCardUps, itemGroupId, itemType, followUpId, designerId,
         labelQuality, block, labelQty, rollQty, cutAndSeal,
-        jobCardSizeDetails, trackingType, orderItemId
+        jobCardSizeDetails, trackingType, orderItemId,
+        selectedPrinting,
+        plateDetails, labelSizeId,
+        selectedFinishing
     };
 
     const openPrintModal = () => {
@@ -510,8 +532,8 @@ const JobCardForm = ({
                                     ))}
                                 </div>
                             </SectionCard>
-                            <SectionCard title="Specifications">
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                            <SectionCard title="Cutting Details">
+                                <div className="grid grid-cols-2 gap-x-3 min-h-[220px]">
                                     <Field label="GSM">
                                         <DropdownWithModal name="" options={dropDownListObject(id ? gsmList?.data : gsmList?.data?.filter((i) => i?.active), "name", "id")}
                                             value={gsmId} setValue={setGsmId} readOnly={readOnly} addNewLabel="+ Add GSM" childComponent={Gsm} addNewModalWidth="w-[30%] h-[45%]" />
@@ -530,23 +552,66 @@ const JobCardForm = ({
                                             value={cuttingSizeId} setValue={setCuttingSizeId} readOnly={readOnly} addNewLabel="+ Add Size" childComponent={Size} addNewModalWidth="w-[30%] h-[45%]" />
                                         {/* <TextInput name="" value={cuttingSizeId} setValue={setCuttingSizeId} readOnly={readOnly} className="w-full" /> */}
                                     </Field>
-                                    <Field label="No. of Pockets">
+                                    <Field label="No. of Sheets">
                                         <TextInput name="" value={noOfPockets} setValue={setNoOfPockets} readOnly={readOnly} type="number" className="w-full text-right" />
                                     </Field>
                                     <Field label="Running Qty">
                                         <TextInput name="" value={runningQty} setValue={setRunningQty} readOnly={readOnly} type="number" className="w-full text-right" />
                                     </Field>
                                 </div>
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-3 mt-2.5 pt-2 border-t border-slate-100">
+                                {/* <div className="grid grid-cols-2 gap-x-3 gap-y-3 mt-2.5 pt-2 border-t border-slate-100">
                                     <CheckBox name="4 Color" value={isFourColor} setValue={setIsFourColor} readOnly={readOnly} />
                                     <CheckBox name="Cut Color" value={isCutColor} setValue={setIsCutColor} readOnly={readOnly} />
                                     <CheckBox name="Front" value={isFront} setValue={setIsFront} readOnly={readOnly} />
                                     <CheckBox name="Front & Back" value={isFrontAndBack} setValue={setIsFrontAndBack} readOnly={readOnly} />
-                                </div>
+                                </div> */}
                             </SectionCard>
                         </div>
 
-                        {/* COL 2 — Process */}
+                        <div className="flex flex-col gap-2">
+                            <SectionCard title="Printing Details">
+                                <div className="grid grid-cols-2 gap-y-4">
+                                    {printingList?.map((item) => (
+                                        <CheckBox key={item.id} name={item.name} value={selectedPrinting.includes(item.id)}
+                                            setValue={() => toggleArr(setSelectedPrinting, item.id)} readOnly={readOnly} />
+                                    ))}
+                                </div>
+                            </SectionCard>
+                            <SectionCard title="Plate & Die Details">
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                    <Field label="Plate Details">
+                                        <DropdownWithModal name="" options={dropDownListObject(id ? plateList?.data : plateList?.data?.filter((i) => i?.active), "name", "id")}
+                                            value={plateId} setValue={setPlateId} readOnly={readOnly} addNewLabel="+ Add Plate" childComponent={PlateMaster} addNewModalWidth="w-[30%] h-[45%]" />
+                                    </Field>
+                                    <Field label="Die Details">
+                                        <DropdownWithModal name="" options={dropDownListObject(id ? dieList?.data : dieList?.data?.filter((i) => i?.active), "name", "id")}
+                                            value={dieId} setValue={setDieId} readOnly={readOnly} addNewLabel="+ Add Die" childComponent={DieMaster} addNewModalWidth="w-[30%] h-[45%]" />
+                                    </Field>
+                                    <div className="col-span-1">
+
+                                        <Field label="Total Plate Sets">
+                                            <TextInput name="" value={totalPlatesets} setValue={setTotalPlatesets} type={"number"} readOnly={readOnly} className=" w-full text-right " />
+                                        </Field>
+                                    </div>
+                                </div>
+                            </SectionCard>
+                            <SectionCard title="Plate Set & Size Details">
+                                <div className=" min-h-[72px] space-y-3">
+                                    <div className=" justify-center items-center">
+                                        <button onClick={() => setPlateModalOpen(true)} className="border flex justify-center gap-1 items-center w-auto  rounded-md text-[10px] bg-green-700 font-semibold uppercase tracking-wider text-white p-1">
+                                            Add Plate Set <Plus className="size-3" />
+                                        </button>
+                                    </div>
+                                    <div className=" justify-center items-center">
+                                        <button onClick={() => setSizeModalOpen(true)} className="border w-auto  rounded-md text-[10px] bg-blue-700 font-semibold uppercase tracking-wider text-white p-1">
+                                            View Size Details
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </SectionCard>
+                        </div>
+
                         <div className="flex flex-col gap-2">
                             <SectionCard title="Process Details">
                                 <div className="grid grid-cols-2 gap-y-4 min-h-[165px]">
@@ -563,7 +628,6 @@ const JobCardForm = ({
                             </SectionCard>
                         </div>
 
-                        {/* COL 3 — Lamination + Varnish */}
                         <div className="flex flex-col gap-2">
 
                             <SectionCard title="Varnish Details">
@@ -573,48 +637,10 @@ const JobCardForm = ({
                             </SectionCard>
                             <SectionCard title="Machines">
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-4 min-h-[132px]">
-                                    {machineList?.map((item) => (
+                                    {machineList?.data?.filter((item) => id ? true : item.active).map((item) => (
                                         <CheckBox key={item.id} name={item.name} value={selectedMachines.includes(item.id)}
                                             setValue={() => toggleArr(setSelectedMachines, item.id)} readOnly={readOnly} />
                                     ))}
-                                </div>
-                            </SectionCard>
-                        </div>
-
-                        {/* COL 4 — Machine */}
-                        <div className="flex flex-col gap-2">
-
-                            <SectionCard title="Machine Specifications">
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-4">
-                                    <CheckBox name="CMYK" value={isCMYK} setValue={setIsCMYK} readOnly={readOnly} />
-                                    <CheckBox name="Cut Col" value={isCutColMachine} setValue={setIsCutColMachine} readOnly={readOnly} />
-                                    <CheckBox name="Front" value={isFrontMachine} setValue={setIsFrontMachine} readOnly={readOnly} />
-                                    <CheckBox name="Front & Back" value={isFrontBackMachine} setValue={setIsFrontBackMachine} readOnly={readOnly} />
-                                </div>
-                            </SectionCard>
-                            <SectionCard title="Plate & Die Details">
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                                    <Field label="Plate Details">
-                                        <DropdownWithModal name="" options={dropDownListObject(id ? plateList?.data : plateList?.data?.filter((i) => i?.active), "name", "id")}
-                                            value={plateId} setValue={setPlateId} readOnly={readOnly} addNewLabel="+ Add Plate" childComponent={PlateMaster} addNewModalWidth="w-[30%] h-[45%]" />
-                                    </Field>
-                                    <Field label="Die Details">
-                                        <DropdownWithModal name="" options={dropDownListObject(id ? dieList?.data : dieList?.data?.filter((i) => i?.active), "name", "id")}
-                                            value={dieId} setValue={setDieId} readOnly={readOnly} addNewLabel="+ Add Die" childComponent={DieMaster} addNewModalWidth="w-[30%] h-[45%]" />
-                                    </Field>
-                                    <div className="col-span-2">
-
-                                        <Field label="Total Plate Sets">
-                                            <TextInput name="" value={totalPlatesets} setValue={setTotalPlatesets} readOnly={readOnly} className=" w-full" />
-                                        </Field>
-                                    </div>
-                                </div>
-                            </SectionCard>
-                            <SectionCard title="Size Details">
-                                <div className="flex-1 min-w-[120px] h-[70px] justify-center items-center">
-                                    <button onClick={() => setSizeModalOpen(true)} className="border w-auto  rounded-md text-[10px] bg-green-700 font-semibold uppercase tracking-wider text-white p-1">
-                                        View Size Details
-                                    </button>
                                 </div>
                             </SectionCard>
                         </div>
@@ -625,292 +651,128 @@ const JobCardForm = ({
             }
             {
                 itemType === "LABEL" && (
-                    <div className="flex items-start min-w-max mx-2">
-                        <div className="w-full h-full">
-                            <SectionCard title="Label Details" className="max-w-full">
+                    <div className="flex items-start min-w-max mx-2 h-full" >
+                        <div className="w-full h-full flex gap-2">
+                            <SectionCard title="Label Details" className="max-w-full h-full">
                                 <div className="flex gap-16">
 
-                                    <div className="grid grid-cols-1 gap-x-3 gap-y-2 h-full">
-                                        <div className="w-40">
+                                    <div className="grid grid-cols-3 gap-y-2 gap-x-2 h-full">
+                                        <div className="">
 
 
-                                            <TextInput name="Label Quality" value={labelQuality} setValue={setLabelQuality} readOnly={readOnly} className="w-full" />
+                                            <TextInput name="Label Quality" value={findFromList(styleItemId, styleItemList?.data, "name")} setValue={setLabelQuality} readOnly={true} className="w-full" />
 
                                         </div>
-                                        <div className="w-40">
+                                        <div className="">
+                                            <DropdownWithModal name="Label Size" options={dropDownListObject(id ? sizeList?.data : sizeList?.data?.filter((i) => i?.active), "name", "id")}
+                                                value={labelSizeId} setValue={setLabelSizeId} readOnly={readOnly} addNewLabel="+ Add Size" childComponent={Size} addNewModalWidth="w-[30%] h-[45%]" />
+                                        </div>
+
+                                        <div className="">
 
                                             <TextInput name="Block" value={block} setValue={setBlock} readOnly={readOnly} className="w-full" />
 
                                         </div>
-                                        <div className="w-40">
+                                        <div className="">
 
                                             <TextInput name="Label Qty" value={orderQty} setValue={setOrderQty} readOnly={true} type="number" className="w-full text-right" />
 
                                         </div>
-                                        <div className="w-40">
+                                        <div className="">
 
                                             <TextInput name="Roll Qty" value={rollQty} setValue={setRollQty} readOnly={readOnly} type="number" className="w-full text-right" />
 
                                         </div>
-                                        <div className="w-40">
+                                        <div className="">
 
 
                                             <TextInput name="Cut & Seal" value={cutAndSeal} setValue={setCutAndSeal} readOnly={readOnly} className="w-full" />
 
                                         </div>
+                                        <div className="col-span-3" >
+                                            <label
+                                                className={`md:text-start block text-[11px] font-bold text-slate-700 mb-1`}
+                                            >
+                                                Remarks
+                                            </label>
+                                            <textarea name="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} readOnly={readOnly} className="w-full h-full focus:outline-none border-slate-300 border focus:ring-1 text-[11px] p-1 rounded-md focus:border-indigo-500 " />
+                                        </div>
 
                                     </div>
-                                    <div>
-                                        {/* Main content area */}
-                                        <div className="bg-white px-4 py-1 shadow-sm">
-                                            <h3 className="text-[12px] font-medium text-slate-700 mb-3">
-                                                {trackingType === "Barcode"
-                                                    ? "Barcode wise Details"
-                                                    : trackingType ===
-                                                        "SizeTemplateBarcode"
-                                                        ? "Size + Barcode wise Details"
-                                                        : "Size wise Details"}
-                                            </h3>
-                                            <div className=" overflow-y-auto">
-                                                {/* --- BARCODE TYPE TABLE --- */}
-                                                {trackingType === "Barcode" && (
-                                                    <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
-                                                        <thead>
-                                                            <tr>
-                                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-11">
-                                                                    S.No
-                                                                </th>
-                                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
-                                                                    Barcode From
-                                                                </th>
-                                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
-                                                                    Barcode To
-                                                                </th>
-                                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-24">
-                                                                    Qty
-                                                                </th>
+
+                                </div>
+                            </SectionCard>
+                            <SectionCard title="Finishing Processes" className="w-1/3">
+                                <div className="grid grid-cols-2 gap-y-4">
+                                    {finishingList?.map((item) => (
+                                        <CheckBox key={item.id} name={item.name} value={selectedFinishing.includes(item.id)}
+                                            setValue={() => toggleArr(setSelectedFinishing, item.id)} readOnly={readOnly} />
+                                    ))}
+                                </div>
+                            </SectionCard>
+                            <SectionCard title="Size Wise Qty Details">
+                                <div>
+                                    {/* Main content area */}
+                                    <div className="bg-white px-4 py-1 shadow-sm">
+
+                                        <div className=" overflow-y-auto">
+
+
+                                            <table className="w-[450px] border-separate border-spacing-0 border-t border-l border-slate-200">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-6">
+                                                            S.No
+                                                        </th>
+                                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-32 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
+                                                            Size
+                                                        </th>
+                                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
+                                                            Qty
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {jobCardSizeDetails?.map(
+                                                        (item, idx) => (
+                                                            <tr
+                                                                key={idx}
+                                                                className="h-8 hover:bg-slate-50 transition-colors"
+                                                            >
+                                                                <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">
+                                                                    {idx + 1}
+                                                                </td>
+                                                                <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
+                                                                    {sizeList?.data?.find((s) => s.id === item.sizeId)
+                                                                        ?.name || "All Items"}
+                                                                </td>
+                                                                <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                                    <input
+                                                                        type="number"
+                                                                        className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
+                                                                        value={item.qty}
+                                                                        disabled={true}
+
+                                                                    />
+                                                                </td>
                                                             </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {jobCardSizeDetails?.map(
-                                                                (item, idx) => (
-                                                                    <tr
-                                                                        key={idx}
-                                                                        className="hover:bg-slate-50 transition-colors"
+                                                        ),
+                                                    )}
+                                                </tbody>
+                                            </table>
 
-                                                                    >
-                                                                        <td className="border-b border-r border-slate-200 px-1 py-0.5 text-center text-[11px] text-slate-500 font-medium">
-                                                                            {idx + 1}
-                                                                        </td>
-                                                                        <td className="border-b border-r border-slate-200 px-1">
-                                                                            <input
-                                                                                type="text"
-                                                                                className="w-full border-none bg-transparent px-2 text-[11px] outline-none focus:bg-white"
-                                                                                value={item.barcodeFrom}
-                                                                                disabled={true}
-                                                                                placeholder="From"
-                                                                            />
-                                                                        </td>
-                                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                                            <input
-                                                                                type="text"
-                                                                                className="w-full h-7 border-none bg-transparent px-2 text-[11px] outline-none focus:bg-white"
-                                                                                value={item.barcodeTo}
-                                                                                disabled={true}
-                                                                                placeholder="To"
-
-                                                                            />
-                                                                        </td>
-                                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                                            <input
-                                                                                type="number"
-                                                                                className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
-                                                                                value={item.qty}
-                                                                                disabled={true}
-                                                                            />
-                                                                        </td>
-                                                                    </tr>
-                                                                ),
-                                                            )}
-                                                        </tbody>
-                                                    </table>
+                                            {(!jobCardSizeDetails ||
+                                                jobCardSizeDetails.length === 0) && (
+                                                    <div className="text-center p-8 text-slate-400 text-sm font-medium italic">
+                                                        No items found for this tracking mode.
+                                                    </div>
                                                 )}
-
-                                                {/* --- SIZE TEMPLATE TYPE TABLE --- */}
-                                                {trackingType ===
-                                                    "SizeTemplate" && (
-                                                        <table className="w-[450px] border-separate border-spacing-0 border-t border-l border-slate-200">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-6">
-                                                                        S.No
-                                                                    </th>
-                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-40 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
-                                                                        Size
-                                                                    </th>
-                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
-                                                                        Qty
-                                                                    </th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {jobCardSizeDetails?.map(
-                                                                    (item, idx) => (
-                                                                        <tr
-                                                                            key={idx}
-                                                                            className="h-8 hover:bg-slate-50 transition-colors"
-                                                                        >
-                                                                            <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">
-                                                                                {idx + 1}
-                                                                            </td>
-                                                                            <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
-                                                                                {sizeList?.data?.find((s) => s.id === item.sizeId)
-                                                                                    ?.name || "All Items"}
-                                                                            </td>
-                                                                            <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                                                <input
-                                                                                    type="number"
-                                                                                    className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
-                                                                                    value={item.qty}
-                                                                                    disabled={true}
-
-                                                                                />
-                                                                            </td>
-                                                                        </tr>
-                                                                    ),
-                                                                )}
-                                                            </tbody>
-                                                        </table>
-                                                    )}
-
-                                                {/* --- SIZE TEMPLATE + BARCODE TYPE TABLE --- */}
-                                                {trackingType ===
-                                                    "SizeTemplateBarcode" && (
-                                                        <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-10">
-                                                                        S.No
-                                                                    </th>
-                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-28">
-                                                                        Size
-                                                                    </th>
-                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-32">
-                                                                        From
-                                                                    </th>
-                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-32">
-                                                                        To
-                                                                    </th>
-                                                                    <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-20">
-                                                                        Qty
-                                                                    </th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {jobCardSizeDetails?.map(
-                                                                    (item, idx) => (
-                                                                        <tr
-                                                                            key={idx}
-                                                                            className="h-8 hover:bg-slate-50 transition-colors"
-                                                                        >
-                                                                            <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black ">
-                                                                                {idx + 1}
-                                                                            </td>
-                                                                            <td className="border-b border-r border-slate-200 px-2 py-0 text-[11px]  text-black truncate ">
-                                                                                {sizeList?.data?.find((s) => s.id === item.sizeId)
-                                                                                    ?.name || "All Items"}
-                                                                            </td>
-                                                                            <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                                                <input
-                                                                                    type="text"
-                                                                                    className="w-full h-7 border-none bg-transparent px-1 text-[11px] outline-none focus:bg-white"
-                                                                                    value={item.barcodeFrom}
-                                                                                    onChange={(e) =>
-                                                                                        handleSizeBreakupChange(
-                                                                                            idx,
-                                                                                            "barcodeFrom",
-                                                                                            e.target.value,
-                                                                                        )
-                                                                                    }
-                                                                                    disabled={readOnly}
-                                                                                    placeholder="From"
-                                                                                    onFocus={(e) => {
-                                                                                        e.target.select()
-                                                                                    }}
-                                                                                    autoFocus={idx == 0}
-
-                                                                                />
-                                                                            </td>
-                                                                            <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                                                <input
-                                                                                    type="text"
-                                                                                    className="w-full h-7 border-none bg-transparent px-1 text-[11px] outline-none focus:bg-white"
-                                                                                    value={item.barcodeTo}
-                                                                                    onChange={(e) =>
-                                                                                        handleSizeBreakupChange(
-                                                                                            idx,
-                                                                                            "barcodeTo",
-                                                                                            e.target.value,
-                                                                                        )
-                                                                                    }
-                                                                                    disabled={readOnly}
-                                                                                    placeholder="To"
-                                                                                    onFocus={(e) => {
-                                                                                        e.target.select()
-                                                                                    }}
-                                                                                />
-                                                                            </td>
-                                                                            <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                                                <input
-                                                                                    type="number"
-                                                                                    className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
-                                                                                    value={item.qty}
-                                                                                    onChange={(e) =>
-                                                                                        handleSizeBreakupChange(
-                                                                                            idx,
-                                                                                            "qty",
-                                                                                            e.target.value,
-                                                                                        )
-                                                                                    }
-                                                                                    disabled={readOnly}
-                                                                                    onBlur={(e) => {
-                                                                                        const value = parseFloat(
-                                                                                            e.target.value || 0,
-                                                                                        ).toFixed(3);
-                                                                                        handleSizeBreakupChange(idx, "qty", value);
-                                                                                    }}
-                                                                                    placeholder="0"
-                                                                                    onFocus={(e) => {
-                                                                                        e.target.select()
-                                                                                    }}
-                                                                                />
-                                                                            </td>
-                                                                        </tr>
-                                                                    ),
-                                                                )}
-                                                            </tbody>
-                                                        </table>
-                                                    )}
-
-                                                {(!jobCardSizeDetails ||
-                                                    jobCardSizeDetails.length === 0) && (
-                                                        <div className="text-center p-8 text-slate-400 text-sm font-medium italic">
-                                                            No items found for this tracking mode.
-                                                        </div>
-                                                    )}
-                                            </div>
-                                            <div className="flex-1 min-w-[120px] mt-5">
-                                                <label
-                                                    className={`md:text-start block text-[11px] font-bold text-slate-700 mb-1`}
-                                                >
-                                                    Remarks
-                                                </label>
-                                                <textarea name="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} readOnly={readOnly} className="w-full h-full focus:outline-none border-slate-300 border focus:ring-1 text-[11px] p-1 rounded-md focus:border-indigo-500 " rows={3} />
-                                            </div>
                                         </div>
+
                                     </div>
                                 </div>
                             </SectionCard>
+
                         </div>
                     </div>
                 )
@@ -920,56 +782,56 @@ const JobCardForm = ({
     );
 
     const footerContent = (
-        <>{
-            itemType !== "LABEL" && (
-                <div className="flex gap-2">
-                    <div className="w-3/4">
+        <>
+            <div className="flex gap-2">
+                <div className="w-3/4">
 
-                        <ProcessRoutePanel
-                            selectedProcesses={selectedProcesses} laminations={laminations} varnishes={varnishes}
-                            defaultList={defaultList} laminationList={laminationList} varnishList={varnishList}
-                            processRoute={processRoute} setProcessRoute={setProcessRoute} readOnly={readOnly}
-                        />
-                    </div>
-                    <div className="border border-slate-200 p-1 bg-white rounded-md shadow-sm w-1/4">
-                        <h2 className="font-medium text-indigo-600 text-[11px]">
-                            REMARKS
-                        </h2>
-                        <textarea
-                            readOnly={readOnly}
-                            value={remarks}
-                            onChange={(e) => {
-                                setRemarks(e.target.value);
-                            }}
-                            className="w-full h-11 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
-                            placeholder="Additional Remarks..."
-                            onKeyDown={(e) => {
-                                if (e.ctrlKey && e.key === "Enter") {
-                                    e.preventDefault();
+                    <ProcessRoutePanel
+                        selectedProcesses={selectedProcesses} laminations={laminations} varnishes={varnishes}
+                        defaultList={defaultList} laminationList={laminationList} varnishList={varnishList}
+                        processRoute={processRoute} setProcessRoute={setProcessRoute} readOnly={readOnly}
+                        boardItems={boardItems} boardId={boardId} printingList={printingList}
+                        boardList={boardList} selectedPrinting={selectedPrinting}
+                    />
+                </div>
+                <div className="border border-slate-200 p-1 bg-white rounded-md shadow-sm w-1/4">
+                    <h2 className="font-medium text-indigo-600 text-[11px]">
+                        REMARKS
+                    </h2>
+                    <textarea
+                        readOnly={readOnly}
+                        value={remarks}
+                        onChange={(e) => {
+                            setRemarks(e.target.value);
+                        }}
+                        className="w-full h-11 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
+                        placeholder="Additional Remarks..."
+                        onKeyDown={(e) => {
+                            if (e.ctrlKey && e.key === "Enter") {
+                                e.preventDefault();
 
-                                    const textarea = e.target;
-                                    const start = textarea.selectionStart;
-                                    const end = textarea.selectionEnd;
+                                const textarea = e.target;
+                                const start = textarea.selectionStart;
+                                const end = textarea.selectionEnd;
 
-                                    const newValue =
-                                        remarks.substring(0, start) + "\n" + remarks.substring(end);
+                                const newValue =
+                                    remarks.substring(0, start) + "\n" + remarks.substring(end);
 
-                                    setRemarks(newValue);
+                                setRemarks(newValue);
 
-                                    // ✅ Restore focus + cursor properly
-                                    requestAnimationFrame(() => {
-                                        textarea.focus();
-                                        textarea.setSelectionRange(start + 1, start + 1);
-                                    });
-                                }
-                            }}
-                        />
-                    </div>
-
+                                // ✅ Restore focus + cursor properly
+                                requestAnimationFrame(() => {
+                                    textarea.focus();
+                                    textarea.setSelectionRange(start + 1, start + 1);
+                                });
+                            }
+                        }}
+                    />
                 </div>
 
-            )
-        }
+            </div>
+
+
             <div className="flex justify-between items-center mt-2">
                 <div className="flex gap-2 flex-wrap">
                     <button onClick={() => saveData("close")} onKeyDown={(e) => {
@@ -1040,6 +902,136 @@ const JobCardForm = ({
     return (
         <>
             <Modal
+                isOpen={plateModalOpen}
+                onClose={() => {
+                    setPlateModalOpen(false)
+                }}
+                widthClass="w-[500px]"
+            >
+                <div className="bg-slate-100 p-3 rounded-lg">
+                    {/* Header section like the reference image */}
+                    <div className="bg-white p-3 rounded-lg flex justify-between items-center mb-3 shadow-sm">
+                        <h3 className="text-[16px] font-bold text-slate-800">
+                            Plate Set Details
+                        </h3>
+                        <div className="flex gap-2">
+                            <button
+                                className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold transition-colors flex items-center gap-1 shadow-sm"
+                                onClick={() => setPlateModalOpen(false)}
+                            >
+                                Done
+                            </button>
+                        </div>
+
+                    </div>
+
+                    {/* Main content area */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                        <div className="h-[220px] overflow-y-auto">
+
+                            <table className="w-full border-collapse text-[11px]">
+                                <thead>
+                                    <tr className="bg-gray-100 text-gray-700 h-7">
+                                        <th className="border border-gray-300 px-1 py-1 text-center w-8">S.No</th>
+                                        <th className="border border-gray-300 px-1 py-1 text-left">Plate Name</th>
+                                        <th className="border border-gray-300 px-1 py-1 text-center w-16">Qty</th>
+                                        {!readOnly && (
+                                            <th className="border border-gray-300 px-1 py-1 text-center w-10">
+                                                <button
+                                                    onClick={() =>
+                                                        setPlateDetails(prev => [...prev, { plateName: "", qty: "" }])
+                                                    }
+                                                    className="flex items-center justify-center mx-auto p-0.5 bg-indigo-100 hover:bg-indigo-200 rounded"
+                                                    title="Add plate row"
+                                                    tabIndex={-1}
+                                                >
+                                                    Actions
+                                                </button>
+                                            </th>
+                                        )}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {plateDetails.map((row, idx) => (
+                                        <tr key={idx} className={idx % 2 === 0 ? "bg-white h-7" : "bg-gray-50 h-7"}>
+                                            <td className="border border-gray-300 text-center text-[10px] text-gray-500">{idx + 1}</td>
+                                            <td className="border border-gray-300 p-0">
+                                                <input
+                                                    type="text"
+                                                    className="w-full px-1 py-0.5 bg-transparent text-[11px] outline-none focus:bg-white"
+                                                    value={row.plateName}
+                                                    onChange={e => {
+                                                        const next = [...plateDetails];
+                                                        next[idx] = { ...next[idx], plateName: e.target.value };
+                                                        setPlateDetails(next);
+                                                    }}
+                                                    disabled={readOnly}
+                                                    placeholder="Plate name"
+                                                />
+                                            </td>
+                                            <td className="border border-gray-300 p-0">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    className="w-full px-1 py-0.5 text-right bg-transparent text-[11px] outline-none focus:bg-white"
+                                                    value={row.qty}
+                                                    onChange={e => {
+                                                        const next = [...plateDetails];
+                                                        next[idx] = { ...next[idx], qty: e.target.value };
+                                                        setPlateDetails(next);
+                                                    }}
+                                                    onBlur={e => {
+                                                        const next = [...plateDetails];
+                                                        next[idx] = { ...next[idx], qty: e.target.value ? Number(e.target.value) : "" };
+                                                        setPlateDetails(next);
+                                                    }}
+                                                    onFocus={e => e.target.select()}
+                                                    disabled={readOnly}
+                                                    placeholder="0"
+                                                />
+                                            </td>
+                                            {!readOnly && (
+                                                <td className="border border-gray-300 text-center">
+                                                    <div className="flex items-center justify-center gap-0.5">
+                                                        <button
+                                                            onClick={() =>
+                                                                setPlateDetails(prev => [...prev, { plateName: "", qty: "" }])
+                                                            }
+                                                            className="p-0.5 bg-blue-50 hover:bg-blue-100 rounded"
+                                                            title="Add row"
+                                                            tabIndex={-1}
+                                                        >
+                                                            <Plus size={11} className="text-blue-700" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                setPlateDetails(prev => {
+                                                                    const next = prev.filter((_, i) => i !== idx);
+                                                                    // keep at least 1 row
+                                                                    return next.length > 0 ? next : [{ plateName: "", qty: "" }];
+                                                                })
+                                                            }
+                                                            className="p-0.5 bg-red-50 hover:bg-red-100 rounded"
+                                                            title="Delete row"
+                                                            tabIndex={-1}
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-red-700" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            )}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                        </div>
+                    </div>
+                </div>
+            </Modal>
+            <Modal
                 isOpen={sizeModalOpen}
                 onClose={() => {
                     setSizeModalOpen(false)
@@ -1050,12 +1042,7 @@ const JobCardForm = ({
                     {/* Header section like the reference image */}
                     <div className="bg-white p-3 rounded-lg flex justify-between items-center mb-3 shadow-sm">
                         <h3 className="text-[16px] font-bold text-slate-800">
-                            {trackingType === "Barcode"
-                                ? "Barcode wise Details"
-                                : trackingType ===
-                                    "SizeTemplateBarcode"
-                                    ? "Size + Barcode wise Details"
-                                    : "Size Wise Details"}
+                            Size Wise Details
                         </h3>
                         <div className="flex gap-2">
                             <button
@@ -1070,194 +1057,50 @@ const JobCardForm = ({
                     {/* Main content area */}
                     <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
                         <div className="h-[220px] overflow-y-auto">
-                            {/* --- BARCODE TYPE TABLE --- */}
-                            {trackingType === "Barcode" && (
-                                <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
-                                    <thead>
-                                        <tr>
-                                            <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-11">
-                                                S.No
-                                            </th>
-                                            <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
-                                                Barcode From
-                                            </th>
-                                            <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
-                                                Barcode To
-                                            </th>
-                                            <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-24">
-                                                Qty
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {jobCardSizeDetails?.map(
-                                            (item, idx) => (
-                                                <tr
-                                                    key={idx}
-                                                    className="hover:bg-slate-50 transition-colors"
-                                                >
-                                                    <td className="border-b border-r border-slate-200 px-1 py-0.5 text-center text-[11px] text-slate-500 font-medium">
-                                                        {idx + 1}
-                                                    </td>
-                                                    <td className="border-b border-r border-slate-200 px-1">
-                                                        <input
-                                                            type="text"
-                                                            className="w-full border-none bg-transparent px-2 text-[11px] outline-none focus:bg-white"
-                                                            value={item.barcodeFrom}
-                                                            disabled={true}
-                                                            placeholder="From"
-                                                        />
-                                                    </td>
-                                                    <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                        <input
-                                                            type="text"
-                                                            className="w-full h-7 border-none bg-transparent px-2 text-[11px] outline-none focus:bg-white"
-                                                            value={item.barcodeTo}
-                                                            disabled={true}
-                                                        />
-                                                    </td>
-                                                    <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                        <input
-                                                            type="number"
-                                                            className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
-                                                            value={item.qty}
-                                                            disabled={true}
-                                                            placeholder="0"
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            ),
-                                        )}
-                                    </tbody>
-                                </table>
-                            )}
 
-                            {/* --- SIZE TEMPLATE TYPE TABLE --- */}
-                            {trackingType ===
-                                "SizeTemplate" && (
-                                    <table className="w-[450px] border-separate border-spacing-0 border-t border-l border-slate-200">
-                                        <thead>
-                                            <tr>
-                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-6">
-                                                    S.No
-                                                </th>
-                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-40 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
-                                                    Size
-                                                </th>
-                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
-                                                    Qty
-                                                </th>
+                            <table className="w-[450px] border-separate border-spacing-0 border-t border-l border-slate-200">
+                                <thead>
+                                    <tr>
+                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-6">
+                                            S.No
+                                        </th>
+                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-40 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
+                                            Size
+                                        </th>
+                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
+                                            Qty
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {jobCardSizeDetails?.map(
+                                        (item, idx) => (
+                                            <tr
+                                                key={idx}
+                                                className="h-8 hover:bg-slate-50 transition-colors"
+                                            >
+                                                <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">
+                                                    {idx + 1}
+                                                </td>
+                                                <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
+                                                    {sizeList?.data?.find((s) => s.id === item.sizeId)
+                                                        ?.name || "All Items"}
+                                                </td>
+                                                <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                    <input
+                                                        type="number"
+                                                        className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
+                                                        value={item.qty}
+                                                        disabled={true}
+                                                    />
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {jobCardSizeDetails?.map(
-                                                (item, idx) => (
-                                                    <tr
-                                                        key={idx}
-                                                        className="h-8 hover:bg-slate-50 transition-colors"
-                                                    >
-                                                        <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">
-                                                            {idx + 1}
-                                                        </td>
-                                                        <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
-                                                            {sizeList?.data?.find((s) => s.id === item.sizeId)
-                                                                ?.name || "All Items"}
-                                                        </td>
-                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                            <input
-                                                                type="number"
-                                                                className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
-                                                                value={item.qty}
-                                                                disabled={true}
-                                                            />
-                                                        </td>
-                                                    </tr>
-                                                ),
-                                            )}
-                                        </tbody>
-                                    </table>
-                                )}
+                                        ),
+                                    )}
+                                </tbody>
+                            </table>
 
-                            {/* --- SIZE TEMPLATE + BARCODE TYPE TABLE --- */}
-                            {trackingType ===
-                                "SizeTemplateBarcode" && (
-                                    <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
-                                        <thead>
-                                            <tr>
-                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-10">
-                                                    S.No
-                                                </th>
-                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-28">
-                                                    Size
-                                                </th>
-                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-32">
-                                                    From
-                                                </th>
-                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-32">
-                                                    To
-                                                </th>
-                                                <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-20">
-                                                    Qty
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {jobCardSizeDetails?.map(
-                                                (item, idx) => (
-                                                    <tr
-                                                        key={idx}
-                                                        className="h-8 hover:bg-slate-50 transition-colors"
-                                                    >
-                                                        <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black ">
-                                                            {idx + 1}
-                                                        </td>
-                                                        <td className="border-b border-r border-slate-200 px-2 py-0 text-[11px]  text-black truncate ">
-                                                            {sizeList?.data?.find((s) => s.id === item.sizeId)
-                                                                ?.name || "All Items"}
-                                                        </td>
-                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                            <input
-                                                                type="text"
-                                                                className="w-full h-7 border-none bg-transparent px-1 text-[11px] outline-none focus:bg-white"
-                                                                value={item.barcodeFrom}
-                                                                onChange={(e) =>
-                                                                    handleSizeBreakupChange(
-                                                                        idx,
-                                                                        "barcodeFrom",
-                                                                        e.target.value,
-                                                                    )
-                                                                }
-                                                                disabled={readOnly}
-                                                                placeholder="From"
-                                                                onFocus={(e) => {
-                                                                    e.target.select()
-                                                                }}
-                                                                autoFocus={idx == 0}
 
-                                                            />
-                                                        </td>
-                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                            <input
-                                                                type="text"
-                                                                className="w-full h-7 border-none bg-transparent px-1 text-[11px] outline-none focus:bg-white"
-                                                                value={item.barcodeTo}
-                                                                disabled={true}
-                                                            />
-                                                        </td>
-                                                        <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                            <input
-                                                                type="number"
-                                                                className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
-                                                                value={item.qty}
-                                                                disabled={true}
-                                                            />
-                                                        </td>
-                                                    </tr>
-                                                ),
-                                            )}
-                                        </tbody>
-                                    </table>
-                                )}
 
                             {!jobCardSizeDetails && (
                                 <div className="text-center p-8 text-slate-400 text-sm font-medium italic">

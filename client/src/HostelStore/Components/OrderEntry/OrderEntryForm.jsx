@@ -36,7 +36,7 @@ import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFoot
 import { PDFViewer } from "@react-pdf/renderer";
 import OrderEntryPrintFormat from "./OrderEntryPrintFormat.jsx";
 import { FiFileText, FiPrinter } from "react-icons/fi";
-import OrderItems from "./OrderItems.jsx";
+import OrderItems, { padRows } from "./OrderItems.jsx";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
@@ -162,7 +162,7 @@ const OrderEntryForm = ({
             setTermsAndCondition(data?.termsAndCondition || "");
             setTermsId(data?.termsId || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
-            setOrderItems(data?.orderItems || []);
+            setOrderItems(padRows(data?.orderItems || []));
             setProductionType(data?.productionType || "SAMPLE");
             setProFormaId(data?.proFormaId || "");
             setRefNo(data?.refNo || "");
@@ -316,11 +316,51 @@ const OrderEntryForm = ({
             if (!item.orderQty || Number(item.orderQty) <= 0) {
                 errors.push(`Row ${index + 1}: Order Qty must be greater than 0`);
             }
+            if (item.orderQty > 0 && item.sizeBreakup.length == 0) {
+                errors.push(`Row ${index + 1}: Size Qty is required for Order Qty`);
+            }
             const key = `${item.styleItemId}_${item.uomId}_${item.itemGroupId}`;
             if (seen.has(key)) {
                 errors.push(`Row ${index + 1}: Duplicate item found`);
             } else {
                 seen.add(key);
+            }
+            if (item.sizeBreakup?.length) {
+
+                const sizeSeen = new Set();
+
+                item.sizeBreakup.forEach((size, sizeIndex) => {
+
+                    // size required
+                    if (!size.sizeId) {
+                        errors.push(
+                            `Row ${index + 1}, Size Row ${sizeIndex + 1}: Size is required`
+                        );
+                    }
+
+                    // qty validation
+                    const qty = Number(size.qty || 0);
+
+                    if (qty <= 0) {
+                        errors.push(
+                            `Row ${index + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`
+                        );
+                    }
+
+
+                    // duplicate sizeId check
+                    if (size.sizeId) {
+
+                        if (sizeSeen.has(size.sizeId)) {
+                            errors.push(
+                                `Row ${index + 1}: Duplicate size found`
+                            );
+                        } else {
+                            sizeSeen.add(size.sizeId);
+                        }
+                    }
+                });
+
             }
         });
 
@@ -334,7 +374,7 @@ const OrderEntryForm = ({
             { condition: !data.orderType, title: "Order Type is required!" },
             { condition: data.orderType === "AGAINSTPI" && !data.proFormaId, title: "PI No is required!" },
             { condition: !data.productionType, title: "Production Type is required!" },
-            { condition: data.productionType === "BULK" && !data.refNo, title: "RefNo is required!" },
+            { condition: data.productionType === "BULK" && data.orderType === "AGAINSTPI" && !data.refNo, title: "RefNo is required!" },
             { condition: !data.deliveryDate, title: "Delivery Date is required!" },
             { condition: !data.validDays, title: "Valid To is required!" },
             { condition: items.length === 0, title: "Order Items are required!" },
@@ -503,36 +543,35 @@ const OrderEntryForm = ({
         }
     };
 
-    const fillWithDefaultRows = (items, total = 14) => {
-        const EMPTY_ROW = {
-            styleItemId: "",
-            uomId: "",
-            hsnId: "",
-            orderQty: "",
-            itemGroupId: "",
-            type: "",
-            sizeBreakup: [],
-            trackingType: "None",
-        };
+    // const fillWithDefaultRows = (items, total = 10) => {
+    //     const EMPTY_ROW = {
+    //         styleItemId: "",
+    //         uomId: "",
+    //         hsnId: "",
+    //         orderQty: "",
+    //         itemGroupId: "",
+    //         type: "",
+    //         sizeBreakup: [],
+    //     };
 
-        const filled = [...items];
+    //     const filled = [...items];
 
-        if (filled.length < total) {
-            const remaining = total - filled.length;
-            for (let i = 0; i < remaining; i++) {
-                filled.push({ ...EMPTY_ROW });
-            }
-        }
+    //     if (filled.length < total) {
+    //         const remaining = total - filled.length;
+    //         for (let i = 0; i < remaining; i++) {
+    //             filled.push({ ...EMPTY_ROW });
+    //         }
+    //     }
 
-        return filled;
-    };
+    //     return filled;
+    // };
 
     // useEffect(() => {
     //     if (!id) {
     //         setOrderItems(fillWithDefaultRows([]));
     //     }
     // }, [id]);
-
+    const fillWithDefaultRows = (items = []) => padRows(items);
     return (
         <>
             <Modal
@@ -1054,7 +1093,6 @@ const OrderEntryForm = ({
                                                 gsmId: item.gsmId || "",
                                                 hsnId: item.hsnId || "",
                                                 sizeBreakup: [],
-                                                trackingType: "None",
                                                 itemGroupId: item.StyleItem?.itemGroupId,
                                             })) || [];
 
@@ -1089,7 +1127,7 @@ const OrderEntryForm = ({
                                             dataList={refList?.data?.filter((item) => item?.customerId === customerId)}
                                             value={refNo}
                                             setValue={setRefNo}
-                                            required={productionType === "BULK"}
+                                            required={productionType === "BULK" && orderType === "AGAINSTPI"}
                                             readOnly={readOnly}
                                             disabled={readOnly}
                                             otherField={"refNo"}

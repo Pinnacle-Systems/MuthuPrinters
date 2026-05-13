@@ -66,3 +66,4 @@ export const CURRENCY_API = "currency";
 export const BANK_API = "bank";
 export const PRODUCTION_ALLOCATION_API = "productionAllocation";
 export const NOTIFICATION_API = "notification";
+export const MACHINE_API = "machine";

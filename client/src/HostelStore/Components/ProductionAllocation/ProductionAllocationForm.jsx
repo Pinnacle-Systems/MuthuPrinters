@@ -24,9 +24,10 @@ import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import { PartyMaster } from "../index.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { useAddProductionAllocationMutation, useDeleteProductionAllocationMutation, useGetProductionAllocationByIdQuery, useGetProductionAllocationQuery, useUpdateProductionAllocationMutation } from "../../../redux/uniformService/ProductionAllocationService.js";
-import { useGetJobCardListQuery } from "../../../redux/uniformService/JobCardService.js";
+import JobCardApi, { useGetJobCardListQuery } from "../../../redux/uniformService/JobCardService.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
+import { useDispatch } from "react-redux";
 
 const ProductionAllocationForm = ({
     readOnly,
@@ -49,6 +50,8 @@ const ProductionAllocationForm = ({
     const [customerName, setCustomerName] = useState("");
     const [remarks, setRemarks] = useState("");
     const [printModalOpen, setPrintModalOpen] = useState(false);
+    const dispatch = useDispatch();
+
     const DEFAULT_ROWS = Array.from({ length: 5 }, (_, index) => ({
         seqNo: index + 1,
         processId: "",
@@ -88,9 +91,6 @@ const ProductionAllocationForm = ({
     const { data: processList } = useGetProcessMasterQuery({ params: { companyId, branchId } }, {
         skip: !companyId || !branchId,
     });
-
-    const [triggerGetOrderById] = useLazyGetOrderEntryByIdQuery();
-    const [dispatchInvalidate] = useInvalidateTags();
 
     const [addData] = useAddProductionAllocationMutation();
     const [updateData] = useUpdateProductionAllocationMutation();
@@ -191,7 +191,7 @@ const ProductionAllocationForm = ({
                 });
             }
             setReadOnly(true);
-            dispatchInvalidate();
+            dispatch(JobCardApi.util.invalidateTags(["jobCard"]));
 
             if (pendingAction === "new") {
                 onNew();

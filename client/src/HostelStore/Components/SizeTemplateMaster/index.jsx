@@ -25,6 +25,7 @@ import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService
 import { toast } from "react-toastify";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 const MODEL = "Size Template Master";
 export default function Form({
@@ -90,6 +91,14 @@ export default function Form({
   const [addData] = useAddSizeTemplateMutation();
   const [updateData] = useUpdateSizeTemplateMutation();
   const [removeData] = useDeleteSizeTemplateMutation();
+
+  const { hasPermission } = UserPermissions();
+  const handleCreate = () => {
+    hasPermission(() => {
+      setForm(true);
+      onNew();
+    }, "create");
+  };
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -513,10 +522,7 @@ export default function Form({
         </h5>
         <div className="flex items-center">
           <button
-            onClick={() => {
-              setForm(true);
-              onNew();
-            }}
+            onClick={handleCreate}
             className="bg-white border font-segoe text-xs px-2 border-green-600 text-green-600 hover:bg-green-700 hover:text-white rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             + Add New Size Template
