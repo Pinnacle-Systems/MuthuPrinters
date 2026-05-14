@@ -1,0 +1,143 @@
+import { useDispatch } from "react-redux";
+import { getCommonParams } from "../../../Utils/helper";
+import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
+import { useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
+import { useEffect, useState } from "react";
+import { FaPlus } from "react-icons/fa";
+import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
+import { useDeleteProductionOutwardMutation } from "../../../redux/uniformService/ProductionOutwardService.js";
+import ProductionOutwardReport from "./ProductionOutwardReport.jsx";
+import ProductionOutwardForm from "./ProductionOutwardForm.jsx";
+
+const index = () => {
+    const [showForm, setShowForm] = useState(false);
+    const [id, setId] = useState("");
+    const [readOnly, setReadOnly] = useState(false);
+
+
+    const dispatch = useDispatch();
+    const { branchId, companyId, finYearId, userId } = getCommonParams();
+    const params = {
+        branchId,
+        companyId,
+        finYearId,
+    };
+    const [dispatchInvalidate] = useInvalidateTags();
+
+    const handleView = (orderId) => {
+        setId(orderId);
+        setShowForm(true);
+        setReadOnly(true);
+    };
+
+    const handleEdit = (orderId) => {
+        setId(orderId);
+        setShowForm(true);
+        setReadOnly(false);
+    };
+    const [removeData] = useDeleteProductionOutwardMutation();
+    const handleDelete = async (id) => {
+        setId(id);
+        if (id) {
+            if (!window.confirm("Are you sure to delete...?")) {
+                return;
+            }
+
+            try {
+                let deldata = await removeData(id).unwrap();
+                // dispatch(ProformaInvoiceApi.util.invalidateTags(["proformaInvoice"]));
+                dispatchInvalidate();
+                if (deldata?.statusCode == 1) {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Child record Exists",
+                        text: deldata.data?.message || "Data cannot be deleted!",
+                    });
+                    return;
+                }
+                setId("");
+                Swal.fire({
+                    title: "Deleted Successfully",
+                    icon: "success",
+                    timer: 1000,
+                });
+                setShowForm(false);
+            } catch (error) {
+                Swal.fire({
+                    icon: "error",
+                    title: "Submission error",
+                    text: error.data?.message || "Something went wrong!",
+                });
+                setShowForm(false);
+            }
+
+        }
+    };
+
+    const onNew = () => {
+        setId("");
+        setReadOnly(false);
+    };
+
+
+    const { data: vendorList } = useGetPartyQuery({ params: { ...params } });
+    const { data: branchList } = useGetBranchQuery({ params: { ...params } });
+
+    return (
+        <>
+            <div
+                className="p-1 bg-[#F1F1F0] h-[85%]"
+                style={{ display: showForm ? "none" : "block" }}
+            >
+                <div className="flex flex-col sm:flex-row justify-between bg-white py-1 px-1 items-start sm:items-center mb-4 gap-x-4 rounded-tl-lg rounded-tr-lg shadow-sm border border-gray-200">
+                    <div>
+                        <h1 className="text-lg font-bold text-gray-800">
+                            Production Outward Report
+                        </h1>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800  py-1 rounded-md flex items-center gap-2 text-xs px-2"
+                            onClick={() => {
+                                setShowForm(true);
+                                onNew();
+                            }}
+                        >
+                            <FaPlus /> Create New
+                        </button>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <ProductionOutwardReport
+                        onView={handleView}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        itemsPerPage={10}
+                    />
+                </div>
+            </div>
+
+            {showForm && (
+                <div className="h-[93vh] overflow-hidden">
+                    <ProductionOutwardForm
+                        readOnly={readOnly}
+                        setReadOnly={setReadOnly}
+                        id={id}
+                        setId={setId}
+                        onClose={() => {
+                            setShowForm(false);
+                            setReadOnly((prev) => !prev);
+                        }}
+                        setShowForm={setShowForm}
+                        vendorList={vendorList}
+                        branchList={branchList}
+                    />
+                </div>
+            )}
+        </>
+    );
+}
+
+export default index

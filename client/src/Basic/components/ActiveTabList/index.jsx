@@ -83,6 +83,7 @@ import {
   ProformaInvoice,
   ProductionAllocation,
   MachineMaster,
+  ProductionOutward,
 } from "../../../HostelStore/Components";
 
 const ActiveTabList = () => {
@@ -170,6 +171,7 @@ const ActiveTabList = () => {
     "BANK MASTER": <BankMaster />,
     "PRODUCTION ALLOCATION": <ProductionAllocation />,
     "MACHINE MASTER": <MachineMaster />,
+    "PRODUCTION OUTWARD": <ProductionOutward />,
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

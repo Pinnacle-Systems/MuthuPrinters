@@ -31,6 +31,7 @@ const InwardItems = ({
   searchDcNo,
   setSearchDcNo,
   fromInwardId,
+  isSupplierOutside,
 }) => {
   const EMPTY_ROW = {
     purchaseBillEntryId: "",
@@ -228,6 +229,7 @@ const InwardItems = ({
           handleInputChange={handleInputChange}
           id={id}
           onCloseFocus={focusActionCell}
+          isSupplierOutside={isSupplierOutside}
         />
       </Modal>
       <Modal

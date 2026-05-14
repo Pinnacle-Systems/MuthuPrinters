@@ -195,3 +195,8 @@ export const conversionTypes = [
   { show: "DOZEN", value: "DOZEN" },
   { show: "PCS", value: "PCS" },
 ];
+
+export const blockTypes = [
+  { show: "NEW", value: "NEW" },
+  { show: "OLD", value: "OLD" },
+];

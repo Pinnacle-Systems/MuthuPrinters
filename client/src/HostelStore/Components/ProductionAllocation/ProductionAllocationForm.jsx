@@ -228,13 +228,13 @@ const ProductionAllocationForm = ({
         setStyleItemId(item.styleItemId || "");
 
         const routes = item.processRoute || [];
-
-        const mappedRows = Array.from({ length: 5 }, (_, index) => {
-            const route = routes[index];
+        const mappedRows = routes.map((route, index) => {
             const processData = processList?.data?.find(
                 (p) => p.id === route?.processId
             );
+
             const isOutside = processData?.isOutsideJob || false;
+
             return {
                 seqNo: route?.sequence || index + 1,
                 processId: route?.processId || "",
@@ -244,7 +244,6 @@ const ProductionAllocationForm = ({
                 isOutSide: route?.processId ? isOutside : false,
             };
         });
-
         setAllocationDetails(mappedRows);
     };
 
@@ -315,22 +314,7 @@ const ProductionAllocationForm = ({
             className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
             hidden: !readOnly || !id,
         },
-        {
-            key: "print",
-            icon: <FiPrinter className="h-4 w-4" />,
-            hoverLabel: "Print",
-            label: "Print PDF",
-            iconOnly: false,
-            onClick: () => setPrintModalOpen(true),
-            onKeyDown: (e) => {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setPrintModalOpen(true);
-                }
-            },
-            className: `bg-slate-600 hover:bg-slate-700 ${actionButtonClass}`,
-        },
+
     ].filter((a) => !a.hidden);
 
     const headerContent = (

@@ -14,23 +14,21 @@ const parseKey = (key) => {
 // Build desired keys from current form selections
 // ─────────────────────────────────────────────────────────────
 const buildDesiredKeys = (
-    selectedProcesses,
-    laminations,
-    varnishes,
-    defaultList,
-    laminationList,
-    varnishList,
-    printingList,
-    selectedPrinting,
     boardItems = [],
+    boardList,
     boardId = "",
-    boardList
+    selectedPrinting,
+    printingList,
+    selectedProcesses,
+    defaultList,
+    laminations,
+    laminationList,
+    varnishes,
+    varnishList,
+    selectedFinishing,
+    finishingList
 ) => {
     const keys = [];
-
-    if (boardId) {
-        keys.push(makeKey("board", boardId));
-    }
 
     // ── Board qualities (multi-select) ──
     boardList.forEach((p) => {
@@ -39,15 +37,20 @@ const buildDesiredKeys = (
         }
     });
 
-    defaultList.forEach((p) => {
-        if (selectedProcesses.includes(p.id))
-            keys.push(makeKey("process", p.id));
-    });
+    if (boardId) {
+        keys.push(makeKey("board", boardId));
+    }
 
     printingList.forEach((p) => {
         if (selectedPrinting.includes(p.id))
             keys.push(makeKey("printing", p.id));
     });
+
+    defaultList.forEach((p) => {
+        if (selectedProcesses.includes(p.id))
+            keys.push(makeKey("process", p.id));
+    });
+
 
     laminationList.forEach((p) => {
         const e = laminations.find((l) => l.processId === p.id);
@@ -63,6 +66,11 @@ const buildDesiredKeys = (
         keys.push(makeKey("varnish", p.id, sub));
     });
 
+    finishingList.forEach((p) => {
+        if (selectedFinishing.includes(p.id))
+            keys.push(makeKey("finishing", p.id));
+    });
+
 
     return keys;
 };
@@ -70,17 +78,18 @@ const buildDesiredKeys = (
 // ─────────────────────────────────────────────────────────────
 // Resolve display label
 // ─────────────────────────────────────────────────────────────
-const resolveLabel = (key, defaultList, laminationList, varnishList, boardList = [], printingList = []) => {
+const resolveLabel = (key, defaultList, laminationList, varnishList, boardList = [], printingList = [], finishingList = []) => {
     const { type, id, sub } = parseKey(key);
     const find = (list) => list.find((p) => p.id === id)?.name || `#${id}`;
 
     let name = "";
-    if (type === "process") name = find(defaultList);
+    if (type === "boardQuality") name = find(boardList);
+    else if (type === "board") name = find(boardList);
+    else if (type === "printing") name = find(printingList);
+    else if (type === "process") name = find(defaultList);
     else if (type === "lamination") name = find(laminationList);
     else if (type === "varnish") name = find(varnishList);
-    else if (type === "board") name = find(boardList);
-    else if (type === "boardQuality") name = find(boardList);
-    else if (type === "printing") name = find(printingList);
+    else if (type === "finishing") name = find(finishingList);
     if (sub === "front") return `${name} (Front)`;
     if (sub === "frontback") return `${name} (F & B)`;
     return name;
@@ -91,11 +100,12 @@ const resolveLabel = (key, defaultList, laminationList, varnishList, boardList =
 // ─────────────────────────────────────────────────────────────
 const typeTag = (key) => {
     const { type } = parseKey(key);
+    if (type === "boardQuality") return { label: "BRD", cls: "text-rose-600   bg-rose-50   border-rose-200" };
+    if (type === "board") return { label: "BRD", cls: "text-rose-600   bg-rose-50   border-rose-200" };
+    if (type === "printing") return { label: "PRN", cls: "text-indigo-600 bg-indigo-50 border-indigo-200" };
     if (type === "lamination") return { label: "LAM", cls: "text-emerald-600 bg-emerald-50 border-emerald-200" };
     if (type === "varnish") return { label: "VAR", cls: "text-amber-600  bg-amber-50  border-amber-200" };
-    if (type === "board") return { label: "BRD", cls: "text-rose-600   bg-rose-50   border-rose-200" };
-    if (type === "boardQuality") return { label: "BRD", cls: "text-rose-600   bg-rose-50   border-rose-200" };
-    if (type === "printing") return { label: "PRN", cls: "text-indigo-600 bg-indigo-50 border-indigo-200" };
+    if (type === "finishing") return { label: "FIN", cls: "text-indigo-600 bg-indigo-50 border-indigo-200" };
     return { label: "PRC", cls: "text-indigo-600 bg-indigo-50 border-indigo-200" };
 };
 
@@ -103,28 +113,33 @@ const typeTag = (key) => {
 // ProcessRoutePanel
 // ─────────────────────────────────────────────────────────────
 export const ProcessRoutePanel = ({
-    selectedProcesses = [],
-    laminations = [],
-    varnishes = [],
-    defaultList = [],
-    laminationList = [],
-    varnishList = [],
-    processRoute = [],
     boardItems = [],
-    boardId = "",
-    setProcessRoute,
-    readOnly = false,
     boardList = [],
+    boardId = "",
     selectedPrinting = [],
     printingList = [],
+    selectedProcesses = [],
+    defaultList = [],
+    laminations = [],
+    laminationList = [],
+    varnishes = [],
+    varnishList = [],
+    processRoute = [],
+    selectedFinishing = [],
+    finishingList = [],
+    setProcessRoute,
+    readOnly = false,
 }) => {
 
     // ── Auto-sync: mirror form state into route ──────────────────
     useEffect(() => {
         const desired = buildDesiredKeys(
-            selectedProcesses, laminations, varnishes,
-            defaultList, laminationList, varnishList, printingList, selectedPrinting,
-            boardItems, boardId, boardList
+            boardItems, boardList, boardId,
+            selectedPrinting, printingList,
+            selectedProcesses, defaultList,
+            laminations, laminationList,
+            varnishes, varnishList,
+            selectedFinishing, finishingList
         );
         setProcessRoute((prev) => {
             const kept = prev.filter((k) => desired.includes(k));
@@ -132,7 +147,7 @@ export const ProcessRoutePanel = ({
             return [...kept, ...added];
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedProcesses, laminations, varnishes, boardId, boardItems, selectedPrinting]);
+    }, [selectedProcesses, laminations, varnishes, boardId, boardItems, selectedPrinting, selectedFinishing]);
 
     const removeFromRoute = (idx) => {
         if (readOnly) return;
@@ -165,7 +180,7 @@ export const ProcessRoutePanel = ({
                         <div className="flex items-center min-w-max py-0.5 gap-0">
                             {processRoute.map((key, idx) => {
                                 const tag = typeTag(key);
-                                const label = resolveLabel(key, defaultList, laminationList, varnishList, boardList, printingList);
+                                const label = resolveLabel(key, defaultList, laminationList, varnishList, boardList, printingList, finishingList);
                                 const isLast = idx === processRoute.length - 1;
 
                                 return (

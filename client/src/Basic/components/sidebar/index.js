@@ -164,7 +164,13 @@ const Sidebar = ({
     return { id: pageId, name: findElement(pageId, pageGroup?.data) };
   });
 
-  const order = ["APPROVAL", "ORDER", "PURCHASE", "PRODUCTION"];
+  const order = [
+    "APPROVAL",
+    "ORDER",
+    "PURCHASE",
+    "PRODUCTION",
+    "OUTSIDE PROCESS",
+  ];
 
   const sorted = order
     .map((name) => transactionsGroup?.find((item) => item.name === name))

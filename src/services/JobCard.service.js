@@ -406,6 +406,10 @@ async function create(body) {
       orderItemId,
       plateDetails,
       labelSizeId,
+      totalMeter,
+      blockDate,
+      isRepeatedJobCard,
+      refJobCardId,
     } = body;
 
     // ─────────────────────────────
@@ -458,7 +462,7 @@ async function create(body) {
 
           orderEntryId: orderEntryId ? Number(orderEntryId) : null,
           orderType: orderType || null,
-          orderQty: orderQty ? Number(orderQty) : null,
+          orderQty: orderQty ? parseInt(orderQty) : null,
           orderItemId: orderItemId ? Number(orderItemId) : null,
           customerId: customerId ? Number(customerId) : null,
 
@@ -466,9 +470,9 @@ async function create(body) {
           boardId: boardId ? Number(boardId) : null,
 
           fullBoardId: fullBoardId ? Number(fullBoardId) : null,
-          noOfPockets: noOfPockets ? Number(noOfPockets) : null,
+          noOfPockets: noOfPockets ? parseInt(noOfPockets) : null,
           cuttingSizeId: cuttingSizeId ? Number(cuttingSizeId) : null,
-          runningQty: runningQty ? Number(runningQty) : null,
+          runningQty: runningQty ? parseInt(runningQty) : null,
 
           isFourColor: !!isFourColor,
           isCutColor: !!isCutColor,
@@ -495,12 +499,15 @@ async function create(body) {
           followUpId: followUpId ? Number(followUpId) : null,
           labelQuality: labelQuality || null,
           block: block || null,
-          labelQty: labelQty ? Number(labelQty) : null,
-          rollQty: rollQty ? Number(rollQty) : null,
+          labelQty: labelQty ? parseInt(labelQty) : null,
+          rollQty: rollQty ? parseInt(rollQty) : null,
           cutAndSeal: cutAndSeal || null,
           trackingType: trackingType || null,
           labelSizeId: labelSizeId ? Number(labelSizeId) : null,
-
+          totalMeter: totalMeter ? parseInt(totalMeter) : null,
+          blockDate: blockDate ? new Date(blockDate) : null,
+          isRepeatedJobCard: !!isRepeatedJobCard,
+          refJobCardId: refJobCardId ? Number(refJobCardId) : null,
           boardQualities: safeBoardItems.length
             ? {
                 createMany: {
@@ -700,6 +707,10 @@ async function update(id, body) {
       plateDetails,
       labelSizeId,
       selectedFinishing,
+      totalMeter,
+      blockDate,
+      isRepeatedJobCard,
+      refJobCardId,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -737,6 +748,9 @@ async function update(id, body) {
       });
       await tx.processRoute.deleteMany({ where: { jobCardId: parseInt(id) } });
       await tx.jobCardSizeBreakup.deleteMany({
+        where: { jobCardId: parseInt(id) },
+      });
+      await tx.finishingProcess.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
 
@@ -784,7 +798,10 @@ async function update(id, body) {
           trackingType: trackingType || null,
           orderItemId: orderItemId ? Number(orderItemId) : null,
           labelSizeId: labelSizeId ? Number(labelSizeId) : null,
-
+          totalMeter: totalMeter ? Number(totalMeter) : null,
+          blockDate: blockDate ? new Date(blockDate) : null,
+          isRepeatedJobCard: !!isRepeatedJobCard,
+          refJobCardId: refJobCardId ? Number(refJobCardId) : null,
           boardQualities:
             boardItems.length > 0
               ? {

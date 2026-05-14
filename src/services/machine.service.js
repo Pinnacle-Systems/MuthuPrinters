@@ -8,19 +8,20 @@ async function get(req) {
       companyId: companyId ? parseInt(companyId) : undefined,
       // active: active ? Boolean(active) : undefined,
     },
-    // include: {
-    //   _count: {
-    //     select: {
-    //       machineDetails: true,
-    //     },
-    //   },
-    // },
+    include: {
+      _count: {
+        select: {
+          machineDetails: true,
+        },
+      },
+      Size: true,
+    },
   });
   return {
     statusCode: 0,
     data: data.map((machine) => ({
       ...machine,
-      // childRecord: machine._count.machineDetails,
+      childRecord: machine._count.machineDetails,
     })),
   };
 }
@@ -30,20 +31,28 @@ async function getOne(id) {
     where: {
       id: parseInt(id),
     },
+    include: {
+      _count: {
+        select: {
+          machineDetails: true,
+        },
+      },
+    },
   });
   if (!data) return NoRecordFound("machine");
-  const childRecord = 0;
+  const childRecord = data._count.machineDetails;
 
   return { statusCode: 0, data: { ...data, ...{ childRecord } } };
 }
 
 async function create(body) {
-  const { name, companyId, active = true } = await body;
+  const { name, companyId, active = true, sizeId } = await body;
 
   const data = await prisma.machine.create({
     data: {
       name,
       active,
+      sizeId: sizeId ? parseInt(sizeId) : undefined,
       companyId: parseInt(companyId),
     },
   });
@@ -52,7 +61,7 @@ async function create(body) {
 }
 
 async function update(id, body) {
-  const { name, active, companyId } = await body;
+  const { name, active, companyId, sizeId } = await body;
   const dataFound = await prisma.machine.findUnique({
     where: {
       id: parseInt(id),
@@ -66,6 +75,7 @@ async function update(id, body) {
     data: {
       name,
       active,
+      sizeId: sizeId ? parseInt(sizeId) : undefined,
       companyId: parseInt(companyId),
     },
   });

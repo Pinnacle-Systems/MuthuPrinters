@@ -41,6 +41,7 @@ import Modal from "../../../UiComponents/Modal/index.js";
 import { getImageUrlPath } from "../../../Constants/index.js";
 import { Plus } from "lucide-react";
 import { useSelector } from "react-redux";
+import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService.js";
 
 const PurchaseInwardForm = ({
   onClose,
@@ -118,11 +119,17 @@ const PurchaseInwardForm = ({
 
   const [addData] = useAddPurchaseInwardEntryMutation();
   const [updateData] = useUpdatePurchaseInwardEntryMutation();
-
+  const { data: supplierData } = useGetPartyByIdQuery(supplierId, {
+    skip: !supplierId,
+  });
   const searchFields = {
     searchDocId,
     searchDocDate,
   };
+
+  const isSupplierOutside = useMemo(() => {
+    return supplierData?.data?.City?.state?.name !== "TAMILNADU";
+  }, [supplierData]);
 
   useEffect(() => {
     if (fromPoSupplierId && fromPoType && !id) {
@@ -417,12 +424,12 @@ const PurchaseInwardForm = ({
     const { items, ...totals } =
       calculateTaxWithHSNBreakupAndInsertIntoInwardItems(
         structuredClone(inwardItems), // clone to avoid mutating state
-        false,
+        isSupplierOutside,
         discountType,
         discountValue,
       );
     return { items, totals };
-  }, [inwardItems, discountType, discountValue]);
+  }, [inwardItems, discountType, discountValue, isSupplierOutside]);
 
   const enrichedItemsList = enrichedItems?.items || [];
   const totals = enrichedItems?.totals || {};
@@ -1034,6 +1041,7 @@ const PurchaseInwardForm = ({
             receiptType={receiptType}
             taxTemplateId={taxTemplateId}
             gsmList={gsmList}
+            isSupplierOutside={isSupplierOutside}
           />
         </fieldset>
 

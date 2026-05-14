@@ -1965,8 +1965,12 @@ model JobCard {
   labelQuality       String?
   block              String?
   orderItemId        Int?
+  totalMeter         Int?
   OrderItems         OrderItems? @relation(fields: [orderItemId], references: [id])
   blockDate          DateTime?
+  isRepeatedJobCard  Boolean?    @default(false)
+  refJobCardId       Int?
+  RefJobCard         JobCard?    @relation("RepeatedJobCard", fields: [refJobCardId], references: [id])
 
   boardQualities        BoardQuality[]
   processDetails        ProcessDetails[]
@@ -1979,6 +1983,7 @@ model JobCard {
   printingDetails       PrintingDetails[]
   plateDetails          PlateDetails[]
   finishingProcesses    FinishingProcess[]
+  JobCards              JobCard[]              @relation("RepeatedJobCard")
 }
 
 model BoardQuality {

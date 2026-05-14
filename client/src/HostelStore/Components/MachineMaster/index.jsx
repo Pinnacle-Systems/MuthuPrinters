@@ -3,12 +3,16 @@ import secureLocalStorage from "react-secure-storage";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import { Check, Power } from "lucide-react";
-import { ReusableTable, TextInputNew, ToggleButton } from "../../../Inputs";
+import { ReusableTable, TextInput, TextInputNew, ToggleButton } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 import { useAddMachineMasterMutation, useDeleteMachineMasterMutation, useGetMachineMasterByIdQuery, useGetMachineMasterQuery, useLazyGetMachineMasterByIdQuery, useUpdateMachineMasterMutation } from "../../../redux/services/MachineMasterService";
 import { UserPermissions } from "../../../Utils/UserPermissions";
+import { Size } from "..";
+import { dropDownListObject } from "../../../Utils/contructObject";
+import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService";
+import { DropdownWithModal } from "../../../Inputs/Reuseable";
 
 export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
     const [form, setForm] = useState(false);
@@ -16,6 +20,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     const [readOnly, setReadOnly] = useState(false);
     const [id, setId] = useState("");
     const [name, setName] = useState("");
+    const [sizeId, setSizeId] = useState("")
     const [active, setActive] = useState(true);
     const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
@@ -37,6 +42,11 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         isFetching: isSingleFetching,
         isLoading: isSingleLoading,
     } = useGetMachineMasterByIdQuery(id, { skip: !id });
+
+    const {
+        data: sizeList,
+
+    } = useGetSizeMasterQuery({ params });
     const [trigger, { data: LazyData }] = useLazyGetMachineMasterByIdQuery();
 
     const [addData] = useAddMachineMasterMutation();
@@ -56,6 +66,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             setName(data?.name ? data.name : "");
             setActive(id ? (data?.active ? data.active : false) : true);
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
+            setSizeId(data?.sizeId ? data.sizeId : "");
         },
         [id],
     );
@@ -71,6 +82,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         companyId: secureLocalStorage.getItem(
             sessionStorage.getItem("sessionId") + "userCompanyId",
         ),
+        sizeId
     };
 
     const validateData = (data) => {
@@ -259,9 +271,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                     <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
                         <div className="space-y-4 ">
                             <fieldset className=" rounded mt-2">
-                                <div className="grid grid-cols-2 my-2">
+                                <div className="grid grid-cols-2 my-2 gap-x-2">
                                     <div className="w-[50%">
-                                        <TextInputNew
+                                        <TextInput
                                             name="Machine"
                                             value={name}
                                             setValue={setName}
@@ -269,6 +281,30 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                                             readOnly={readOnly}
                                             disabled={childRecord.current > 0}
                                             ref={countryNameRef}
+                                        />
+                                    </div>
+                                    <div className="w-40">
+                                        <DropdownWithModal
+                                            name="Size"
+                                            options={dropDownListObject(
+                                                id
+                                                    ? sizeList?.data
+                                                    : sizeList?.data?.filter(
+                                                        (item) => item?.active,
+                                                    ),
+                                                "name",
+                                                "id",
+                                            )}
+                                            value={sizeId}
+                                            setValue={(val) => {
+                                                setSizeId(val);
+                                            }}
+                                            required={true}
+                                            readOnly={readOnly}
+                                            // disabled={childRecord.current > 0}
+                                            addNewLabel="+ Add New Size"
+                                            childComponent={Size}
+                                            addNewModalWidth="w-[40%] h-[45%]"
                                         />
                                     </div>
                                 </div>

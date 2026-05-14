@@ -31,7 +31,7 @@ const JobCardReport = ({
 
     const [dataPerPage, setDataPerPage] = useState("10");
     const [searchDocNo, setSearchDocNo] = useState("");
-    const [searchDate, setSearchDate] = useState("");
+    const [searchDocDate, setSearchDocDate] = useState("");
     const [searchCustomer, setSearchCustomer] = useState("");
     const [searchProductionType, setSearchProductionType] = useState("");
 
@@ -48,7 +48,7 @@ const JobCardReport = ({
 
     const searchFields = {
         searchDocNo,
-        searchDate,
+        searchDocDate,
         searchCustomer,
         searchProductionType,
     };
@@ -57,7 +57,7 @@ const JobCardReport = ({
         setCurrentPageNumber(1);
     }, [
         searchDocNo,
-        searchDate,
+        searchDocDate,
         searchCustomer,
         searchProductionType,
     ]);
@@ -419,9 +419,9 @@ const JobCardReport = ({
                                                 type="text"
                                                 className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
                                                 placeholder="Search"
-                                                value={searchDate}
+                                                value={searchDocDate}
                                                 onChange={(e) => {
-                                                    setSearchDate(e.target.value);
+                                                    setSearchDocDate(e.target.value);
                                                 }}
                                             />
                                         </th>

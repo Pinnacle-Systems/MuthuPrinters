@@ -1,6 +1,6 @@
 import { IoArrowBackCircleSharp } from "react-icons/io5";
-import { DropdownInput, DropdownNew, ReusableInput, TextInput } from "../../../Inputs";
-import { productionTypes } from "../../../Utils/DropdownData";
+import { CheckBoxNew, DateInputNew, DropdownInput, DropdownNew, ReusableInput, TextInput } from "../../../Inputs";
+import { blockTypes, productionTypes } from "../../../Utils/DropdownData";
 import { useCallback, useEffect, useRef, useState } from "react";
 import moment from "moment";
 import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
@@ -11,7 +11,7 @@ import Swal from "sweetalert2";
 import { dropDownListObject } from "../../../Utils/contructObject";
 import { BoardMaster, DieMaster, Gsm, PlateMaster, Size } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
-import { useAddJobCardMutation, useGetJobCardByIdQuery, useUpdateJobCardMutation } from "../../../redux/uniformService/JobCardService.js";
+import { useAddJobCardMutation, useGetJobCardByIdQuery, useGetJobCardListQuery, useLazyGetJobCardByIdQuery, useUpdateJobCardMutation } from "../../../redux/uniformService/JobCardService.js";
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
 import { useGetProcessGroupMasterQuery } from "../../../redux/services/ProcessGroupMaster.service.js";
 import secureLocalStorage from "react-secure-storage";
@@ -89,7 +89,7 @@ const JobCardForm = ({
     const [followUpId, setFollowUpId] = useState("");
     const [designerId, setDesignerId] = useState("");
     const [labelQuality, setLabelQuality] = useState("");
-    const [block, setBlock] = useState("");
+    const [block, setBlock] = useState("NEW");
     const [labelQty, setLabelQty] = useState("");
     const [rollQty, setRollQty] = useState("");
     const [cutAndSeal, setCutAndSeal] = useState("");
@@ -105,7 +105,11 @@ const JobCardForm = ({
     const [plateDetails, setPlateDetails] = useState(
         Array.from({ length: 6 }, () => ({ plateName: "", qty: "" }))
     );
-    const [labelSizeId, setLabelSizeId] = useState("")
+    const [labelSizeId, setLabelSizeId] = useState("");
+    const [totalMeter, setTotalMeter] = useState("");
+    const [blockDate, setBlockDate] = useState("");
+    const [isRepeatedJobCard, setIsRepeatedJobCard] = useState();
+    const [refJobCardId, setRefJobCardId] = useState("");
 
     const qrRef = useRef(null);
 
@@ -118,6 +122,7 @@ const JobCardForm = ({
     const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { companyId, branchId } });
     const { data: sizeList } = useGetSizeMasterQuery({ params: { companyId, branchId } });
     const { data: machineList } = useGetMachineMasterQuery({ params: { companyId, branchId } });
+    const { data: jobCardList } = useGetJobCardListQuery({ params: { companyId, branchId } });
 
     const getGroupIds = (groupName) =>
         processGroupList?.data?.find((g) => g.name === groupName)?.processGroupList?.map((i) => i.processId) || [];
@@ -140,11 +145,13 @@ const JobCardForm = ({
     const [updateData] = useUpdateJobCardMutation();
     const [addApprovalStatus] = useAddApprovalStausMutation();
     const [getOrderById] = useLazyGetOrderEntryByIdQuery()
+    const [getRefById] = useLazyGetJobCardByIdQuery();
 
     const syncFormWithDb = useCallback((data) => {
         setDocId(data?.docId || "New");
         setDocDate(data?.docDate ? moment.utc(data.docDate).format("YYYY-MM-DD") : moment.utc(new Date()).format("YYYY-MM-DD"));
         setOrderType(data?.orderType || "ORDER");
+        setBlockDate(data?.blockDate ? moment.utc(data.blockDate).format("YYYY-MM-DD") : "");
         setProductionType(data?.productionType || "SAMPLE");
         setCustomerId(data?.customerId || "");
         setRemarks(data?.remarks || "");
@@ -168,7 +175,7 @@ const JobCardForm = ({
         setBoardItems(data?.boardQualities?.map((b) => b.boardId) || []);
         setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
         setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
-        setSelectedFinishing(data?.finishingDetails?.map((f) => f.processId) || []);
+        setSelectedFinishing(data?.finishingProcesses?.map((f) => f.processId) || []);
         setLaminations(data?.laminationDetails?.map((l) => ({ processId: l.laminationId, isFront: l.isFront, isFrontAndBack: l.isFrontAndBack })) || []);
         setVarnishes(data?.varnishDetails?.map((v) => ({ processId: v.varnishId, isFront: v.isFront, isFrontAndBack: v.isFrontAndBack })) || []);
         setSelectedMachines(data?.machineDetails?.map((m) => m.macId) || []);
@@ -188,7 +195,7 @@ const JobCardForm = ({
         setFollowUpId(data?.followUpId || "");
         setDesignerId(data?.designerId || "");
         setLabelQuality(data?.labelQuality || "");
-        setBlock(data?.block || "");
+        setBlock(data?.block || "NEW");
         setLabelQty(data?.labelQty || "");
         setRollQty(data?.rollQty || "");
         setCutAndSeal(data?.cutAndSeal || "");
@@ -196,6 +203,9 @@ const JobCardForm = ({
         setTrackingType(data?.trackingType || "");
         setOrderItemId(data?.orderItemId || "");
         setLabelSizeId(data?.labelSizeId || "");
+        setTotalMeter(data?.totalMeter || "");
+        setIsRepeatedJobCard(data?.isRepeatedJobCard || false);
+        setRefJobCardId(data?.refJobCardId || "");
 
         const rawPlates = data?.plateDetails || [];
         const paddedPlates = [...rawPlates];
@@ -228,8 +238,9 @@ const JobCardForm = ({
         labelQuality, block, labelQty, rollQty, cutAndSeal,
         jobCardSizeDetails, trackingType, orderItemId,
         selectedPrinting,
-        plateDetails, labelSizeId,
-        selectedFinishing
+        plateDetails: plateDetails?.filter((plate) => plate?.plateName && plate?.qty), labelSizeId, totalMeter,
+        selectedFinishing, blockDate,
+        isRepeatedJobCard, refJobCardId,
     };
 
     const openPrintModal = () => {
@@ -290,16 +301,17 @@ const JobCardForm = ({
 
     const validateData = (d) => {
         const checks = [
-            { condition: !d.customerId, title: "Customer is required!" },
             { condition: !d.docDate, title: "Document Date is required!" },
-            { condition: !d.orderType, title: "Order Type is required!" },
+            { condition: !d.customerId, title: "Customer is required!" },
             { condition: !d.orderEntryId, title: "Order No is required!" },
             { condition: !d.productionType, title: "Production Type is required!" },
+            // { condition: !d.orderType, title: "Order Type is required!" },
             { condition: !d.styleItemId, title: "Item Description is required!" },
             { condition: !d.orderQty, title: "Order Quantity is required!" },
-            { condition: !d.customerId, title: "Customer is required!" },
             { condition: !d.followUpId, title: "Follow-Up is required!" },
-            { condition: !d.designerId, title: "Designer is required!" }
+            { condition: !d.designerId, title: "Designer is required!" },
+            { condition: d.processRoute?.length === 0, title: " Select at Least One Process" },
+            { condition: d.isRepeatedJobCard && !d.refJobCardId, title: "Reference Job Card is required!" },
         ];
         const failed = checks.find((c) => c.condition);
         if (failed) { Swal.fire({ icon: "warning", title: failed.title, timer: 1500, showConfirmButton: false }); return false; }
@@ -360,19 +372,121 @@ const JobCardForm = ({
         finally { setActionLoading(false); }
     };
 
+    const handleJobCardChange = async (value) => {
+        if (!value.id) return;
+        try {
+            const result = await getRefById(value?.id || value).unwrap();
+            const data = result?.data;
+            if (!data) return;
+            setGsmId(data?.gsmId || "");
+            setBoardId(data?.boardId || "");
+            setFullBoardId(data?.fullBoardId || "");
+            setNoOfPockets(data?.noOfPockets || "");
+            setCuttingSizeId(data?.cuttingSizeId || "");
+            setRunningQty(data?.runningQty || "");
+            setPlateId(data?.plateId || "");
+            setDieId(data?.dieId || "");
+            setTotalPlatesets(data?.totalPlatesets || "");
+            setBoardItems(data?.boardQualities?.map((b) => b.boardId) || []);
+            setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
+            setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
+            setSelectedFinishing(data?.finishingProcesses?.map((f) => f.processId) || []);
+            setLaminations(
+                data?.laminationDetails?.map((l) => ({
+                    processId: l.laminationId,
+                    isFront: l.isFront,
+                    isFrontAndBack: l.isFrontAndBack,
+                })) || []
+            );
+            setVarnishes(
+                data?.varnishDetails?.map((v) => ({
+                    processId: v.varnishId,
+                    isFront: v.isFront,
+                    isFrontAndBack: v.isFrontAndBack,
+                })) || []
+            );
+            setSelectedMachines(data?.machineDetails?.map((m) => m.macId) || []);
+            setJobRunTime(data?.jobRunTime || "");
+            setTagCardUps(data?.tagCardUps || "");
+            setProcessRoute(
+                data?.processRoute
+                    ? [...data.processRoute]
+                        .sort((a, b) => a.sequence - b.sequence)
+                        .map((r) => {
+                            const sub = r.isFront ? "front" : r.isFrontAndBack ? "frontback" : "";
+                            return `${r.type}:${r.processId}${sub ? `:${sub}` : ""}`;
+                        })
+                    : []
+            );
+            setLabelQuality(data?.labelQuality || "");
+            setBlock(data?.block || "NEW");
+            setBlockDate(data?.blockDate ? moment.utc(data.blockDate).format("YYYY-MM-DD") : "");
+            setLabelQty(data?.labelQty || "");
+            setRollQty(data?.rollQty || "");
+            setCutAndSeal(data?.cutAndSeal || "");
+            setLabelSizeId(data?.labelSizeId || "");
+            setTotalMeter(data?.totalMeter || "");
+            setItemGroupId(data?.itemGroupId || "");
+            setItemType(data?.itemType || "");
+            setJobCardSizeDetails(
+                data?.jobCardSizeDetails?.map((s) => ({
+                    sizeId: s.sizeId || "",
+                    qty: s.qty || "",
+                    barcodeFrom: s.barcodeFrom || "",
+                    barcodeTo: s.barcodeTo || "",
+                })) || []
+            );
+            const rawPlates = data?.plateDetails || [];
+            const paddedPlates = [...rawPlates];
+            while (paddedPlates.length < 6) paddedPlates.push({ plateName: "", qty: "" });
+            setPlateDetails(paddedPlates);
+        } catch (err) {
+            console.error("Failed to load order style items", err);
+        }
+    }
+
     const headerContent = (
         <div className="flex flex-col xl:flex-row gap-1">
             <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                 <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Basic Details</h2>
-                <div className="flex gap-2">
-                    <div className="w-28"><ReusableInput label="Job Card No" readOnly value={docId} /></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="w-40"><ReusableInput label="Job Card No" readOnly value={docId} /></div>
                     <div className="w-28"><ReusableInput label="Job Card Date" value={docDate} type="date" readOnly disabled /></div>
+                    <div className="mt-4">
+
+                        <CheckBoxNew
+                            name="Is Repeated"
+                            readOnly={readOnly}
+                            value={isRepeatedJobCard}
+                            setValue={setIsRepeatedJobCard}
+                            disabled={readOnly || childRecord.current > 0}
+                            className="text-[11px] font-medium"
+                        />
+                    </div>
+                    {
+                        isRepeatedJobCard && (
+
+                            <div className="w-40">
+                                <DropdownNew
+                                    name="Job Card No"
+                                    dataList={jobCardList?.data}
+                                    value={refJobCardId}
+                                    setValue={setRefJobCardId}
+                                    required
+                                    readOnly={readOnly}
+                                    disabled={readOnly || childRecord.current > 0}
+                                    otherField={"docId"}
+                                    beforeChange={handleJobCardChange}
+                                />
+                            </div>
+                        )
+                    }
                 </div>
             </div>
 
             <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                 <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Customer Details</h2>
-                <div className="w-64 px-1">
+                <div className="w-72 px-1">
                     <DropdownNew name="Customer"
                         dataList={id ? customerList?.data?.filter((i) => i?.isCustomer) : customerList?.data?.filter((i) => i?.active && i?.isCustomer)}
                         value={customerId} setValue={setCustomerId} required readOnly={readOnly} disabled={readOnly || childRecord.current > 0} ref={customerRef} />
@@ -392,6 +506,11 @@ const JobCardForm = ({
                                 item?.customerId === customerId
                             )} value={orderEntryId} setValue={setOrderEntryId} required readOnly={readOnly} disabled={readOnly || childRecord.current > 0} otherField={"docId"}
                             beforeChange={async (selectedValue) => {
+                                if (isRepeatedJobCard && refJobCardId) {
+                                    const res = await getOrderById(selectedValue?.id).unwrap();
+                                    setSelectedOrderData(res?.data);
+                                    return;
+                                }
                                 if (!selectedValue) {
                                     setProductionType("SAMPLE");
                                     setStyleItemId("");
@@ -412,9 +531,12 @@ const JobCardForm = ({
                                 setOrderQty("");
                                 setJobCardSizeDetails([]);
                                 setBoardItems([]);
+                                setBoardId("");
+                                setSelectedPrinting([]);
                                 setSelectedProcesses([]);
                                 setSelectedMachines([]);
                                 setLaminations([]);
+                                setPlateDetails([]);
                                 setVarnishes([]);
                                 setProductionType(res?.data?.productionType);
                                 setOrderStyleItems(res?.data?.orderItems?.map(item => item?.styleItemId) || []);
@@ -431,6 +553,14 @@ const JobCardForm = ({
                         )} value={styleItemId} setValue={setStyleItemId} required readOnly={readOnly} disabled={readOnly || childRecord.current > 0}
                             beforeChange={
                                 (selectedValue) => {
+                                    if (isRepeatedJobCard && refJobCardId) {
+                                        const selectedOrderItem =
+                                            selectedOrderData?.orderItems?.find(
+                                                item => item.styleItemId === selectedValue?.id
+                                            );
+                                        setOrderQty(selectedOrderItem?.orderQty || "");
+                                        return;
+                                    }
                                     setItemGroupId(selectedValue?.itemGroupId);
                                     setItemType(selectedValue?.ItemGroup?.name);
                                     const selectedOrderItem =
@@ -456,7 +586,10 @@ const JobCardForm = ({
                                     setSelectedMachines([]);
                                     setLaminations([]);
                                     setVarnishes([]);
-
+                                    setSelectedPrinting([]);
+                                    setPlateDetails([]);
+                                    setBoardId("")
+                                    setSelectedFinishing([]);
                                 }
                             }
                         />
@@ -474,7 +607,7 @@ const JobCardForm = ({
                                     <TextInput name="Tag/Card Ups" value={tagCardUps} setValue={setTagCardUps} readOnly={readOnly} className="w-full text-right" onFocus={(e) => e.target.select()} />
                                 </div>
                                 <div className="w-28">
-                                    <TextInput name="Job Run Time" value={jobRunTime} setValue={setJobRunTime} readOnly={readOnly} className="w-full" onFocus={(e) => e.target.select()} />
+                                    <TextInput name="Job Run Time (Hours)" value={jobRunTime} setValue={setJobRunTime} readOnly={readOnly} className="w-full text-right" type="number" onFocus={(e) => e.target.select()} />
                                 </div>
                             </>)
                     }
@@ -494,21 +627,34 @@ const JobCardForm = ({
             </div>
 
             <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-                <h2 className="text-xs font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">QR Code</h2>
+                <h2 className="text-xs font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                    QR Code
+                </h2>
+
                 {docId && docId !== "New" ? (
-                    <div className=" justify-center items-center gap-2">
-                        <QRCodeCanvas
-                            ref={qrRef}
-                            value={JSON.stringify({ id, docId })}
-                            size={80}
-                            className="border border-slate-200 rounded mx-auto my-2"
-                        />
-                        <span className="text-xs text-slate-400 ">Scan to identify order</span>
+                    <div className="flex flex-col items-center justify-center gap-1">
+                        <div className="flex flex-col items-center justify-center w-28 h-28 border-2 border-dashed border-slate-200 rounded bg-white">
+                            <QRCodeCanvas
+                                ref={qrRef}
+                                value={JSON.stringify({ id, docId })}
+                                size={80}
+                                className="border border-slate-200 rounded"
+                                level="H"
+                            />
+
+                            <span className="text-[9px] font-bold text-slate-700 mt-1 tracking-tight">
+                                {docId}
+                            </span>
+                        </div>
                     </div>
                 ) : (
-                    <div className="flex justify-center items-center mt-2 gap-2 w-28">
-                        <div className="w-20 h-20 flex items-center m-auto justify-center border border-dashed border-slate-300 rounded text-slate-400 text-xs text-center px-2">
-                            QR appears after save
+                    <div className="flex justify-center items-center mt-2 w-28">
+                        <div className="w-28 h-28 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded bg-white text-slate-400 text-[10px] font-medium text-center leading-tight">
+                            <span>
+                                QR appears
+                                <br />
+                                after save
+                            </span>
                         </div>
                     </div>
                 )}
@@ -638,7 +784,7 @@ const JobCardForm = ({
                             <SectionCard title="Machines">
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-4 min-h-[132px]">
                                     {machineList?.data?.filter((item) => id ? true : item.active).map((item) => (
-                                        <CheckBox key={item.id} name={item.name} value={selectedMachines.includes(item.id)}
+                                        <CheckBox key={item.id} name={`${item.name}${item.Size?.name ? ` (${item.Size.name})` : ""}`} value={selectedMachines.includes(item.id)}
                                             setValue={() => toggleArr(setSelectedMachines, item.id)} readOnly={readOnly} />
                                     ))}
                                 </div>
@@ -667,12 +813,42 @@ const JobCardForm = ({
                                             <DropdownWithModal name="Label Size" options={dropDownListObject(id ? sizeList?.data : sizeList?.data?.filter((i) => i?.active), "name", "id")}
                                                 value={labelSizeId} setValue={setLabelSizeId} readOnly={readOnly} addNewLabel="+ Add Size" childComponent={Size} addNewModalWidth="w-[30%] h-[45%]" />
                                         </div>
-
                                         <div className="">
 
-                                            <TextInput name="Block" value={block} setValue={setBlock} readOnly={readOnly} className="w-full" />
+                                            <TextInput name="Total Meter" value={totalMeter} setValue={setTotalMeter} readOnly={readOnly} type="number" className="w-full text-right" />
 
                                         </div>
+                                        <div className="">
+
+                                            <DropdownInput
+                                                name="Block"
+                                                options={blockTypes}
+                                                value={block}
+                                                setValue={(value) => setBlock(value)}
+                                                required={true}
+                                                readOnly={readOnly}
+                                                disabled={childRecord.current > 0 || readOnly}
+                                                beforeChange={() => {
+                                                    setBlockDate(null)
+                                                }}
+                                            />
+
+                                        </div>
+                                        {
+                                            block === "OLD" && (
+                                                <div>
+                                                    <DateInputNew
+                                                        name="Block Date"
+                                                        value={blockDate}
+                                                        setValue={setBlockDate}
+                                                        disabled={readOnly}
+                                                        required={false}
+                                                        type="date"
+                                                    />
+                                                </div>
+                                            )
+                                        }
+
                                         <div className="">
 
                                             <TextInput name="Label Qty" value={orderQty} setValue={setOrderQty} readOnly={true} type="number" className="w-full text-right" />
@@ -683,7 +859,7 @@ const JobCardForm = ({
                                             <TextInput name="Roll Qty" value={rollQty} setValue={setRollQty} readOnly={readOnly} type="number" className="w-full text-right" />
 
                                         </div>
-                                        <div className="">
+                                        {/* <div className="">
 
 
                                             <TextInput name="Cut & Seal" value={cutAndSeal} setValue={setCutAndSeal} readOnly={readOnly} className="w-full" />
@@ -696,7 +872,7 @@ const JobCardForm = ({
                                                 Remarks
                                             </label>
                                             <textarea name="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} readOnly={readOnly} className="w-full h-full focus:outline-none border-slate-300 border focus:ring-1 text-[11px] p-1 rounded-md focus:border-indigo-500 " />
-                                        </div>
+                                        </div> */}
 
                                     </div>
 
@@ -710,7 +886,7 @@ const JobCardForm = ({
                                     ))}
                                 </div>
                             </SectionCard>
-                            <SectionCard title="Size Wise Qty Details">
+                            <SectionCard title="Size Wise Qty Details" className="w-1/3">
                                 <div>
                                     {/* Main content area */}
                                     <div className="bg-white px-4 py-1 shadow-sm">
@@ -718,13 +894,13 @@ const JobCardForm = ({
                                         <div className=" overflow-y-auto">
 
 
-                                            <table className="w-[450px] border-separate border-spacing-0 border-t border-l border-slate-200">
+                                            <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
                                                 <thead>
                                                     <tr>
                                                         <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-6">
                                                             S.No
                                                         </th>
-                                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-32 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
+                                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-20 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
                                                             Size
                                                         </th>
                                                         <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
@@ -792,6 +968,7 @@ const JobCardForm = ({
                         processRoute={processRoute} setProcessRoute={setProcessRoute} readOnly={readOnly}
                         boardItems={boardItems} boardId={boardId} printingList={printingList}
                         boardList={boardList} selectedPrinting={selectedPrinting}
+                        selectedFinishing={selectedFinishing} finishingList={finishingList}
                     />
                 </div>
                 <div className="border border-slate-200 p-1 bg-white rounded-md shadow-sm w-1/4">
@@ -1036,7 +1213,7 @@ const JobCardForm = ({
                 onClose={() => {
                     setSizeModalOpen(false)
                 }}
-                widthClass="w-[750px]"
+                widthClass="w-[550px]"
             >
                 <div className="bg-slate-100 p-3 rounded-lg">
                     {/* Header section like the reference image */}
@@ -1058,7 +1235,7 @@ const JobCardForm = ({
                     <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
                         <div className="h-[220px] overflow-y-auto">
 
-                            <table className="w-[450px] border-separate border-spacing-0 border-t border-l border-slate-200">
+                            <table className="w-[420px] border-separate border-spacing-0 border-t border-l border-slate-200">
                                 <thead>
                                     <tr>
                                         <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-6">

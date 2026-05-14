@@ -1797,6 +1797,7 @@ const PurchaseOrderForm = ({
             colorList={colorList}
             termsRef={termsRef}
             gsmList={gsmList}
+            isSupplierOutside={isSupplierOutside}
           />
         }
         footer={footerContent}

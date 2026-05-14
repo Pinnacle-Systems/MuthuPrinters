@@ -1,6 +1,9 @@
 import { prisma } from "../lib/prisma.js";
 import { NoRecordFound } from "../configs/Responses.js";
-import { getYearShortCodeForFinYear } from "../utils/helper.js";
+import {
+  getDateFromDateTime,
+  getYearShortCodeForFinYear,
+} from "../utils/helper.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 
@@ -36,20 +39,28 @@ async function get(req) {
     pageNumber,
     dataPerPage,
     searchDocNo,
+    searchDocDate,
+    searchJobCard,
+    searchStyleItem,
   } = req.query;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
-  const data = await prisma.productionAllocation.findMany({
+  let data = await prisma.productionAllocation.findMany({
     where: {
       docId: searchDocNo ? { contains: searchDocNo } : undefined,
-
       AND: finYearDate
         ? [
             { createdAt: { gte: finYearDate.startDateStartTime } },
             { createdAt: { lte: finYearDate.endDateEndTime } },
           ]
         : undefined,
+      JobCard: {
+        docId: searchJobCard ? { contains: searchJobCard } : undefined,
+      },
+      StyleItem: {
+        name: searchStyleItem ? { contains: searchStyleItem } : undefined,
+      },
     },
 
     include: {
@@ -81,6 +92,11 @@ async function get(req) {
       id: "desc",
     },
   });
+  if (searchDocDate) {
+    data = data.filter((item) =>
+      String(getDateFromDateTime(item.createdAt)).includes(searchDocDate),
+    );
+  }
 
   let result = data;
 

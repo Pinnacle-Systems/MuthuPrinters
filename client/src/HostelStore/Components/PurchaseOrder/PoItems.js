@@ -108,6 +108,7 @@ const PoItems = ({
   colorList,
   termsRef,
   gsmList,
+  isSupplierOutside,
 }) => {
   const gridWrapperRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null);
@@ -341,6 +342,7 @@ const PoItems = ({
           id={id}
           isNewVersion={isNewVersion}
           onCloseFocus={focusNextRowFromTaxModal}
+          isSupplierOutside={isSupplierOutside}
         />
       </Modal>
 

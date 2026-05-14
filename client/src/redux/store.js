@@ -65,6 +65,7 @@ import {
   ProformaInvoiceApi,
   ProductionAllocationApi,
   NotificationApi,
+  ProductionOutwardApi,
 } from "./uniformService";
 import OrderEntryApi from "./uniformService/OrderEntryService";
 import BoardMasterApi from "./services/boardService";
@@ -135,6 +136,7 @@ const commonReducers = {
   productionAllocation: ProductionAllocationApi.reducer,
   notification: NotificationApi.reducer,
   machine: MachineMasterApi.reducer,
+  productionOutward: ProductionOutwardApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -201,6 +203,7 @@ const commonMiddleware = [
   ProductionAllocationApi.middleware,
   NotificationApi.middleware,
   MachineMasterApi.middleware,
+  ProductionOutwardApi.middleware,
 ];
 
 const store = configureStore({
