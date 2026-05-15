@@ -80,7 +80,7 @@ const index = () => {
     };
 
 
-    const { data: vendorList } = useGetPartyQuery({ params: { ...params } });
+    const { data: supplierList } = useGetPartyQuery({ params: { ...params } });
     const { data: branchList } = useGetBranchQuery({ params: { ...params } });
 
     return (
@@ -131,7 +131,7 @@ const index = () => {
                             setReadOnly((prev) => !prev);
                         }}
                         setShowForm={setShowForm}
-                        vendorList={vendorList}
+                        supplierList={supplierList}
                         branchList={branchList}
                     />
                 </div>

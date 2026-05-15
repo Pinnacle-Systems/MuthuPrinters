@@ -6,12 +6,9 @@ import {
   create,
   update,
   remove,
-  getAllocationList,
-} from "../controllers/productionAllocation.controller.js";
+} from "../controllers/productionOutward.controller.js";
 
 router.post("/", create);
-
-router.get("/allocationList", getAllocationList);
 
 router.get("/", get);
 router.put("/:id", update);

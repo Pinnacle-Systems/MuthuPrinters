@@ -202,6 +202,13 @@ async function getJobCardList(req) {
       customer: { select: { name: true } },
       processRoute: true,
       OrderEntry: { select: { docId: true } },
+      StyleItem: { select: { name: true } },
+      productionAllocations: {
+        select: {
+          id: true,
+          docId: true,
+        },
+      },
     },
     orderBy: {
       docId: "desc",
@@ -213,12 +220,13 @@ async function getJobCardList(req) {
     docId: item.docId,
     orderQty: item.orderQty,
     styleItemId: item.styleItemId,
-
+    styleItemName: item.StyleItem?.name || "",
     customerName: item.customer?.name || "",
 
     orderEntryDocId: item.OrderEntry?.docId || "",
 
     processRoute: item.processRoute || [],
+    productionAllocationId: item.productionAllocations?.[0]?.id || null,
   }));
 
   return { statusCode: 0, data };

@@ -431,6 +431,7 @@ async function update(id, body, files) {
   const data = await prisma.proformaInvoice.update({
     where: { id: parseInt(id) },
     data: {
+      branchId: parseInt(branchId),
       docDate: docDate ? new Date(docDate) : null,
       userDate: userDate ? new Date(userDate) : null,
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,

@@ -21,7 +21,6 @@ async function getNextDocId(branchId, shortCode, startTime, endTime) {
   if (lastObject) {
     const parts = lastObject.docId.split("/");
     const lastNum = parseInt(parts.at(-1));
-
     if (!isNaN(lastNum)) {
       newDocId = `${branchObj.branchCode}/${shortCode}/POUT/${lastNum + 1}`;
     }
@@ -31,15 +30,21 @@ async function getNextDocId(branchId, shortCode, startTime, endTime) {
 }
 
 async function get(req) {
-  const { finYearId, pagination, pageNumber, dataPerPage, searchDocNo } =
-    req.query;
+  const {
+    finYearId,
+    branchId,
+    pagination,
+    pageNumber,
+    dataPerPage,
+    searchDocNo,
+  } = req.query;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
   const data = await prisma.productionOutward.findMany({
     where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
       docId: searchDocNo ? { contains: searchDocNo } : undefined,
-
       AND: finYearDate
         ? [
             { createdAt: { gte: finYearDate.startDateStartTime } },
@@ -47,35 +52,22 @@ async function get(req) {
           ]
         : undefined,
     },
-
     include: {
-      Vendor: true,
-
-      ProductionAllocation: {
-        include: {
-          JobCard: true,
-        },
-      },
-
-      outwardDetails: {
+      Supplier: true,
+      JobCard: true,
+      ProductionAllocation: true,
+      productionOutwardDetails: {
         include: {
           Process: true,
-          JobCard: true,
+          ProductionAllocationDtl: true,
         },
-
-        orderBy: {
-          sequence: "asc",
-        },
+        orderBy: { sequence: "asc" },
       },
     },
-
-    orderBy: {
-      id: "desc",
-    },
+    orderBy: { id: "desc" },
   });
 
   let result = data;
-
   if (pagination) {
     result = data.slice(
       (pageNumber - 1) * parseInt(dataPerPage),
@@ -92,40 +84,24 @@ async function get(req) {
 
 async function getOne(id) {
   const data = await prisma.productionOutward.findUnique({
-    where: {
-      id: parseInt(id),
-    },
-
+    where: { id: parseInt(id) },
     include: {
-      Vendor: true,
-
-      ProductionAllocation: {
-        include: {
-          JobCard: true,
-        },
-      },
-
-      outwardDetails: {
+      Supplier: true,
+      JobCard: true,
+      ProductionAllocation: true,
+      productionOutwardDetails: {
         include: {
           Process: true,
-          JobCard: true,
+          ProductionAllocationDtl: true,
         },
-
-        orderBy: {
-          sequence: "asc",
-        },
+        orderBy: { sequence: "asc" },
       },
     },
   });
 
-  if (!data) {
-    return NoRecordFound("Production Outward");
-  }
+  if (!data) return NoRecordFound("Production Outward");
 
-  return {
-    statusCode: 0,
-    data,
-  };
+  return { statusCode: 0, data };
 }
 
 async function create(body) {
@@ -135,8 +111,9 @@ async function create(body) {
     finYearId,
     docDate,
     remarks,
+    jobCardId,
     productionAllocationId,
-    vendorId,
+    supplierId,
     outwardDetails,
   } = body;
 
@@ -159,47 +136,34 @@ async function create(body) {
   const data = await prisma.productionOutward.create({
     data: {
       docId: newDocId,
-
       docDate: docDate ? new Date(docDate) : null,
-
       remarks,
-
+      branchId: branchId ? parseInt(branchId) : null,
       createdById: parseInt(userId),
-
+      jobCardId: parseInt(jobCardId),
       productionAllocationId: productionAllocationId
         ? parseInt(productionAllocationId)
         : null,
-
-      vendorId: vendorId ? parseInt(vendorId) : null,
-
-      outwardDetails: {
+      supplierId: supplierId ? parseInt(supplierId) : null,
+      productionOutwardDetails: {
         createMany: {
           data: outwardDetails.map((item) => ({
             processId: item.processId ? parseInt(item.processId) : null,
-
-            jobCardId: item.jobCardId ? parseInt(item.jobCardId) : null,
-
-            sentQty: item.sentQty ? parseInt(item.sentQty) : 0,
-
-            pendingQty: item.sentQty ? parseInt(item.sentQty) : 0,
-
+            sentQty: item.sentQty ? parseFloat(item.sentQty) : 0,
             sequence: item.sequence ? parseInt(item.sequence) : null,
-
-            remarks: item.remarks || null,
+            productionAllocationDtlId: item.productionAllocationDtlId
+              ? parseInt(item.productionAllocationDtlId)
+              : null,
           })),
         },
       },
     },
-
     include: {
-      outwardDetails: true,
+      productionOutwardDetails: true,
     },
   });
 
-  return {
-    statusCode: 0,
-    data,
-  };
+  return { statusCode: 0, data };
 }
 
 async function update(id, body) {
@@ -207,143 +171,63 @@ async function update(id, body) {
     userId,
     docDate,
     remarks,
+    jobCardId,
     productionAllocationId,
-    vendorId,
+    supplierId,
     outwardDetails,
   } = body;
 
   const found = await prisma.productionOutward.findUnique({
-    where: {
-      id: parseInt(id),
-    },
+    where: { id: parseInt(id) },
   });
 
-  if (!found) {
-    return NoRecordFound("Production Outward");
-  }
+  if (!found) return NoRecordFound("Production Outward");
 
   const data = await prisma.productionOutward.update({
-    where: {
-      id: parseInt(id),
-    },
-
+    where: { id: parseInt(id) },
     data: {
       docDate: docDate ? new Date(docDate) : null,
-
       remarks,
-
       updatedById: parseInt(userId),
-
+      jobCardId: parseInt(jobCardId),
       productionAllocationId: productionAllocationId
         ? parseInt(productionAllocationId)
         : null,
-
-      vendorId: vendorId ? parseInt(vendorId) : null,
-
-      outwardDetails: {
+      supplierId: supplierId ? parseInt(supplierId) : null,
+      productionOutwardDetails: {
         deleteMany: {},
-
         createMany: {
           data: outwardDetails.map((item) => ({
             processId: item.processId ? parseInt(item.processId) : null,
-
-            jobCardId: item.jobCardId ? parseInt(item.jobCardId) : null,
-
-            sentQty: item.sentQty ? parseInt(item.sentQty) : 0,
-
-            pendingQty: item.pendingQty ? parseInt(item.pendingQty) : 0,
-
+            sentQty: item.sentQty ? parseFloat(item.sentQty) : 0,
             sequence: item.sequence ? parseInt(item.sequence) : null,
-
-            remarks: item.remarks || null,
+            productionAllocationDtlId: item.productionAllocationDtlId
+              ? parseInt(item.productionAllocationDtlId)
+              : null,
           })),
         },
       },
     },
-
     include: {
-      outwardDetails: true,
+      productionOutwardDetails: true,
     },
   });
 
-  return {
-    statusCode: 0,
-    data,
-  };
+  return { statusCode: 0, data };
 }
 
 async function remove(id) {
   const found = await prisma.productionOutward.findUnique({
-    where: {
-      id: parseInt(id),
-    },
+    where: { id: parseInt(id) },
   });
 
-  if (!found) {
-    return NoRecordFound("Production Outward");
-  }
+  if (!found) return NoRecordFound("Production Outward");
 
   const data = await prisma.productionOutward.delete({
-    where: {
-      id: parseInt(id),
-    },
+    where: { id: parseInt(id) },
   });
 
-  return {
-    statusCode: 0,
-    data,
-  };
+  return { statusCode: 0, data };
 }
 
 export { get, getOne, create, update, remove };
-
-// model ProductionOutward {
-//   id                     Int       @id @default(autoincrement())
-//   docId                  String
-//   docDate                DateTime?
-
-//   productionAllocationId Int?
-//   ProductionAllocation   ProductionAllocation?
-//     @relation(fields: [productionAllocationId], references: [id])
-
-//   vendorId               Int?
-//   Vendor                 Party?
-//     @relation(fields: [vendorId], references: [id])
-
-//   remarks                String?
-
-//   outwardDetails         ProductionOutwardDtl[]
-
-//   createdAt              DateTime @default(now())
-// }
-
-// model ProductionOutwardDtl {
-//   id                  Int      @id @default(autoincrement())
-
-//   productionOutwardId Int
-//   ProductionOutward   ProductionOutward
-//     @relation(fields: [productionOutwardId], references: [id], onDelete: Cascade)
-
-//   processId           Int?
-//   Process             Process?
-//     @relation(fields: [processId], references: [id])
-
-//   jobCardId           Int?
-//   JobCard             JobCard?
-//     @relation(fields: [jobCardId], references: [id])
-
-//   sentQty             Int?
-
-//   receivedQty         Int? @default(0)
-
-//   pendingQty          Int?
-
-//   sequence            Int?
-
-//   remarks             String?
-
-// allocationDetailId Int?
-
-// AllocationDetail ProductionAllocationDtl?
-//  @relation(fields: [allocationDetailId], references: [id])
-// }

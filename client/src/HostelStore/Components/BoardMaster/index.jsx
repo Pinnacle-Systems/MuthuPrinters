@@ -228,7 +228,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             header: "Status",
             accessor: (item) => (item.active ? ACTIVE : INACTIVE),
             //   cellClass: () => "font-medium text-gray-900",
-            className: "font-medium text-gray-900 text-center uppercase w-16",
+            className: "font-medium text-gray-900 text-left uppercase w-16",
         },
     ];
 

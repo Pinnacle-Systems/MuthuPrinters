@@ -11,7 +11,6 @@ export const makeEmptyRow = () => ({
     receivedQty: 0,
     pendingQty: "",
     sequence: "",
-    remarks: "",
     allocationDetailId: "",
 });
 
@@ -43,7 +42,7 @@ const OutwardDetails = ({
             // Auto-calculate pendingQty when sentQty changes
             if (field === "sentQty") {
                 const sent = Number(value) || 0;
-                const received = Number(row.receivedQty) || 0;
+                const received = Number(row.receivedQty) || "";
                 row.pendingQty = sent - received;
             }
 
@@ -71,18 +70,15 @@ const OutwardDetails = ({
                             <th className="w-20 px-2 py-2 text-center font-medium border border-gray-300">
                                 Sent Qty <span className="text-red-500">*</span>
                             </th>
-                            <th className="w-20 px-2 py-2 text-center font-medium border border-gray-300">
+                            <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
                                 Received Qty
                             </th>
-                            <th className="w-20 px-2 py-2 text-center font-medium border border-gray-300">
+                            <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
                                 Pending Qty
                             </th>
-                            <th className="w-40 px-2 py-2 text-center font-medium border border-gray-300">
-                                Remarks
-                            </th>
-                            <th className="w-14 px-2 py-2 text-center font-medium border border-gray-300">
+                            {/* <th className="w-14 px-2 py-2 text-center font-medium border border-gray-300">
                                 Actions
-                            </th>
+                            </th> */}
                         </tr>
                     </thead>
 
@@ -106,25 +102,19 @@ const OutwardDetails = ({
                                     <td className="border border-gray-300 text-[11px]">
                                         <input
                                             type="number"
-                                            min="0"
+
                                             className="w-full text-center px-1 bg-transparent text-[11px] outline-none focus:bg-white h-7"
                                             value={row.sequence}
                                             onChange={(e) => handleInputChange(e.target.value, index, "sequence")}
                                             onFocus={(e) => e.target.select()}
-                                            disabled={readOnly || childRecord?.current > 0}
-                                            placeholder="0"
+                                            disabled={true}
+
                                         />
                                     </td>
 
                                     {/* Process */}
                                     <td className="border border-gray-300 text-[11px]">
-                                        <DropdownNew
-                                            name=""
-                                            dataList={processList?.data?.filter(i => id ? true : i?.active !== false)}
-                                            value={row.processId}
-                                            setValue={(val) => handleInputChange(val, index, "processId")}
-                                            readOnly={readOnly || childRecord?.current > 0}
-                                        />
+                                        {findFromList(row.processId, processList?.data, "name") || ""}
                                     </td>
 
                                     {/* Sent Qty */}
@@ -147,28 +137,18 @@ const OutwardDetails = ({
 
                                     {/* Received Qty — read only, filled on inward */}
                                     <td className="border border-gray-300 text-[11px] text-right px-1 bg-gray-50">
-                                        {row.receivedQty || 0}
+                                        {row.receivedQty || ""}
                                     </td>
 
                                     {/* Pending Qty — auto calculated */}
                                     <td className="border border-gray-300 text-[11px] text-right px-1 bg-gray-50">
-                                        {row.sentQty !== "" ? (Number(row.sentQty) || 0) - (Number(row.receivedQty) || 0) : ""}
+                                        {row.sentQty !== "" ? (Number(row.sentQty) || "") - (Number(row.receivedQty) || "") : ""}
                                     </td>
 
-                                    {/* Remarks */}
-                                    <td className="border border-gray-300 text-[11px]">
-                                        <input
-                                            type="text"
-                                            className="w-full px-1 bg-transparent text-[11px] outline-none focus:bg-white h-7"
-                                            value={row.remarks || ""}
-                                            onChange={(e) => handleInputChange(e.target.value, index, "remarks")}
-                                            disabled={readOnly}
-                                            placeholder=""
-                                        />
-                                    </td>
+
 
                                     {/* Actions */}
-                                    <td className="w-14 border border-gray-300 bg-gray-50 text-center">
+                                    {/* <td className="w-14 border border-gray-300 bg-gray-50 text-center">
                                         {!readOnly && (
                                             <div className="flex items-center justify-center gap-0.5 px-0.5">
                                                 <button
@@ -191,7 +171,7 @@ const OutwardDetails = ({
                                                 </button>
                                             </div>
                                         )}
-                                    </td>
+                                    </td> */}
                                 </tr>
                             );
                         })}
@@ -199,18 +179,17 @@ const OutwardDetails = ({
 
                     <tfoot>
                         <tr className="bg-gray-100 h-7 font-medium text-gray-800 text-[12px]">
-                            <td className="text-right px-2 border border-gray-300 font-medium" colSpan={4}>Total</td>
+                            <td className="text-right px-2 border border-gray-300 font-medium" colSpan={3}>Total</td>
                             <td className="text-right border border-gray-300 px-1 font-medium">
-                                {outwardDetails?.reduce((s, r) => s + (Number(r.sentQty) || 0), 0)}
+                                {outwardDetails?.reduce((s, r) => s + (Number(r.sentQty) || ""), 0)}
                             </td>
                             <td className="text-right border border-gray-300 px-1 font-medium">
-                                {outwardDetails?.reduce((s, r) => s + (Number(r.receivedQty) || 0), 0)}
+                                {outwardDetails?.reduce((s, r) => s + (Number(r.receivedQty) || ""), 0)}
                             </td>
                             <td className="text-right border border-gray-300 px-1 font-medium">
-                                {outwardDetails?.reduce((s, r) => s + ((Number(r.sentQty) || 0) - (Number(r.receivedQty) || 0)), 0)}
+                                {outwardDetails?.reduce((s, r) => s + ((Number(r.sentQty) || "") - (Number(r.receivedQty) || "")), 0)}
                             </td>
-                            <td className="border border-gray-300" />
-                            <td className="border border-gray-300 bg-gray-50" />
+
                         </tr>
                     </tfoot>
                 </table>

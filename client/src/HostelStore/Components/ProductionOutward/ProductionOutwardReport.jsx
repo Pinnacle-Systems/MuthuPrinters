@@ -35,6 +35,7 @@ const ProductionOutwardReport = ({
     const [serachDocNo, setSerachDocNo] = useState("");
     const [searchDocDate, setSearchDocDate] = useState("");
     const [searchVendor, setSearchVendor] = useState("");
+    const [searchJobCard, setSearchJobCard] = useState("");
 
     const [totalCount, setTotalCount] = useState(0);
     const [currentPageNumber, setCurrentPageNumber] = useState(1);
@@ -206,15 +207,11 @@ const ProductionOutwardReport = ({
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
                                             <div>Outward Date</div>
                                         </th>
-
-                                        <th className="w-80  px-3   font-medium text-[13px] text-gray-900  text-center ">
-                                            <div>Vendor</div>
+                                        <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
+                                            <div>Job Card</div>
                                         </th>
-                                        <th
-                                            className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
-                                            rowSpan={2}
-                                        >
-                                            <div> Remarks</div>
+                                        <th className="w-80  px-3   font-medium text-[13px] text-gray-900  text-center ">
+                                            <div>Supplier</div>
                                         </th>
                                         <th
                                             className="w-14   px-3  font-medium text-[13px]  text-gray-900  text-center "
@@ -299,8 +296,11 @@ const ProductionOutwardReport = ({
                                                             {getDateFromDateTimeToDisplay(dataObj.docDate)}
                                                         </td>
                                                         <td className="py-1.5 text-left">
+                                                            {dataObj?.JobCard?.docId}
+                                                        </td>
+                                                        <td className="py-1.5 text-left">
                                                             {" "}
-                                                            {dataObj?.vendor?.name}
+                                                            {dataObj?.Supplier?.name}
                                                         </td>
 
 

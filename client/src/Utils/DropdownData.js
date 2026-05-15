@@ -200,3 +200,8 @@ export const blockTypes = [
   { show: "NEW", value: "NEW" },
   { show: "OLD", value: "OLD" },
 ];
+
+export const outwardProcessTypes = [
+  { show: "SINGLE", value: "SINGLE" },
+  { show: "MULTIPLE", value: "Multiple" },
+];

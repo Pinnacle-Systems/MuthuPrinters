@@ -48,6 +48,7 @@ async function get(req) {
 
   let data = await prisma.productionAllocation.findMany({
     where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
       docId: searchDocNo ? { contains: searchDocNo } : undefined,
       AND: finYearDate
         ? [
@@ -112,6 +113,27 @@ async function get(req) {
     totalCount: data.length,
     data: result,
   };
+}
+
+async function getAllocationList(req) {
+  const { branchId, companyId } = req.query;
+
+  let data = await prisma.productionAllocation.findMany({
+    where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
+    },
+    select: {
+      id: true,
+      docId: true,
+      jobCardId: true,
+      allocationDetails: true,
+    },
+    orderBy: {
+      docId: "desc",
+    },
+  });
+
+  return { statusCode: 0, data };
 }
 
 async function getOne(id) {
@@ -193,6 +215,8 @@ async function create(body) {
 
       styleItemId: styleItemId ? parseInt(styleItemId) : null,
 
+      branchId: parseInt(branchId),
+
       allocationDetails: {
         createMany: {
           data: allocationDetails.map((item) => ({
@@ -229,6 +253,7 @@ async function update(id, body) {
     jobCardId,
     styleItemId,
     allocationDetails,
+    branchId,
   } = body;
 
   const found = await prisma.productionAllocation.findUnique({
@@ -248,6 +273,8 @@ async function update(id, body) {
 
     data: {
       docDate: docDate ? new Date(docDate) : null,
+
+      branchId: parseInt(branchId),
 
       remarks,
 
@@ -310,4 +337,4 @@ async function remove(id) {
   };
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove, getAllocationList };

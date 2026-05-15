@@ -125,6 +125,8 @@ model Branch {
   orderEntries          OrderEntry[]
   jobCards              JobCard[]
   proformaInvoices      ProformaInvoice[]
+  productionAllocations ProductionAllocation[]
+  productionOutwards    ProductionOutward[]
 }
 
 model UserOnBranch {
@@ -214,6 +216,8 @@ model User {
   proformaInvoicesUpdatedBy      ProformaInvoice[]      @relation(name: "proformaUpdatedBy")
   productionAllocationsCreatedBy ProductionAllocation[] @relation(name: "AllocationCreatedBy")
   productionAllocationsUpdatedBy ProductionAllocation[] @relation(name: "AllocationUpdatedBy")
+  productionOutwardsCreatedBy    ProductionOutward[]    @relation("createdBy")
+  productionOutwardsUpdatedBy    ProductionOutward[]    @relation("updatedBy")
 }
 
 model Employee {
@@ -473,6 +477,7 @@ model Party {
   orderEntries          OrderEntry[]
   JobCard               JobCard[]
   proformaInvoices      ProformaInvoice[]
+  productionOutwards    ProductionOutward[]
 }
 
 model PartyBranch {
@@ -1851,6 +1856,7 @@ model Process {
   ProductionAllocationDtl ProductionAllocationDtl[]
   finishingProcess        FinishingProcess[]
   printingDetails         PrintingDetails[]
+  productionOutwardDtls   ProductionOutwardDtl[]
 }
 
 model ProcessGroup {
@@ -1984,6 +1990,7 @@ model JobCard {
   plateDetails          PlateDetails[]
   finishingProcesses    FinishingProcess[]
   JobCards              JobCard[]              @relation("RepeatedJobCard")
+  productionOutwards    ProductionOutward[]
 }
 
 model BoardQuality {
@@ -2243,8 +2250,12 @@ model ProductionAllocation {
   remarks     String?
   styleItemId Int?
   StyleItem   StyleItem? @relation(fields: [styleItemId], references: [id])
+  Branch      Branch?    @relation(fields: [branchId], references: [id])
+  branchId    Int?
 
   allocationDetails ProductionAllocationDtl[]
+
+  productionOutwards ProductionOutward[]
 }
 
 model ProductionAllocationDtl {
@@ -2257,6 +2268,8 @@ model ProductionAllocationDtl {
   Process                Process?             @relation(fields: [processId], references: [id])
   type                   String?
   sequence               Int?
+
+  productionOutwardDtls ProductionOutwardDtl[]
 }
 
 model Machine {
@@ -2286,4 +2299,40 @@ model Notification {
 
   createdAt  DateTime @default(now())
   isResolved Boolean  @default(false)
+}
+
+model ProductionOutward {
+  id                     Int                   @id @default(autoincrement())
+  docId                  String
+  docDate                DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  createdById            Int?
+  createdBy              User?                 @relation("createdBy", fields: [createdById], references: [id])
+  updatedById            Int?
+  updatedBy              User?                 @relation("updatedBy", fields: [updatedById], references: [id])
+  jobCardId              Int
+  JobCard                JobCard               @relation(fields: [jobCardId], references: [id])
+  productionAllocationId Int?
+  ProductionAllocation   ProductionAllocation? @relation(fields: [productionAllocationId], references: [id])
+  supplierId             Int?
+  Supplier               Party?                @relation(fields: [supplierId], references: [id])
+  remarks                String?
+
+  Branch                   Branch?                @relation(fields: [branchId], references: [id])
+  branchId                 Int?
+  productionOutwardDetails ProductionOutwardDtl[]
+}
+
+model ProductionOutwardDtl {
+  id                  Int               @id @default(autoincrement())
+  productionOutwardId Int
+  ProductionOutward   ProductionOutward @relation(fields: [productionOutwardId], references: [id], onDelete: Cascade)
+  processId           Int?
+  Process             Process?          @relation(fields: [processId], references: [id])
+  sentQty             Float?
+  sequence            Int?
+
+  productionAllocationDtlId Int?
+  ProductionAllocationDtl   ProductionAllocationDtl? @relation(fields: [productionAllocationDtlId], references: [id])
 }

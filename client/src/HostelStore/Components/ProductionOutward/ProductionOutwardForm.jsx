@@ -1,8 +1,6 @@
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 
 import {
-    CheckBox,
-    CheckBoxNew,
     DateInputNew,
     DropdownInput,
     DropdownNew,
@@ -26,19 +24,14 @@ import { dropDownListObject } from "../../../Utils/contructObject.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { PartyMaster } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
-import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
-import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
-import { useGetUomQuery } from "../../../redux/services/UomMasterService.js";
-import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
-import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
-import { useGetSizeTemplateQuery } from "../../../redux/services/SizeTemplateMaster.js";
-import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
 import { useDispatch } from "react-redux";
 import { useAddProductionOutwardMutation, useGetProductionOutwardByIdQuery, useUpdateProductionOutwardMutation } from "../../../redux/uniformService/ProductionOutwardService.js";
 import OutwardDetails, { DEFAULT_ROW_COUNT, makeEmptyRow } from "./OutwardDetails.jsx";
 import { useGetJobCardListQuery } from "../../../redux/uniformService/JobCardService.js";
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
+import { useGetAllocationListQuery } from "../../../redux/uniformService/ProductionAllocationService.js";
+import { outwardProcessTypes } from "../../../Utils/DropdownData.js";
 
 const ProductionOutwardForm = ({
     onClose,
@@ -46,22 +39,24 @@ const ProductionOutwardForm = ({
     setId,
     readOnly,
     setReadOnly,
-    vendorList,
-
+    supplierList,
 }) => {
     const today = new Date();
     const [docDate, setDocDate] = useState(
         moment.utc(today).format("YYYY-MM-DD"),
     );
-    const [vendorId, setVendorId] = useState("");
+    const [supplierId, setSupplierId] = useState("");
     const [remarks, setRemarks] = useState("");
     const [docId, setDocId] = useState("");
     const [outwardDetails, setOutwardDetails] = useState(
         Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow)
     );
     const dispatch = useDispatch();
-    const vendorRef = useRef(null);
+    const supplierRef = useRef(null);
     const childRecord = useRef(0);
+    const [jobCardId, setJobCardId] = useState("");
+    const [productionAllocationId, setProductionAllocationId] = useState("");
+    const [processType, setProcessType] = useState("");
     const [dispatchInvalidate] = useInvalidateTags();
     const { userId, finYearId, branchId, companyId } = getCommonParams();
     const params = {
@@ -75,18 +70,8 @@ const ProductionOutwardForm = ({
         isFetching: isSingleFetching,
         isLoading: isSingleLoading,
     } = useGetProductionOutwardByIdQuery(id, { skip: !id });
-    const { data: styleItemList } = useGetStyleItemMasterQuery({
-        params: { ...params },
-    });
-    const { data: uomList } = useGetUomQuery({ params });
-    const { data: sizeList } = useGetSizeMasterQuery({ params });
-    const { data: gsmList } = useGetGsmMasterQuery({ params });
-    const { data: itemGroupList } = useGetItemGroupMasterQuery({ params });
-    const { data: sizeTemplateList } = useGetSizeTemplateQuery({
-        params: { companyId },
-    });
-    const { data: hsnList } = useGetHsnMasterQuery({ params });
     const { data: jobCardList } = useGetJobCardListQuery({ params: { companyId, branchId } });
+    const { data: productionAllocationList } = useGetAllocationListQuery({ params: { companyId, branchId } });
     const { data: processList } = useGetProcessMasterQuery({ params: { companyId } });
     const [addData] = useAddProductionOutwardMutation();
     const [updateData] = useUpdateProductionOutwardMutation();
@@ -101,10 +86,17 @@ const ProductionOutwardForm = ({
                     ? moment.utc(data.docDate).format("YYYY-MM-DD")
                     : moment.utc(new Date()).format("YYYY-MM-DD"),
             );
-            setVendorId(data?.vendorId || "");
+            setSupplierId(data?.supplierId || "");
             setRemarks(data?.remarks || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
-            setOutwardDetails(data?.outwardDetails || []);
+            setOutwardDetails(
+                data?.productionOutwardDetails?.length
+                    ? data.productionOutwardDetails
+                    : Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow)
+            );
+            setJobCardId(data?.jobCardId || "");
+            setProductionAllocationId(data?.productionAllocationId || "");
+            setProcessType(data?.processType || "");
         },
         [id],
     );
@@ -122,10 +114,13 @@ const ProductionOutwardForm = ({
         docDate,
         branchId,
         userId,
-        vendorId,
+        supplierId,
         remarks,
         finYearId,
-        outwardDetails: outwardDetails?.filter(i => i.jobCardId && i.processId),
+        outwardDetails: outwardDetails?.filter(i => i.processId),
+        jobCardId,
+        productionAllocationId,
+        processType
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -153,7 +148,7 @@ const ProductionOutwardForm = ({
                                 setDocId("New");
                                 syncFormWithDb(undefined);
                                 setTimeout(() => {
-                                    vendorRef.current?.focus();
+                                    supplierRef.current?.focus();
                                 }, 100);
                             }
                             if (nextProcess == "close") {
@@ -266,11 +261,11 @@ const ProductionOutwardForm = ({
     const validateData = (data) => {
         const items = data?.outwardDetails || [];
         const checks = [
-            { condition: !data.vendorId, title: "Customer is required!" },
-            { condition: !data.productionType, title: "Production Type is required!" },
-            { condition: !data.validDays, title: "Valid To is required!" },
-            { condition: items.length === 0, title: "Order Items are required!" },
-            {}
+            // { condition: !data.supplierId, title: "Customer is required!" },
+            // { condition: !data.processType, title: "Production Type is required!" },
+            // { condition: items.length === 0, title: "Order Items are required!" },
+            // { condition: !data.jobCardId, title: "Job Card is required!" },
+            // { condition: !data.productionAllocationId, title: "Production Allocation is required!" },
         ];
 
         const failed = checks.find((c) => c.condition);
@@ -285,33 +280,33 @@ const ProductionOutwardForm = ({
             });
             return false;
         }
-        const rowErrors = validateRows(items);
-        if (rowErrors.length > 0) {
-            Swal.fire({
-                icon: "warning",
-                title: "Row Validation Error",
-                html: `<div style="text-align:left">${rowErrors.join("<br/>")}</div>`,
-            });
-            return false;
-        }
+        // const rowErrors = validateRows(items);
+        // if (rowErrors.length > 0) {
+        //     Swal.fire({
+        //         icon: "warning",
+        //         title: "Row Validation Error",
+        //         html: `<div style="text-align:left">${rowErrors.join("<br/>")}</div>`,
+        //     });
+        //     return false;
+        // }
 
-        // 🔹 Duplicate validation
-        const duplicates = findDuplicates(items);
-        if (duplicates.length > 0) {
-            const message = duplicates
-                .map(
-                    (d) =>
-                        `Row ${d.duplicateIndex + 1} is duplicate of Row ${d.firstIndex + 1}`
-                )
-                .join("<br/>");
+        // // 🔹 Duplicate validation
+        // const duplicates = findDuplicates(items);
+        // if (duplicates.length > 0) {
+        //     const message = duplicates
+        //         .map(
+        //             (d) =>
+        //                 `Row ${d.duplicateIndex + 1} is duplicate of Row ${d.firstIndex + 1}`
+        //         )
+        //         .join("<br/>");
 
-            Swal.fire({
-                icon: "warning",
-                title: "Duplicate Items Found",
-                html: `<div style="text-align:left">${message}</div>`,
-            });
-            return false;
-        }
+        //     Swal.fire({
+        //         icon: "warning",
+        //         title: "Duplicate Items Found",
+        //         html: `<div style="text-align:left">${message}</div>`,
+        //     });
+        //     return false;
+        // }
 
         return true;
     };
@@ -355,9 +350,43 @@ const ProductionOutwardForm = ({
     };
 
     useEffect(() => {
-        vendorRef.current?.focus();
+        supplierRef.current?.focus();
     }, []);
 
+    const handleJobCardChange = (item) => {
+        if (!item) return;
+
+        setProductionAllocationId(item.productionAllocationId || "");
+
+        const allocation = productionAllocationList?.data?.find(
+            (s) => s.jobCardId === item.id  // match by jobCardId, not allocation id
+        );
+
+        const allocationDetails = allocation?.allocationDetails;
+
+        if (allocationDetails) {
+            const outsideRows = allocationDetails
+                .filter((detail) => detail.isOutSide === true)
+                .map((detail) => ({
+                    ...makeEmptyRow(),
+                    sequence: detail.sequence,
+                    processId: detail.processId,
+                    allocationDetailId: detail.id,
+                }));
+
+            const paddedRows = [
+                ...outsideRows,
+                ...Array.from(
+                    { length: Math.max(0, DEFAULT_ROW_COUNT - outsideRows.length) },
+                    makeEmptyRow
+                ),
+            ];
+
+            setOutwardDetails(paddedRows);
+        } else {
+            setOutwardDetails(Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow));
+        }
+    };
 
     return (
         <>
@@ -389,37 +418,71 @@ const ProductionOutwardForm = ({
                         </div>
                         <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                             <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Job Card Details</h2>
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                            <div className="grid grid-cols-3 gap-2">
+                                <DropdownNew
+                                    name="Job Card No"
+                                    dataList={jobCardList?.data}
+                                    value={jobCardId}
+                                    setValue={setJobCardId}
+                                    required
+                                    readOnly={readOnly}
+                                    disabled={readOnly}
+                                    otherField={"docId"}
+                                    beforeChange={handleJobCardChange}
+                                    ref={supplierRef}
+                                />
+                                <DropdownNew
+                                    name="Production Allocation No"
+                                    dataList={productionAllocationList?.data}
+                                    value={productionAllocationId}
+                                    setValue={setProductionAllocationId}
+                                    required
+                                    readOnly={true}
+                                    disabled={true}
+                                    otherField={"docId"}
+                                />
+                                <DropdownInput
+                                    name="Process Type"
+                                    options={outwardProcessTypes}
+                                    value={processType}
+                                    setValue={(value) => setProcessType(value)}
+                                    required={true}
+                                    readOnly={readOnly}
+                                    disabled={childRecord.current > 0 || readOnly}
+                                />
+                                <div className="col-span-2">
 
-
+                                    <TextInput name="Item Description" value={findFromList(jobCardId, jobCardList?.data, "styleItemName")} readOnly={true} required
+                                        className=" w-full " />
+                                </div>
 
                             </div>
                         </div>
                         <div className=" w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                             <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                                Vendor Details
+                                Supplier Details
                             </h2>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                 <div className="md:col-span-2">
                                     <DropdownWithModal
-                                        name="Vendor"
+                                        name="Supplier"
                                         options={dropDownListObject(
                                             id
-                                                ? vendorList?.data?.filter((item) => item?.isCustomer)
-                                                : vendorList?.data?.filter((item) => item?.active && item?.isCustomer),
+                                                ? supplierList?.data?.filter((item) => item?.isSupplier)
+                                                : supplierList?.data?.filter((item) => item?.active && item?.isSupplier),
                                             "name",
                                             "id",
                                         )}
-                                        value={vendorId}
-                                        setValue={setVendorId}
+                                        value={supplierId}
+                                        setValue={setSupplierId}
                                         required={true}
                                         readOnly={readOnly}
                                         className={`w-full`}
-                                        addNewLabel="+ Add New Vendor"
+                                        addNewLabel="+ Add New Supplier"
                                         childComponent={PartyMaster}
                                         addNewModalWidth="w-[90%] h-[95%]"
                                         disabled={childRecord.current > 0 || readOnly}
-                                        ref={vendorRef}
+
                                         openOnFocus={true}
                                     />
                                 </div>
@@ -427,7 +490,7 @@ const ProductionOutwardForm = ({
                                     <TextInput
                                         name="Contact Person"
                                         placeholder="Contact name"
-                                        value={findFromList(vendorId, vendorList?.data, "contactPersonName")}
+                                        value={findFromList(supplierId, supplierList?.data, "contactPersonName")}
                                         disabled={true}
                                     />
                                 </div>
@@ -435,7 +498,7 @@ const ProductionOutwardForm = ({
                                     <TextInput
                                         name="Phone"
                                         placeholder="Contact number"
-                                        value={findFromList(vendorId, vendorList?.data, "contactNumber")}
+                                        value={findFromList(supplierId, supplierList?.data, "contactNumber")}
                                         disabled={true}
                                         className="w-20"
                                     />
