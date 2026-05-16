@@ -84,6 +84,7 @@ import {
   ProductionAllocation,
   MachineMaster,
   ProductionOutward,
+  ProductionInward,
 } from "../../../HostelStore/Components";
 
 const ActiveTabList = () => {
@@ -172,6 +173,8 @@ const ActiveTabList = () => {
     "PRODUCTION ALLOCATION": <ProductionAllocation />,
     "MACHINE MASTER": <MachineMaster />,
     "PRODUCTION OUTWARD": <ProductionOutward />,
+    "PRODUCTION INWARD": <ProductionInward />,
+
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

@@ -154,6 +154,9 @@ async function create(body) {
             productionAllocationDtlId: item.productionAllocationDtlId
               ? parseInt(item.productionAllocationDtlId)
               : null,
+            prevProcessId: item.prevProcessId
+              ? parseInt(item.prevProcessId)
+              : null,
           })),
         },
       },
@@ -203,6 +206,9 @@ async function update(id, body) {
             sequence: item.sequence ? parseInt(item.sequence) : null,
             productionAllocationDtlId: item.productionAllocationDtlId
               ? parseInt(item.productionAllocationDtlId)
+              : null,
+            prevProcessId: item.prevProcessId
+              ? parseInt(item.prevProcessId)
               : null,
           })),
         },

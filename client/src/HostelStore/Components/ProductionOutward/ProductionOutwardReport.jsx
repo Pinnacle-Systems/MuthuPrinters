@@ -34,7 +34,7 @@ const ProductionOutwardReport = ({
     const [dataPerPage, setDataPerPage] = useState("10");
     const [serachDocNo, setSerachDocNo] = useState("");
     const [searchDocDate, setSearchDocDate] = useState("");
-    const [searchVendor, setSearchVendor] = useState("");
+    const [searchSupplier, setSearchSupplier] = useState("");
     const [searchJobCard, setSearchJobCard] = useState("");
 
     const [totalCount, setTotalCount] = useState(0);
@@ -50,7 +50,8 @@ const ProductionOutwardReport = ({
     const searchFields = {
         serachDocNo,
         searchDocDate,
-        searchVendor,
+        searchSupplier,
+        searchJobCard,
     };
 
     useEffect(() => {
@@ -58,7 +59,8 @@ const ProductionOutwardReport = ({
     }, [
         serachDocNo,
         searchDocDate,
-        searchVendor,
+        searchSupplier,
+        searchJobCard,
     ]);
 
     const companyId = secureLocalStorage.getItem(
@@ -247,15 +249,26 @@ const ProductionOutwardReport = ({
                                                 }}
                                             />
                                         </th>
+                                        <th className="  px-1 font-medium text-[13px]  text-gray-900  text-center w-32">
+                                            <input
+                                                type="text"
+                                                className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
+                                                placeholder="Search"
+                                                value={searchJobCard}
+                                                onChange={(e) => {
+                                                    setSearchJobCard(e.target.value);
+                                                }}
+                                            />
+                                        </th>
 
                                         <th className="w-80  px-1 font-medium text-[13px]  text-gray-900  text-center ">
                                             <input
                                                 type="text"
                                                 className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
                                                 placeholder="Search"
-                                                value={searchVendor}
+                                                value={searchSupplier}
                                                 onChange={(e) => {
-                                                    setSearchVendor(e.target.value);
+                                                    setSearchSupplier(e.target.value);
                                                 }}
                                             />
                                         </th>

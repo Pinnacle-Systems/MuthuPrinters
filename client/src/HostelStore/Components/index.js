@@ -56,3 +56,4 @@ export { default as ProformaInvoice } from "./ProformaInvoice/ProfomaInvoice";
 export { default as ProductionAllocation } from "./ProductionAllocation";
 export { default as MachineMaster } from "./MachineMaster";
 export { default as ProductionOutward } from "./ProductionOutward";
+export { default as ProductionInward } from "./ProductionInward";

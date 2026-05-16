@@ -10,3 +10,4 @@ export { default as ProformaInvoiceApi } from "./ProformaInvoiceService";
 export { default as ProductionAllocationApi } from "./ProductionAllocationService";
 export { default as NotificationApi } from "./NotificationService";
 export { default as ProductionOutwardApi } from "./ProductionOutwardService";
+export { default as ProductionInwardApi } from "./ProductionInwardService";

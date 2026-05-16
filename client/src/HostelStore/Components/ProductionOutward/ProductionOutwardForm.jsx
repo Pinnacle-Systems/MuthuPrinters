@@ -359,33 +359,119 @@ const ProductionOutwardForm = ({
         setProductionAllocationId(item.productionAllocationId || "");
 
         const allocation = productionAllocationList?.data?.find(
-            (s) => s.jobCardId === item.id  // match by jobCardId, not allocation id
+            (s) => s.jobCardId === item.id
         );
 
-        const allocationDetails = allocation?.allocationDetails;
+        const allocationDetails = allocation?.allocationDetails || [];
+        const processRoute = item.processRoute || [];
 
-        if (allocationDetails) {
-            const outsideRows = allocationDetails
-                .filter((detail) => detail.isOutSide === true)
-                .map((detail) => ({
-                    ...makeEmptyRow(),
-                    sequence: detail.sequence,
-                    processId: detail.processId,
-                    allocationDetailId: detail.id,
-                }));
-
-            const paddedRows = [
-                ...outsideRows,
-                ...Array.from(
-                    { length: Math.max(0, DEFAULT_ROW_COUNT - outsideRows.length) },
-                    makeEmptyRow
-                ),
-            ];
-
-            setOutwardDetails(paddedRows);
-        } else {
+        if (!allocationDetails.length) {
             setOutwardDetails(Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow));
+            setSupplierId("");
+            return;
         }
+
+        const sorted = [...allocationDetails].sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
+
+        // seq -> status from processRoute
+        const seqStatusMap = {};
+        processRoute.forEach(pr => { seqStatusMap[pr.sequence] = pr.status; });
+
+        // seq -> processId from allocationDetails
+        const seqProcessMap = {};
+        sorted.forEach(d => { seqProcessMap[d.sequence] = d.processId; });
+
+        const outsideProcesses = sorted.filter(d => d.isOutSide === true);
+
+        if (!outsideProcesses.length) {
+            setOutwardDetails(Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow));
+            setSupplierId("");
+            return;
+        }
+
+        // Find the FIRST outside process whose immediately previous seq is COMPLETED
+        // Once found, collect all consecutive outside processes from that point
+        // regardless of their own status — eligibility is only checked for the first one
+        let startIndex = -1;
+        for (let i = 0; i < outsideProcesses.length; i++) {
+            const detail = outsideProcesses[i];
+            const prevSeq = (detail.sequence || 1) - 1;
+            const isPrevCompleted = prevSeq <= 0 || seqStatusMap[prevSeq] === "COMPLETED";
+            if (isPrevCompleted) {
+                startIndex = i;
+                break;
+            }
+        }
+
+        if (startIndex === -1) {
+            // No eligible outside process found
+            setOutwardDetails(Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow));
+            setSupplierId("");
+            return;
+        }
+
+        // From the first eligible, collect consecutive outside processes
+        // that are contiguous by sequence (no gaps, no inhouse between them)
+        const firstEligible = outsideProcesses[startIndex];
+        const firstSupplierId = firstEligible.supplierId;
+
+        // Get all consecutive outside processes starting from firstEligible
+        // They must be consecutive by sequence number (seq+1, seq+2...)
+        const consecutiveOutside = [];
+        let expectedSeq = firstEligible.sequence;
+        for (let i = startIndex; i < outsideProcesses.length; i++) {
+            const detail = outsideProcesses[i];
+            if (detail.sequence === expectedSeq) {
+                consecutiveOutside.push(detail);
+                expectedSeq++;
+            } else {
+                break; // gap in sequence, stop
+            }
+        }
+
+        // Now group by same supplierId from the start
+        const sameSupplierGroup = [];
+        for (const detail of consecutiveOutside) {
+            if (detail.supplierId === firstSupplierId) {
+                sameSupplierGroup.push(detail);
+            } else {
+                break;
+            }
+        }
+
+        // If different supplier exists next, only show first supplier's group
+        // If same supplier all through, show all with only first row editable
+        const rowsToShow = sameSupplierGroup; // always use same supplier group
+
+        // Auto-set supplierId
+        setSupplierId(firstSupplierId || "");
+
+        const outsideRows = rowsToShow.map((detail, idx) => {
+            const prevSeq = (detail.sequence || 1) - 1;
+            const prevProcessId = prevSeq > 0 ? (seqProcessMap[prevSeq] || "") : "";
+
+            return {
+                ...makeEmptyRow(),
+                sequence: detail.sequence,
+                processId: detail.processId,
+                allocationDetailId: detail.id,
+                supplierId: detail.supplierId || "",
+                prevProcessId,
+                availableQty: "",
+                // Only first row sentQty is editable
+                isDisabled: idx > 0,
+            };
+        });
+
+        const paddedRows = [
+            ...outsideRows,
+            ...Array.from(
+                { length: Math.max(0, DEFAULT_ROW_COUNT - outsideRows.length) },
+                makeEmptyRow
+            ),
+        ];
+
+        setOutwardDetails(paddedRows);
     };
 
     return (
@@ -404,7 +490,7 @@ const ProductionOutwardForm = ({
                                 <div className="w-36">
                                     <TextInput name="Outward No" value={docId} disabled={true} />
                                 </div>
-                                <div className="w-32">
+                                <div className="w-28">
                                     <DateInputNew
                                         name="Outward Date"
                                         value={docDate}
@@ -418,30 +504,36 @@ const ProductionOutwardForm = ({
                         </div>
                         <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                             <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Job Card Details</h2>
-                            <div className="grid grid-cols-3 gap-2">
-                                <DropdownNew
-                                    name="Job Card No"
-                                    dataList={jobCardList?.data}
-                                    value={jobCardId}
-                                    setValue={setJobCardId}
-                                    required
-                                    readOnly={readOnly}
-                                    disabled={readOnly}
-                                    otherField={"docId"}
-                                    beforeChange={handleJobCardChange}
-                                    ref={supplierRef}
-                                />
-                                <DropdownNew
-                                    name="Production Allocation No"
-                                    dataList={productionAllocationList?.data}
-                                    value={productionAllocationId}
-                                    setValue={setProductionAllocationId}
-                                    required
-                                    readOnly={true}
-                                    disabled={true}
-                                    otherField={"docId"}
-                                />
-                                <DropdownInput
+                            <div className="flex gap-2 px-1">
+                                <div className="w-40">
+
+                                    <DropdownNew
+                                        name="Job Card No"
+                                        dataList={jobCardList?.data}
+                                        value={jobCardId}
+                                        setValue={setJobCardId}
+                                        required
+                                        readOnly={readOnly}
+                                        disabled={readOnly}
+                                        otherField={"docId"}
+                                        beforeChange={handleJobCardChange}
+                                        ref={supplierRef}
+                                    />
+                                </div>
+                                <div className="w-40">
+
+                                    <DropdownNew
+                                        name="Production Allocation No"
+                                        dataList={productionAllocationList?.data}
+                                        value={productionAllocationId}
+                                        setValue={setProductionAllocationId}
+                                        required
+                                        readOnly={true}
+                                        disabled={true}
+                                        otherField={"docId"}
+                                    />
+                                </div>
+                                {/* <DropdownInput
                                     name="Process Type"
                                     options={outwardProcessTypes}
                                     value={processType}
@@ -449,8 +541,9 @@ const ProductionOutwardForm = ({
                                     required={true}
                                     readOnly={readOnly}
                                     disabled={childRecord.current > 0 || readOnly}
-                                />
-                                <div className="col-span-2">
+                                /> */}
+
+                                <div className="w-64">
 
                                     <TextInput name="Item Description" value={findFromList(jobCardId, jobCardList?.data, "styleItemName")} readOnly={true} required
                                         className=" w-full " />
@@ -522,6 +615,9 @@ const ProductionOutwardForm = ({
                         processList={processList}
                         id={id}
                         childRecord={childRecord}
+                        jobCardId={jobCardId}
+                        productionAllocationList={productionAllocationList}  // add
+                        setSupplierId={setSupplierId}
                     />
                 }
                 footer={
@@ -545,9 +641,9 @@ const ProductionOutwardForm = ({
                                     summaryColumn: "left",
                                 },
                                 {
-                                    key: "pendingQty",
-                                    label: "Pending Qty",
-                                    value: outwardDetails?.reduce((acc, i) => acc + ((Number(i.sentQty) || 0) - (Number(i.receivedQty) || 0)), 0),
+                                    key: "receivedQty",
+                                    label: "Received Qty",
+                                    value: outwardDetails?.reduce((acc, i) => acc + (Number(i.receivedQty) || 0), 0),
                                     summaryColumn: "left",
                                 },
                             ]}

@@ -229,6 +229,8 @@ async function create(body) {
             isInHouse: Boolean(item.isInHouse),
 
             isOutSide: Boolean(item.isOutSide),
+
+            supplierId: item.supplierId ? parseInt(item.supplierId) : null,
           })),
         },
       },
@@ -298,6 +300,8 @@ async function update(id, body) {
             isInHouse: Boolean(item.isInHouse),
 
             isOutSide: Boolean(item.isOutSide),
+
+            supplierId: item.supplierId ? parseInt(item.supplierId) : null,
           })),
         },
       },

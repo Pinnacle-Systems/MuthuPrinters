@@ -600,6 +600,7 @@ async function create(body) {
                     sequence: idx + 1,
                     isFront: !!r.isFront,
                     isFrontAndBack: !!r.isFrontAndBack,
+                    status: "NOT_STARTED",
                   })),
                 },
               }
