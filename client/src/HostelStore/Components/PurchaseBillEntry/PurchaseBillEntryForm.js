@@ -40,6 +40,7 @@ import Modal from "../../../UiComponents/Modal";
 import { PartyMaster, TaxTemplate } from "..";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
+import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 
 const PurchaseBillEntryForm = ({
   onClose,
@@ -97,7 +98,13 @@ const PurchaseBillEntryForm = ({
   const [updateData] = useUpdatePurchaseBillEntryMutation();
   const dispatch = useDispatch();
   const searchFields = { searchDocId, searchPIDate, searchInvNo, searchDcNo };
+  const { data: supplierData } = useGetPartyByIdQuery(supplierId, {
+    skip: !supplierId,
+  });
 
+  const isSupplierOutside = useMemo(() => {
+    return supplierData?.data?.City?.state?.name !== "TAMILNADU";
+  }, [supplierData]);
   const {
     data: purchaseInwarddata,
     isFetching: isSingleInwardFetching,
@@ -264,12 +271,12 @@ const PurchaseBillEntryForm = ({
     const { items, ...totals } =
       calculateTaxWithHSNBreakupAndInsertIntoInwardItems(
         structuredClone(inwardItems), // clone to avoid mutating state
-        false,
+        isSupplierOutside,
         discountType,
         discountValue,
       );
     return { items, totals };
-  }, [inwardItems, discountType, discountValue]);
+  }, [inwardItems, discountType, discountValue, isSupplierOutside]);
 
   const enrichedItemsList = enrichedItems?.items || [];
   const totals = enrichedItems?.totals || {};
@@ -669,6 +676,7 @@ const PurchaseBillEntryForm = ({
             setSearchDcNo={setSearchDcNo}
             taxTemplateId={taxTemplateId}
             fromInwardId={fromInwardId}
+            isSupplierOutside={isSupplierOutside}
           />
         </fieldset>
 

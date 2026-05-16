@@ -202,6 +202,13 @@ async function getJobCardList(req) {
       customer: { select: { name: true } },
       processRoute: true,
       OrderEntry: { select: { docId: true } },
+      StyleItem: { select: { name: true } },
+      productionAllocations: {
+        select: {
+          id: true,
+          docId: true,
+        },
+      },
     },
     orderBy: {
       docId: "desc",
@@ -213,12 +220,13 @@ async function getJobCardList(req) {
     docId: item.docId,
     orderQty: item.orderQty,
     styleItemId: item.styleItemId,
-
+    styleItemName: item.StyleItem?.name || "",
     customerName: item.customer?.name || "",
 
     orderEntryDocId: item.OrderEntry?.docId || "",
 
     processRoute: item.processRoute || [],
+    productionAllocationId: item.productionAllocations?.[0]?.id || null,
   }));
 
   return { statusCode: 0, data };
@@ -252,6 +260,9 @@ async function getOne(id) {
         include: { Process: { select: { id: true, name: true } } },
       },
       jobCardSizeDetails: true,
+      printingDetails: true,
+      finishingProcesses: true,
+      plateDetails: true,
       _count: {
         select: {
           productionAllocations: true,
@@ -398,7 +409,15 @@ async function create(body) {
       processRoute,
       trackingType,
       jobCardSizeDetails,
+      selectedPrinting,
+      selectedFinishing,
       orderItemId,
+      plateDetails,
+      labelSizeId,
+      totalMeter,
+      blockDate,
+      isRepeatedJobCard,
+      refJobCardId,
     } = body;
 
     // ─────────────────────────────
@@ -411,6 +430,9 @@ async function create(body) {
     const safeMachines = safeArray(selectedMachines);
     const safeProcessRoute = safeArray(processRoute);
     const safeJobCardSizeDetails = safeArray(jobCardSizeDetails);
+    const safeSelectedPrinting = safeArray(selectedPrinting);
+    const safePlateDetails = safeArray(plateDetails);
+    const safeFinishingDetails = safeArray(selectedFinishing);
 
     // ─────────────────────────────
     // FIN YEAR + DOC ID
@@ -448,7 +470,7 @@ async function create(body) {
 
           orderEntryId: orderEntryId ? Number(orderEntryId) : null,
           orderType: orderType || null,
-          orderQty: orderQty ? Number(orderQty) : null,
+          orderQty: orderQty ? parseInt(orderQty) : null,
           orderItemId: orderItemId ? Number(orderItemId) : null,
           customerId: customerId ? Number(customerId) : null,
 
@@ -456,9 +478,9 @@ async function create(body) {
           boardId: boardId ? Number(boardId) : null,
 
           fullBoardId: fullBoardId ? Number(fullBoardId) : null,
-          noOfPockets: noOfPockets ? Number(noOfPockets) : null,
+          noOfPockets: noOfPockets ? parseInt(noOfPockets) : null,
           cuttingSizeId: cuttingSizeId ? Number(cuttingSizeId) : null,
-          runningQty: runningQty ? Number(runningQty) : null,
+          runningQty: runningQty ? parseInt(runningQty) : null,
 
           isFourColor: !!isFourColor,
           isCutColor: !!isCutColor,
@@ -485,16 +507,41 @@ async function create(body) {
           followUpId: followUpId ? Number(followUpId) : null,
           labelQuality: labelQuality || null,
           block: block || null,
-          labelQty: labelQty ? Number(labelQty) : null,
-          rollQty: rollQty ? Number(rollQty) : null,
+          labelQty: labelQty ? parseInt(labelQty) : null,
+          rollQty: rollQty ? parseInt(rollQty) : null,
           cutAndSeal: cutAndSeal || null,
           trackingType: trackingType || null,
-
+          labelSizeId: labelSizeId ? Number(labelSizeId) : null,
+          totalMeter: totalMeter ? parseInt(totalMeter) : null,
+          blockDate: blockDate ? new Date(blockDate) : null,
+          isRepeatedJobCard: !!isRepeatedJobCard,
+          refJobCardId: refJobCardId ? Number(refJobCardId) : null,
           boardQualities: safeBoardItems.length
             ? {
                 createMany: {
                   data: safeBoardItems.map((id) => ({
                     boardId: Number(id),
+                  })),
+                },
+              }
+            : undefined,
+
+          printingDetails: safeSelectedPrinting.length
+            ? {
+                createMany: {
+                  data: safeSelectedPrinting.map((id) => ({
+                    processId: Number(id),
+                  })),
+                },
+              }
+            : undefined,
+
+          plateDetails: safePlateDetails.length
+            ? {
+                createMany: {
+                  data: safePlateDetails.map((p) => ({
+                    plateName: p.plateName,
+                    qty: p.qty ? Number(p.qty) : null,
                   })),
                 },
               }
@@ -538,7 +585,7 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safeMachines.map((id) => ({
-                    machineId: Number(id),
+                    macId: Number(id),
                   })),
                 },
               }
@@ -548,7 +595,7 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safeProcessRoute.map((r, idx) => ({
-                    processId: Number(r.processId),
+                    processId: Number(r.processId || r.boardId),
                     type: r.type,
                     sequence: idx + 1,
                     isFront: !!r.isFront,
@@ -566,6 +613,16 @@ async function create(body) {
                     qty: s.qty ? Number(s.qty) : null,
                     barcodeFrom: s.barcodeFrom || null,
                     barcodeTo: s.barcodeTo || null,
+                  })),
+                },
+              }
+            : undefined,
+
+          finishingProcesses: safeFinishingDetails.length
+            ? {
+                createMany: {
+                  data: safeFinishingDetails.map((id) => ({
+                    processId: Number(id),
                   })),
                 },
               }
@@ -654,6 +711,14 @@ async function update(id, body) {
       trackingType,
       jobCardSizeDetails,
       orderItemId,
+      selectedPrinting,
+      plateDetails,
+      labelSizeId,
+      selectedFinishing,
+      totalMeter,
+      blockDate,
+      isRepeatedJobCard,
+      refJobCardId,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -673,6 +738,10 @@ async function update(id, body) {
     await prisma.$transaction(async (tx) => {
       // Delete all child records first, then recreate (simplest safe strategy)
       await tx.boardQuality.deleteMany({ where: { jobCardId: parseInt(id) } });
+      await tx.printingDetails.deleteMany({
+        where: { jobCardId: parseInt(id) },
+      });
+      await tx.plateDetails.deleteMany({ where: { jobCardId: parseInt(id) } });
       await tx.processDetails.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
@@ -689,6 +758,10 @@ async function update(id, body) {
       await tx.jobCardSizeBreakup.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
+      await tx.finishingProcess.deleteMany({
+        where: { jobCardId: parseInt(id) },
+      });
+
       data = await tx.jobCard.update({
         where: { id: parseInt(id) },
         data: {
@@ -732,7 +805,11 @@ async function update(id, body) {
           cutAndSeal: cutAndSeal || null,
           trackingType: trackingType || null,
           orderItemId: orderItemId ? Number(orderItemId) : null,
-
+          labelSizeId: labelSizeId ? Number(labelSizeId) : null,
+          totalMeter: totalMeter ? Number(totalMeter) : null,
+          blockDate: blockDate ? new Date(blockDate) : null,
+          isRepeatedJobCard: !!isRepeatedJobCard,
+          refJobCardId: refJobCardId ? Number(refJobCardId) : null,
           boardQualities:
             boardItems.length > 0
               ? {
@@ -743,6 +820,27 @@ async function update(id, body) {
                   },
                 }
               : undefined,
+
+          printingDetails: selectedPrinting.length
+            ? {
+                createMany: {
+                  data: selectedPrinting.map((id) => ({
+                    processId: Number(id),
+                  })),
+                },
+              }
+            : undefined,
+
+          plateDetails: plateDetails.length
+            ? {
+                createMany: {
+                  data: plateDetails.map((p) => ({
+                    plateName: p.plateName,
+                    qty: p.qty ? Number(p.qty) : null,
+                  })),
+                },
+              }
+            : undefined,
 
           processDetails:
             selectedProcesses.length > 0
@@ -786,7 +884,7 @@ async function update(id, body) {
               ? {
                   createMany: {
                     data: selectedMachines.map((mId) => ({
-                      machineId: parseInt(mId),
+                      macId: parseInt(mId),
                     })),
                   },
                 }
@@ -796,7 +894,7 @@ async function update(id, body) {
             ? {
                 createMany: {
                   data: processRoute.map((r, idx) => ({
-                    processId: parseInt(r.processId),
+                    processId: parseInt(r.processId || r.processId),
                     type: r.type,
                     sequence: idx + 1,
                     isFront: Boolean(r.isFront),
@@ -813,6 +911,15 @@ async function update(id, body) {
                     qty: s.qty ? Number(s.qty) : null,
                     barcodeFrom: s.barcodeFrom || null,
                     barcodeTo: s.barcodeTo || null,
+                  })),
+                },
+              }
+            : undefined,
+          finishingProcesses: selectedFinishing.length
+            ? {
+                createMany: {
+                  data: selectedFinishing.map((id) => ({
+                    processId: Number(id),
                   })),
                 },
               }

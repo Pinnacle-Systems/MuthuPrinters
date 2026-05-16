@@ -190,3 +190,18 @@ export const currencySymbolList = [
   { code: "AUD", show: "$ (AUD)", value: "$" },
   { code: "CAD", show: "$ (CAD)", value: "$" },
 ];
+
+export const conversionTypes = [
+  { show: "DOZEN", value: "DOZEN" },
+  { show: "PCS", value: "PCS" },
+];
+
+export const blockTypes = [
+  { show: "NEW", value: "NEW" },
+  { show: "OLD", value: "OLD" },
+];
+
+export const outwardProcessTypes = [
+  { show: "SINGLE", value: "SINGLE" },
+  { show: "MULTIPLE", value: "Multiple" },
+];

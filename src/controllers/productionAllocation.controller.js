@@ -5,11 +5,21 @@ import {
   create as _create,
   update as _update,
   remove as _remove,
+  getAllocationList as _getAllocationList,
 } from "../services/ProductionAllocation.sevice.js";
 
 async function get(req, res, next) {
   try {
     res.json(await _get(req));
+  } catch (err) {
+    console.error(`Error `, err.message);
+    res.status(500).json({ statusCode: 1, message: err.message });
+  }
+}
+
+async function getAllocationList(req, res, next) {
+  try {
+    res.json(await _getAllocationList(req));
   } catch (err) {
     console.error(`Error `, err.message);
     res.status(500).json({ statusCode: 1, message: err.message });
@@ -80,4 +90,4 @@ async function remove(req, res, next) {
   }
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove, getAllocationList };

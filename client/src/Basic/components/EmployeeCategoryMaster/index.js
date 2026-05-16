@@ -24,6 +24,7 @@ import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import Swal from "sweetalert2";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 const MODEL = "Employee Category Master";
 
@@ -65,6 +66,14 @@ export default function Form({
   const [addData] = useAddEmployeeCategoryMutation();
   const [updateData] = useUpdateEmployeeCategoryMutation();
   const [removeData] = useDeleteEmployeeCategoryMutation();
+
+  const { hasPermission } = UserPermissions();
+  const handleCreate = () => {
+    hasPermission(() => {
+      setForm(true);
+      onNew();
+    }, "create");
+  };
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -491,10 +500,7 @@ export default function Form({
         </h5>
         <div className="flex items-center">
           <button
-            onClick={() => {
-              setForm(true);
-              onNew();
-            }}
+            onClick={handleCreate}
             className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             + Add New Employee Category

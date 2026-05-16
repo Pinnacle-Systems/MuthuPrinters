@@ -20,6 +20,7 @@ import {
 import Modal from "../../../UiComponents/Modal";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 export default function Form({ onSuccess, defaultName = "" }) {
   const [form, setForm] = useState(false);
@@ -59,6 +60,14 @@ export default function Form({ onSuccess, defaultName = "" }) {
   const [addData] = useAddColorMasterMutation();
   const [updateData] = useUpdateColorMasterMutation();
   const [removeData] = useDeleteColorMasterMutation();
+
+  const { hasPermission } = UserPermissions();
+  const handleCreate = () => {
+    hasPermission(() => {
+      setForm(true);
+      onNew();
+    }, "create");
+  };
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -381,10 +390,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
         <h5 className="text-lg font-bold text-gray-800">Color Master</h5>
         <div className="flex items-center">
           <button
-            onClick={() => {
-              setForm(true);
-              onNew();
-            }}
+            onClick={handleCreate}
             className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             + Add New Color

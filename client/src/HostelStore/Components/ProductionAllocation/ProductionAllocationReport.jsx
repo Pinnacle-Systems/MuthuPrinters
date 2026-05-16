@@ -20,7 +20,7 @@ const ProductionAllocationReport = ({
     );
 
     const [dataPerPage, setDataPerPage] = useState("10");
-    const [serachDocNo, setSerachDocNo] = useState("");
+    const [searchDocNo, setSearchDocNo] = useState("");
     const [searchDocDate, setSearchDocDate] = useState("");
     const [searchJobCard, setSearchJobCard] = useState("");
     const [searchStyleItem, setSearchStyleItem] = useState("");
@@ -29,7 +29,7 @@ const ProductionAllocationReport = ({
     const [currentPageNumber, setCurrentPageNumber] = useState(1);
 
     const searchFields = {
-        serachDocNo,
+        searchDocNo,
         searchDocDate,
         searchJobCard,
         searchStyleItem,
@@ -37,7 +37,7 @@ const ProductionAllocationReport = ({
 
     useEffect(() => {
         setCurrentPageNumber(1);
-    }, [serachDocNo, searchDocDate, searchJobCard, searchStyleItem]);
+    }, [searchDocNo, searchDocDate, searchJobCard, searchStyleItem]);
 
     const {
         data: allData,
@@ -165,8 +165,8 @@ const ProductionAllocationReport = ({
                                         type="text"
                                         className="text-black h-5   w-full  px-1 focus:outline-none border  border-gray-400 rounded-md"
                                         placeholder="Search"
-                                        value={serachDocNo}
-                                        onChange={(e) => setSerachDocNo(e.target.value)}
+                                        value={searchDocNo}
+                                        onChange={(e) => setSearchDocNo(e.target.value)}
                                     />
                                 </th>
                                 <th className=" px-1 font-medium text-[13px] border  text-gray-900  text-center w-32">
@@ -228,7 +228,7 @@ const ProductionAllocationReport = ({
                                             key={item.id}
                                             className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${index % 2 === 0 ? "bg-white" : "bg-gray-100"
                                                 }`}
-                                            onClick={() => onView(item.id)}
+                                        // onClick={() => onView(item.id)}
                                         >
                                             <td className="text-center ">{index + 1}</td>
                                             <td className="py-1.5 text-center ">{item.docId}</td>

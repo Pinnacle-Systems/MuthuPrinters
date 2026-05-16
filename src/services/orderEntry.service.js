@@ -190,7 +190,7 @@ async function get(req) {
       },
     },
     orderBy: {
-      docId: "desc",
+      id: "desc",
     },
   });
   if (searchDocDate) {

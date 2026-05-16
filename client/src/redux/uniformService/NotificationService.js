@@ -34,7 +34,7 @@ const NotificationApi = createApi({
       providesTags: ["notification"],
     }),
 
-    markNotificationAsRead: builder.mutation({
+    markPendingJobCardAsRead: builder.mutation({
       query: ({ id }) => ({
         url: `${NOTIFICATION_API}/markAsRead/${id}`,
         method: "PUT",
@@ -45,7 +45,7 @@ const NotificationApi = createApi({
   }),
 });
 
-export const { useGetNotificationsQuery, useMarkNotificationAsReadMutation } =
+export const { useGetNotificationsQuery, useMarkPendingJobCardAsReadMutation } =
   NotificationApi;
 
 export default NotificationApi;

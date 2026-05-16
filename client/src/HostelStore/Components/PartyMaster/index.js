@@ -53,6 +53,7 @@ import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { BranchTypeMaster } from "..";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 export default function Form({
   partyId,
@@ -164,6 +165,14 @@ export default function Form({
   const [removeData] = useDeletePartyMutation();
   const [dispatchInvalidate] = useInvalidateTags();
   const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
+
+  const { hasPermission } = UserPermissions();
+  const handleCreate = () => {
+    hasPermission(() => {
+      setForm(true);
+      onNew();
+    }, "create");
+  };
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -2398,8 +2407,7 @@ export default function Form({
             <div className="flex items-center gap-4 text-md">
               <button
                 onClick={() => {
-                  setForm(true);
-                  onNew();
+                  handleCreate();
                   // syncFormWithDb(undefined)
                   // syncFormWithDbNew(undefined)
                   setParentId("");

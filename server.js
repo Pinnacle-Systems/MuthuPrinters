@@ -70,6 +70,8 @@ import {
   bank,
   productionAllocation,
   notification,
+  machine,
+  productionOutward,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -172,6 +174,8 @@ app.use("/currency", currency);
 app.use("/bank", bank);
 app.use("/productionAllocation", productionAllocation);
 app.use("/notification", notification);
+app.use("/machine", machine);
+app.use("/productionOutward", productionOutward);
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;

@@ -22,6 +22,8 @@ const ProformaInvoiceItems = ({
     isCurrencySymbol,
     isCustomerExport,
     termsRef,
+    conversionType,
+    isSupplierOutside,
 }) => {
     const styleItemRefs = useRef({});
     const { companyId } = getCommonParams();
@@ -72,7 +74,13 @@ const ProformaInvoiceItems = ({
         const price = parseFloat(newItems[index].price) || 0;
         const dozen = qty / 12
         newItems[index].dozen = dozen ? dozen.toFixed(2) : "";
-        newItems[index].amount = dozen && price ? (dozen * price).toFixed(2) : "";
+        // ✅ Switch gross calculation based on conversionType
+        if (conversionType === "DOZEN") {
+            newItems[index].amount = dozen && price ? (dozen * price).toFixed(2) : "";
+        } else {
+            // PCS: qty * price
+            newItems[index].amount = qty && price ? (qty * price).toFixed(2) : "";
+        }
 
         setItems(newItems);
         if (field === "styleItemId") {
@@ -168,6 +176,7 @@ const ProformaInvoiceItems = ({
                     id={id}
                     isNewVersion={false}
                     onCloseFocus={handleFocusNextRow}
+                    isSupplierOutside={isSupplierOutside}
                 />
             </Modal>
 
@@ -487,7 +496,7 @@ const ProformaInvoiceItems = ({
                                 className="text-right px-2 border border-gray-300"
                                 colSpan={4}
                             >
-                                Total Qty
+                                Total
                             </td>
                             <td className="text-right px-1 border border-gray-300">
                                 {items
@@ -501,11 +510,11 @@ const ProformaInvoiceItems = ({
                                 }
                             </td>
                             <td className="text-right px-1  border border-gray-300">
-                                {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
+                                {/* {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
                                 {
                                     items?.reduce((sum, i) => sum + (parseFloat(i.price) || 0), 0)
                                         .toFixed(2)
-                                }
+                                } */}
                             </td>
                             <td className="text-right px-1 border border-gray-300  text-black">
                                 {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}

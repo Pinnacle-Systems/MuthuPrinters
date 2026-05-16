@@ -29,6 +29,7 @@ import { ItemGroup, UomMaster, SizeTemplate, HsnMaster, Gsm } from "..";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 const MODEL = "Item Master";
 export default function Form({ onSuccess, defaultName = "" }) {
@@ -78,6 +79,14 @@ export default function Form({ onSuccess, defaultName = "" }) {
   const [addData] = useAddStyleItemMasterMutation();
   const [updateData] = useUpdateStyleItemMasterMutation();
   const [removeData] = useDeleteStyleItemMasterMutation();
+
+  const { hasPermission } = UserPermissions();
+  const handleCreate = () => {
+    hasPermission(() => {
+      setForm(true);
+      onNew();
+    }, "create");
+  };
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -550,10 +559,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
         </h5>
         <div className="flex items-center">
           <button
-            onClick={() => {
-              setForm(true);
-              onNew();
-            }}
+            onClick={handleCreate}
             className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             + Add New Item

@@ -40,11 +40,11 @@ async function checkPendingJobCards(userId) {
 
           type: "WARNING",
 
-          userId: userId,
+          userId: parseInt(userId),
 
           referenceId: item.id,
 
-          referencePage: "JOB_CARD_PENDING",
+          referencePage: REFERENCE_PAGE,
         },
       });
     }

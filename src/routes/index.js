@@ -67,3 +67,5 @@ export { default as currency } from "./currency.route.js";
 export { default as bank } from "./bank.route.js";
 export { default as productionAllocation } from "./productionAllocation.route.js";
 export { default as notification } from "./notification.route.js";
+export { default as machine } from "./machine.route.js";
+export { default as productionOutward } from "./productionOutward.route.js";

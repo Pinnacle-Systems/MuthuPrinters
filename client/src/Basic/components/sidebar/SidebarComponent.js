@@ -25,7 +25,7 @@ import location from "./images/location.png";
 import sizetemplate from "./images/sizetemplate.png";
 import fabstyle from "./images/style.png";
 import fabric from "./images/fabric.png";
-import process from "./images/process.png";
+// import process from "./images/process.png";
 import portion from "./images/portion.png";
 import uom from "./images/uom.png";
 import styleitem from "./images/styleItem.png";

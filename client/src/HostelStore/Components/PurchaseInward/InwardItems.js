@@ -35,6 +35,7 @@ const InwardItems = ({
   fromPoId,
   receiptType,
   gsmList,
+  isSupplierOutside,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -242,6 +243,7 @@ const InwardItems = ({
           handleInputChange={handleInputChange}
           id={id}
           onCloseFocus={focusActionCell}
+          isSupplierOutside={isSupplierOutside}
         />
       </Modal>
       <Modal

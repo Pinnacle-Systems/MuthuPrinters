@@ -24,9 +24,10 @@ import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import { PartyMaster } from "../index.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { useAddProductionAllocationMutation, useDeleteProductionAllocationMutation, useGetProductionAllocationByIdQuery, useGetProductionAllocationQuery, useUpdateProductionAllocationMutation } from "../../../redux/uniformService/ProductionAllocationService.js";
-import { useGetJobCardListQuery } from "../../../redux/uniformService/JobCardService.js";
+import JobCardApi, { useGetJobCardListQuery } from "../../../redux/uniformService/JobCardService.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
+import { useDispatch } from "react-redux";
 
 const ProductionAllocationForm = ({
     readOnly,
@@ -49,6 +50,8 @@ const ProductionAllocationForm = ({
     const [customerName, setCustomerName] = useState("");
     const [remarks, setRemarks] = useState("");
     const [printModalOpen, setPrintModalOpen] = useState(false);
+    const dispatch = useDispatch();
+
     const DEFAULT_ROWS = Array.from({ length: 5 }, (_, index) => ({
         seqNo: index + 1,
         processId: "",
@@ -88,9 +91,6 @@ const ProductionAllocationForm = ({
     const { data: processList } = useGetProcessMasterQuery({ params: { companyId, branchId } }, {
         skip: !companyId || !branchId,
     });
-
-    const [triggerGetOrderById] = useLazyGetOrderEntryByIdQuery();
-    const [dispatchInvalidate] = useInvalidateTags();
 
     const [addData] = useAddProductionAllocationMutation();
     const [updateData] = useUpdateProductionAllocationMutation();
@@ -191,7 +191,7 @@ const ProductionAllocationForm = ({
                 });
             }
             setReadOnly(true);
-            dispatchInvalidate();
+            dispatch(JobCardApi.util.invalidateTags(["jobCard"]));
 
             if (pendingAction === "new") {
                 onNew();
@@ -228,13 +228,13 @@ const ProductionAllocationForm = ({
         setStyleItemId(item.styleItemId || "");
 
         const routes = item.processRoute || [];
-
-        const mappedRows = Array.from({ length: 5 }, (_, index) => {
-            const route = routes[index];
+        const mappedRows = routes.map((route, index) => {
             const processData = processList?.data?.find(
                 (p) => p.id === route?.processId
             );
+
             const isOutside = processData?.isOutsideJob || false;
+
             return {
                 seqNo: route?.sequence || index + 1,
                 processId: route?.processId || "",
@@ -244,7 +244,6 @@ const ProductionAllocationForm = ({
                 isOutSide: route?.processId ? isOutside : false,
             };
         });
-
         setAllocationDetails(mappedRows);
     };
 
@@ -315,22 +314,7 @@ const ProductionAllocationForm = ({
             className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
             hidden: !readOnly || !id,
         },
-        {
-            key: "print",
-            icon: <FiPrinter className="h-4 w-4" />,
-            hoverLabel: "Print",
-            label: "Print PDF",
-            iconOnly: false,
-            onClick: () => setPrintModalOpen(true),
-            onKeyDown: (e) => {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setPrintModalOpen(true);
-                }
-            },
-            className: `bg-slate-600 hover:bg-slate-700 ${actionButtonClass}`,
-        },
+
     ].filter((a) => !a.hidden);
 
     const headerContent = (

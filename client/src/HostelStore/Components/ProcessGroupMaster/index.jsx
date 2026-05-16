@@ -18,6 +18,7 @@ import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardN
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { useAddProcessGroupMasterMutation, useDeleteProcessGroupMasterMutation, useGetProcessGroupMasterByIdQuery, useGetProcessGroupMasterQuery, useUpdateProcessGroupMasterMutation } from "../../../redux/services/ProcessGroupMaster.service";
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 export default function Form({
     onSuccess,
@@ -79,6 +80,13 @@ export default function Form({
     const [addData] = useAddProcessGroupMasterMutation();
     const [updateData] = useUpdateProcessGroupMasterMutation();
     const [removeData] = useDeleteProcessGroupMasterMutation();
+    const { hasPermission } = UserPermissions();
+    const handleCreate = () => {
+        hasPermission(() => {
+            setForm(true);
+            onNew();
+        }, "create");
+    };
 
     const syncFormWithDb = useCallback(
         (data) => {
@@ -484,10 +492,7 @@ export default function Form({
                 </h5>
                 <div className="flex items-center">
                     <button
-                        onClick={() => {
-                            setForm(true);
-                            onNew();
-                        }}
+                        onClick={handleCreate}
                         className="bg-white border font-segoe text-xs px-2 border-green-600 text-green-600 hover:bg-green-700 hover:text-white rounded-md shadow transition-colors duration-200 flex items-center gap-2"
                     >
                         + Add New Process Group
