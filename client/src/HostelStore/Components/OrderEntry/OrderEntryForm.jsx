@@ -49,6 +49,7 @@ import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMas
 import { useGetSizeTemplateQuery } from "../../../redux/services/SizeTemplateMaster.js";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
 import { useDispatch } from "react-redux";
+import JobCardApi from "../../../redux/uniformService/JobCardService.js";
 
 const OrderEntryForm = ({
     onClose,
@@ -249,7 +250,6 @@ const OrderEntryForm = ({
                     showConfirmButton: false,
                     timer: 2000,
                     didClose: () => {
-                        dispatchInvalidate();
 
                         if (returnData.statusCode === 0) {
                             if (nextProcess == "new") {
@@ -268,7 +268,9 @@ const OrderEntryForm = ({
                         }
                     },
                 });
+                dispatchInvalidate();
                 dispatch(ProformaInvoiceApi.util.invalidateTags(["proformaInvoice"]));
+                dispatch(JobCardApi.util.invalidateTags(["jobCard"]));
             }
         } catch (error) {
             console.log("handle", error);

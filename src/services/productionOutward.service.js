@@ -2,7 +2,10 @@
 
 import { prisma } from "../lib/prisma.js";
 import { NoRecordFound } from "../configs/Responses.js";
-import { getYearShortCodeForFinYear } from "../utils/helper.js";
+import {
+  getDateFromDateTime,
+  getYearShortCodeForFinYear,
+} from "../utils/helper.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 
@@ -37,11 +40,14 @@ async function get(req) {
     pageNumber,
     dataPerPage,
     searchDocNo,
+    searchDocDate,
+    searchJobCard,
+    searchSupplier,
   } = req.query;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
-  const data = await prisma.productionOutward.findMany({
+  let data = await prisma.productionOutward.findMany({
     where: {
       branchId: branchId ? parseInt(branchId) : undefined,
       docId: searchDocNo ? { contains: searchDocNo } : undefined,
@@ -51,6 +57,12 @@ async function get(req) {
             { createdAt: { lte: finYearDate.endDateEndTime } },
           ]
         : undefined,
+      JobCard: {
+        docId: searchJobCard ? { contains: searchJobCard } : undefined,
+      },
+      Supplier: {
+        name: searchSupplier ? { contains: searchSupplier } : undefined,
+      },
     },
     include: {
       Supplier: true,
@@ -66,7 +78,11 @@ async function get(req) {
     },
     orderBy: { id: "desc" },
   });
-
+  if (searchDocDate) {
+    data = data.filter((item) =>
+      String(getDateFromDateTime(item.createdAt)).includes(searchDocDate),
+    );
+  }
   let result = data;
   if (pagination) {
     result = data.slice(
@@ -104,6 +120,86 @@ async function getOne(id) {
   return { statusCode: 0, data };
 }
 
+async function getOutwardJobCardDtls(req) {
+  const {
+    supplierId,
+    pagination,
+    searchJobCard,
+    searchDocId,
+    searchDocDate,
+    processId,
+  } = req.query;
+
+  let data = [];
+
+  const whereCondition = {
+    ProductionOutward: {
+      supplierId: supplierId ? parseInt(supplierId) : undefined,
+
+      docId: searchDocId ? { contains: searchDocId } : undefined,
+
+      docDate: searchDocDate
+        ? {
+            gte: new Date(searchDocDate + "T00:00:00.000Z"),
+            lte: new Date(searchDocDate + "T23:59:59.999Z"),
+          }
+        : undefined,
+
+      JobCard: {
+        docId: searchJobCard ? { contains: searchJobCard } : undefined,
+      },
+    },
+
+    processId: processId ? parseInt(processId) : undefined,
+  };
+
+  data = await prisma.productionOutwardDtl.findMany({
+    where: whereCondition,
+
+    include: {
+      ProductionOutward: {
+        select: {
+          id: true,
+          docId: true,
+          docDate: true,
+          supplierId: true,
+
+          Supplier: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+
+          JobCard: {
+            select: {
+              id: true,
+              docId: true,
+            },
+          },
+        },
+      },
+
+      Process: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+
+    orderBy: {
+      id: "desc",
+    },
+  });
+
+  return {
+    statusCode: 0,
+    data,
+    totalCount: data.length,
+  };
+}
+
 async function create(body) {
   const {
     userId,
@@ -115,6 +211,8 @@ async function create(body) {
     productionAllocationId,
     supplierId,
     outwardDetails,
+    dcNo,
+    vehicleNo,
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -133,40 +231,71 @@ async function create(body) {
     finYearDate?.endDateEndTime,
   );
 
-  const data = await prisma.productionOutward.create({
-    data: {
-      docId: newDocId,
-      docDate: docDate ? new Date(docDate) : null,
-      remarks,
-      branchId: branchId ? parseInt(branchId) : null,
-      createdById: parseInt(userId),
-      jobCardId: parseInt(jobCardId),
-      productionAllocationId: productionAllocationId
-        ? parseInt(productionAllocationId)
-        : null,
-      supplierId: supplierId ? parseInt(supplierId) : null,
-      productionOutwardDetails: {
-        createMany: {
-          data: outwardDetails.map((item) => ({
-            processId: item.processId ? parseInt(item.processId) : null,
-            sentQty: item.sentQty ? parseFloat(item.sentQty) : 0,
-            sequence: item.sequence ? parseInt(item.sequence) : null,
-            productionAllocationDtlId: item.productionAllocationDtlId
-              ? parseInt(item.productionAllocationDtlId)
-              : null,
-            prevProcessId: item.prevProcessId
-              ? parseInt(item.prevProcessId)
-              : null,
-          })),
+  const data = await prisma.$transaction(async (tx) => {
+    const outward = await tx.productionOutward.create({
+      data: {
+        docId: newDocId,
+        docDate: docDate ? new Date(docDate) : null,
+        remarks,
+        branchId: branchId ? parseInt(branchId) : null,
+        createdById: parseInt(userId),
+        jobCardId: parseInt(jobCardId),
+        productionAllocationId: productionAllocationId
+          ? parseInt(productionAllocationId)
+          : null,
+        supplierId: supplierId ? parseInt(supplierId) : null,
+        dcNo,
+        vehicleNo,
+        productionOutwardDetails: {
+          createMany: {
+            data: outwardDetails.map((item) => ({
+              processId: item.processId ? parseInt(item.processId) : null,
+
+              sentQty: item.sentQty ? parseFloat(item.sentQty) : 0,
+
+              sequence: item.sequence ? parseInt(item.sequence) : null,
+
+              // productionAllocationDtlId: item.productionAllocationDtlId
+              //   ? parseInt(item.productionAllocationDtlId)
+              //   : null,
+
+              // prevProcessId: item.prevProcessId
+              //   ? parseInt(item.prevProcessId)
+              //   : null,
+            })),
+          },
         },
       },
-    },
-    include: {
-      productionOutwardDetails: true,
-    },
+
+      include: {
+        productionOutwardDetails: true,
+      },
+    });
+
+    await Promise.all(
+      outwardDetails.map((item) =>
+        tx.processRoute.updateMany({
+          where: {
+            jobCardId: parseInt(jobCardId),
+            processId: item.processId ? parseInt(item.processId) : null,
+            sequence: item.sequence ? parseInt(item.sequence) : null,
+          },
+
+          data: {
+            status: "COMPLETED",
+            completedQty: item.sentQty ? parseInt(item.sentQty) : 0,
+          },
+        }),
+      ),
+    );
+
+    return outward;
   });
 
-  return { statusCode: 0, data };
+  return {
+    statusCode: 0,
+    data,
+  };
 }
 
 async function update(id, body) {
@@ -178,48 +307,141 @@ async function update(id, body) {
     productionAllocationId,
     supplierId,
     outwardDetails,
+    dcNo,
+    vehicleNo,
   } = body;
-
+  console.log(outwardDetails, "outwardDetails");
+  console.log(body, "body");
   const found = await prisma.productionOutward.findUnique({
-    where: { id: parseInt(id) },
-  });
-
-  if (!found) return NoRecordFound("Production Outward");
-
-  const data = await prisma.productionOutward.update({
-    where: { id: parseInt(id) },
-    data: {
-      docDate: docDate ? new Date(docDate) : null,
-      remarks,
-      updatedById: parseInt(userId),
-      jobCardId: parseInt(jobCardId),
-      productionAllocationId: productionAllocationId
-        ? parseInt(productionAllocationId)
-        : null,
-      supplierId: supplierId ? parseInt(supplierId) : null,
-      productionOutwardDetails: {
-        deleteMany: {},
-        createMany: {
-          data: outwardDetails.map((item) => ({
-            processId: item.processId ? parseInt(item.processId) : null,
-            sentQty: item.sentQty ? parseFloat(item.sentQty) : 0,
-            sequence: item.sequence ? parseInt(item.sequence) : null,
-            productionAllocationDtlId: item.productionAllocationDtlId
-              ? parseInt(item.productionAllocationDtlId)
-              : null,
-            prevProcessId: item.prevProcessId
-              ? parseInt(item.prevProcessId)
-              : null,
-          })),
-        },
-      },
+    where: {
+      id: parseInt(id),
     },
     include: {
       productionOutwardDetails: true,
     },
   });
 
-  return { statusCode: 0, data };
+  if (!found) {
+    return NoRecordFound("Production Outward");
+  }
+
+  const data = await prisma.$transaction(async (tx) => {
+    // OLD DETAILS
+    const oldDetails = found.productionOutwardDetails || [];
+
+    // OLD KEYS
+    const oldKeys = oldDetails.map(
+      (item) => `${item.processId}_${item.sequence}`,
+    );
+
+    // NEW KEYS
+    const newKeys = outwardDetails.map(
+      (item) => `${item.processId}_${item.sequence}`,
+    );
+
+    // REMOVED ROWS
+    const removedRows = oldDetails.filter(
+      (item) => !newKeys.includes(`${item.processId}_${item.sequence}`),
+    );
+
+    // UPDATE OUTWARD
+    const updated = await tx.productionOutward.update({
+      where: {
+        id: parseInt(id),
+      },
+
+      data: {
+        docDate: docDate ? new Date(docDate) : null,
+
+        remarks,
+
+        updatedById: parseInt(userId),
+
+        jobCardId: parseInt(jobCardId),
+
+        productionAllocationId: productionAllocationId
+          ? parseInt(productionAllocationId)
+          : null,
+
+        supplierId: supplierId ? parseInt(supplierId) : null,
+
+        dcNo,
+        vehicleNo,
+
+        productionOutwardDetails: {
+          deleteMany: {},
+
+          createMany: {
+            data: outwardDetails.map((item) => ({
+              processId: item.processId ? parseInt(item.processId) : null,
+
+              sentQty: item.sentQty ? parseFloat(item.sentQty) : 0,
+
+              sequence: item.sequence ? parseInt(item.sequence) : null,
+            })),
+          },
+        },
+      },
+
+      include: {
+        productionOutwardDetails: true,
+      },
+    });
+
+    // =========================================
+    // COMPLETE CURRENT ROUTES
+    // =========================================
+
+    await Promise.all(
+      outwardDetails.map((item) =>
+        tx.processRoute.updateMany({
+          where: {
+            jobCardId: parseInt(jobCardId),
+
+            processId: item.processId ? parseInt(item.processId) : null,
+
+            sequence: item.sequence ? parseInt(item.sequence) : null,
+          },
+
+          data: {
+            status: "COMPLETED",
+
+            completedQty: item.sentQty ? parseInt(item.sentQty) : 0,
+          },
+        }),
+      ),
+    );
+
+    // =========================================
+    // RESET REMOVED ROUTES
+    // =========================================
+
+    await Promise.all(
+      removedRows.map((item) =>
+        tx.processRoute.updateMany({
+          where: {
+            jobCardId: parseInt(jobCardId),
+
+            processId: item.processId,
+
+            sequence: item.sequence,
+          },
+
+          data: {
+            status: "NOT_STARTED",
+            completedQty: 0,
+          },
+        }),
+      ),
+    );
+
+    return updated;
+  });
+
+  return {
+    statusCode: 0,
+    data,
+  };
 }
 
 async function remove(id) {
@@ -236,4 +458,4 @@ async function remove(id) {
   return { statusCode: 0, data };
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove, getOutwardJobCardDtls };

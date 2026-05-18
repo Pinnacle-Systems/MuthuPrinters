@@ -1,14 +1,23 @@
 import React, { useState } from "react";
 import { findFromList } from "../../../Utils/helper";
+import Modal from "../../../UiComponents/Modal";
+import ProductionOutwardSelection from "./ProductionOutsideSelection";
+import Swal from "sweetalert2";
+import { VIEW } from "../../../icons";
 
 export const DEFAULT_ROW_COUNT = 5;
 
 export const makeEmptyRow = () => ({
     processId: "",
-    outwardDetailId: "",
     receivedQty: "",
     wastageQty: "",
     acceptedQty: "",
+    price: "",
+    discountType: "",
+    discountValue: "",
+    taxPercent: "",
+    jobCardId: "",
+    productionOutwardId: ""
 });
 
 const InwardDetails = ({
@@ -18,8 +27,23 @@ const InwardDetails = ({
     processList,
     id,
     childRecord,
+    setTempItems,
+    tempItems,
+    searchDocId,
+    setSearchDocId,
+    setSearchDocDate,
+    searchDocDate,
+    searchJobCard,
+    setSearchJobCard,
+    supplierId,
+    receiptType,
+    jobCardList,
+    productionOutwardList
 }) => {
     const [contextMenu, setContextMenu] = useState(null);
+    const [fillGrid, setFillGrid] = useState(false);
+    const [focusedField, setFocusedField] = useState(null);
+    const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
 
     const deleteMainRow = (index) =>
         setInwardDetails((prev) => prev.filter((_, i) => i !== index));
@@ -54,6 +78,62 @@ const InwardDetails = ({
 
     return (
         <>
+            <Modal
+                isOpen={fillGrid}
+                onClose={() => {
+                    setFillGrid(false);
+
+                    // setTimeout(() => {
+                    //     const firstInput = document.querySelector("#inwardQty-input-0");
+                    //     if (firstInput) {
+                    //         firstInput.focus();
+                    //         firstInput.select(); // optional UX 🔥
+                    //     }
+                    // }, 100); // small delay important
+                }}
+                widthClass={"w-[98%] h-[90%]"}
+            >
+                <ProductionOutwardSelection
+                    inwardDetails={inwardDetails}
+                    setInwardDetails={setInwardDetails}
+                    setTempItems={setTempItems}
+                    tempItems={tempItems}
+                    searchDocId={searchDocId}
+                    setSearchDocId={setSearchDocId}
+                    setSearchDocDate={setSearchDocDate}
+                    searchDocDate={searchDocDate}
+                    onClose={() => setFillGrid(false)}
+                    searchJobCard={searchJobCard}
+                    setSearchJobCard={setSearchJobCard}
+                />
+            </Modal>
+            <div className="flex items-center my-2 justify-between">
+                <h2 className="font-medium text-slate-700">List Of Items</h2>
+                <button
+                    className={`font-bold bord text-sm bg-blue-500 rounded-md text-white px-2`}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            setFillGrid(true);
+                        }
+                    }}
+                    onClick={() => {
+                        if (!supplierId) {
+                            Swal.fire({
+                                icon: "warning",
+                                title: ` Choose Supplier`,
+                                showConfirmButton: false,
+                                timer: 2000,
+                            });
+                        } else {
+                            setFillGrid(true);
+                        }
+                    }}
+                    type="button"
+                >
+                    Fill Po Items
+                </button>
+            </div>
             <div className="w-full h-full overflow-y-auto bg-white py-1">
                 <table className="table-fixed bg-white border-collapse">
                     <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10 text-[12px]">
@@ -61,18 +141,40 @@ const InwardDetails = ({
                             <th className="w-10 px-2 py-2 text-center font-medium border border-gray-300">
                                 S.No
                             </th>
+                            <th className="w-36 px-2 py-2 text-center font-medium border border-gray-300">
+                                Job Card No
+                            </th>
+                            <th className="w-36 px-2 py-2 text-center font-medium border border-gray-300">
+                                Prod Outward No
+                            </th>
                             <th className="w-44 px-2 py-2 text-center font-medium border border-gray-300">
                                 Process <span className="text-red-500">*</span>
                             </th>
                             <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
                                 Received Qty <span className="text-red-500">*</span>
                             </th>
-                            <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
+                            {
+                                receiptType === "Against Invoice" && (
+                                    <th className={`w-20 px-4 py-2 text-center font-medium `}>
+                                        Price<span className="text-red-500">*</span>
+                                    </th>
+                                )}
+                            {receiptType === "Against Invoice" && (
+                                <th className={`w-20 px-1 py-2 text-center font-medium `}>
+                                    Gross
+                                </th>
+                            )}
+                            {receiptType === "Against Invoice" && (
+                                <th className={`w-16 px-1 py-2 text-center font-medium `}>
+                                    Tax
+                                </th>
+                            )}
+                            {/* <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
                                 Wastage Qty
                             </th>
                             <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
                                 Accepted Qty
-                            </th>
+                            </th> */}
                         </tr>
                     </thead>
 
@@ -95,6 +197,16 @@ const InwardDetails = ({
                                     {/* S.No */}
                                     <td className="w-10 border border-gray-300 text-[11px] text-center text-gray-500">
                                         {isEmpty ? "" : sNo}
+                                    </td>
+
+                                    {/* JobCard No. */}
+                                    <td className="border border-gray-300 text-[11px] px-1 font-medium">
+                                        {findFromList(row.jobCardId, jobCardList?.data, "name") || ""}
+                                    </td>
+
+                                    {/* Production Outward No. */}
+                                    <td className="border border-gray-300 text-[11px] px-1 font-medium">
+                                        {findFromList(row.productionOutwardId, productionOutwardList?.data, "name") || ""}
                                     </td>
 
                                     {/* Process */}
@@ -126,8 +238,94 @@ const InwardDetails = ({
                                         />
                                     </td>
 
-                                    {/* Wastage Qty */}
-                                    <td className="border border-gray-300 text-[11px]">
+                                    {
+                                        receiptType === "Against Invoice" && (
+                                            <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
+                                                <input
+                                                    onKeyDown={(e) => {
+                                                        if (e.code === "Minus" || e.code === "NumpadSubtract")
+                                                            e.preventDefault();
+                                                        if (e.key === "Delete") {
+                                                            handleInputChange("", index, "price");
+                                                        }
+                                                    }}
+                                                    min={"0"}
+                                                    type="number"
+                                                    className="text-right rounded px-1 w-full table-data-input"
+                                                    onFocus={(e) => {
+                                                        e.target.select();
+                                                        setFocusedField(`${index}-price`);
+                                                    }}
+                                                    value={
+                                                        focusedField === `${index}-price`
+                                                            ? (row?.price ?? "")
+                                                            : row?.price
+                                                                ? Number(row.price).toFixed(2)
+                                                                : ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        handleInputChange(e.target.value, index, "price")
+                                                    }
+                                                    onBlur={(e) => {
+                                                        const val = e.target.value;
+                                                        handleInputChange(
+                                                            val ? Number(val).toFixed(2) : "",
+                                                            index,
+                                                            "price",
+                                                        );
+                                                        setFocusedField(null);
+                                                    }}
+                                                    disabled={
+                                                        readOnly ||
+                                                        (row.stockQty ?? 0) > 0
+                                                    }
+                                                />
+                                            </td>
+                                        )}
+                                    {receiptType === "Against Invoice" && (
+                                        <td className=" border border-gray-300 text-[11px]">
+                                            <input
+                                                type="number"
+                                                onFocus={(e) => e.target.select()}
+                                                className="text-right rounded px-1 w-full"
+                                                value={
+                                                    !row.receivedQty || !row.price
+                                                        ? 0.0
+                                                        : (
+                                                            parseFloat(row.receivedQty) *
+                                                            parseFloat(row.price)
+                                                        ).toFixed(2)
+                                                }
+                                                disabled={true}
+                                            />
+                                        </td>
+                                    )}
+                                    {receiptType === "Against Invoice" && (
+                                        <td className="  border border-gray-300 text-[11px] text-right ">
+                                            <button
+                                                disabled={!row?.processId}
+                                                className="text-center rounded w-full table-data-input"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        setCurrentSelectedIndex(index);
+                                                    }
+                                                }}
+                                                onClick={() => {
+                                                    if (!taxTemplateId)
+                                                        return toast.info("Please select Tax Type", {
+                                                            position: "top-center",
+                                                        });
+                                                    setCurrentSelectedIndex(index);
+                                                }}
+                                            >
+                                                {VIEW}
+                                            </button>
+                                        </td>
+                                    )}
+
+                                    {/* <td className="border border-gray-300 text-[11px]">
                                         <input
                                             type="number"
                                             min="0"
@@ -148,12 +346,11 @@ const InwardDetails = ({
                                             disabled={isDisabled}
                                             placeholder={isEmpty ? "" : "0"}
                                         />
-                                    </td>
+                                    </td> */}
 
-                                    {/* Accepted Qty — auto-calculated, read-only */}
-                                    <td className="border border-gray-300 text-[11px] text-right px-1 bg-gray-50">
+                                    {/* <td className="border border-gray-300 text-[11px] text-right px-1 bg-gray-50">
                                         {isEmpty ? "" : (row.acceptedQty !== "" && row.acceptedQty !== undefined ? row.acceptedQty : "")}
-                                    </td>
+                                    </td> */}
                                 </tr>
                             );
                         })}
@@ -161,16 +358,41 @@ const InwardDetails = ({
 
                     <tfoot>
                         <tr className="bg-gray-100 h-7 font-medium text-gray-800 text-[12px]">
-                            <td className="text-right px-2 border border-gray-300" colSpan={2}>Total</td>
+                            <td className="text-right px-2 border border-gray-300" colSpan={4}>Total</td>
                             <td className="text-right border border-gray-300 px-1">
                                 {inwardDetails?.reduce((s, r) => s + (Number(r.receivedQty) || 0), 0) || ""}
                             </td>
-                            <td className="text-right border border-gray-300 px-1">
+                            {/* <td className="text-right border border-gray-300 px-1">
                                 {inwardDetails?.reduce((s, r) => s + (Number(r.wastageQty) || 0), 0) || ""}
                             </td>
                             <td className="text-right border border-gray-300 px-1">
                                 {inwardDetails?.reduce((s, r) => s + (Number(r.acceptedQty) || 0), 0) || ""}
-                            </td>
+                            </td> */}
+                            {
+                                receiptType === "Against Invoice" && (
+                                    <td className="text-right border border-gray-300 px-1 font-medium ">
+                                        {inwardDetails
+                                            ?.reduce((sum, row) => sum + (Number(row.price) || 0), 0)
+                                            .toFixed(2)}
+                                    </td>
+                                )}
+                            {receiptType === "Against Invoice" && (
+                                <td className="text-right border border-gray-300 px-1 font-medium ">
+                                    {inwardDetails
+                                        ?.reduce((sum, row) => {
+                                            const qty = parseFloat(row.receivedQty) || 0;
+                                            const price = parseFloat(row.price) || 0;
+                                            return sum + qty * price;
+                                        }, 0)
+                                        .toFixed(2)}
+                                </td>
+                            )}
+                            {receiptType === "Against Invoice" && (
+                                <td
+                                    className="text-right border border-gray-300"
+                                    colSpan={1}
+                                ></td>
+                            )}
                         </tr>
                     </tfoot>
                 </table>

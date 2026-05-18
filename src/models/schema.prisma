@@ -2130,6 +2130,7 @@ model ProcessRoute {
   isFront        Boolean  @default(false)
   isFrontAndBack Boolean  @default(false)
   status         String?
+  completedQty   Int?
 }
 
 model ProformaInvoice {
@@ -2333,6 +2334,8 @@ model ProductionOutward {
 
   Branch                   Branch?                @relation(fields: [branchId], references: [id])
   branchId                 Int?
+  dcNo                     String?
+  vehicleNo                String?
   productionOutwardDetails ProductionOutwardDtl[]
 
   productionInwards ProductionInward[]
@@ -2374,6 +2377,8 @@ model ProductionInward {
   jobCardId           Int
   JobCard             JobCard            @relation(fields: [jobCardId], references: [id])
   inwardType          String?
+  dcNo                String?
+  vehicleNo           String?
 
   inwardDetails ProductionInwardDtl[]
 }

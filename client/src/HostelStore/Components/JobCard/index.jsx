@@ -16,6 +16,7 @@ import OrderEntryApi from "../../../redux/uniformService/OrderEntryService.js";
 import { invalidateOrderEntryModule } from "../../../redux/Dispatch/OrderInvalidateTags.js";
 import { useIsApprover } from "../../../CustomHooks/userIsApprover.js";
 import { useGetEmployeeQuery } from "../../../redux/services/EmployeeMasterService.js";
+import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -69,6 +70,7 @@ const index = () => {
             try {
                 let deldata = await removeData(id).unwrap();
                 invalidateOrderEntryModule();
+                invalidateJobCardModule();
                 if (deldata?.statusCode == 1) {
                     Swal.fire({
                         icon: "error",

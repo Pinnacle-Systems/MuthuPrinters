@@ -32,6 +32,7 @@ import { CheckBox, Field, LVHeader, LVRow, SectionCard } from "./Utils.jsx";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import { Plus } from "lucide-react";
 import { useGetMachineMasterQuery } from "../../../redux/services/MachineMasterService.js";
+import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
 
 const JobCardForm = ({
     onClose, id, setId, readOnly, setReadOnly,
@@ -257,6 +258,7 @@ const JobCardForm = ({
             Swal.fire({
                 icon: "success", title: `${text || "Saved"} Successfully`, showConfirmButton: false, timer: 2000,
                 didClose: () => {
+                    invalidateJobCardModule();
                     if (returnData.statusCode === 0) {
                         if (!id) {
                             Swal.fire({ icon: "question", title: "Do You Want to Print?", showCancelButton: true, confirmButtonText: "Yes, Print", cancelButtonText: "No [Esc]", confirmButtonColor: "#3085d6", cancelButtonColor: "#6b7280", focusConfirm: true, allowEnterKey: true, allowEscapeKey: true })
@@ -366,7 +368,10 @@ const JobCardForm = ({
         setActionLoading(true);
         try {
             const result = await addApprovalStatus({ userId: userData?.id, remarks: approvalRemarks || null, actionType, referenceId: id, referencePage: "JOB CARD", recordData: {} }).unwrap();
-            if (result.statusCode === 0) { toast.success(result.message || (actionType === "APPROVE" ? "Job Card Approved!" : "Sent Back for Review!")); setApprovalModal(false); onClose(); }
+            if (result.statusCode === 0) {
+                toast.success(result.message || (actionType === "APPROVE" ? "Job Card Approved!" : "Sent Back for Review!")); setApprovalModal(false); onClose();
+                invalidateJobCardModule();
+            }
             else { toast.error(result.message || "Action failed"); setApprovalModal(false); }
         } catch (err) { toast.error(err?.data?.message || "Something went wrong!"); setApprovalModal(false); }
         finally { setActionLoading(false); }

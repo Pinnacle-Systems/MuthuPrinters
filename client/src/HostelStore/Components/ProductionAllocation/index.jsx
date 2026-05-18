@@ -13,6 +13,7 @@ import { useDeleteProductionAllocationMutation } from "../../../redux/uniformSer
 import ProductionAllocationReport from "./ProductionAllocationReport.jsx";
 import ProductionAllocationForm from "./ProductionAllocationForm.jsx";
 import JobCardApi from "../../../redux/uniformService/JobCardService.js";
+import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -56,7 +57,7 @@ const index = () => {
 
             try {
                 let deldata = await removeData(id).unwrap();
-                dispatch(JobCardApi.util.invalidateTags(["jobCard"]));
+                invalidateJobCardModule();
                 dispatchInvalidate();
                 if (deldata?.statusCode == 1) {
                     Swal.fire({

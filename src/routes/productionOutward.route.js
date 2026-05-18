@@ -6,11 +6,13 @@ import {
   create,
   update,
   remove,
+  getOutwardJobCardDtls,
 } from "../controllers/productionOutward.controller.js";
 
 router.post("/", create);
 
 router.get("/", get);
+router.get("/getOutwardJobCardDtls", getOutwardJobCardDtls);
 router.put("/:id", update);
 
 router.get("/:id", getOne);

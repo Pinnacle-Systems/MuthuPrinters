@@ -19,7 +19,7 @@ import tw from "../../../Utils/tailwind-react-pdf";
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 import { FiEdit2, FiSave, FiPrinter, FiEye } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
-import {
+import OrderEntryApi, {
     useGetOrderEntryQuery,
     useLazyGetOrderEntryByIdQuery,
 } from "../../../redux/uniformService/OrderEntryService";
@@ -40,6 +40,7 @@ import { PartyMaster } from "../index.js";
 import { BankMaster, CurrencyMaster, PayTermMaster } from "../../../Basic/components/index.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { conversionTypes } from "../../../Utils/DropdownData.js";
+import { useDispatch } from "react-redux";
 
 const EMPTY_ROW = {
     styleItemId: "",
@@ -119,6 +120,7 @@ const ProformaInvoiceForm = ({
         contactPerson: "",
         phone: "",
     });
+    const dispatch = useDispatch();
 
     const { data: allData } = useGetProformaInvoiceQuery({
         params: { branchId },
@@ -384,6 +386,7 @@ const ProformaInvoiceForm = ({
                     }
                 });
             }
+            dispatch(OrderEntryApi.util.invalidateTags(["orderEntry"]));
             setReadOnly(true);
             dispatchInvalidate();
 

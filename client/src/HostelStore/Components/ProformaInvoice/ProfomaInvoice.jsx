@@ -14,12 +14,13 @@ import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterS
 import { useGetCurrenciesQuery } from "../../../redux/services/CurrencyMasterService.js";
 import { useGetCityQuery } from "../../../redux/services/CityMasterService.js";
 import { useGetbankQuery } from "../../../redux/services/BankMasterService.js";
+import OrderEntryApi from "../../../redux/uniformService/OrderEntryService.js";
 
 const ProformaInvoice = () => {
     const [showForm, setShowForm] = useState(false);
     const [id, setId] = useState("");
     const [readOnly, setReadOnly] = useState(false);
-
+    const dispatch = useDispatch();
     const { branchId, companyId, finYearId, userId } = getCommonParams();
     const params = {
         branchId,
@@ -68,6 +69,7 @@ const ProformaInvoice = () => {
                     icon: "success",
                     timer: 1000,
                 });
+                dispatch(OrderEntryApi.util.invalidateTags(["orderEntry"]));
             } catch (error) {
                 Swal.fire({
                     icon: "error",

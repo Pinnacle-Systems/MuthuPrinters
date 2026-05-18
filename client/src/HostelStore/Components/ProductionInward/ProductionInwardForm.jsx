@@ -1,6 +1,7 @@
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 import {
     DateInputNew,
+    DropdownInput,
     DropdownNew,
     TextInput,
 } from "../../../Inputs/index.js";
@@ -25,7 +26,8 @@ import {
 import InwardDetails, { DEFAULT_ROW_COUNT, makeEmptyRow } from "./InwardDetails.jsx";
 import { useGetJobCardListQuery } from "../../../redux/uniformService/JobCardService.js";
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
-import { useGetProductionOutwardQuery } from "../../../redux/uniformService/ProductionOutwardService.js";
+import { useGetProductionOutwardJobCardDtlsQuery, useGetProductionOutwardQuery } from "../../../redux/uniformService/ProductionOutwardService.js";
+import { receiptTypes } from "../../../Utils/DropdownData.js";
 
 const ProductionInwardForm = ({
     onClose,
@@ -42,16 +44,44 @@ const ProductionInwardForm = ({
     const [docId, setDocId] = useState("");
     const [productionOutwardId, setProductionOutwardId] = useState("");
     const [jobCardId, setJobCardId] = useState("");
-    const [inwardType, setInwardType] = useState("");
+    const [receiptType, setReceiptType] = useState("");
     const [inwardDetails, setInwardDetails] = useState(
         Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow)
     );
-
+    const [dcNo, setDcNo] = useState("");
+    const [dcDate, setDcDate] = useState("");
     const supplierRef = useRef(null);
     const childRecord = useRef(0);
     const [dispatchInvalidate] = useInvalidateTags();
     const { userId, finYearId, branchId, companyId } = getCommonParams();
     const params = { branchId, companyId, finYearId };
+    const [searchDocId, setSearchDocId] = useState("");
+    const [searchDocDate, setSearchDocDate] = useState("");
+    const [searchJobCard, setSearchJobCard] = useState("");
+    const [currentPageNumber, setCurrentPageNumber] = useState(1);
+    const [tempItems, setTempItems] = useState([]);
+    const [dataPerPage, setDataPerPage] = useState("10");
+
+    const searchFields = {
+        searchDocId,
+        searchDocDate,
+        searchJobCard,
+    };
+
+    const {
+        data: productionOutwardDtlsData,
+        isLoading: isProductionOutwardDtlsLoading,
+        isFetching: isProductionOutwardDtlsFetching,
+    } = useGetProductionOutwardJobCardDtlsQuery({
+        params: {
+            branchId,
+            supplierId,
+            ...searchFields,
+            pagination: true,
+            dataPerPage,
+            pageNumber: currentPageNumber,
+        },
+    });
 
     const {
         data: singleData,
@@ -66,6 +96,13 @@ const ProductionInwardForm = ({
     const [addData] = useAddProductionInwardMutation();
     const [updateData] = useUpdateProductionInwardMutation();
 
+    const syncFormWithDbItems = useCallback(
+        (data) => {
+            setTempItems(data);
+        },
+        [supplierId],
+    );
+
     const syncFormWithDb = useCallback(
         (data) => {
             setDocId(data?.docId ? data?.docId : "New");
@@ -77,17 +114,27 @@ const ProductionInwardForm = ({
             setSupplierId(data?.supplierId || "");
             setRemarks(data?.remarks || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
-            setProductionOutwardId(data?.productionOutwardId || "");
-            setJobCardId(data?.jobCardId || "");
-            setInwardType(data?.inwardType || "");
+            setReceiptType(data?.receiptType || "");
             setInwardDetails(
                 data?.inwardDetails?.length
                     ? data.inwardDetails
                     : Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow)
             );
+            setDcNo(data?.dcNo || "");
+            setDcDate(data?.dcDate ? moment.utc(data.dcDate).format("YYYY-MM-DD") : "");
         },
         [id],
     );
+
+    useEffect(() => {
+        setCurrentPageNumber(1);
+    }, [searchDocId, searchDocDate, searchJobCard]);
+
+    useEffect(() => {
+        if (productionOutwardDtlsData?.data) {
+            syncFormWithDbItems(productionOutwardDtlsData?.data);
+        }
+    }, [isProductionOutwardDtlsLoading, isProductionOutwardDtlsFetching, syncFormWithDbItems, productionOutwardDtlsData]);
 
     useEffect(() => {
         if (id && singleData?.data) {
@@ -105,10 +152,10 @@ const ProductionInwardForm = ({
         supplierId,
         remarks,
         finYearId,
-        productionOutwardId,
-        jobCardId,
-        inwardType,
+        receiptType,
         inwardDetails: inwardDetails?.filter((i) => i.processId),
+        dcNo,
+        dcDate
     };
 
     const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -292,40 +339,43 @@ const ProductionInwardForm = ({
 
                         {/* Outward & Job Card Details */}
                         <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-                            <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Outward & Job Card Details</h2>
+                            <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Inward Details</h2>
                             <div className="flex gap-2 px-1">
-                                <div className="w-40">
-                                    <DropdownNew
-                                        name="Production Outward No"
-                                        dataList={outwardList?.data}
-                                        value={productionOutwardId}
-                                        setValue={setProductionOutwardId}
+                                <div>
+                                    <DropdownInput
+                                        name="Receipt Basis"
+                                        options={receiptTypes}
+                                        value={receiptType}
+                                        setValue={(value) => {
+                                            setReceiptType(value);
+                                        }}
+                                        required={true}
                                         readOnly={readOnly}
-                                        disabled={readOnly}
-                                        otherField={"docId"}
-                                        beforeChange={handleOutwardChange}
+                                        disabled={id}
+                                        beforeChange={() => {
+
+                                            // setInwardDetails([]);
+
+                                        }}
                                     />
                                 </div>
-                                <div className="w-40">
-                                    <DropdownNew
-                                        name="Job Card No"
-                                        dataList={jobCardList?.data}
-                                        value={jobCardId}
-                                        setValue={setJobCardId}
-                                        readOnly={true}
-                                        disabled={true}
-                                        otherField={"docId"}
+                                <TextInput
+                                    name={"Dc No."}
+                                    value={dcNo}
+                                    setValue={setDcNo}
+                                    readOnly={readOnly}
+                                />
+                                <div className="w-28">
+                                    <DateInputNew
+                                        name="Dc Date"
+                                        value={dcDate}
+                                        setValue={setDcDate}
+                                        readOnly={readOnly}
+                                        type={"date"}
                                     />
                                 </div>
-                                <div className="w-64">
-                                    <TextInput
-                                        name="Item Description"
-                                        value={findFromList(jobCardId, jobCardList?.data, "styleItemName")}
-                                        readOnly={true}
-                                        required
-                                        className="w-full"
-                                    />
-                                </div>
+                                <div></div>
+
                             </div>
                         </div>
                     </div>
@@ -340,6 +390,18 @@ const ProductionInwardForm = ({
                         processList={processList}
                         id={id}
                         childRecord={childRecord}
+                        setTempItems={setTempItems}
+                        tempItems={tempItems}
+                        searchDocId={searchDocId}
+                        setSearchDocId={setSearchDocId}
+                        setSearchDocDate={setSearchDocDate}
+                        searchDocDate={searchDocDate}
+                        searchJobCard={searchJobCard}
+                        setSearchJobCard={setSearchJobCard}
+                        supplierId={supplierId}
+                        receiptType={receiptType}
+                        jobCardList={jobCardList}
+                        productionOutwardList={outwardList}
                     />
                 }
                 footer={

@@ -12,6 +12,7 @@ import OrderEntryForm from "./OrderEntryForm.jsx";
 import { useIsApprover } from "../../../CustomHooks/userIsApprover.js";
 import ProformaInvoiceApi from "../../../redux/uniformService/ProformaInvoiceService.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
+import JobCardApi from "../../../redux/uniformService/JobCardService.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -62,6 +63,7 @@ const index = () => {
             try {
                 let deldata = await removeData(id).unwrap();
                 dispatch(ProformaInvoiceApi.util.invalidateTags(["proformaInvoice"]));
+                dispatch(JobCardApi.util.invalidateTags(["jobCard"]));
                 dispatchInvalidate();
                 if (deldata?.statusCode == 1) {
                     Swal.fire({

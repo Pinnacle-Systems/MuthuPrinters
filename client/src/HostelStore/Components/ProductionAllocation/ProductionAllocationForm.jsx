@@ -21,6 +21,7 @@ import JobCardApi, { useGetJobCardListQuery } from "../../../redux/uniformServic
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
 import { useDispatch } from "react-redux";
+import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
 
 const ProductionAllocationForm = ({
     readOnly,
@@ -223,6 +224,7 @@ const ProductionAllocationForm = ({
                         customerRef.current.focus();
                     }
                 });
+                invalidateJobCardModule();
             } else {
                 const res = await addData(payload).unwrap();
                 savedId = res.data.id;
