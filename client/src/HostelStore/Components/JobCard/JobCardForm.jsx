@@ -1016,24 +1016,34 @@ const JobCardForm = ({
 
             <div className="flex justify-between items-center mt-2">
                 <div className="flex gap-2 flex-wrap">
-                    <button onClick={() => saveData("close")} onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault()
-                            saveData("close")
-                        }
-                    }} disabled={readOnly || isDisabled}
-                        className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium">
-                        <HiOutlineRefresh className="w-3.5 h-3.5" /> Save & Close
-                    </button>
-                    <button onClick={() => saveData("new")} onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault()
-                            saveData("new")
-                        }
-                    }} disabled={readOnly || isDisabled}
-                        className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium">
-                        <FiSave className="w-3.5 h-3.5" /> Save & New
-                    </button>
+                    {
+                        !readOnly && (
+
+                            <button onClick={() => saveData("close")} onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault()
+                                    saveData("close")
+                                }
+                            }} disabled={readOnly || isDisabled}
+                                className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium">
+                                <HiOutlineRefresh className="w-3.5 h-3.5" /> Save & Close
+                            </button>
+                        )
+                    }
+                    {
+                        !readOnly && (
+
+                            <button onClick={() => saveData("new")} onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault()
+                                    saveData("new")
+                                }
+                            }} disabled={readOnly || isDisabled}
+                                className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium">
+                                <FiSave className="w-3.5 h-3.5" /> Save & New
+                            </button>
+                        )
+                    }
                     {status === "REJECTED" && (
                         <button onClick={() => saveData("close", { submitApproval: true })} disabled={readOnly}
                             title="Submit Approval" className="bg-green-700 text-white px-2 py-1 rounded hover:bg-green-800 flex items-center text-xs">

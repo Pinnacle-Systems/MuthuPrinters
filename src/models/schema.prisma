@@ -1150,6 +1150,7 @@ model TaxTemplate {
   pos                 Po[]
   purchaseBillEntries PurchaseBillEntry[]
   purchaseInwards     PurchaseInward[]
+  productionInwards   ProductionInward[]
   proformaInvoices    ProformaInvoice[]
 }
 
@@ -1865,6 +1866,7 @@ model Process {
   productionOutwardDtlsProcess     ProductionOutwardDtl[]    @relation("process")
   productionOutwardDtlsPrevProcess ProductionOutwardDtl[]    @relation("prevProcess")
   productionInwardDtls             ProductionInwardDtl[]
+  inwardProcessDtls                InwardProcessDtl[]
 }
 
 model ProcessGroup {
@@ -2000,6 +2002,7 @@ model JobCard {
   JobCards              JobCard[]              @relation("RepeatedJobCard")
   productionOutwards    ProductionOutward[]
   productionInwards     ProductionInward[]
+  productionInwardDtls  ProductionInwardDtl[]
 }
 
 model BoardQuality {
@@ -2338,7 +2341,8 @@ model ProductionOutward {
   vehicleNo                String?
   productionOutwardDetails ProductionOutwardDtl[]
 
-  productionInwards ProductionInward[]
+  productionInwards    ProductionInward[]
+  productionInwardDtls ProductionInwardDtl[]
 }
 
 model ProductionOutwardDtl {
@@ -2374,11 +2378,19 @@ model ProductionInward {
   remarks             String?
   Branch              Branch?            @relation(fields: [branchId], references: [id])
   branchId            Int?
-  jobCardId           Int
-  JobCard             JobCard            @relation(fields: [jobCardId], references: [id])
+  jobCardId           Int?
+  JobCard             JobCard?           @relation(fields: [jobCardId], references: [id])
   inwardType          String?
   dcNo                String?
+  dcDate              DateTime?
   vehicleNo           String?
+  receiptType         String?
+  invNo               String?
+  netBillValue        Float?
+  discountType        String?
+  discountValue       Float?
+  TaxTemplate         TaxTemplate?       @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
+  taxTemplateId       Int?
 
   inwardDetails ProductionInwardDtl[]
 }
@@ -2398,4 +2410,18 @@ model ProductionInwardDtl {
   discountType         String?
   discountValue        Float?
   taxPercent           Float?
+  jobCardId            Int?
+  JobCard              JobCard?              @relation(fields: [jobCardId], references: [id])
+  productionOutwardId  Int?
+  ProductionOutward    ProductionOutward?    @relation(fields: [productionOutwardId], references: [id])
+
+  inwardProcessDtls InwardProcessDtl[]
+}
+
+model InwardProcessDtl {
+  id                    Int                 @id @default(autoincrement())
+  productionInwardDtlId Int
+  ProductionInwardDtl   ProductionInwardDtl @relation(fields: [productionInwardDtlId], references: [id], onDelete: Cascade)
+  processId             Int?
+  Process               Process?            @relation(fields: [processId], references: [id])
 }

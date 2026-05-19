@@ -1246,7 +1246,7 @@ const OrderEntryForm = ({
                             {/* Left Buttons */}
                             <div className="flex gap-2 flex-wrap">
                                 {
-                                    !isDisabled && (
+                                    !isDisabled && !readOnly && (
                                         <>
 
                                             <button

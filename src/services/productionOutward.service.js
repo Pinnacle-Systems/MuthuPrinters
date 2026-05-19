@@ -193,6 +193,8 @@ async function getOutwardJobCardDtls(req) {
     },
   });
 
+  console.log(data, "data");
+
   return {
     statusCode: 0,
     data,

@@ -1,31 +1,13 @@
 import { getDateFromDateTimeToDisplay } from "../../../Utils/helper";
 
-/**
- * ProductionOutwardSelection
- *
- * Lets the user pick one or more ProductionOutwardDtl rows
- * (grouped visually by their parent Outward doc) and merges
- * them into the parent form's inwardDetails state.
- *
- * Props:
- *  inwardDetails  – current inwardDetails array from parent form
- *  setInwardDetails – setter
- *  tempItems      – flat array of ProductionOutwardDtl rows (from API)
- *  onClose        – close modal callback
- *  searchDocId    – controlled search value (Outward No)
- *  setSearchDocId
- *  searchDocDate  – controlled search value (Outward Date)
- *  setSearchDocDate
- *  searchJobCard  – controlled search value (Job Card No)
- *  setSearchJobCard
- */
-
 const EMPTY_ROW = {
     processId: "",
     outwardDetailId: "",
     receivedQty: "",
     wastageQty: "",
     acceptedQty: "",
+    jobCardId: "",
+    productionOutwardId: "",
 };
 
 // ─── Selection helpers ─────────────────────────────────────────────────────────
@@ -34,7 +16,11 @@ function buildInwardRow(outwardDtl) {
     return {
         ...EMPTY_ROW,
         outwardDetailId: outwardDtl.id,
+        productionOutwardId: outwardDtl.productionOutwardId,
+        jobCardId: outwardDtl?.ProductionOutward?.JobCard?.id ?? "",
         processId: outwardDtl.processId ?? "",
+        receivedQty: outwardDtl?.sentQty ?? "",
+        acceptedQty: outwardDtl?.sentQty ?? "",
         // carry display info so the grid can show process name without refetch
         _processName: outwardDtl.Process?.name ?? "",
         _sentQty: outwardDtl.sentQty ?? "",

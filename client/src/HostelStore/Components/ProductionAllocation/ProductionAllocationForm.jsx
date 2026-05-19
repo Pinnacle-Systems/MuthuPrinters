@@ -180,17 +180,6 @@ const ProductionAllocationForm = ({
                 return false;
             }
 
-            // Supplier required for Outside
-            if (row.isOutSide && !row.supplierId) {
-                Swal.fire({
-                    title: "Error",
-                    text: `Supplier is required in row ${i + 1}`,
-                    icon: "error",
-                    confirmButtonColor: "#d33",
-                });
-
-                return false;
-            }
         }
 
         return true;
@@ -500,10 +489,10 @@ const ProductionAllocationForm = ({
                                         <th className="border border-slate-300 px-2 py-1 w-28">
                                             Outside
                                         </th>
-
+                                        {/* 
                                         <th className="border border-slate-300 px-2 py-1 w-64">
                                             Supplier
-                                        </th>
+                                        </th> */}
                                     </tr>
                                 </thead>
 
@@ -553,7 +542,7 @@ const ProductionAllocationForm = ({
                                                     disabled={!row.processId}
                                                 />
                                             </td>
-                                            <td className="border border-gray-300">
+                                            {/* <td className="border border-gray-300">
                                                 <FxSelectWithAdd
                                                     value={row.supplierId}
                                                     onChange={(val) => {
@@ -572,7 +561,7 @@ const ProductionAllocationForm = ({
                                                     childComponent={PartyMaster}
                                                     addNewModalWidth="w-[90%] h-[90%]"
                                                 />
-                                            </td>
+                                            </td> */}
 
                                         </tr>
                                     ))}

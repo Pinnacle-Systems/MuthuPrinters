@@ -8,11 +8,14 @@ import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { useDeleteProductionInwardMutation } from "../../../redux/uniformService/ProductionInwardService.js";
 import ProductionInwardReport from "./ProductionInwardReport.jsx";
 import ProductionInwardForm from "./ProductionInwardForm.jsx";
+import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
+import { UserPermissions } from "../../../Utils/UserPermissions.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
     const [id, setId] = useState("");
     const [readOnly, setReadOnly] = useState(false);
+    const { hasPermission } = UserPermissions();
 
     const dispatch = useDispatch();
     const { branchId, companyId, finYearId, userId } = getCommonParams();
@@ -68,6 +71,16 @@ const index = () => {
 
     const { data: supplierList } = useGetPartyQuery({ params: { ...params } });
     const { data: branchList } = useGetBranchQuery({ params: { ...params } });
+    const { data: taxTypeList, isLoading: isTaxLoading, isFetching: isTaxfetching } =
+        useGetTaxTemplateQuery({ params: { ...params } });
+
+    const handleCreate = () => {
+        hasPermission(() => {
+            setShowForm(true);
+            onNew();
+        }, "create");
+    };
+
 
     return (
         <>
@@ -84,7 +97,7 @@ const index = () => {
                     <div className="flex items-center gap-2">
                         <button
                             className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800 py-1 rounded-md flex items-center gap-2 text-xs px-2"
-                            onClick={() => { setShowForm(true); onNew(); }}
+                            onClick={handleCreate}
                         >
                             <FaPlus /> Create New
                         </button>
@@ -115,6 +128,8 @@ const index = () => {
                         setShowForm={setShowForm}
                         supplierList={supplierList}
                         branchList={branchList}
+                        taxTypeList={taxTypeList}
+                        hasPermission={hasPermission}
                     />
                 </div>
             )}

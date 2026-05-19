@@ -41,6 +41,13 @@ const getLastCompletedQty = (processRoute) => {
     return completed.length > 0 ? completed[0].completedQty : null;
 };
 
+// Returns true if the process at (sequence - 1) is COMPLETED
+const isPrevProcessCompleted = (route, sequence) => {
+    if (sequence <= 1) return true; // no previous process
+    const prev = route.find(r => r.sequence === sequence - 1);
+    return !prev || prev.status?.toUpperCase() === "COMPLETED";
+};
+
 // ─── ProcessTree ──────────────────────────────────────────────────────────────
 
 const ProcessTree = ({ processRoute, processList, allocationDetails, selectedProcessIds, onToggle }) => {
@@ -77,6 +84,33 @@ const ProcessTree = ({ processRoute, processList, allocationDetails, selectedPro
                         const isCompleted = route.status?.toUpperCase() === "COMPLETED";
                         const completedQty = route.completedQty;
                         const isChecked = selectedProcessIds.includes(route.processId);
+                        const isPrevDone = (() => {
+                            // find the nearest preceding NON-outside (inside) process
+                            for (let i = idx - 1; i >= 0; i--) {
+                                const prev = sorted[i];
+                                const prevAlloc = allocationDetails?.find(d => d.processId === prev.processId);
+                                if (!prevAlloc?.isOutSide) {
+                                    // found nearest inside process — it must be completed
+                                    return prev.status?.toUpperCase() === "COMPLETED";
+                                }
+                            }
+                            return true; // no inside process before this — not blocked
+                        })();
+                        const isPrevOutsideChecked = (() => {
+                            if (idx === 0) return true;
+                            for (let i = idx - 1; i >= 0; i--) {
+                                const prev = sorted[i];
+                                const prevAlloc = allocationDetails?.find(d => d.processId === prev.processId);
+                                if (prevAlloc?.isOutSide === true) {
+                                    // if already completed by another supplier — treat as satisfied, no checkbox needed
+                                    if (prev.status?.toUpperCase() === "COMPLETED") return true;
+                                    // otherwise must be checked by user
+                                    return selectedProcessIds.includes(prev.processId);
+                                }
+                            }
+                            return true;
+                        })();
+                        const isCheckboxDisabled = !isOutside || !isPrevDone || !isPrevOutsideChecked;
                         const isLast = idx === sorted.length - 1;
 
                         return (
@@ -95,12 +129,17 @@ const ProcessTree = ({ processRoute, processList, allocationDetails, selectedPro
 
                                 <div className={`flex-1 mb-1 rounded-lg border transition-all duration-150 ${isOutside ? "border-indigo-200 bg-indigo-50/60" : "border-gray-200 bg-white"} ${isChecked ? "ring-1 ring-indigo-400 border-indigo-400" : ""}`}>
                                     <div className="flex items-center gap-2 px-3 py-2">
-                                        {isOutside && (
+                                        {isOutside && !isCompleted && (
                                             <input
                                                 type="checkbox"
-                                                className="w-3.5 h-3.5 rounded border-indigo-400 accent-indigo-600 cursor-pointer flex-shrink-0"
+                                                className={`w-3.5 h-3.5 rounded border-indigo-400 accent-indigo-600 flex-shrink-0 ${isCheckboxDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
                                                 checked={isChecked}
-                                                onChange={() => onToggle(route, alloc)}
+                                                onChange={() => !isCheckboxDisabled && onToggle(route, alloc)}
+                                                disabled={isCheckboxDisabled}
+                                                title={
+                                                    !isPrevDone ? "Previous process not completed" :
+                                                        !isPrevOutsideChecked ? "Select the previous outside process first" : ""
+                                                }
                                             />
                                         )}
                                         <div className="flex-1 min-w-0">
@@ -651,24 +690,34 @@ const ProductionOutwardForm = ({
             footer={
                 <div className="flex flex-col md:flex-row gap-2 justify-between">
                     <div className="flex gap-2 flex-wrap">
-                        <button
-                            onClick={() => saveData("close")}
-                            disabled={readOnly}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveData("close"); e.stopPropagation(); } }}
-                            className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                        >
-                            <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                            Save & Close
-                        </button>
-                        <button
-                            onClick={() => saveData("new")}
-                            disabled={readOnly}
-                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); saveData("new"); } }}
-                            className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                        >
-                            <FiSave className="w-4 h-4 mr-2" />
-                            Save & New
-                        </button>
+                        {
+                            !readOnly && (
+
+                                <button
+                                    onClick={() => saveData("close")}
+                                    disabled={readOnly}
+                                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveData("close"); e.stopPropagation(); } }}
+                                    className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                >
+                                    <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                                    Save & Close
+                                </button>
+                            )
+                        }
+                        {
+                            !readOnly && (
+
+                                <button
+                                    onClick={() => saveData("new")}
+                                    disabled={readOnly}
+                                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); saveData("new"); } }}
+                                    className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                >
+                                    <FiSave className="w-4 h-4 mr-2" />
+                                    Save & New
+                                </button>
+                            )
+                        }
                     </div>
                     <div className="flex gap-2 flex-wrap">
                         {!id || (readOnly && (

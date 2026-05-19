@@ -14,21 +14,13 @@ const COLUMNS = [
         render: (row) => getDateFromDateTimeToDisplay(row.docDate)
     },
     {
-        key: "jobCard", label: "Job Card", width: "w-32",
-        render: (row) => row?.JobCard?.docId
-    },
-    {
-        key: "outwardNo", label: "Outward No", width: "w-32",
-        render: (row) => row?.ProductionOutward?.docId
-    },
-    {
         key: "supplier", label: "Supplier", width: "w-80",
         render: (row) => row?.Supplier?.name
     },
 ];
 
 // Outward No has no search — only include searchable keys here
-const SEARCH_COLUMNS = ["docId", "docDate", "jobCard", "supplier"];
+const SEARCH_COLUMNS = ["docId", "docDate", "supplier"];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

@@ -57,7 +57,8 @@ const ProductionInwardApi = createApi({
       invalidatesTags: ["productionInward"],
     }),
     updateProductionInward: builder.mutation({
-      query: ({ id, body }) => {
+      query: (payload) => {
+        const { id, ...body } = payload;
         return {
           url: `${PRODUCTION_INWARD_API}/${id}`,
           method: "PUT",

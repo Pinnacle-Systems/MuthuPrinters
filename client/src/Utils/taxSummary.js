@@ -1,11 +1,10 @@
-import { useEffect } from "react";
-
 export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
   poItems = [],
   isSupplierOutside = false,
   discountType,
   discountValue,
   isDozen = false,
+  qtyField = "qty",
 ) {
   let roundTo = 2;
 
@@ -27,7 +26,7 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
 
   // ---- Step 1: Base item calc ----
   items?.forEach((item) => {
-    const qty = Number(item?.qty) || 0;
+    const qty = Number(item?.[qtyField]) || 0;
     const dozen = Number(item?.dozen) || 0;
     const price = Number(item?.price) || 0;
     const taxPct = Number(item?.taxPercent) || 0;
