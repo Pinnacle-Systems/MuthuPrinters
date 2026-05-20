@@ -18,22 +18,17 @@ import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { PartyMaster } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
-import {
-    useAddProductionInwardMutation,
-    useGetProductionInwardByIdQuery,
-    useUpdateProductionInwardMutation,
-} from "../../../redux/uniformService/ProductionInwardService.js";
-import InwardDetails, { DEFAULT_ROW_COUNT, makeEmptyRow } from "./InwardDetails.jsx";
+import BillDetails, { DEFAULT_ROW_COUNT, makeEmptyRow } from "./BillDetails.jsx";
 import { useGetJobCardListQuery } from "../../../redux/uniformService/JobCardService.js";
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
-import { useGetProductionOutwardJobCardDtlsQuery, useGetProductionOutwardQuery } from "../../../redux/uniformService/ProductionOutwardService.js";
-import { receiptTypes } from "../../../Utils/DropdownData.js";
 import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService.js";
 import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary.js";
 import PoSummary from "../PurchaseOrder/PoSummary.js";
 import Modal from "../../../UiComponents/Modal/index.js";
+import { useAddProcessBillMutation, useGetProcessBillByIdQuery, useUpdateProcessBillMutation } from "../../../redux/uniformService/ProcessBillService.js";
+import { useGetProductionInwardJobCardDtlsQuery, useGetProductionInwardQuery } from "../../../redux/uniformService/ProductionInwardService.js";
 
-const ProductionInwardForm = ({
+const ProcessBillForm = ({
     onClose,
     id,
     setId,
@@ -48,14 +43,9 @@ const ProductionInwardForm = ({
     const [supplierId, setSupplierId] = useState("");
     const [remarks, setRemarks] = useState("");
     const [docId, setDocId] = useState("");
-    const [productionOutwardId, setProductionOutwardId] = useState("");
-    const [jobCardId, setJobCardId] = useState("");
-    const [receiptType, setReceiptType] = useState("");
-    const [inwardDetails, setInwardDetails] = useState(
+    const [billDetails, setBillDetails] = useState(
         Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow)
     );
-    const [dcNo, setDcNo] = useState("");
-    const [dcDate, setDcDate] = useState("");
     const supplierRef = useRef(null);
     const childRecord = useRef(0);
     const [dispatchInvalidate] = useInvalidateTags();
@@ -70,7 +60,6 @@ const ProductionInwardForm = ({
     const [discountType, setDiscountType] = useState("Percentage");
     const [discountValue, setDiscountValue] = useState();
     const [netBillValue, setNetBillValue] = useState("");
-    const [invNo, setInvNo] = useState("");
     const [taxTemplateId, setTaxTemplateId] = useState("");
     const [summary, setSummary] = useState(false);
 
@@ -81,10 +70,10 @@ const ProductionInwardForm = ({
     };
 
     const {
-        data: productionOutwardDtlsData,
-        isLoading: isProductionOutwardDtlsLoading,
-        isFetching: isProductionOutwardDtlsFetching,
-    } = useGetProductionOutwardJobCardDtlsQuery({
+        data: productionInwardDtlsData,
+        isLoading: isProductionInwardDtlsLoading,
+        isFetching: isProductionInwardDtlsFetching,
+    } = useGetProductionInwardJobCardDtlsQuery({
         params: {
             branchId,
             supplierId,
@@ -99,11 +88,11 @@ const ProductionInwardForm = ({
         data: singleData,
         isFetching: isSingleFetching,
         isLoading: isSingleLoading,
-    } = useGetProductionInwardByIdQuery(id, { skip: !id });
+    } = useGetProcessBillByIdQuery(id, { skip: !id });
 
     const { data: jobCardList } = useGetJobCardListQuery({ params: { companyId, branchId } });
     const { data: processList } = useGetProcessMasterQuery({ params: { companyId } });
-    const { data: outwardList } = useGetProductionOutwardQuery({ params: { branchId, companyId, finYearId } });
+    const { data: inwardList } = useGetProductionInwardQuery({ params: { branchId, companyId, finYearId } });
     const { data: supplierData } = useGetPartyByIdQuery(supplierId, {
         skip: !supplierId,
     });
@@ -112,8 +101,8 @@ const ProductionInwardForm = ({
         return supplierData?.data?.City?.state?.name !== "TAMILNADU";
     }, [supplierData]);
 
-    const [addData] = useAddProductionInwardMutation();
-    const [updateData] = useUpdateProductionInwardMutation();
+    const [addData] = useAddProcessBillMutation();
+    const [updateData] = useUpdateProcessBillMutation();
 
     const syncFormWithDbItems = useCallback(
         (data) => {
@@ -133,10 +122,9 @@ const ProductionInwardForm = ({
             setSupplierId(data?.supplierId || "");
             setRemarks(data?.remarks || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
-            setReceiptType(data?.receiptType || "");
-            setInwardDetails(
-                data?.inwardDetails?.length
-                    ? data.inwardDetails.map((item) => ({
+            setBillDetails(
+                data?.billDetails?.length
+                    ? data.billDetails.map((item) => ({
                         ...item,
 
                         // convert inwardProcessDtls -> processes array
@@ -147,12 +135,9 @@ const ProductionInwardForm = ({
                     }))
                     : Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow)
             );
-            setDcNo(data?.dcNo || "");
-            setDcDate(data?.dcDate ? moment.utc(data.dcDate).format("YYYY-MM-DD") : "");
             setDiscountType(data?.discountType || "");
             setDiscountValue(data?.discountValue || "");
             setNetBillValue(parseFloat(data?.netBillValue)?.toFixed(2) || "");
-            setInvNo(data?.invNo || "");
             setTaxTemplateId(data?.taxTemplateId || "");
         },
         [id],
@@ -163,10 +148,10 @@ const ProductionInwardForm = ({
     }, [searchDocId, searchDocDate, searchJobCard]);
 
     useEffect(() => {
-        if (productionOutwardDtlsData?.data) {
-            syncFormWithDbItems(productionOutwardDtlsData?.data);
+        if (productionInwardDtlsData?.data) {
+            syncFormWithDbItems(productionInwardDtlsData?.data);
         }
-    }, [isProductionOutwardDtlsLoading, isProductionOutwardDtlsFetching, syncFormWithDbItems, productionOutwardDtlsData]);
+    }, [isProductionInwardDtlsLoading, isProductionInwardDtlsFetching, syncFormWithDbItems, productionInwardDtlsData]);
 
     useEffect(() => {
         if (id && singleData?.data) {
@@ -184,14 +169,10 @@ const ProductionInwardForm = ({
         supplierId,
         remarks,
         finYearId,
-        receiptType,
-        inwardDetails: inwardDetails?.filter((i) => i.jobCardId),
-        dcNo,
-        dcDate,
+        billDetails: billDetails?.filter((i) => i.jobCardId),
         discountType,
         discountValue,
         netBillValue,
-        invNo,
         taxTemplateId,
     };
 
@@ -208,8 +189,6 @@ const ProductionInwardForm = ({
                     timer: 2000,
                     didClose: () => {
                         // dispatchInvalidate();
-                        invalidateJobCardModule();
-
                         if (returnData.statusCode === 0) {
                             if (nextProcess === "new") {
                                 setId(0);
@@ -232,45 +211,33 @@ const ProductionInwardForm = ({
     };
 
     const validateData = (data) => {
-        const items = data?.inwardDetails || [];
-        const isAgainstInvoice = data.receiptType === "Against Invoice";
+        const items = data?.billDetails || [];
         const isAmountMatched =
             Number(data?.netBillValue).toFixed(2) ===
             parseFloat(totals?.net || 0).toFixed(2);
         const checks = [
             { condition: !data.supplierId, title: "Supplier is required!" },
-            { condition: !data.receiptType, title: "Receipt Basis is required!" },
-
             {
-                condition: isAgainstInvoice && !data.invNo,
-                title: "Invoice No is required!",
-            },
-            {
-                condition: isAgainstInvoice && !data.netBillValue,
+                condition: !data.netBillValue,
                 title: "Bill Value is required!",
             },
             {
-                condition: isAgainstInvoice && !data.taxTemplateId,
+                condition: !data.taxTemplateId,
                 title: "Tax Template is required!",
             },
 
-            // ✅ Conditional: NOT Against Invoice
-            {
-                condition: !isAgainstInvoice && !data.dcNo,
-                title: "DC No is required!",
-            },
             {
                 condition: items.length === 0,
                 title: "Please add at least one item!",
             },
             {
-                condition: !isGridDatasValid(data?.inwardDetails, false, [
-                    "receivedQty",
+                condition: !isGridDatasValid(data?.billDetails, false, [
+                    "billedQty",
                 ]),
                 title: "Please fill all required item fields!",
             },
             {
-                condition: isAgainstInvoice && !isAmountMatched,
+                condition: !isAmountMatched,
                 title: "Total Bill Value and Total Net Amount must be Equal.",
             },
         ];
@@ -323,45 +290,19 @@ const ProductionInwardForm = ({
         }
     }, []);
 
-    // When outward is selected, auto-fill supplier and jobCard
-    const handleOutwardChange = (item) => {
-        if (!item) return;
-        setSupplierId(item.supplierId || "");
-        setJobCardId(item.jobCardId || "");
-        // Pre-fill inward details from outward details
-        if (item.productionOutwardDetails?.length) {
-            const rows = item.productionOutwardDetails.map((d) => ({
-                ...makeEmptyRow(),
-                // processId: d.processId || "",
-                processes: d.inwardProcessDtls?.map((p) => p.processId) || [],
-                outwardDetailId: d.id,
-                receivedQty: "",
-                wastageQty: "",
-                acceptedQty: "",
-            }));
-            const padded = [
-                ...rows,
-                ...Array.from({ length: Math.max(0, DEFAULT_ROW_COUNT - rows.length) }, makeEmptyRow),
-            ];
-            setInwardDetails(padded);
-        } else {
-            setInwardDetails(Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow));
-        }
-    };
-
     const enrichedItems = useMemo(() => {
-        if (!inwardDetails?.length) return inwardDetails;
+        if (!billDetails?.length) return billDetails;
         const { items, ...totals } =
             calculateTaxWithHSNBreakupAndInsertIntoPoItems(
-                structuredClone(inwardDetails), // clone to avoid mutating state
+                structuredClone(billDetails), // clone to avoid mutating state
                 isSupplierOutside,
                 discountType,
                 discountValue,
                 false,
-                "acceptedQty",
+                "billedQty",
             );
         return { items, totals };
-    }, [inwardDetails, discountType, discountValue, isSupplierOutside]);
+    }, [billDetails, discountType, discountValue, isSupplierOutside]);
 
     const enrichedItemsList = enrichedItems?.items || [];
     const totals = enrichedItems?.totals || {};
@@ -378,7 +319,7 @@ const ProductionInwardForm = ({
                     setDiscountType={setDiscountType}
                     discountValue={discountValue}
                     setDiscountValue={setDiscountValue}
-                    poItems={inwardDetails}
+                    poItems={billDetails}
                     taxTypeId={taxTemplateId}
                     readOnly={readOnly}
                     totals={totals}
@@ -386,7 +327,7 @@ const ProductionInwardForm = ({
                 />
             </Modal>
             <TransactionLayout
-                title="Process Receipt"
+                title="Process Bill"
                 badge={<ModeChip id={id} readOnly={readOnly} />}
                 closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
                 onClose={onClose}
@@ -398,11 +339,11 @@ const ProductionInwardForm = ({
                             <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Basic Details</h2>
                             <div className="flex gap-2">
                                 <div className="w-36">
-                                    <TextInput name="Receipt No" value={docId} disabled={true} />
+                                    <TextInput name="Process Bill No" value={docId} disabled={true} />
                                 </div>
                                 <div className="w-28">
                                     <DateInputNew
-                                        name="Receipt Date"
+                                        name="Process Bill Date"
                                         value={docDate}
                                         setValue={setDocDate}
                                         disabled={readOnly}
@@ -459,24 +400,10 @@ const ProductionInwardForm = ({
                                         className="w-20"
                                     />
                                 </div>
-                                {
-                                    receiptType === "Against Invoice" && (
 
-                                        <DropdownInput
-                                            name="Tax Type"
-                                            options={dropDownListObject(
-                                                taxTypeList ? taxTypeList?.data : [],
-                                                "name",
-                                                "id",
-                                            )}
-                                            value={taxTemplateId}
-                                            setValue={setTaxTemplateId}
-                                            required={receiptType === "Against Invoice"}
-                                            readOnly={readOnly}
-                                            disabled={receiptType !== "Against Invoice" || childRecord.current > 0 || readOnly}
-                                        />
-                                    )
-                                }
+
+
+
                             </div>
                         </div>
 
@@ -484,39 +411,27 @@ const ProductionInwardForm = ({
                         <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                             <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Receipt Details</h2>
                             <div className="flex gap-2 px-0.5">
-                                <div className="w-56">
-                                    <DropdownInput
-                                        name="Receipt Basis"
-                                        options={receiptTypes}
-                                        value={receiptType}
-                                        setValue={(value) => {
-                                            setReceiptType(value);
-                                        }}
-                                        required={true}
-                                        readOnly={readOnly}
-                                        disabled={childRecord.current > 0 || readOnly}
-                                        beforeChange={() => {
-                                            setInvNo("");
-                                            setNetBillValue("");
-                                            // setInwardDetails([]);
-                                        }}
-                                    />
-                                </div>
-                                <TextInput
-                                    name={"Inv No"}
-                                    value={invNo}
-                                    setValue={setInvNo}
+                                <DropdownInput
+                                    name="Tax Type"
+                                    options={dropDownListObject(
+                                        taxTypeList ? taxTypeList?.data : [],
+                                        "name",
+                                        "id",
+                                    )}
+                                    value={taxTemplateId}
+                                    setValue={setTaxTemplateId}
+                                    required={true}
                                     readOnly={readOnly}
-                                    required={receiptType === "Against Invoice"}
-                                    disabled={receiptType !== "Against Invoice" || readOnly}
+                                    disabled={childRecord.current > 0 || readOnly}
                                 />
+
                                 <div className="w-28">
                                     <TextInput
                                         name={"Net Bill Value"}
                                         value={netBillValue}
                                         setValue={setNetBillValue}
                                         readOnly={readOnly || childRecord.current > 0}
-                                        required={receiptType === "Against Invoice"}
+                                        required={true}
                                         type={"number"}
                                         onFocus={(e) => {
                                             e.target.select();
@@ -526,27 +441,12 @@ const ProductionInwardForm = ({
                                                 e.target.value ? Number(e.target.value).toFixed(2) : "",
                                             )
                                         }
-                                        disabled={receiptType !== "Against Invoice"}
+                                        disabled={childRecord.current > 0 || readOnly}
                                         className={"text-right"}
                                     />
                                 </div>
-                                <TextInput
-                                    name={"Dc No."}
-                                    value={dcNo}
-                                    setValue={setDcNo}
-                                    readOnly={readOnly}
-                                    required={receiptType !== "Against Invoice"}
-                                />
-                                <div className="w-28">
-                                    <DateInputNew
-                                        name="Dc Date"
-                                        value={dcDate}
-                                        setValue={setDcDate}
-                                        readOnly={readOnly}
-                                        type={"date"}
-                                    />
-                                </div>
-                                <div></div>
+
+
 
                             </div>
                         </div>
@@ -555,10 +455,10 @@ const ProductionInwardForm = ({
                 detailsLayout="default"
                 detailsLayouts={["default"]}
                 gridItems={
-                    <InwardDetails
-                        inwardDetails={inwardDetails}
+                    <BillDetails
+                        billDetails={billDetails}
                         enrichedItems={enrichedItems}
-                        setInwardDetails={setInwardDetails}
+                        setBillDetails={setBillDetails}
                         readOnly={readOnly}
                         processList={processList}
                         id={id}
@@ -572,47 +472,14 @@ const ProductionInwardForm = ({
                         searchJobCard={searchJobCard}
                         setSearchJobCard={setSearchJobCard}
                         supplierId={supplierId}
-                        receiptType={receiptType}
                         jobCardList={jobCardList}
-                        productionOutwardList={outwardList}
+                        productionInwardList={inwardList}
                         isSupplierOutside={isSupplierOutside}
                         taxTemplateId={taxTemplateId}
                     />
                 }
                 footer={
                     <>
-                        {/* <ReusableFormFooter
-                            sections={[
-                                {
-                                    title: "Remarks",
-                                    value: remarks,
-                                    onChange: setRemarks,
-                                    placeholder: "Additional notes...",
-                                    readOnly: readOnly,
-                                },
-                            ]}
-                            hasSummaryTitle="Summary"
-                            totalsRows={[
-                                {
-                                    key: "receivedQty",
-                                    label: "Received Qty",
-                                    value: inwardDetails?.reduce((acc, i) => acc + (Number(i.receivedQty) || 0), 0),
-                                    summaryColumn: "left",
-                                },
-                                {
-                                    key: "wastageQty",
-                                    label: "Wastage Qty",
-                                    value: inwardDetails?.reduce((acc, i) => acc + (Number(i.wastageQty) || 0), 0),
-                                    summaryColumn: "left",
-                                },
-                                {
-                                    key: "acceptedQty",
-                                    label: "Accepted Qty",
-                                    value: inwardDetails?.reduce((acc, i) => acc + (Number(i.acceptedQty) || 0), 0),
-                                    summaryColumn: "left",
-                                },
-                            ]}
-                        /> */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
 
                             {/* Remarks */}
@@ -637,31 +504,11 @@ const ProductionInwardForm = ({
                                     Qty Summary
                                 </h2>
 
-                                <div className="flex justify-between text-[12px]">
-                                    <span>Received Qty</span>
-                                    <span>
-                                        {inwardDetails?.reduce(
-                                            (acc, i) => acc + (Number(i.receivedQty) || 0),
-                                            0
-                                        )}
-                                    </span>
-                                </div>
-
-                                <div className="flex justify-between text-[12px]">
-                                    <span>Wastage Qty</span>
-                                    <span>
-                                        {inwardDetails?.reduce(
-                                            (acc, i) => acc + (Number(i.wastageQty) || 0),
-                                            0
-                                        )}
-                                    </span>
-                                </div>
-
                                 <div className="flex justify-between text-[12px] font-medium">
-                                    <span>Accepted Qty</span>
+                                    <span>Billed Qty</span>
                                     <span>
-                                        {inwardDetails?.reduce(
-                                            (acc, i) => acc + (Number(i.acceptedQty) || 0),
+                                        {billDetails?.reduce(
+                                            (acc, i) => acc + (Number(i.billedQty) || 0),
                                             0
                                         )}
                                     </span>
@@ -669,10 +516,7 @@ const ProductionInwardForm = ({
                             </div>
 
                             <div className="rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                                {
-                                    receiptType === "Against Invoice" && (
-
-                                        <div>
+                               
                                             <h2 className="mb-1 text-[12px] font-bold text-slate-700">
                                                 Amount Summary
                                             </h2>
@@ -680,9 +524,9 @@ const ProductionInwardForm = ({
                                             <div className="flex justify-between text-[12px]">
                                                 <span>Gross Amount</span>
                                                 <span>
-                                                     Rs.{inwardDetails
+                                                    Rs.{billDetails
                                                         ?.reduce((sum, row) => {
-                                                            const qty = parseFloat(row.acceptedQty) || 0;
+                                                            const qty = parseFloat(row.billedQty) || 0;
                                                             const price = parseFloat(row.price) || 0;
                                                             return sum + qty * price;
                                                         }, 0)
@@ -703,9 +547,7 @@ const ProductionInwardForm = ({
                                                     Rs.{parseFloat(totals?.net || 0).toFixed(2)}
                                                 </span>
                                             </div>
-                                        </div>
-                                    )
-                                }
+                                      
                             </div>
 
 
@@ -746,23 +588,23 @@ const ProductionInwardForm = ({
                                             Edit
                                         </button>
                                     ))}
-                                {receiptType === "Against Invoice" && (
-                                    <button
-                                        className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-800 flex items-center text-xs font-medium"
-                                        onClick={() => {
-                                            console.log(taxTemplateId);
-                                            if (!taxTemplateId) {
-                                                toast.info("Please Select Tax Template !", {
-                                                    position: "top-center",
-                                                });
-                                                return;
-                                            }
-                                            setSummary(true);
-                                        }}
-                                    >
-                                        View Bill Summary
-                                    </button>
-                                )}
+
+                                <button
+                                    className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-800 flex items-center text-xs font-medium"
+                                    onClick={() => {
+                                        console.log(taxTemplateId);
+                                        if (!taxTemplateId) {
+                                            toast.info("Please Select Tax Template !", {
+                                                position: "top-center",
+                                            });
+                                            return;
+                                        }
+                                        setSummary(true);
+                                    }}
+                                >
+                                    View Bill Summary
+                                </button>
+
                             </div>
                         </div>
                     </>
@@ -772,4 +614,4 @@ const ProductionInwardForm = ({
     );
 };
 
-export default ProductionInwardForm;
+export default ProcessBillForm;

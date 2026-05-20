@@ -70,3 +70,4 @@ export { default as notification } from "./notification.route.js";
 export { default as machine } from "./machine.route.js";
 export { default as productionOutward } from "./productionOutward.route.js";
 export { default as productionInward } from "./productionInward.route.js";
+export { default as processBill } from "./processBill.route.js";

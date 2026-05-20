@@ -5,8 +5,7 @@ import {
   create as _create,
   update as _update,
   remove as _remove,
-  getInwardJobCardDtls as _getInwardJobCardDtls,
-} from "../services/productionInward.service.js";
+} from "../services/processBill.service.js";
 
 async function get(req, res, next) {
   try {
@@ -81,12 +80,4 @@ async function remove(req, res, next) {
   }
 }
 
-async function getInwardJobCardDtls(req, res, next) {
-  try {
-    res.json(await _getInwardJobCardDtls(req));
-  } catch (err) {
-    console.error(`Error`, err.message);
-  }
-}
-
-export { get, getOne, create, update, remove, getInwardJobCardDtls };
+export { get, getOne, create, update, remove };

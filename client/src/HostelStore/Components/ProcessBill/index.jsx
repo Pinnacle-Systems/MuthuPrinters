@@ -2,14 +2,14 @@ import { useDispatch } from "react-redux";
 import { getCommonParams } from "../../../Utils/helper";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
 import { useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
-import { useDeleteProductionOutwardMutation } from "../../../redux/uniformService/ProductionOutwardService.js";
-import ProductionOutwardReport from "./ProductionOutwardReport.jsx";
-import ProductionOutwardForm from "./ProductionOutwardForm.jsx";
+import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
 import { UserPermissions } from "../../../Utils/UserPermissions.js";
-import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
+import { useDeleteProcessBillMutation } from "../../../redux/uniformService/ProcessBillService.js";
+import ProcessBillReport from "./ProcessBillReport.jsx";
+import ProcessBillForm from "./ProcessBillForm.jsx";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -17,14 +17,9 @@ const index = () => {
     const [readOnly, setReadOnly] = useState(false);
     const { hasPermission } = UserPermissions();
 
-
     const dispatch = useDispatch();
     const { branchId, companyId, finYearId, userId } = getCommonParams();
-    const params = {
-        branchId,
-        companyId,
-        finYearId,
-    };
+    const params = { branchId, companyId, finYearId };
     const [dispatchInvalidate] = useInvalidateTags();
 
     const handleView = (orderId) => {
@@ -38,18 +33,15 @@ const index = () => {
         setShowForm(true);
         setReadOnly(false);
     };
-    const [removeData] = useDeleteProductionOutwardMutation();
+
+    const [removeData] = useDeleteProcessBillMutation();
     const handleDelete = async (id) => {
         setId(id);
         if (id) {
-            if (!window.confirm("Are you sure to delete...?")) {
-                return;
-            }
-
+            if (!window.confirm("Are you sure to delete...?")) return;
             try {
                 let deldata = await removeData(id).unwrap();
-                invalidateJobCardModule();
-                // dispatchInvalidate();
+                dispatchInvalidate();
                 if (deldata?.statusCode == 1) {
                     Swal.fire({
                         icon: "error",
@@ -59,11 +51,7 @@ const index = () => {
                     return;
                 }
                 setId("");
-                Swal.fire({
-                    title: "Deleted Successfully",
-                    icon: "success",
-                    timer: 1000,
-                });
+                Swal.fire({ title: "Deleted Successfully", icon: "success", timer: 1000 });
                 setShowForm(false);
             } catch (error) {
                 Swal.fire({
@@ -73,7 +61,6 @@ const index = () => {
                 });
                 setShowForm(false);
             }
-
         }
     };
 
@@ -82,9 +69,10 @@ const index = () => {
         setReadOnly(false);
     };
 
-
     const { data: supplierList } = useGetPartyQuery({ params: { ...params } });
     const { data: branchList } = useGetBranchQuery({ params: { ...params } });
+    const { data: taxTypeList, isLoading: isTaxLoading, isFetching: isTaxfetching } =
+        useGetTaxTemplateQuery({ params: { ...params } });
 
     const handleCreate = () => {
         hasPermission(() => {
@@ -92,6 +80,7 @@ const index = () => {
             onNew();
         }, "create");
     };
+
 
     return (
         <>
@@ -102,13 +91,12 @@ const index = () => {
                 <div className="flex flex-col sm:flex-row justify-between bg-white py-1 px-1 items-start sm:items-center mb-4 gap-x-4 rounded-tl-lg rounded-tr-lg shadow-sm border border-gray-200">
                     <div>
                         <h1 className="text-lg font-bold text-gray-800">
-                            Process Issue Report
+                            Process Bill Report
                         </h1>
                     </div>
-
                     <div className="flex items-center gap-2">
                         <button
-                            className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800  py-1 rounded-md flex items-center gap-2 text-xs px-2"
+                            className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800 py-1 rounded-md flex items-center gap-2 text-xs px-2"
                             onClick={handleCreate}
                         >
                             <FaPlus /> Create New
@@ -117,7 +105,7 @@ const index = () => {
                 </div>
 
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <ProductionOutwardReport
+                    <ProcessBillReport
                         onView={handleView}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
@@ -128,7 +116,7 @@ const index = () => {
 
             {showForm && (
                 <div className="h-[93vh] overflow-hidden">
-                    <ProductionOutwardForm
+                    <ProcessBillForm
                         readOnly={readOnly}
                         setReadOnly={setReadOnly}
                         id={id}
@@ -140,12 +128,13 @@ const index = () => {
                         setShowForm={setShowForm}
                         supplierList={supplierList}
                         branchList={branchList}
+                        taxTypeList={taxTypeList}
                         hasPermission={hasPermission}
                     />
                 </div>
             )}
         </>
     );
-}
+};
 
-export default index
+export default index;

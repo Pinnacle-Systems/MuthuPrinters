@@ -6,14 +6,12 @@ import {
   create,
   update,
   remove,
-  getInwardJobCardDtls,
-} from "../controllers/productionInward.controller.js";
+} from "../controllers/processBill.controller.js";
 
 router.post("/", create);
 
-router.get("/", get);
-router.get("/getInwardJobCardDtls", getInwardJobCardDtls);
 
+router.get("/", get);
 router.put("/:id", update);
 
 router.get("/:id", getOne);

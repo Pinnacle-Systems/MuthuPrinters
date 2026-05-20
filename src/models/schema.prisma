@@ -128,6 +128,7 @@ model Branch {
   productionAllocations ProductionAllocation[]
   productionOutwards    ProductionOutward[]
   productionInwards     ProductionInward[]
+  processBills          ProcessBill[]
 }
 
 model UserOnBranch {
@@ -221,6 +222,8 @@ model User {
   productionOutwardsUpdatedBy    ProductionOutward[]    @relation("updatedBy")
   productionInwardsCreatedBy     ProductionInward[]     @relation("InwardCreatedBy")
   productionInwardsUpdatedBy     ProductionInward[]     @relation("InwardUpdatedBy")
+  processBillsCreatedBy              ProcessBill[]          @relation(name: "createdBy")
+  processBillsUpdatedBy              ProcessBill[]          @relation(name: "updatedBy")
 }
 
 model Employee {
@@ -484,6 +487,7 @@ model Party {
 
   productionAllocationDtls ProductionAllocationDtl[]
   productionInwards        ProductionInward[]
+  processBills              ProcessBill[]
 }
 
 model PartyBranch {
@@ -1152,6 +1156,7 @@ model TaxTemplate {
   purchaseInwards     PurchaseInward[]
   productionInwards   ProductionInward[]
   proformaInvoices    ProformaInvoice[]
+  processBills        ProcessBill[]
 }
 
 model TaxTemplateDetails {
@@ -1867,6 +1872,7 @@ model Process {
   productionOutwardDtlsPrevProcess ProductionOutwardDtl[]    @relation("prevProcess")
   productionInwardDtls             ProductionInwardDtl[]
   inwardProcessDtls                InwardProcessDtl[]
+  billingProcesses                 BillingProcess[]
 }
 
 model ProcessGroup {
@@ -2003,6 +2009,7 @@ model JobCard {
   productionOutwards    ProductionOutward[]
   productionInwards     ProductionInward[]
   productionInwardDtls  ProductionInwardDtl[]
+  processBillDtls       ProcessBillDtl[]
 }
 
 model BoardQuality {
@@ -2393,6 +2400,7 @@ model ProductionInward {
   taxTemplateId       Int?
 
   inwardDetails ProductionInwardDtl[]
+  processBillDtls ProcessBillDtl[]
 }
 
 model ProductionInwardDtl {
@@ -2424,4 +2432,54 @@ model InwardProcessDtl {
   ProductionInwardDtl   ProductionInwardDtl @relation(fields: [productionInwardDtlId], references: [id], onDelete: Cascade)
   processId             Int?
   Process               Process?            @relation(fields: [processId], references: [id])
+}
+
+model ProcessBill {
+  id            Int          @id @default(autoincrement())
+  docId         String
+  docDate       DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  createdById   Int?
+  createdBy     User?        @relation("createdBy", fields: [createdById], references: [id])
+  updatedById   Int?
+  updatedBy     User?        @relation("updatedBy", fields: [updatedById], references: [id])
+  supplierId    Int?
+  Supplier      Party?       @relation(fields: [supplierId], references: [id])
+  remarks       String?
+  Branch        Branch?      @relation(fields: [branchId], references: [id])
+  branchId      Int?
+  netBillValue  Float?
+  discountType  String?
+  discountValue Float?
+  TaxTemplate   TaxTemplate? @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
+  taxTemplateId Int?
+
+  processBillDtls ProcessBillDtl[]
+}
+
+model ProcessBillDtl {
+  id                 Int               @id @default(autoincrement())
+  processBilldId     Int
+  ProcessBill        ProcessBill       @relation(fields: [processBilldId], references: [id], onDelete: Cascade)
+  acceptedQty        Float?
+  billedQty          Float?
+  price              Float?
+  discountType       String?
+  discountValue      Float?
+  taxPercent         Float?
+  jobCardId          Int?
+  JobCard            JobCard?          @relation(fields: [jobCardId], references: [id])
+  productionInwardId Int?
+  ProductionInward   ProductionInward? @relation(fields: [productionInwardId], references: [id])
+  
+  billingProcesses BillingProcess[]
+}
+
+model BillingProcess {
+  id               Int            @id @default(autoincrement())
+  processBillDtlId Int
+  ProcessBillDtl   ProcessBillDtl @relation(fields: [processBillDtlId], references: [id], onDelete: Cascade)
+  processId        Int?
+  Process          Process?       @relation(fields: [processId], references: [id])
 }

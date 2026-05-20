@@ -69,4 +69,4 @@ export const NOTIFICATION_API = "notification";
 export const MACHINE_API = "machine";
 export const PRODUCTION_OUTWARD_API = "productionOutward";
 export const PRODUCTION_INWARD_API = "productionInward";
-export const VENDOR_BILL_API = "vendorBill";
+export const PROCESS_BILL_API = "processBill";

@@ -8,9 +8,9 @@ import FormReportTable from "../../../Basic/components/Reuseable/FormReportTable
 // ─── Column definitions ───────────────────────────────────────────────────────
 
 const COLUMNS = [
-    { key: "docId", label: "Inward No", width: "w-32" },
+    { key: "docId", label: "Receipt No", width: "w-32" },
     {
-        key: "docDate", label: "Inward Date", width: "w-32",
+        key: "docDate", label: "Receipt Date", width: "w-32",
         render: (row) => getDateFromDateTimeToDisplay(row.docDate)
     },
     {

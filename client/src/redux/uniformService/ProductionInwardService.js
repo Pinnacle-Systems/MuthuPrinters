@@ -45,6 +45,19 @@ const ProductionInwardApi = createApi({
       },
       providesTags: ["productionInward"],
     }),
+    getProductionInwardJobCardDtls: builder.query({
+      query: ({ params }) => {
+        return {
+          url: `${PRODUCTION_INWARD_API}/getInwardJobCardDtls`,
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+          params,
+        };
+      },
+      providesTags: ["productionInward"],
+    }),
     addProductionInward: builder.mutation({
       query: (payload) => ({
         url: PRODUCTION_INWARD_API,
@@ -80,6 +93,7 @@ const ProductionInwardApi = createApi({
 export const {
   useGetProductionInwardQuery,
   useGetProductionInwardByIdQuery,
+  useGetProductionInwardJobCardDtlsQuery,
   useLazyGetProductionInwardByIdQuery,
   useAddProductionInwardMutation,
   useUpdateProductionInwardMutation,

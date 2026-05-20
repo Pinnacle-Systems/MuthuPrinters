@@ -73,6 +73,7 @@ import {
   machine,
   productionOutward,
   productionInward,
+  processBill,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -178,6 +179,7 @@ app.use("/notification", notification);
 app.use("/machine", machine);
 app.use("/productionOutward", productionOutward);
 app.use("/productionInward", productionInward);
+app.use("/processBill", processBill);
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;

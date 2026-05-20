@@ -228,7 +228,7 @@ async function getOne(id) {
 
       inwardDetails: {
         include: {
-          Process: true,
+          inwardProcessDtls: true,
 
           ProductionOutwardDtl: true,
         },
@@ -248,6 +248,141 @@ async function getOne(id) {
 
       status: getProductionInwardStatus(data),
     },
+  };
+}
+
+async function getInwardJobCardDtls(req) {
+  const {
+    supplierId,
+    pagination,
+    searchJobCard,
+    searchDocId,
+    searchDocDate,
+    processId,
+  } = req.query;
+
+  let data = [];
+
+  const inwardedData = await prisma.processBillDtl.findMany({
+    where: {
+      productionInwardId: {
+        not: null,
+      },
+    },
+
+    select: {
+      productionInwardId: true,
+    },
+  });
+
+  const billedInwardIds = [
+    ...new Set(
+      inwardedData.map((item) => item.productionInwardId).filter(Boolean),
+    ),
+  ];
+
+  const whereCondition = {
+    ProductionInward: {
+      supplierId: supplierId ? parseInt(supplierId) : undefined,
+
+      docId: searchDocId ? { contains: searchDocId } : undefined,
+
+      docDate: searchDocDate
+        ? {
+            gte: moment
+              .utc(searchDocDate, "DD-MM-YYYY")
+              .startOf("day")
+              .toDate(),
+            lte: moment.utc(searchDocDate, "DD-MM-YYYY").endOf("day").toDate(),
+          }
+        : undefined,
+
+      JobCard: {
+        docId: searchJobCard ? { contains: searchJobCard } : undefined,
+      },
+    },
+    productionInwardId: {
+      notIn: billedInwardIds,
+    },
+
+  };
+
+  data = await prisma.productionInwardDtl.findMany({
+    where: whereCondition,
+
+    include: {
+      ProductionInward: {
+        select: {
+          id: true,
+          docId: true,
+          docDate: true,
+          supplierId: true,
+
+          Supplier: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+
+          JobCard: {
+            select: {
+              id: true,
+              docId: true,
+            },
+          },
+        },
+      },
+      JobCard:{
+        select:{
+          id:true,
+          docId:true,
+        }
+      },
+        inwardProcessDtls: true
+
+    },
+
+    orderBy: {
+      id: "desc",
+    },
+  });
+
+  // Group by productionOutwardId
+  // const groupedData = Object.values(
+  //   data.reduce((acc, item) => {
+  //     const key = item.productionInwardId;
+
+  //     if (!acc[key]) {
+  //       acc[key] = {
+  //         id: item.id,
+  //         productionInwardId: item.productionInwardId,
+
+  //         // combine process ids here
+  //         processes: item.processId ? [item.processId] : [],
+
+  //         acceptedQty: item.acceptedQty,
+  //         sequence: item.sequence,
+  //         prevProcessId: item.prevProcessId,
+
+  //         ProductionInward: item.ProductionInward,
+  //         jobCardId: item.jobCardId,
+  //       };
+  //     } else {
+  //       // push additional process ids
+  //       if (item.processId && !acc[key].processes.includes(item.processId)) {
+  //         acc[key].processes.push(item.processId);
+  //       }
+  //     }
+
+  //     return acc;
+  //   }, {}),
+  // );
+
+  return {
+    statusCode: 0,
+    data,
+    totalCount: data.length,
   };
 }
 
@@ -353,7 +488,7 @@ async function create(body) {
               parseFloat(item.receivedQty || 0) -
               parseFloat(item.wastageQty || 0),
 
-            processId: item.processId ? parseInt(item.processId) : null,
+            // processId: item.processId ? parseInt(item.processId) : null,
 
             price: item.price ? parseFloat(item.price) : null,
 
@@ -370,6 +505,12 @@ async function create(body) {
             productionOutwardId: item.productionOutwardId
               ? parseInt(item.productionOutwardId)
               : null,
+
+            inwardProcessDtls: {
+              create: (item.processes || []).map((processId) => ({
+                processId: parseInt(processId),
+              })),
+            },
           })),
         },
       },
@@ -578,7 +719,7 @@ async function update(id, body) {
               parseFloat(item.receivedQty || 0) -
               parseFloat(item.wastageQty || 0),
 
-            processId: item.processId ? parseInt(item.processId) : null,
+            // processId: item.processId ? parseInt(item.processId) : null,
 
             price: item.price ? parseFloat(item.price) : null,
 
@@ -589,10 +730,27 @@ async function update(id, body) {
               : null,
 
             taxPercent: item.taxPercent ? parseFloat(item.taxPercent) : null,
+            jobCardId: item.jobCardId ? parseInt(item.jobCardId) : null,
+
+            productionOutwardId: item.productionOutwardId
+              ? parseInt(item.productionOutwardId)
+              : null,
           },
         });
+        await tx.inwardProcessDtl.deleteMany({
+          where: {
+            productionInwardDtlId: parseInt(item.id),
+          },
+        });
+
+        await tx.inwardProcessDtl.createMany({
+          data: (item.processes || []).map((processId) => ({
+            productionInwardDtlId: parseInt(item.id),
+            processId: parseInt(processId),
+          })),
+        });
       } else {
-        await tx.productionInwardDtl.create({
+        const createdDtl = await tx.productionInwardDtl.create({
           data: {
             productionInwardId: parseInt(id),
 
@@ -608,7 +766,7 @@ async function update(id, body) {
               parseFloat(item.receivedQty || 0) -
               parseFloat(item.wastageQty || 0),
 
-            processId: item.processId ? parseInt(item.processId) : null,
+            // processId: item.processId ? parseInt(item.processId) : null,
 
             price: item.price ? parseFloat(item.price) : null,
 
@@ -619,7 +777,18 @@ async function update(id, body) {
               : null,
 
             taxPercent: item.taxPercent ? parseFloat(item.taxPercent) : null,
+            jobCardId: item.jobCardId ? parseInt(item.jobCardId) : null,
+
+            productionOutwardId: item.productionOutwardId
+              ? parseInt(item.productionOutwardId)
+              : null,
           },
+        });
+        await tx.inwardProcessDtl.createMany({
+          data: (item.processes || []).map((processId) => ({
+            productionInwardDtlId: createdDtl.id,
+            processId: parseInt(processId),
+          })),
         });
       }
     }
@@ -728,4 +897,4 @@ async function remove(id) {
   };
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove , getInwardJobCardDtls};

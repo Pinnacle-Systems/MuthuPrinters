@@ -437,7 +437,7 @@ const ProductionOutwardForm = ({
                     showConfirmButton: false,
                     timer: 2000,
                     didClose: () => {
-                        dispatchInvalidate();
+                        // dispatchInvalidate();
                         invalidateJobCardModule();
                         if (returnData.statusCode === 0) {
                             if (nextProcess === "new") {
@@ -567,8 +567,8 @@ const ProductionOutwardForm = ({
                         Basic Details
                     </p>
                     <div className="flex gap-2 w-full">
-                        <TextInput name="Outward No" value={docId} disabled />
-                        <DateInputNew name="Outward Date" value={docDate} setValue={setDocDate} disabled required type="date" />
+                        <TextInput name=" Process Issue No" value={docId} disabled />
+                        <DateInputNew name="Process Issue Date" value={docDate} setValue={setDocDate} disabled required type="date" />
                     </div>
                 </div>
 
@@ -679,7 +679,7 @@ const ProductionOutwardForm = ({
 
     return (
         <TransactionLayout
-            title="Production Outward"
+            title="Process Issue"
             badge={<ModeChip id={id} readOnly={readOnly} />}
             closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
             onClose={onClose}

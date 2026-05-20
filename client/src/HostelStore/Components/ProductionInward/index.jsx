@@ -10,6 +10,7 @@ import ProductionInwardReport from "./ProductionInwardReport.jsx";
 import ProductionInwardForm from "./ProductionInwardForm.jsx";
 import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
 import { UserPermissions } from "../../../Utils/UserPermissions.js";
+import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -41,7 +42,9 @@ const index = () => {
             if (!window.confirm("Are you sure to delete...?")) return;
             try {
                 let deldata = await removeData(id).unwrap();
-                dispatchInvalidate();
+                // dispatchInvalidate();
+                invalidateJobCardModule();
+
                 if (deldata?.statusCode == 1) {
                     Swal.fire({
                         icon: "error",
@@ -91,7 +94,7 @@ const index = () => {
                 <div className="flex flex-col sm:flex-row justify-between bg-white py-1 px-1 items-start sm:items-center mb-4 gap-x-4 rounded-tl-lg rounded-tr-lg shadow-sm border border-gray-200">
                     <div>
                         <h1 className="text-lg font-bold text-gray-800">
-                            Production Inward Report
+                            Process Receipt Report
                         </h1>
                     </div>
                     <div className="flex items-center gap-2">

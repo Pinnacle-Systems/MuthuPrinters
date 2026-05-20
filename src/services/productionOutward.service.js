@@ -8,6 +8,7 @@ import {
 } from "../utils/helper.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
+import moment from "moment";
 
 async function getNextDocId(branchId, shortCode, startTime, endTime) {
   let lastObject = await prisma.productionOutward.findFirst({
@@ -19,13 +20,13 @@ async function getNextDocId(branchId, shortCode, startTime, endTime) {
 
   const branchObj = await getTableRecordWithId(branchId, "branch");
 
-  let newDocId = `${branchObj.branchCode}/${shortCode}/POUT/1`;
+  let newDocId = `${branchObj.branchCode}/${shortCode}/PIS/1`;
 
   if (lastObject) {
     const parts = lastObject.docId.split("/");
     const lastNum = parseInt(parts.at(-1));
     if (!isNaN(lastNum)) {
-      newDocId = `${branchObj.branchCode}/${shortCode}/POUT/${lastNum + 1}`;
+      newDocId = `${branchObj.branchCode}/${shortCode}/PIS/${lastNum + 1}`;
     }
   }
 
@@ -132,6 +133,24 @@ async function getOutwardJobCardDtls(req) {
 
   let data = [];
 
+  const inwardedData = await prisma.productionInwardDtl.findMany({
+    where: {
+      productionOutwardId: {
+        not: null,
+      },
+    },
+
+    select: {
+      productionOutwardId: true,
+    },
+  });
+
+  const inwardedOutwardIds = [
+    ...new Set(
+      inwardedData.map((item) => item.productionOutwardId).filter(Boolean),
+    ),
+  ];
+
   const whereCondition = {
     ProductionOutward: {
       supplierId: supplierId ? parseInt(supplierId) : undefined,
@@ -140,14 +159,20 @@ async function getOutwardJobCardDtls(req) {
 
       docDate: searchDocDate
         ? {
-            gte: new Date(searchDocDate + "T00:00:00.000Z"),
-            lte: new Date(searchDocDate + "T23:59:59.999Z"),
+            gte: moment
+              .utc(searchDocDate, "DD-MM-YYYY")
+              .startOf("day")
+              .toDate(),
+            lte: moment.utc(searchDocDate, "DD-MM-YYYY").endOf("day").toDate(),
           }
         : undefined,
 
       JobCard: {
         docId: searchJobCard ? { contains: searchJobCard } : undefined,
       },
+    },
+    productionOutwardId: {
+      notIn: inwardedOutwardIds,
     },
 
     processId: processId ? parseInt(processId) : undefined,
@@ -193,12 +218,41 @@ async function getOutwardJobCardDtls(req) {
     },
   });
 
-  console.log(data, "data");
+  // Group by productionOutwardId
+  const groupedData = Object.values(
+    data.reduce((acc, item) => {
+      const key = item.productionOutwardId;
+
+      if (!acc[key]) {
+        acc[key] = {
+          id: item.id,
+          productionOutwardId: item.productionOutwardId,
+
+          // combine process ids here
+          processes: item.processId ? [item.processId] : [],
+
+          sentQty: item.sentQty,
+          sequence: item.sequence,
+          prevProcessId: item.prevProcessId,
+          productionAllocationDtlId: item.productionAllocationDtlId,
+
+          ProductionOutward: item.ProductionOutward,
+        };
+      } else {
+        // push additional process ids
+        if (item.processId && !acc[key].processes.includes(item.processId)) {
+          acc[key].processes.push(item.processId);
+        }
+      }
+
+      return acc;
+    }, {}),
+  );
 
   return {
     statusCode: 0,
-    data,
-    totalCount: data.length,
+    data: groupedData,
+    totalCount: groupedData.length,
   };
 }
 

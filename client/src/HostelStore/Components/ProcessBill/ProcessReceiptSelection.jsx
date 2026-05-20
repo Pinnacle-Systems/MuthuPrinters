@@ -2,47 +2,49 @@ import { findFromList, getDateFromDateTimeToDisplay } from "../../../Utils/helpe
 
 const EMPTY_ROW = {
     processId: "",
-    outwardDetailId: "",
-    receivedQty: "",
-    wastageQty: "",
+    inwardDetailId: "",
     acceptedQty: "",
     jobCardId: "",
-    productionOutwardId: "",
+    productionInwardId: "",
 };
 
 // ─── Selection helpers ─────────────────────────────────────────────────────────
 
-function buildInwardRow(outwardDtl) {
+function buildInwardRow(inwardDtl) {
     return {
         ...EMPTY_ROW,
-        outwardDetailId: outwardDtl.id,
-        productionOutwardId: outwardDtl.productionOutwardId,
-        jobCardId: outwardDtl?.ProductionOutward?.JobCard?.id ?? "",
-        processes: outwardDtl.processes ?? "",
-        receivedQty: outwardDtl?.sentQty ?? "",
-        acceptedQty: outwardDtl?.sentQty ?? "",
-        // carry display info so the grid can show process name without refetch
-        _processName: outwardDtl.Process?.name ?? "",
-        _sentQty: outwardDtl.sentQty ?? "",
+
+        inwardDetailId: inwardDtl.id,
+
+        productionInwardId: inwardDtl.productionInwardId,
+
+        jobCardId: inwardDtl?.JobCard?.id ?? "",
+
+        processes:
+            inwardDtl?.inwardProcessDtls
+                ?.map((p) => p.processId)
+                .filter(Boolean) || [],
+
+        acceptedQty: inwardDtl?.acceptedQty ?? "",
     };
 }
 
-function isSelected(inwardDetails, outwardDtlId) {
-    return inwardDetails.some(
-        (r) => parseInt(r.outwardDetailId) === parseInt(outwardDtlId),
+function isSelected(billDetails, inwardDtlId) {
+    return billDetails.some(
+        (r) => parseInt(r.inwardDetailId) === parseInt(inwardDtlId),
     );
 }
 
-function addRow(setInwardDetails, outwardDtl) {
-    setInwardDetails((prev) => {
+function addRow(setBillDetails, inwardDtl) {
+    setBillDetails((prev) => {
         const already = prev.some(
-            (r) => parseInt(r.outwardDetailId) === parseInt(outwardDtl.id),
+            (r) => parseInt(r.inwardDetailId) === parseInt(inwardDtl.id),
         );
         if (already) return prev;
 
         const rows = structuredClone(prev);
-        const newRow = buildInwardRow(outwardDtl);
-        const emptyIdx = rows.findIndex((r) => !r.outwardDetailId && !r.processId);
+        const newRow = buildInwardRow(inwardDtl);
+        const emptyIdx = rows.findIndex((r) => !r.inwardDetailId && !r.processId);
 
         if (emptyIdx !== -1) {
             rows[emptyIdx] = newRow;
@@ -53,10 +55,10 @@ function addRow(setInwardDetails, outwardDtl) {
     });
 }
 
-function removeRow(setInwardDetails, outwardDtlId) {
-    setInwardDetails((prev) => {
+function removeRow(setBillDetails, inwardDtlId) {
+    setBillDetails((prev) => {
         const updated = prev.filter(
-            (r) => parseInt(r.outwardDetailId) !== parseInt(outwardDtlId),
+            (r) => parseInt(r.inwardDetailId) !== parseInt(inwardDtlId),
         );
         // keep at least 5 empty rows
         while (updated.length < 5) updated.push({ ...EMPTY_ROW });
@@ -64,51 +66,51 @@ function removeRow(setInwardDetails, outwardDtlId) {
     });
 }
 
-function toggleRow(inwardDetails, setInwardDetails, outwardDtl) {
-    if (isSelected(inwardDetails, outwardDtl.id)) {
-        removeRow(setInwardDetails, outwardDtl.id);
+function toggleRow(billDetails, setBillDetails, inwardDtl) {
+    if (isSelected(billDetails, inwardDtl.id)) {
+        removeRow(setBillDetails, inwardDtl.id);
     } else {
-        addRow(setInwardDetails, outwardDtl);
+        addRow(setBillDetails, inwardDtl);
     }
 }
 
-function isGroupAllSelected(inwardDetails, groupRows) {
-    return groupRows.length > 0 && groupRows.every((r) => isSelected(inwardDetails, r.id));
+function isGroupAllSelected(billDetails, groupRows) {
+    return groupRows.length > 0 && groupRows.every((r) => isSelected(billDetails, r.id));
 }
 
-function toggleGroup(inwardDetails, setInwardDetails, groupRows, select) {
+function toggleGroup(billDetails, setBillDetails, groupRows, select) {
     groupRows.forEach((row) => {
         if (select) {
-            addRow(setInwardDetails, row);
+            addRow(setBillDetails, row);
         } else {
-            removeRow(setInwardDetails, row.id);
+            removeRow(setBillDetails, row.id);
         }
     });
 }
 
-function isAllSelected(inwardDetails, tempItems) {
-    return tempItems.length > 0 && tempItems.every((r) => isSelected(inwardDetails, r.id));
+function isAllSelected(billDetails, tempItems) {
+    return tempItems.length > 0 && tempItems.every((r) => isSelected(billDetails, r.id));
 }
 
-function toggleAll(inwardDetails, setInwardDetails, tempItems, select) {
+function toggleAll(billDetails, setBillDetails, tempItems, select) {
     tempItems.forEach((row) => {
         if (select) {
-            addRow(setInwardDetails, row);
+            addRow(setBillDetails, row);
         } else {
-            removeRow(setInwardDetails, row.id);
+            removeRow(setBillDetails, row.id);
         }
     });
 }
 
-// ─── Group tempItems by productionOutwardId ────────────────────────────────────
+// ─── Group tempItems by productionInwardId ────────────────────────────────────
 
 function groupByOutward(tempItems) {
     const map = new Map();
     for (const item of tempItems) {
-        const outwardId = item.ProductionOutward?.id;
+        const outwardId = item.ProductionInward?.id;
         if (!map.has(outwardId)) {
             map.set(outwardId, {
-                outward: item.ProductionOutward,
+                outward: item.ProductionInward,
                 rows: [],
             });
         }
@@ -119,9 +121,9 @@ function groupByOutward(tempItems) {
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-const ProductionOutwardSelection = ({
-    inwardDetails = [],
-    setInwardDetails,
+const ProcessReceiptSelection = ({
+    billDetails = [],
+    setBillDetails,
     tempItems = [],
     onClose,
     searchDocId,
@@ -133,24 +135,24 @@ const ProductionOutwardSelection = ({
     processList = [],
 }) => {
     const groups = groupByOutward(tempItems);
-    const allSelected = isAllSelected(inwardDetails, tempItems);
+    const allSelected = isAllSelected(billDetails, tempItems);
 
     return (
         <div className="h-full flex flex-col bg-[#f1f1f0]">
             {/* ── Header ── */}
             <div className="border-b py-2 px-4 mx-3 flex justify-between items-center sticky top-0 z-10 bg-white mt-3">
                 <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
-                    Production Outward Items
+                    Process Receipt Items
                 </h2>
                 <button
                     type="button"
                     onClick={() => {
                         onClose();
-                        setTimeout(() => {
-                            const first = document.querySelector("#receivedQty-input-0");
-                            first?.focus();
-                            first?.select();
-                        }, 100);
+                        // setTimeout(() => {
+                        //     const first = document.querySelector("#acceptedQty-input-0");
+                        //     first?.focus();
+                        //     first?.select();
+                        // }, 100);
                     }}
                     className="px-3 py-1 hover:bg-green-600 hover:text-white rounded text-green-600
                                border border-green-600 flex items-center gap-1 text-xs"
@@ -175,7 +177,7 @@ const ProductionOutwardSelection = ({
                                                 className="cursor-pointer"
                                                 checked={allSelected}
                                                 onChange={(e) =>
-                                                    toggleAll(inwardDetails, setInwardDetails, tempItems, e.target.checked)
+                                                    toggleAll(billDetails, setBillDetails, tempItems, e.target.checked)
                                                 }
                                             />
                                         </div>
@@ -184,7 +186,7 @@ const ProductionOutwardSelection = ({
 
                                     {/* Outward No with search */}
                                     <th className="px-1 py-1 border border-gray-300 text-center text-xs w-24">
-                                        <div>Process Issue No</div>
+                                        <div>Process Receipt No</div>
                                         <input
                                             type="text"
                                             className="text-black h-5 w-full px-1 focus:outline-none border border-gray-400 rounded-md"
@@ -197,7 +199,7 @@ const ProductionOutwardSelection = ({
 
                                     {/* Outward Date with search */}
                                     <th className="px-1 py-1 border border-gray-300 text-center text-xs w-24">
-                                        <div>Process Issue Date</div>
+                                        <div>Process Receipt Date</div>
                                         <input
                                             type="text"
                                             className="text-black h-5 w-full px-1 focus:outline-none border border-gray-400 rounded-md"
@@ -222,7 +224,7 @@ const ProductionOutwardSelection = ({
                                     </th>
 
                                     <th className="px-1 py-1 border border-gray-300 text-center text-xs w-40">Process</th>
-                                    <th className="px-1 py-1 border border-gray-300 text-center text-xs w-20">Sent Qty</th>
+                                    <th className="px-1 py-1 border border-gray-300 text-center text-xs w-20">Accepted Qty</th>
                                 </tr>
                             </thead>
 
@@ -230,17 +232,17 @@ const ProductionOutwardSelection = ({
                                 {groups.length === 0 ? (
                                     <tr>
                                         <td colSpan={7} className="py-6 text-center text-gray-400 text-sm">
-                                            No Issue records found
+                                            No Receipt records found
                                         </td>
                                     </tr>
                                 ) : (
                                     groups.map(({ outward, rows }, groupIdx) => {
-                                        const groupAllSelected = isGroupAllSelected(inwardDetails, rows);
+                                        const groupAllSelected = isGroupAllSelected(billDetails, rows);
                                         return (
                                             <>
-                                                {/* ── Detail rows (one per OutwardDtl / process) ── */}
+                                                {/* ── Detail rows (one per inwardDtl / process) ── */}
                                                 {rows.map((row, rowIdx) => {
-                                                    const selected = isSelected(inwardDetails, row.id);
+                                                    const selected = isSelected(billDetails, row.id);
                                                     const globalIdx = groups
                                                         .slice(0, groupIdx)
                                                         .reduce((acc, g) => acc + g.rows.length, 0) + rowIdx;
@@ -254,7 +256,7 @@ const ProductionOutwardSelection = ({
                                                                     ? "bg-white hover:bg-gray-50"
                                                                     : "bg-gray-50 hover:bg-gray-100"
                                                                 }`}
-                                                            onClick={() => toggleRow(inwardDetails, setInwardDetails, row)}
+                                                            onClick={() => toggleRow(billDetails, setBillDetails, row)}
                                                         >
                                                             {/* Row checkbox */}
                                                             <td
@@ -266,7 +268,7 @@ const ProductionOutwardSelection = ({
                                                                     className="cursor-pointer"
                                                                     checked={selected}
                                                                     onChange={() =>
-                                                                        toggleRow(inwardDetails, setInwardDetails, row)
+                                                                        toggleRow(billDetails, setBillDetails, row)
                                                                     }
                                                                 />
                                                             </td>
@@ -281,20 +283,20 @@ const ProductionOutwardSelection = ({
                                                                 {getDateFromDateTimeToDisplay(outward?.docDate)}
                                                             </td>
                                                             <td className="border border-gray-300 px-2 py-1 text-center">
-                                                                {outward?.JobCard?.docId}
+                                                                {row?.JobCard?.docId}
                                                             </td>
                                                             <td className="border border-gray-300 px-2 py-1">
                                                                 {/* {row.Process?.name ?? "—"} */}
                                                                 {
-                                                                    row.processes
-                                                                        ?.map((id) => findFromList(id, processList?.data, "name"))
+                                                                    row.inwardProcessDtls
+                                                                        ?.map((item) => findFromList(item.processId, processList?.data, "name"))
                                                                         .filter(Boolean)
                                                                         .join(" + ")
                                                                 }
                                                             </td>
                                                             <td className="border border-gray-300 px-2 py-1 text-right">
-                                                                {row.sentQty != null
-                                                                    ? parseFloat(row.sentQty).toFixed(2)
+                                                                {row.acceptedQty != null
+                                                                    ? parseFloat(row.acceptedQty).toFixed(2)
                                                                     : "—"}
                                                             </td>
                                                         </tr>
@@ -313,4 +315,4 @@ const ProductionOutwardSelection = ({
     );
 };
 
-export default ProductionOutwardSelection;
+export default ProcessReceiptSelection;
