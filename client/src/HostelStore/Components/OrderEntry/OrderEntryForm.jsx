@@ -62,7 +62,8 @@ const OrderEntryForm = ({
     branchList,
     canApprove,
     userData,
-    branchData
+    branchData,
+    hasPermission,
 }) => {
     const today = new Date();
     const [docDate, setDocDate] = useState(
@@ -1353,7 +1354,7 @@ const OrderEntryForm = ({
                                     (readOnly && (
                                         <button
                                             className="bg-yellow-600 text-white px-4 py-1 rounded hover:bg-yellow-700 flex items-center text-xs"
-                                            onClick={() => setReadOnly(false)}
+                                            onClick={() => hasPermission(() => setReadOnly(false), "edit")}
                                             disabled={isDisabled}
                                         >
                                             <FiEdit2 className="w-4 h-4 mr-2" />

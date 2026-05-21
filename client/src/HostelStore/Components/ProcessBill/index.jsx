@@ -10,6 +10,8 @@ import { UserPermissions } from "../../../Utils/UserPermissions.js";
 import { useDeleteProcessBillMutation } from "../../../redux/uniformService/ProcessBillService.js";
 import ProcessBillReport from "./ProcessBillReport.jsx";
 import ProcessBillForm from "./ProcessBillForm.jsx";
+import Swal from "sweetalert2";
+import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -41,7 +43,8 @@ const index = () => {
             if (!window.confirm("Are you sure to delete...?")) return;
             try {
                 let deldata = await removeData(id).unwrap();
-                dispatchInvalidate();
+                // dispatchInvalidate();
+                invalidateJobCardModule();
                 if (deldata?.statusCode == 1) {
                     Swal.fire({
                         icon: "error",

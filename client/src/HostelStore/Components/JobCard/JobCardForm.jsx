@@ -38,7 +38,7 @@ const JobCardForm = ({
     onClose, id, setId, readOnly, setReadOnly,
     customerList, gsmList, plateList, dieList, branchData,
     formOrderCustomerId, fromOrderId, fromOrderType, fromOrderQty,
-    canApprove, userData, employeeList
+    canApprove, userData, employeeList,hasPermission,
 }) => {
     const today = new Date();
     const [docDate, setDocDate] = useState(moment.utc(today).format("YYYY-MM-DD"));
@@ -1065,14 +1065,14 @@ const JobCardForm = ({
                 </div>
                 <div className="flex gap-2">
                     {id && readOnly && (
-                        <button disabled={status === "PENDING" && !canApprove} onClick={() => setReadOnly(false)}
+                        <button disabled={status === "PENDING" && !canApprove} onClick={() => hasPermission(() => setReadOnly(false), "edit")}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                     e.preventDefault()
-                                    setReadOnly(false)
+                                    hasPermission(() => setReadOnly(false), "edit")
                                 }
                             }}
-                            className="bg-amber-500 text-white px-3 py-1.5 rounded hover:bg-amber-600 flex items-center gap-1.5 text-xs font-medium">
+                            className="bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 flex items-center gap-1.5 text-xs font-medium">
                             <FiEdit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                     )}

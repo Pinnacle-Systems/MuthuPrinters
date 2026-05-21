@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { findFromList } from "../../../Utils/helper";
 import Modal from "../../../UiComponents/Modal";
 import ProcessReceiptSelection from "./ProcessReceiptSelection";
@@ -17,7 +17,8 @@ export const makeEmptyRow = () => ({
     taxPercent: "",
     jobCardId: "",
     productionInwardId: "",
-    processes: []
+    processes: [],
+    acceptedQty: "",
 });
 
 const BillDetails = ({
@@ -46,6 +47,7 @@ const BillDetails = ({
     const [fillGrid, setFillGrid] = useState(false);
     const [focusedField, setFocusedField] = useState(null);
     const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
+    const actionRefs = useRef([]);
 
     const deleteMainRow = (index) =>
         setBillDetails((prev) => prev.filter((_, i) => i !== index));
@@ -58,24 +60,22 @@ const BillDetails = ({
             const rows = [...prev];
             let row = { ...rows[index], [field]: value };
 
-            // // Auto-calculate acceptedQty = receivedQty - wastageQty
-            // if (field === "receivedQty" || field === "wastageQty") {
-            //     const received = field === "receivedQty" ? Number(value) || 0 : Number(row.receivedQty) || 0;
-            //     const wastage = field === "wastageQty" ? Number(value) || 0 : Number(row.wastageQty) || 0;
-            //     if (wastage > received) {
-            //         Swal.fire({
-            //             icon: "warning",
-            //             title: "Invalid Wastage Qty",
-            //             text: "Wastage Qty cannot exceed Received Qty",
-            //             confirmButtonColor: "#3085d6",
-            //         });
+            // Auto-calculate acceptedQty = receivedQty - wastageQty
+            if (field === "billedQty") {
+                const accepted = field === "acceptedQty" ? Number(value) || 0 : Number(row.acceptedQty) || 0;
+                const billed = field === "billedQty" ? Number(value) || 0 : Number(row.billedQty) || 0;
+                if (billed > accepted) {
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Invalid Billed Qty",
+                        text: "Billed Qty cannot exceed Accepted Qty",
+                        confirmButtonColor: "#3085d6",
+                    });
 
-            //         row.wastageQty = "";
-            //         row.acceptedQty = received;
-            //     } else {
-            //         row.acceptedQty = received - wastage;
-            //     }
-            // }
+                    row.billedQty = "";
+                    row.acceptedQty = accepted;
+                }
+            }
 
             rows[index] = row;
             return rows;
@@ -90,6 +90,13 @@ const BillDetails = ({
 
     let sNo = 0;
 
+    const focusActionCell = (index) => {
+        const nextIndex = index + 1;
+        setTimeout(() => {
+            actionRefs.current[nextIndex]?.focus();
+        }, 200); // wait for modal close render
+    };
+
     return (
         <>
             <Modal
@@ -97,13 +104,13 @@ const BillDetails = ({
                 onClose={() => {
                     setFillGrid(false);
 
-                    // setTimeout(() => {
-                    //     const firstInput = document.querySelector("#acceptedQty-input-0");
-                    //     if (firstInput) {
-                    //         firstInput.focus();
-                    //         firstInput.select(); // optional UX 🔥
-                    //     }
-                    // }, 100); // small delay important
+                    setTimeout(() => {
+                        const firstInput = document.querySelector("#billedQty-input-0");
+                        if (firstInput) {
+                            firstInput.focus();
+                            firstInput.select(); // optional UX 🔥
+                        }
+                    }, 100); // small delay important
                 }}
                 widthClass={"w-[75%] h-[85%]"}
             >
@@ -116,7 +123,16 @@ const BillDetails = ({
                     setSearchDocId={setSearchDocId}
                     setSearchDocDate={setSearchDocDate}
                     searchDocDate={searchDocDate}
-                    onClose={() => setFillGrid(false)}
+                    onClose={() => {
+                        setFillGrid(false)
+                        setTimeout(() => {
+                            const firstInput = document.querySelector("#billedQty-input-0");
+                            if (firstInput) {
+                                firstInput.focus();
+                                firstInput.select(); // optional UX 🔥
+                            }
+                        }, 100);
+                    }}
                     searchJobCard={searchJobCard}
                     setSearchJobCard={setSearchJobCard}
                     processList={processList}
@@ -135,6 +151,7 @@ const BillDetails = ({
                     handleInputChange={handleInputChange}
                     id={id}
                     isSupplierOutside={isSupplierOutside}
+                    onCloseFocus={focusActionCell}
                 />
             </Modal>
             <div className="bg-white p-1 h-full">
@@ -250,7 +267,7 @@ const BillDetails = ({
                                             <input
                                                 type="number"
                                                 min="0"
-                                                className={`w-full text-right px-1 text-[11px] outline-none h-7 ${isDisabled
+                                                className={`w-full text-right px-1 text-[11px] outline-none ${isDisabled
                                                     ? " text-gray-400 cursor-not-allowed"
                                                     : "bg-transparent focus:bg-white"
                                                     }`}
@@ -271,9 +288,11 @@ const BillDetails = ({
                                         </td>
                                         <td className="border border-gray-300 text-[11px]">
                                             <input
+                                                id={`billedQty-input-${index}`}
+                                                ref={(el) => (actionRefs.current[index] = el)}
                                                 type="number"
                                                 min="0"
-                                                className={`w-full text-right px-1 text-[11px] outline-none h-7 ${isDisabled
+                                                className={`w-full text-right px-1 text-[11px] outline-none ${isDisabled
                                                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                                     : "bg-transparent focus:bg-white"
                                                     }`}
@@ -341,10 +360,10 @@ const BillDetails = ({
                                                 onFocus={(e) => e.target.select()}
                                                 className="text-right rounded px-1 w-full"
                                                 value={
-                                                    !row.acceptedQty || !row.price
+                                                    !row.billedQty || !row.price
                                                         ? 0.0
                                                         : (
-                                                            parseFloat(row.acceptedQty) *
+                                                            parseFloat(row.billedQty) *
                                                             parseFloat(row.price)
                                                         ).toFixed(2)
                                                 }
@@ -398,7 +417,7 @@ const BillDetails = ({
                                 <td className="text-right border border-gray-300 px-1 font-medium ">
                                     {billDetails
                                         ?.reduce((sum, row) => {
-                                            const qty = parseFloat(row.acceptedQty) || 0;
+                                            const qty = parseFloat(row.billedQty) || 0;
                                             const price = parseFloat(row.price) || 0;
                                             return sum + qty * price;
                                         }, 0)

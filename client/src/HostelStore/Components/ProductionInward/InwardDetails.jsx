@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { findFromList } from "../../../Utils/helper";
 import Modal from "../../../UiComponents/Modal";
 import ProductionOutwardSelection from "./ProductionOutsideSelection";
@@ -50,6 +50,7 @@ const InwardDetails = ({
     const [fillGrid, setFillGrid] = useState(false);
     const [focusedField, setFocusedField] = useState(null);
     const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
+    const actionRefs = useRef([]);
 
     const deleteMainRow = (index) =>
         setInwardDetails((prev) => prev.filter((_, i) => i !== index));
@@ -94,6 +95,13 @@ const InwardDetails = ({
 
     let sNo = 0;
 
+    const focusActionCell = (index) => {
+        const nextIndex = index + 1;
+        setTimeout(() => {
+            actionRefs.current[nextIndex]?.focus();
+        }, 200); // wait for modal close render
+    };
+
     return (
         <>
             <Modal
@@ -101,13 +109,13 @@ const InwardDetails = ({
                 onClose={() => {
                     setFillGrid(false);
 
-                    // setTimeout(() => {
-                    //     const firstInput = document.querySelector("#inwardQty-input-0");
-                    //     if (firstInput) {
-                    //         firstInput.focus();
-                    //         firstInput.select(); // optional UX 🔥
-                    //     }
-                    // }, 100); // small delay important
+                    setTimeout(() => {
+                        const firstInput = document.querySelector("#wastageQty-input-0");
+                        if (firstInput) {
+                            firstInput.focus();
+                            firstInput.select(); // optional UX 🔥
+                        }
+                    }, 100); // small delay important
                 }}
                 widthClass={"w-[75%] h-[85%]"}
             >
@@ -120,7 +128,16 @@ const InwardDetails = ({
                     setSearchDocId={setSearchDocId}
                     setSearchDocDate={setSearchDocDate}
                     searchDocDate={searchDocDate}
-                    onClose={() => setFillGrid(false)}
+                    onClose={() => {
+                        setFillGrid(false)
+                        setTimeout(() => {
+                            const firstInput = document.querySelector("#wastageQty-input-0");
+                            if (firstInput) {
+                                firstInput.focus();
+                                firstInput.select(); // optional UX 🔥
+                            }
+                        }, 100); // small delay important
+                    }}
                     searchJobCard={searchJobCard}
                     setSearchJobCard={setSearchJobCard}
                     processList={processList}
@@ -139,6 +156,7 @@ const InwardDetails = ({
                     handleInputChange={handleInputChange}
                     id={id}
                     isSupplierOutside={isSupplierOutside}
+                    onCloseFocus={focusActionCell}
                 />
             </Modal>
             <div className="bg-white p-1 h-full">
@@ -262,7 +280,7 @@ const InwardDetails = ({
                                             <input
                                                 type="number"
                                                 min="0"
-                                                className={`w-full text-right px-1 text-[11px] outline-none h-7 ${isDisabled
+                                                className={`w-full text-right px-1 text-[11px] outline-none ${isDisabled
                                                     ? " text-gray-400 cursor-not-allowed"
                                                     : "bg-transparent focus:bg-white"
                                                     }`}
@@ -283,9 +301,10 @@ const InwardDetails = ({
                                         </td>
                                         <td className="border border-gray-300 text-[11px]">
                                             <input
+                                                id={`wastageQty-input-${index}`}
                                                 type="number"
                                                 min="0"
-                                                className={`w-full text-right px-1 text-[11px] outline-none h-7 ${isDisabled
+                                                className={`w-full text-right px-1 text-[11px] outline-none ${isDisabled
                                                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                                     : "bg-transparent focus:bg-white"
                                                     }`}
@@ -312,6 +331,8 @@ const InwardDetails = ({
                                             receiptType === "Against Invoice" && (
                                                 <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
                                                     <input
+                                                        ref={(el) => (actionRefs.current[index] = el)}
+                                                        id={`price-input-${index}`}
                                                         onKeyDown={(e) => {
                                                             if (e.code === "Minus" || e.code === "NumpadSubtract")
                                                                 e.preventDefault();

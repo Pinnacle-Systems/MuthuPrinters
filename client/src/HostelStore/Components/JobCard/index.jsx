@@ -17,6 +17,7 @@ import { invalidateOrderEntryModule } from "../../../redux/Dispatch/OrderInvalid
 import { useIsApprover } from "../../../CustomHooks/userIsApprover.js";
 import { useGetEmployeeQuery } from "../../../redux/services/EmployeeMasterService.js";
 import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
+import { UserPermissions } from "../../../Utils/UserPermissions.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -26,6 +27,7 @@ const index = () => {
     const [fromOrderId, setFromOrderId] = useState("");
     const [fromOrderType, setFromOrderType] = useState("");
     const [fromOrderQty, setFromOrderQty] = useState("");
+    const { hasPermission } = UserPermissions();
 
     const dispatch = useDispatch();
     const { branchId, companyId, finYearId, userId } = getCommonParams();
@@ -137,6 +139,13 @@ const index = () => {
 
     }, [tabParams]);
 
+    const handleCreate = () => {
+        hasPermission(() => {
+            setShowForm(true);
+            onNew();
+        }, "create");
+    };
+
     return (
         <>
             <div
@@ -153,10 +162,7 @@ const index = () => {
                     <div className="flex items-center gap-2">
                         <button
                             className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800  py-1 rounded-md flex items-center gap-2 text-xs px-2"
-                            onClick={() => {
-                                setShowForm(true);
-                                onNew();
-                            }}
+                            onClick={handleCreate}
                         >
                             <FaPlus /> Create New
                         </button>
@@ -208,6 +214,7 @@ const index = () => {
                         setFromOrderQty={setFromOrderQty}
                         canApprove={canApprove}
                         employeeList={employeeList}
+                        hasPermission={hasPermission}
                     />
                 </div>
             )}

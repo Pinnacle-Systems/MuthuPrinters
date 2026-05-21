@@ -15,6 +15,7 @@ import { useGetCurrenciesQuery } from "../../../redux/services/CurrencyMasterSer
 import { useGetCityQuery } from "../../../redux/services/CityMasterService.js";
 import { useGetbankQuery } from "../../../redux/services/BankMasterService.js";
 import OrderEntryApi from "../../../redux/uniformService/OrderEntryService.js";
+import { UserPermissions } from "../../../Utils/UserPermissions.js";
 
 const ProformaInvoice = () => {
     const [showForm, setShowForm] = useState(false);
@@ -34,6 +35,8 @@ const ProformaInvoice = () => {
     const { data: userData } = useGetUserByIdQuery(userId)
     const { data: cityList } = useGetCityQuery({ params });
     const { data: bankList } = useGetbankQuery({ params });
+    const { hasPermission } = UserPermissions();
+
     const handleView = (orderId) => {
         setId(orderId);
         setShowForm(true);
@@ -89,6 +92,13 @@ const ProformaInvoice = () => {
     const { data: customerList } = useGetPartyQuery({ params: { ...params } });
     const { data: branchList } = useGetBranchQuery({ params: { ...params } });
     const { data: currencyList } = useGetCurrenciesQuery({ params: { ...params } });
+
+    const handleCreate = () => {
+        hasPermission(() => {
+            setShowForm(true);
+            onNew();
+        }, "create");
+    };
     return (
         <>
             <div
@@ -105,7 +115,7 @@ const ProformaInvoice = () => {
                     <div className="flex items-center gap-2">
                         <button
                             className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800  py-1 rounded-md flex items-center gap-2 text-xs px-2"
-                            onClick={onNew}
+                            onClick={handleCreate}
                         >
                             <FaPlus /> Create New
                         </button>
@@ -141,6 +151,7 @@ const ProformaInvoice = () => {
                         currencyList={currencyList}
                         cityList={cityList}
                         bankList={bankList}
+                        hasPermission={hasPermission}
                     />
                 </div>
             )}

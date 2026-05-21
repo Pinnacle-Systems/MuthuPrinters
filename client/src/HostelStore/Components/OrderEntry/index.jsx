@@ -13,6 +13,7 @@ import { useIsApprover } from "../../../CustomHooks/userIsApprover.js";
 import ProformaInvoiceApi from "../../../redux/uniformService/ProformaInvoiceService.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import JobCardApi from "../../../redux/uniformService/JobCardService.js";
+import { UserPermissions } from "../../../Utils/UserPermissions.js";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -20,6 +21,7 @@ const index = () => {
     const [readOnly, setReadOnly] = useState(false);
     const [selectedOrderId, setSelectedOrderId] = useState("");
     const [showJobCardForm, setShowJobCardForm] = useState(false);
+    const { hasPermission } = UserPermissions();
 
     const openTabs = useSelector((state) => state.openTabs);
     const previewOrderId = useMemo(() => openTabs.tabs.find(i => i.name === "ORDER ENTRY")?.previewId, [openTabs]);
@@ -115,6 +117,13 @@ const index = () => {
         setShowJobCardForm(true);
     };
 
+    const handleCreate = () => {
+        hasPermission(() => {
+            setShowForm(true);
+            onNew();
+        }, "create");
+    };
+
     return (
         <>
             <div
@@ -131,10 +140,7 @@ const index = () => {
                     <div className="flex items-center gap-2">
                         <button
                             className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800  py-1 rounded-md flex items-center gap-2 text-xs px-2"
-                            onClick={() => {
-                                setShowForm(true);
-                                onNew();
-                            }}
+                            onClick={handleCreate}
                         >
                             <FaPlus /> Create New
                         </button>
@@ -172,6 +178,7 @@ const index = () => {
                         termsData={termsData}
                         canApprove={canApprove}
                         branchData={branchData}
+                        hasPermission={hasPermission}
                     />
                 </div>
             )}

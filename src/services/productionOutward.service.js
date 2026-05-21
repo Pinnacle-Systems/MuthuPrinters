@@ -76,6 +76,11 @@ async function get(req) {
         },
         orderBy: { sequence: "asc" },
       },
+      _count: {
+        select: {
+          productionInwardDtls: true,
+        },
+      },
     },
     orderBy: { id: "desc" },
   });
@@ -84,9 +89,12 @@ async function get(req) {
       String(getDateFromDateTime(item.createdAt)).includes(searchDocDate),
     );
   }
-  let result = data;
+  let result = data?.map((item) => ({
+    ...item,
+    childRecord: item._count.productionInwardDtls,
+  }));
   if (pagination) {
-    result = data.slice(
+    result = result.slice(
       (pageNumber - 1) * parseInt(dataPerPage),
       pageNumber * parseInt(dataPerPage),
     );
@@ -214,7 +222,7 @@ async function getOutwardJobCardDtls(req) {
     },
 
     orderBy: {
-      id: "desc",
+      id: "asc",
     },
   });
 
@@ -338,7 +346,7 @@ async function create(body) {
           },
 
           data: {
-            status: "COMPLETED",
+            status: "PENDING",
             completedQty: item.sentQty ? parseInt(item.sentQty) : 0,
           },
         }),
@@ -366,8 +374,6 @@ async function update(id, body) {
     dcNo,
     vehicleNo,
   } = body;
-  console.log(outwardDetails, "outwardDetails");
-  console.log(body, "body");
   const found = await prisma.productionOutward.findUnique({
     where: {
       id: parseInt(id),
@@ -460,7 +466,7 @@ async function update(id, body) {
           },
 
           data: {
-            status: "COMPLETED",
+            status: "PENDING",
 
             completedQty: item.sentQty ? parseInt(item.sentQty) : 0,
           },
@@ -503,12 +509,37 @@ async function update(id, body) {
 async function remove(id) {
   const found = await prisma.productionOutward.findUnique({
     where: { id: parseInt(id) },
+    include: {
+      productionOutwardDetails: true,
+    },
   });
 
   if (!found) return NoRecordFound("Production Outward");
 
-  const data = await prisma.productionOutward.delete({
-    where: { id: parseInt(id) },
+  const data = await prisma.$transaction(async (tx) => {
+    // Reset process route status
+    await Promise.all(
+      found.productionOutwardDetails.map((item) =>
+        tx.processRoute.updateMany({
+          where: {
+            jobCardId: found.jobCardId,
+            processId: item.processId,
+            sequence: item.sequence,
+          },
+          data: {
+            status: "NOT_STARTED",
+            completedQty: null,
+          },
+        }),
+      ),
+    );
+
+    // Delete outward
+    const deleted = await tx.productionOutward.delete({
+      where: { id: parseInt(id) },
+    });
+
+    return deleted;
   });
 
   return { statusCode: 0, data };

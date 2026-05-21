@@ -77,6 +77,7 @@ const ProformaInvoiceForm = ({
     currencyList,
     cityList,
     bankList,
+    hasPermission
 }) => {
     const { branchId, companyId, finYearId, userId } = getCommonParams();
 
@@ -514,7 +515,7 @@ const ProformaInvoiceForm = ({
             icon: <FiEdit2 className="h-4 w-4" />,
             hoverLabel: "Edit",
             iconOnly: true,
-            onClick: () => setReadOnly(false),
+            onClick: () => hasPermission(() => setReadOnly(false), "edit"),
             className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
             hidden: !readOnly || !id || isOldVersion,
         },

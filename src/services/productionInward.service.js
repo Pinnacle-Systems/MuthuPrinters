@@ -8,6 +8,7 @@ import {
 } from "../utils/helper.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
+import moment from "moment";
 
 const REFERENCE_PAGE = "PRODUCTION INWARD";
 
@@ -28,7 +29,7 @@ async function getNextDocId(branchId, shortCode, startTime, endTime, saveType) {
 
   const branchObj = await getTableRecordWithId(branchId, "branch");
 
-  let newDocId = `${branchObj.branchCode}/${shortCode}/PIN/1`;
+  let newDocId = `${branchObj.branchCode}/${shortCode}/PR/1`;
 
   if (lastObject) {
     if (lastObject.docId === "Draft Save") {
@@ -50,11 +51,11 @@ async function getNextDocId(branchId, shortCode, startTime, endTime, saveType) {
         return currentNo > maxNo ? current.docId : max;
       }, null);
 
-      newDocId = `${branchObj.branchCode}/${shortCode}/PIN/${
+      newDocId = `${branchObj.branchCode}/${shortCode}/PR/${
         parseInt(maxDocId.split("/").at(-1)) + 1
       }`;
     } else {
-      newDocId = `${branchObj.branchCode}/${shortCode}/PIN/${
+      newDocId = `${branchObj.branchCode}/${shortCode}/PR/${
         parseInt(lastObject.docId.split("/").at(-1)) + 1
       }`;
     }
@@ -170,6 +171,12 @@ async function get(req) {
         },
       },
 
+      _count: {
+        select: {
+          processBillDtls: true,
+        },
+      },
+
       inwardDetails: true,
     },
 
@@ -199,6 +206,7 @@ async function get(req) {
     data: data.map((item) => ({
       ...item,
       status: getProductionInwardStatus(item),
+      childRecord: item._count.processBillDtls,
     })),
 
     nextDocId: newDocId,
@@ -296,15 +304,13 @@ async function getInwardJobCardDtls(req) {
             lte: moment.utc(searchDocDate, "DD-MM-YYYY").endOf("day").toDate(),
           }
         : undefined,
-
-      JobCard: {
-        docId: searchJobCard ? { contains: searchJobCard } : undefined,
-      },
+    },
+    JobCard: {
+      docId: searchJobCard ? { contains: searchJobCard } : undefined,
     },
     productionInwardId: {
       notIn: billedInwardIds,
     },
-
   };
 
   data = await prisma.productionInwardDtl.findMany({
@@ -333,14 +339,13 @@ async function getInwardJobCardDtls(req) {
           },
         },
       },
-      JobCard:{
-        select:{
-          id:true,
-          docId:true,
-        }
+      JobCard: {
+        select: {
+          id: true,
+          docId: true,
+        },
       },
-        inwardProcessDtls: true
-
+      inwardProcessDtls: true,
     },
 
     orderBy: {
@@ -431,10 +436,8 @@ async function create(body) {
     draftSave,
   );
 
-  let data;
-
-  await prisma.$transaction(async (tx) => {
-    data = await tx.productionInward.create({
+  const data = await prisma.$transaction(async (tx) => {
+    const inward = await tx.productionInward.create({
       data: {
         docId: newDocId,
 
@@ -519,38 +522,27 @@ async function create(body) {
         inwardDetails: true,
       },
     });
+    await Promise.all(
+      inwardDetails.flatMap((item) =>
+        (item.processes || []).map((processId) =>
+          tx.processRoute.updateMany({
+            where: {
+              jobCardId: item.jobCardId ? parseInt(item.jobCardId) : null,
 
-    // UPDATE OUTWARD DETAIL RECEIVED QTY
+              processId: processId ? parseInt(processId) : null,
+            },
 
-    // for (const item of inwardDetails) {
-    //   if (item.outwardDetailId) {
-    //     const outwardDtl = await tx.productionOutwardDtl.findUnique({
-    //       where: {
-    //         id: parseInt(item.outwardDetailId),
-    //       },
-    //     });
+            data: {
+              status: "COMPLETED",
 
-    //     if (outwardDtl) {
-    //       const totalReceived =
-    //         parseFloat(outwardDtl.receivedQty || 0) +
-    //         parseFloat(item.receivedQty || 0);
+              completedQty: item.acceptedQty ? parseFloat(item.acceptedQty) : 0,
+            },
+          }),
+        ),
+      ),
+    );
 
-    //       const pending = parseFloat(outwardDtl.sentQty || 0) - totalReceived;
-
-    //       await tx.productionOutwardDtl.update({
-    //         where: {
-    //           id: outwardDtl.id,
-    //         },
-
-    //         data: {
-    //           receivedQty: totalReceived,
-
-    //           pendingQty: pending,
-    //         },
-    //       });
-    //     }
-    //   }
-    // }
+    return inward;
   });
 
   return {
@@ -611,38 +603,29 @@ async function update(id, body) {
   let data;
 
   await prisma.$transaction(async (tx) => {
-    // REVERT OLD RECEIVED QTY
+    for (const removedItem of removedItems) {
+      const processDtl = await tx.inwardProcessDtl.findMany({
+        where: {
+          productionInwardDtlId: removedItem.id,
+        },
+      });
 
-    // for (const oldItem of dataFound.inwardDetails) {
-    //   if (oldItem.outwardDetailId) {
-    //     const outwardDtl = await tx.productionOutwardDtl.findUnique({
-    //       where: {
-    //         id: parseInt(oldItem.outwardDetailId),
-    //       },
-    //     });
+      for (const proc of processDtl) {
+        await tx.processRoute.updateMany({
+          where: {
+            jobCardId: removedItem.jobCardId
+              ? parseInt(removedItem.jobCardId)
+              : null,
 
-    //     if (outwardDtl) {
-    //       const totalReceived =
-    //         parseFloat(outwardDtl.receivedQty || 0) -
-    //         parseFloat(oldItem.receivedQty || 0);
+            processId: proc.processId ? parseInt(proc.processId) : null,
+          },
 
-    //       const pending = parseFloat(outwardDtl.sentQty || 0) - totalReceived;
-
-    //       await tx.productionOutwardDtl.update({
-    //         where: {
-    //           id: outwardDtl.id,
-    //         },
-
-    //         data: {
-    //           receivedQty: totalReceived,
-
-    //           pendingQty: pending,
-    //         },
-    //       });
-    //     }
-    //   }
-    // }
-
+          data: {
+            status: "PENDING",
+          },
+        });
+      }
+    }
     if (removedIds.length > 0) {
       await tx.productionInwardDtl.deleteMany({
         where: {
@@ -793,37 +776,25 @@ async function update(id, body) {
       }
     }
 
-    // ADD NEW RECEIVED QTY
+    await Promise.all(
+      inwardDetails.flatMap((item) =>
+        (item.processes || []).map((processId) =>
+          tx.processRoute.updateMany({
+            where: {
+              jobCardId: item.jobCardId ? parseInt(item.jobCardId) : null,
 
-    // for (const item of inwardDetails) {
-    //   if (item.outwardDetailId) {
-    //     const outwardDtl = await tx.productionOutwardDtl.findUnique({
-    //       where: {
-    //         id: parseInt(item.outwardDetailId),
-    //       },
-    //     });
+              processId: processId ? parseInt(processId) : null,
+            },
 
-    //     if (outwardDtl) {
-    //       const totalReceived =
-    //         parseFloat(outwardDtl.receivedQty || 0) +
-    //         parseFloat(item.receivedQty || 0);
+            data: {
+              status: "COMPLETED",
 
-    //       const pending = parseFloat(outwardDtl.sentQty || 0) - totalReceived;
-
-    //       await tx.productionOutwardDtl.update({
-    //         where: {
-    //           id: outwardDtl.id,
-    //         },
-
-    //         data: {
-    //           receivedQty: totalReceived,
-
-    //           pendingQty: pending,
-    //         },
-    //       });
-    //     }
-    //   }
-    // }
+              completedQty: parseFloat(item.acceptedQty || 0),
+            },
+          }),
+        ),
+      ),
+    );
   });
 
   return {
@@ -843,7 +814,11 @@ async function remove(id) {
     },
 
     include: {
-      inwardDetails: true,
+      inwardDetails: {
+        include: {
+          inwardProcessDtls: true,
+        },
+      },
     },
   });
 
@@ -851,44 +826,29 @@ async function remove(id) {
     return NoRecordFound("Production Inward");
   }
 
-  await prisma.$transaction(async (tx) => {
-    // REVERT OUTWARD RECEIVED QTY
-
-    // for (const item of dataFound.inwardDetails) {
-    //   if (item.outwardDetailId) {
-    //     const outwardDtl = await tx.productionOutwardDtl.findUnique({
-    //       where: {
-    //         id: parseInt(item.outwardDetailId),
-    //       },
-    //     });
-
-    //     if (outwardDtl) {
-    //       const totalReceived =
-    //         parseFloat(outwardDtl.receivedQty || 0) -
-    //         parseFloat(item.receivedQty || 0);
-
-    //       const pending = parseFloat(outwardDtl.sentQty || 0) - totalReceived;
-
-    //       await tx.productionOutwardDtl.update({
-    //         where: {
-    //           id: outwardDtl.id,
-    //         },
-
-    //         data: {
-    //           receivedQty: totalReceived,
-
-    //           pendingQty: pending,
-    //         },
-    //       });
-    //     }
-    //   }
-    // }
-
-    await tx.productionInward.delete({
+  const data = await prisma.$transaction(async (tx) => {
+    // Reset process route status
+    await Promise.all(
+      dataFound.inwardDetails.flatMap((item) =>
+        (item.inwardProcessDtls || []).map((proc) =>
+          tx.processRoute.updateMany({
+            where: {
+              jobCardId: dataFound.jobCardId,
+              processId: proc.processId,
+            },
+            data: {
+              status: "PENDING",
+            },
+          }),
+        ),
+      ),
+    );
+    const deleted = await tx.productionInward.delete({
       where: {
         id: parseInt(id),
       },
     });
+    return deleted;
   });
 
   return {
@@ -897,4 +857,4 @@ async function remove(id) {
   };
 }
 
-export { get, getOne, create, update, remove , getInwardJobCardDtls};
+export { get, getOne, create, update, remove, getInwardJobCardDtls };

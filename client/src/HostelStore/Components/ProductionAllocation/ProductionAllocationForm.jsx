@@ -31,6 +31,7 @@ const ProductionAllocationForm = ({
     onClose,
     termsData,
     customerList,
+    hasPermission,
 }) => {
     const { branchId, companyId, finYearId, userId } = getCommonParams();
 
@@ -338,11 +339,11 @@ const ProductionAllocationForm = ({
             hoverLabel: "Edit",
             label: "Edit",
             iconOnly: false,
-            onClick: () => setReadOnly(false),
+            onClick: () => hasPermission(() => setReadOnly(false), "edit"),
             onKeyDown: (e) => {
                 if (e.key === "Enter") {
                     e.preventDefault();
-                    setReadOnly(false);
+                    hasPermission(() => setReadOnly(false), "edit");
                 }
             },
             className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,

@@ -32,6 +32,31 @@ import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService
 import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary.js";
 import PoSummary from "../PurchaseOrder/PoSummary.js";
 import Modal from "../../../UiComponents/Modal/index.js";
+import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
+
+const EMPTY_ROW = {
+    receivedQty: "",
+    wastageQty: "",
+    acceptedQty: "",
+    price: "",
+    discountType: "",
+    discountValue: "",
+    taxPercent: "",
+    jobCardId: "",
+    productionOutwardId: "",
+    processes: []
+};
+
+const padItems = (itemsArray = []) => {
+    const currentLength = itemsArray.length;
+    if (currentLength < DEFAULT_ROW_COUNT) {
+        const padding = Array.from({ length: DEFAULT_ROW_COUNT - currentLength }, () => ({
+            ...EMPTY_ROW,
+        }));
+        return [...itemsArray, ...padding];
+    }
+    return itemsArray;
+};
 
 const ProductionInwardForm = ({
     onClose,
@@ -134,19 +159,19 @@ const ProductionInwardForm = ({
             setRemarks(data?.remarks || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
             setReceiptType(data?.receiptType || "");
-            setInwardDetails(
-                data?.inwardDetails?.length
-                    ? data.inwardDetails.map((item) => ({
-                        ...item,
+            const inwardRows = data?.inwardDetails?.length
+                ? data.inwardDetails.map((item) => ({
+                    ...item,
 
-                        // convert inwardProcessDtls -> processes array
-                        processes:
-                            item?.inwardProcessDtls?.map(
-                                (process) => process.processId
-                            ) || [],
-                    }))
-                    : Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow)
-            );
+                    // convert inwardProcessDtls -> processes array
+                    processes:
+                        item?.inwardProcessDtls?.map(
+                            (process) => process.processId
+                        ) || [],
+                }))
+                : [];
+
+            setInwardDetails(padItems(inwardRows));
             setDcNo(data?.dcNo || "");
             setDcDate(data?.dcDate ? moment.utc(data.dcDate).format("YYYY-MM-DD") : "");
             setDiscountType(data?.discountType || "");
@@ -680,7 +705,7 @@ const ProductionInwardForm = ({
                                             <div className="flex justify-between text-[12px]">
                                                 <span>Gross Amount</span>
                                                 <span>
-                                                     Rs.{inwardDetails
+                                                    Rs.{inwardDetails
                                                         ?.reduce((sum, row) => {
                                                             const qty = parseFloat(row.acceptedQty) || 0;
                                                             const price = parseFloat(row.price) || 0;
@@ -712,28 +737,38 @@ const ProductionInwardForm = ({
                         </div>
                         <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
                             <div className="flex gap-2 flex-wrap">
-                                <button
-                                    onClick={() => saveData("close")}
-                                    disabled={readOnly}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") { e.preventDefault(); saveData("close"); e.stopPropagation(); }
-                                    }}
-                                    className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                                >
-                                    <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                                    Save & Close
-                                </button>
-                                <button
-                                    onClick={() => saveData("new")}
-                                    disabled={readOnly}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); saveData("new"); }
-                                    }}
-                                    className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                                >
-                                    <FiSave className="w-4 h-4 mr-2" />
-                                    Save & New
-                                </button>
+                                {
+                                    !readOnly && (
+
+                                        <button
+                                            onClick={() => saveData("close")}
+                                            disabled={readOnly}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") { e.preventDefault(); saveData("close"); e.stopPropagation(); }
+                                            }}
+                                            className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                        >
+                                            <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                                            Save & Close
+                                        </button>
+                                    )
+                                }
+                                {
+                                    !readOnly && (
+
+                                        <button
+                                            onClick={() => saveData("new")}
+                                            disabled={readOnly}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); saveData("new"); }
+                                            }}
+                                            className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                        >
+                                            <FiSave className="w-4 h-4 mr-2" />
+                                            Save & New
+                                        </button>
+                                    )
+                                }
                             </div>
                             <div className="flex gap-2 flex-wrap">
                                 {!id ||

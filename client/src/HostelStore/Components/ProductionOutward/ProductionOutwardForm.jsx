@@ -27,6 +27,11 @@ import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalida
 const statusMeta = {
     COMPLETED: { dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-300", label: "Completed" },
     IN_PROGRESS: { dot: "bg-blue-500", badge: "bg-blue-50 text-blue-700 border-blue-300", label: "In Progress" },
+    PENDING: {
+        dot: "bg-amber-500",
+        badge: "bg-amber-50 text-amber-700 border-amber-300",
+        label: "Pending"
+    },
     NOT_STARTED: { dot: "bg-gray-400", badge: "bg-gray-100 text-gray-500 border-gray-300", label: "Not Started" },
 };
 const getStatus = (s) => statusMeta[(s || "NOT_STARTED").toUpperCase()] || statusMeta.NOT_STARTED;
@@ -81,20 +86,35 @@ const ProcessTree = ({ processRoute, processList, allocationDetails, selectedPro
                         const procName = findFromList(route.processId, processList?.data, "name") || `Process ${idx + 1}`;
                         const alloc = allocationDetails?.find(d => d.processId === route.processId);
                         const isOutside = alloc?.isOutSide === true;
-                        const isCompleted = route.status?.toUpperCase() === "COMPLETED";
+                        const status = route.status?.toUpperCase();
+                        const isCompleted = status === "COMPLETED";
+                        const isPending = status === "PENDING";
                         const completedQty = route.completedQty;
                         const isChecked = selectedProcessIds.includes(route.processId);
                         const isPrevDone = (() => {
-                            // find the nearest preceding NON-outside (inside) process
+                            // immediate previous process is pending → block
+                            if (idx > 0) {
+                                const immediatePrev = sorted[idx - 1];
+
+                                if (immediatePrev?.status?.toUpperCase() === "PENDING") {
+                                    return false;
+                                }
+                            }
+
+                            // find nearest preceding NON-outside (inside) process
                             for (let i = idx - 1; i >= 0; i--) {
                                 const prev = sorted[i];
-                                const prevAlloc = allocationDetails?.find(d => d.processId === prev.processId);
+                                const prevAlloc = allocationDetails?.find(
+                                    d => d.processId === prev.processId
+                                );
+
                                 if (!prevAlloc?.isOutSide) {
-                                    // found nearest inside process — it must be completed
+                                    // nearest inside process must be completed
                                     return prev.status?.toUpperCase() === "COMPLETED";
                                 }
                             }
-                            return true; // no inside process before this — not blocked
+
+                            return true;
                         })();
                         const isPrevOutsideChecked = (() => {
                             if (idx === 0) return true;
@@ -110,7 +130,7 @@ const ProcessTree = ({ processRoute, processList, allocationDetails, selectedPro
                             }
                             return true;
                         })();
-                        const isCheckboxDisabled = !isOutside || !isPrevDone || !isPrevOutsideChecked;
+                        const isCheckboxDisabled = !isOutside || isPending || !isPrevDone || !isPrevOutsideChecked;
                         const isLast = idx === sorted.length - 1;
 
                         return (

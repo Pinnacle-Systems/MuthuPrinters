@@ -27,6 +27,30 @@ import PoSummary from "../PurchaseOrder/PoSummary.js";
 import Modal from "../../../UiComponents/Modal/index.js";
 import { useAddProcessBillMutation, useGetProcessBillByIdQuery, useUpdateProcessBillMutation } from "../../../redux/uniformService/ProcessBillService.js";
 import { useGetProductionInwardJobCardDtlsQuery, useGetProductionInwardQuery } from "../../../redux/uniformService/ProductionInwardService.js";
+import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
+
+const EMPTY_ROW = {
+    billedQty: "",
+    price: "",
+    discountType: "",
+    discountValue: "",
+    taxPercent: "",
+    jobCardId: "",
+    productionInwardId: "",
+    processes: [],
+    acceptedQty: "",
+};
+
+const padItems = (itemsArray = []) => {
+    const currentLength = itemsArray.length;
+    if (currentLength < DEFAULT_ROW_COUNT) {
+        const padding = Array.from({ length: DEFAULT_ROW_COUNT - currentLength }, () => ({
+            ...EMPTY_ROW,
+        }));
+        return [...itemsArray, ...padding];
+    }
+    return itemsArray;
+};
 
 const ProcessBillForm = ({
     onClose,
@@ -122,19 +146,19 @@ const ProcessBillForm = ({
             setSupplierId(data?.supplierId || "");
             setRemarks(data?.remarks || "");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
-            setBillDetails(
-                data?.billDetails?.length
-                    ? data.billDetails.map((item) => ({
-                        ...item,
 
-                        // convert inwardProcessDtls -> processes array
-                        processes:
-                            item?.inwardProcessDtls?.map(
-                                (process) => process.processId
-                            ) || [],
-                    }))
-                    : Array.from({ length: DEFAULT_ROW_COUNT }, makeEmptyRow)
-            );
+            const billDetails = data?.processBillDtls?.length
+                ? data.processBillDtls.map((item) => ({
+                    ...item,
+
+                    // convert inwardProcessDtls -> processes array
+                    processes:
+                        item?.billingProcesses?.map(
+                            (process) => process.processId
+                        ) || [],
+                }))
+                : []
+            setBillDetails(padItems(billDetails));
             setDiscountType(data?.discountType || "");
             setDiscountValue(data?.discountValue || "");
             setNetBillValue(parseFloat(data?.netBillValue)?.toFixed(2) || "");
@@ -189,6 +213,7 @@ const ProcessBillForm = ({
                     timer: 2000,
                     didClose: () => {
                         // dispatchInvalidate();
+                        invalidateJobCardModule();
                         if (returnData.statusCode === 0) {
                             if (nextProcess === "new") {
                                 setId(0);
@@ -232,7 +257,7 @@ const ProcessBillForm = ({
             },
             {
                 condition: !isGridDatasValid(data?.billDetails, false, [
-                    "billedQty",
+                    "billedQty", "price"
                 ]),
                 title: "Please fill all required item fields!",
             },
@@ -409,7 +434,7 @@ const ProcessBillForm = ({
 
                         {/* Outward & Job Card Details */}
                         <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-                            <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Receipt Details</h2>
+                            <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">Bill Details</h2>
                             <div className="flex gap-2 px-0.5">
                                 <DropdownInput
                                     name="Tax Type"
@@ -516,66 +541,76 @@ const ProcessBillForm = ({
                             </div>
 
                             <div className="rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                               
-                                            <h2 className="mb-1 text-[12px] font-bold text-slate-700">
-                                                Amount Summary
-                                            </h2>
 
-                                            <div className="flex justify-between text-[12px]">
-                                                <span>Gross Amount</span>
-                                                <span>
-                                                    Rs.{billDetails
-                                                        ?.reduce((sum, row) => {
-                                                            const qty = parseFloat(row.billedQty) || 0;
-                                                            const price = parseFloat(row.price) || 0;
-                                                            return sum + qty * price;
-                                                        }, 0)
-                                                        .toFixed(2)}
-                                                </span>
-                                            </div>
+                                <h2 className="mb-1 text-[12px] font-bold text-slate-700">
+                                    Amount Summary
+                                </h2>
 
-                                            <div className="flex justify-between text-[12px]">
-                                                <span>Taxable Amount</span>
-                                                <span className="">
-                                                    Rs.{parseFloat(totals?.taxable || 0).toFixed(2)}{" "}
-                                                </span>
-                                            </div>
+                                <div className="flex justify-between text-[12px]">
+                                    <span>Gross Amount</span>
+                                    <span>
+                                        Rs.{billDetails
+                                            ?.reduce((sum, row) => {
+                                                const qty = parseFloat(row.billedQty) || 0;
+                                                const price = parseFloat(row.price) || 0;
+                                                return sum + qty * price;
+                                            }, 0)
+                                            .toFixed(2)}
+                                    </span>
+                                </div>
 
-                                            <div className="flex justify-between text-[12px] font-medium">
-                                                <span>Net Amount</span>
-                                                <span>
-                                                    Rs.{parseFloat(totals?.net || 0).toFixed(2)}
-                                                </span>
-                                            </div>
-                                      
+                                <div className="flex justify-between text-[12px]">
+                                    <span>Taxable Amount</span>
+                                    <span className="">
+                                        Rs.{parseFloat(totals?.taxable || 0).toFixed(2)}{" "}
+                                    </span>
+                                </div>
+
+                                <div className="flex justify-between text-[12px] font-medium">
+                                    <span>Net Amount</span>
+                                    <span>
+                                        Rs.{parseFloat(totals?.net || 0).toFixed(2)}
+                                    </span>
+                                </div>
+
                             </div>
 
 
                         </div>
                         <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
                             <div className="flex gap-2 flex-wrap">
-                                <button
-                                    onClick={() => saveData("close")}
-                                    disabled={readOnly}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") { e.preventDefault(); saveData("close"); e.stopPropagation(); }
-                                    }}
-                                    className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                                >
-                                    <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                                    Save & Close
-                                </button>
-                                <button
-                                    onClick={() => saveData("new")}
-                                    disabled={readOnly}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); saveData("new"); }
-                                    }}
-                                    className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                                >
-                                    <FiSave className="w-4 h-4 mr-2" />
-                                    Save & New
-                                </button>
+                                {
+                                    !readOnly && (
+
+                                        <button
+                                            onClick={() => saveData("close")}
+                                            disabled={readOnly}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") { e.preventDefault(); saveData("close"); e.stopPropagation(); }
+                                            }}
+                                            className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                        >
+                                            <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                                            Save & Close
+                                        </button>
+                                    )
+                                }
+                                {
+                                    !readOnly && (
+
+                                        <button
+                                            onClick={() => saveData("new")}
+                                            disabled={readOnly}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); saveData("new"); }
+                                            }}
+                                            className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                        >
+                                            <FiSave className="w-4 h-4 mr-2" />
+                                            Save & New
+                                        </button>
+                                    )
+                                }
                             </div>
                             <div className="flex gap-2 flex-wrap">
                                 {!id ||
