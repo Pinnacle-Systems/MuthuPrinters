@@ -349,6 +349,8 @@ model Department {
   doctor    Employee[] @relation()
   Company   Company    @relation(fields: [companyId], references: [id])
   companyId Int
+
+  machines   Machine[]
 }
 
 enum PageType {
@@ -2303,6 +2305,8 @@ model Machine {
   companyId Int?
   Size      Size?    @relation(fields: [sizeId], references: [id])
   sizeId    Int?
+  Department Department? @relation(fields: [departmentId], references: [id])
+  departmentId Int?
 
   machineDetails MachineDetails[]
 }

@@ -200,7 +200,11 @@ async function getJobCardList(req) {
       orderQty: true,
       styleItemId: true,
       customer: { select: { name: true } },
-      processRoute: true,
+      processRoute: {
+        orderBy: {
+          sequence: "asc",
+        },
+      },
       OrderEntry: { select: { docId: true } },
       StyleItem: { select: { name: true } },
       productionAllocations: {
@@ -214,6 +218,8 @@ async function getJobCardList(req) {
       docId: "desc",
     },
   });
+
+  console.log("Job Card List Result:", result?.processRoute);
 
   const data = result.map((item) => ({
     id: item.id,
@@ -258,6 +264,7 @@ async function getOne(id) {
       },
       processRoute: {
         include: { Process: { select: { id: true, name: true } } },
+        orderBy: { sequence: "asc" },
       },
       jobCardSizeDetails: true,
       printingDetails: true,
@@ -720,6 +727,7 @@ async function update(id, body) {
       blockDate,
       isRepeatedJobCard,
       refJobCardId,
+      isAmendment,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -755,13 +763,134 @@ async function update(id, body) {
       await tx.machineDetails.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
-      await tx.processRoute.deleteMany({ where: { jobCardId: parseInt(id) } });
       await tx.jobCardSizeBreakup.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
       await tx.finishingProcess.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
+
+      if (processRoute.length > 0) {
+        // Fetch current DB rows for this job card
+        const existingRouteRows = await tx.processRoute.findMany({
+          where: { jobCardId: parseInt(id) },
+          select: {
+            id: true,
+            processId: true,
+            type: true,
+            isFront: true,
+            isFrontAndBack: true,
+          },
+        });
+
+        // Build a lookup key identical to the frontend: "type:processId[:sub]"
+        const makeRouteKey = (type, processId, isFront, isFrontAndBack) => {
+          const sub = isFrontAndBack ? "frontback" : isFront ? "front" : "";
+          return `${type}:${processId}${sub ? `:${sub}` : ""}`;
+        };
+
+        const existingKeyToRow = {};
+        existingRouteRows.forEach((row) => {
+          existingKeyToRow[
+            makeRouteKey(
+              row.type,
+              row.processId,
+              row.isFront,
+              row.isFrontAndBack,
+            )
+          ] = row;
+        });
+
+        // Build desired key set from the incoming payload
+        const incomingKeyToRoute = {};
+        processRoute.forEach((r, idx) => {
+          const key = makeRouteKey(
+            r.type,
+            Number(r.processId),
+            Boolean(r.isFront),
+            Boolean(r.isFrontAndBack),
+          );
+          incomingKeyToRoute[key] = { ...r, sequence: idx + 1 };
+        });
+
+        // Delete rows that are no longer in the incoming payload
+        const keysToDelete = Object.keys(existingKeyToRow).filter(
+          (k) => !incomingKeyToRoute[k],
+        );
+        if (keysToDelete.length > 0) {
+          const idsToDelete = keysToDelete.map((k) => existingKeyToRow[k].id);
+          await tx.processRoute.deleteMany({
+            where: { id: { in: idsToDelete } },
+          });
+        }
+
+        // Update sequence on rows that already exist (keep status/completedQty untouched)
+        const keysToUpdate = Object.keys(incomingKeyToRoute).filter(
+          (k) => existingKeyToRow[k],
+        );
+        for (const key of keysToUpdate) {
+          await tx.processRoute.update({
+            where: { id: existingKeyToRow[key].id },
+            data: { sequence: incomingKeyToRoute[key].sequence },
+          });
+        }
+
+        // Insert rows that are new
+        const keysToInsert = Object.keys(incomingKeyToRoute).filter(
+          (k) => !existingKeyToRow[k],
+        );
+        if (keysToInsert.length > 0) {
+          await tx.processRoute.createMany({
+            data: keysToInsert.map((k) => {
+              const r = incomingKeyToRoute[k];
+              return {
+                jobCardId: parseInt(id),
+                processId: Number(r.processId),
+                type: r.type,
+                sequence: r.sequence,
+                isFront: Boolean(r.isFront),
+                isFrontAndBack: Boolean(r.isFrontAndBack),
+              };
+            }),
+          });
+        }
+      } else {
+        // Incoming payload has no routes — delete all existing rows
+        await tx.processRoute.deleteMany({
+          where: { jobCardId: parseInt(id) },
+        });
+      }
+      if (isAmendment) {
+        const allocation = await tx.productionAllocation.findFirst({
+          where: { jobCardId: parseInt(id) },
+          select: {
+            id: true,
+            allocationDetails: {
+              select: { id: true, processId: true, type: true },
+            },
+          },
+        });
+
+        if (allocation) {
+          // Build a sequence lookup from the (now-synced) incoming processRoute
+          // key: "type:processId"  →  value: sequence (1-based)
+          const routeSequenceMap = {};
+          processRoute.forEach((r, idx) => {
+            routeSequenceMap[`${r.type}:${Number(r.processId)}`] = idx + 1;
+          });
+
+          // Update each dtl row whose type+processId appears in the route
+          for (const dtl of allocation.allocationDetails) {
+            const key = `${dtl.type}:${dtl.processId}`;
+            if (routeSequenceMap[key] !== undefined) {
+              await tx.productionAllocationDtl.update({
+                where: { id: dtl.id },
+                data: { sequence: routeSequenceMap[key] },
+              });
+            }
+          }
+        }
+      }
 
       data = await tx.jobCard.update({
         where: { id: parseInt(id) },
@@ -891,19 +1020,6 @@ async function update(id, body) {
                 }
               : undefined,
 
-          processRoute: processRoute.length
-            ? {
-                createMany: {
-                  data: processRoute.map((r, idx) => ({
-                    processId: parseInt(r.processId || r.processId),
-                    type: r.type,
-                    sequence: idx + 1,
-                    isFront: Boolean(r.isFront),
-                    isFrontAndBack: Boolean(r.isFrontAndBack),
-                  })),
-                },
-              }
-            : undefined,
           jobCardSizeDetails: jobCardSizeDetails.length
             ? {
                 createMany: {

@@ -11,6 +11,7 @@ import ProductionInwardForm from "./ProductionInwardForm.jsx";
 import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
 import { UserPermissions } from "../../../Utils/UserPermissions.js";
 import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
+import Swal from "sweetalert2";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);

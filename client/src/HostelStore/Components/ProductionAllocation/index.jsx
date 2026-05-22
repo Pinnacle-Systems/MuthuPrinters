@@ -15,6 +15,7 @@ import ProductionAllocationForm from "./ProductionAllocationForm.jsx";
 import JobCardApi from "../../../redux/uniformService/JobCardService.js";
 import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
 import { UserPermissions } from "../../../Utils/UserPermissions";
+import Swal from "sweetalert2";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);

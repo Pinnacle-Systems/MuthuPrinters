@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import moment from "moment";
 import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper.js";
 import { toast } from "react-toastify";
-import { FiEdit2, FiSave } from "react-icons/fi";
+import { FiEdit2, FiFileText, FiSave } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { dropDownListObject } from "../../../Utils/contructObject.js";
@@ -21,6 +21,9 @@ import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterS
 import { useGetAllocationListQuery } from "../../../redux/uniformService/ProductionAllocationService.js";
 import TransactionLayout from "../../../Basic/components/Reuseable/TransactionLayout.jsx";
 import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
+import DeliveryChallanPrintFormat from "./DeliveryChallan.jsx";
+import Modal from "../../../UiComponents/Modal/index.js";
+import { PDFViewer } from "@react-pdf/renderer";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -213,7 +216,8 @@ const DeliveryPanel = ({
     setVehicleNo,
     deliveryQty,
     setDeliveryQty,
-    qtyCap,             // last completed seq qty — null means no cap
+    qtyCap,
+    branchData      // last completed seq qty — null means no cap
 }) => {
     const isDisabled = readOnly || childRecord?.current > 0;
 
@@ -346,6 +350,7 @@ const ProductionOutwardForm = ({
     setReadOnly,
     supplierList,
     hasPermission,
+    branchData
 }) => {
     const today = new Date();
     const [docDate, setDocDate] = useState(moment.utc(today).format("YYYY-MM-DD"));
@@ -358,6 +363,9 @@ const ProductionOutwardForm = ({
     const [vehicleNo, setVehicleNo] = useState("");
     const [deliveryQty, setDeliveryQty] = useState("");
     const [selectedProcesses, setSelectedProcesses] = useState([]);
+    const [printModalOpen, setPrintModalOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState(null);
+
     const [dispatchInvalidate] = useInvalidateTags();
     const supplierRef = useRef(null);
     const childRecord = useRef(0);
@@ -460,13 +468,45 @@ const ProductionOutwardForm = ({
                         // dispatchInvalidate();
                         invalidateJobCardModule();
                         if (returnData.statusCode === 0) {
-                            if (nextProcess === "new") {
-                                setId(0);
-                                setDocId("New");
-                                syncFormWithDb(undefined);
-                                setTimeout(() => supplierRef.current?.focus(), 100);
+                            if (!id) {
+                                Swal.fire({ icon: "question", title: "Do You Want to Print?", showCancelButton: true, confirmButtonText: "Yes, Print", cancelButtonText: "No [Esc]", confirmButtonColor: "#3085d6", cancelButtonColor: "#6b7280", focusConfirm: true, allowEnterKey: true, allowEscapeKey: true })
+                                    .then((result) => {
+                                        if (result.isConfirmed) {
+
+                                            setPrintModalOpen(true);
+                                            setPendingAction(nextProcess);
+
+                                            if (returnData?.data?.id) {
+                                                setId(returnData.data.id);
+                                            }
+
+                                        } else {
+
+                                            if (nextProcess === "new") {
+                                                syncFormWithDb(undefined);
+                                                setId("");
+                                                setDocId("New");
+
+                                                setTimeout(() => {
+                                                    customerRef.current?.focus();
+                                                }, 300);
+                                            }
+
+                                            if (nextProcess === "close") {
+                                                onClose();
+                                            }
+                                        }
+                                    });
+                            } else {
+
+                                if (nextProcess === "new") {
+                                    setId(0);
+                                    setDocId("New");
+                                    syncFormWithDb(undefined);
+                                    setTimeout(() => supplierRef.current?.focus(), 100);
+                                }
+                                if (nextProcess === "close") onClose();
                             }
-                            if (nextProcess === "close") onClose();
                         } else {
                             toast.error(returnData?.message);
                         }
@@ -698,61 +738,97 @@ const ProductionOutwardForm = ({
     );
 
     return (
-        <TransactionLayout
-            title="Process Issue"
-            badge={<ModeChip id={id} readOnly={readOnly} />}
-            closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
-            onClose={onClose}
-            onKeyDown={handleKeyDown}
-            detailsLayout="default"
-            detailsLayouts={["default"]}
-            gridItems={bodyContent}
-            footer={
-                <div className="flex flex-col md:flex-row gap-2 justify-between">
-                    <div className="flex gap-2 flex-wrap">
-                        {
-                            !readOnly && (
+        <>
+            {printModalOpen && (
+                <Modal
+                    isOpen={printModalOpen}
+                    onClose={() => {
+                        setPrintModalOpen(false);
+                        if (pendingAction === "new") { setId(""); setDocId("New"); syncFormWithDb(undefined); setTimeout(() => customerRef.current?.focus(), 100); }
+                        if (pendingAction === "close") onClose();
+                        setPendingAction(null);
+                    }}
+                    widthClass="w-[90%] h-[90%]"
+                >
+                    <PDFViewer className="w-full h-full border-none">
+                        <DeliveryChallanPrintFormat
+                            singleData={singleData?.data}
+                            supplierDetails={supplierList?.data?.find(s => s.id === supplierId)}
+                            branchData={branchData?.data}
+                            processList={processList}
+                            jobCardList={jobCardList}
+                            deliveryQty={deliveryQty}
+                        />
+                    </PDFViewer>
+                </Modal>
+            )}
+            <TransactionLayout
+                title="Process Issue"
+                badge={<ModeChip id={id} readOnly={readOnly} />}
+                closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
+                onClose={onClose}
+                onKeyDown={handleKeyDown}
+                detailsLayout="default"
+                detailsLayouts={["default"]}
+                gridItems={bodyContent}
+                footer={
+                    <div className="flex flex-col md:flex-row gap-2 justify-between">
+                        <div className="flex gap-2 flex-wrap">
+                            {
+                                !readOnly && (
 
-                                <button
-                                    onClick={() => saveData("close")}
-                                    disabled={readOnly}
-                                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveData("close"); e.stopPropagation(); } }}
-                                    className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                                >
-                                    <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                                    Save & Close
-                                </button>
-                            )
-                        }
-                        {
-                            !readOnly && (
+                                    <button
+                                        onClick={() => saveData("close")}
+                                        disabled={readOnly}
+                                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveData("close"); e.stopPropagation(); } }}
+                                        className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                    >
+                                        <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                                        Save & Close
+                                    </button>
+                                )
+                            }
+                            {
+                                !readOnly && (
 
+                                    <button
+                                        onClick={() => saveData("new")}
+                                        disabled={readOnly}
+                                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); saveData("new"); } }}
+                                        className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                    >
+                                        <FiSave className="w-4 h-4 mr-2" />
+                                        Save & New
+                                    </button>
+                                )
+                            }
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                            {!id || (readOnly && (
                                 <button
-                                    onClick={() => saveData("new")}
-                                    disabled={readOnly}
-                                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); saveData("new"); } }}
-                                    className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                                    className="bg-yellow-600 text-white px-4 py-1 rounded hover:bg-yellow-700 flex items-center text-xs"
+                                    onClick={() => hasPermission(() => setReadOnly(false), "edit")}
                                 >
-                                    <FiSave className="w-4 h-4 mr-2" />
-                                    Save & New
+                                    <FiEdit2 className="w-4 h-4 mr-2" />
+                                    Edit
                                 </button>
-                            )
-                        }
+                            ))}
+                            {id && (
+                                <button
+                                    onClick={() => {
+                                        setPrintModalOpen(true);
+                                    }}
+                                    className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs"
+                                >
+                                    <FiFileText className="w-4 h-4 mr-2" />
+                                    PDF Export
+                                </button>
+                            )}
+                        </div>
                     </div>
-                    <div className="flex gap-2 flex-wrap">
-                        {!id || (readOnly && (
-                            <button
-                                className="bg-yellow-600 text-white px-4 py-1 rounded hover:bg-yellow-700 flex items-center text-xs"
-                                onClick={() => hasPermission(() => setReadOnly(false), "edit")}
-                            >
-                                <FiEdit2 className="w-4 h-4 mr-2" />
-                                Edit
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            }
-        />
+                }
+            />
+        </>
     );
 };
 

@@ -1,7 +1,7 @@
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 import { CheckBoxNew, DateInputNew, DropdownInput, DropdownNew, ReusableInput, TextInput } from "../../../Inputs";
 import { blockTypes, productionTypes } from "../../../Utils/DropdownData";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
 import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
 import { toast } from "react-toastify";
@@ -22,7 +22,7 @@ import tw from "../../../Utils/tailwind-react-pdf.js";
 import JobCardPrintFormat from "./JobCardPrintFormat.jsx";
 import { useGetRefListQuery, useLazyGetOrderEntryByIdQuery } from "../../../redux/uniformService/OrderEntryService.js";
 import { invalidateOrderEntryModule } from "../../../redux/Dispatch/OrderInvalidateTags.js";
-import { ProcessRoutePanel, routeKeysToDb } from "./ProcessRoutePanel.jsx";
+import { ProcessRoutePanel, routeKeysToDb, buildCompletedSet } from "./ProcessRoutePanel.jsx";
 import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoServices.js";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
@@ -33,12 +33,13 @@ import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService
 import { Plus } from "lucide-react";
 import { useGetMachineMasterQuery } from "../../../redux/services/MachineMasterService.js";
 import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
+import QRCode from "qrcode";
 
 const JobCardForm = ({
     onClose, id, setId, readOnly, setReadOnly,
     customerList, gsmList, plateList, dieList, branchData,
     formOrderCustomerId, fromOrderId, fromOrderType, fromOrderQty,
-    canApprove, userData, employeeList,hasPermission,
+    canApprove, userData, employeeList, hasPermission,
 }) => {
     const today = new Date();
     const [docDate, setDocDate] = useState(moment.utc(today).format("YYYY-MM-DD"));
@@ -54,14 +55,6 @@ const JobCardForm = ({
     const [noOfPockets, setNoOfPockets] = useState("");
     const [cuttingSizeId, setCuttingSizeId] = useState("");
     const [runningQty, setRunningQty] = useState("");
-    const [isFourColor, setIsFourColor] = useState(false);
-    const [isCutColor, setIsCutColor] = useState(false);
-    const [isFront, setIsFront] = useState(false);
-    const [isFrontAndBack, setIsFrontAndBack] = useState(false);
-    const [isCMYK, setIsCMYK] = useState(false);
-    const [isCutColMachine, setIsCutColMachine] = useState(false);
-    const [isFrontMachine, setIsFrontMachine] = useState(false);
-    const [isFrontBackMachine, setIsFrontBackMachine] = useState(false);
     const [totalPlatesets, setTotalPlatesets] = useState("");
     const [plateId, setPlateId] = useState("");
     const [dieId, setDieId] = useState("");
@@ -111,7 +104,8 @@ const JobCardForm = ({
     const [blockDate, setBlockDate] = useState("");
     const [isRepeatedJobCard, setIsRepeatedJobCard] = useState();
     const [refJobCardId, setRefJobCardId] = useState("");
-
+    const [pendingPrint, setPendingPrint] = useState(false);
+    const [isAmendment, setIsAmendment] = useState(false);
     const qrRef = useRef(null);
 
     const params = { companyId: secureLocalStorage.getItem(sessionStorage.getItem("sessionId") + "userCompanyId") };
@@ -140,7 +134,60 @@ const JobCardForm = ({
     const { data: singleData, isFetching: isSingleFetching, isLoading: isSingleLoading } =
         useGetJobCardByIdQuery(id, { skip: !id });
     const status = singleData?.data?.approvalStatus?.status;
-    const isDisabled = (status === "APPROVED" || status === "PENDING") && !canApprove;
+    const isDisabledPermission = (status === "APPROVED" || status === "PENDING") && !canApprove;
+
+    // ─────────────────────────────────────────────────────────────
+    // Task 3: Build a Set of "type:processId" strings for completed
+    // route steps. Fields bound to these steps will be disabled.
+    // ─────────────────────────────────────────────────────────────
+    const dbProcessRoute = singleData?.data?.processRoute || [];
+
+    const completedSet = useMemo(
+        () => buildCompletedSet(dbProcessRoute),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [JSON.stringify(dbProcessRoute)]
+    );
+
+    /**
+     * Returns true when ALL route entries that reference the given
+     * process IDs (by type) are COMPLETED, meaning the user should
+     * NOT be able to edit the corresponding form field.
+     *
+     * @param {"boardQuality"|"board"|"printing"|"process"|"lamination"|"varnish"|"finishing"} type
+     * @param {number|number[]} processIds  - single id or array of ids
+     */
+    const isCompletedInRoute = (type, processIds) => {
+        const ids = Array.isArray(processIds) ? processIds : [processIds];
+        // If none of the ids appear in the route at all, not locked
+        const routeEntries = dbProcessRoute.filter(
+            (r) => r.type === type && ids.includes(r.processId)
+        );
+        if (routeEntries.length === 0) return false;
+        return routeEntries.every((r) => r.status === "COMPLETED");
+    };
+
+    /**
+     * For checkbox-group fields (boardItems, selectedPrinting, etc.),
+     * returns true if this SPECIFIC item id is completed in the route.
+     */
+    const isItemCompleted = (type, itemId) =>
+        completedSet.has(`${type}:${itemId}`);
+
+    // Derived: are ALL board qualities completed? → lock the whole board section
+    const allBoardQualitiesCompleted =
+        boardItems.length > 0 &&
+        boardItems.every((bid) => isItemCompleted("boardQuality", bid));
+
+    const boardCompleted = isCompletedInRoute("board", boardId);
+
+    // Cutting details are tied to boardQuality / board steps in route
+    // We lock them when ALL board-related steps are completed
+    const cuttingFieldsLocked = allBoardQualitiesCompleted && boardCompleted;
+
+    // Printing: individual items may be locked
+    // Process details: individual items
+    // Lamination/Varnish: individual items
+    // Machine: no route type for machines, so never locked by route
 
     const [addData] = useAddJobCardMutation();
     const [updateData] = useUpdateJobCardMutation();
@@ -162,14 +209,6 @@ const JobCardForm = ({
         setNoOfPockets(data?.noOfPockets || "");
         setCuttingSizeId(data?.cuttingSizeId || "");
         setRunningQty(data?.runningQty || "");
-        setIsFourColor(data?.isFourColor || false);
-        setIsCutColor(data?.isCutColor || false);
-        setIsFront(data?.isFront || false);
-        setIsFrontAndBack(data?.isFrontAndBack || false);
-        setIsCMYK(data?.isCMYK || false);
-        setIsCutColMachine(data?.isCutColMachine || false);
-        setIsFrontMachine(data?.isFrontMachine || false);
-        setIsFrontBackMachine(data?.isFrontBackMachine || false);
         setPlateId(data?.plateId || "");
         setDieId(data?.dieId || "");
         setTotalPlatesets(data?.totalPlatesets || "");
@@ -221,6 +260,13 @@ const JobCardForm = ({
         else syncFormWithDb(undefined);
     }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
+    useEffect(() => {
+        if (pendingPrint && singleData?.data && !isSingleFetching) {
+            openPrintModal(singleData.data.id, singleData.data.docId);
+            setPendingPrint(false);
+        }
+    }, [pendingPrint, singleData, isSingleFetching]);
+
     const toggleArr = (setter, val) =>
         setter((prev) => prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]);
     const toggleLV = (setter, pid) =>
@@ -231,8 +277,7 @@ const JobCardForm = ({
     const formData = {
         id, docDate, branchId, userId, finYearId, orderType, orderQty, customerId,
         boardItems, gsmId, boardId, remarks, fullBoardId, noOfPockets, cuttingSizeId,
-        runningQty, isFourColor, isCutColor, isFront, isFrontAndBack, isCMYK,
-        isCutColMachine, isFrontMachine, isFrontBackMachine, plateId, dieId,
+        runningQty, plateId, dieId,
         totalPlatesets, selectedProcesses, laminations, varnishes, selectedMachines,
         orderEntryId, jobRunTime, processRoute: routeKeysToDb(processRoute),
         productionType, styleItemId, tagCardUps, itemGroupId, itemType, followUpId, designerId,
@@ -241,12 +286,21 @@ const JobCardForm = ({
         selectedPrinting,
         plateDetails: plateDetails?.filter((plate) => plate?.plateName && plate?.qty), labelSizeId, totalMeter,
         selectedFinishing, blockDate,
-        isRepeatedJobCard, refJobCardId,
+        isRepeatedJobCard, refJobCardId, isAmendment
     };
 
-    const openPrintModal = () => {
-        if (qrRef.current) {
-            setQrCodeDataUrl(qrRef.current.toDataURL("image/png"));
+    const openPrintModal = async (overrideId, overrideDocId) => {
+        const printId = overrideId ?? id;
+        const printDocId = overrideDocId ?? docId;
+        try {
+            const dataUrl = await QRCode.toDataURL(
+                JSON.stringify({ id: printId, docId: printDocId }),
+                { width: 120, margin: 1, errorCorrectionLevel: "H" }
+            );
+            setQrCodeDataUrl(dataUrl);
+        } catch (err) {
+            console.error("QR gen failed", err);
+            setQrCodeDataUrl("");
         }
         setPrintModalOpen(true);
     };
@@ -264,27 +318,19 @@ const JobCardForm = ({
                             Swal.fire({ icon: "question", title: "Do You Want to Print?", showCancelButton: true, confirmButtonText: "Yes, Print", cancelButtonText: "No [Esc]", confirmButtonColor: "#3085d6", cancelButtonColor: "#6b7280", focusConfirm: true, allowEnterKey: true, allowEscapeKey: true })
                                 .then((result) => {
                                     if (result.isConfirmed) {
-
                                         if (returnData?.data?.id) {
                                             setId(returnData.data.id);
                                         }
-
-                                        setPendingAction(nextProcess);
-
-                                        openPrintModal(); // ✅ correct
-
+                                        setPendingPrint(true);
                                     } else {
-
                                         if (nextProcess === "new") {
                                             syncFormWithDb(undefined);
                                             setId("");
                                             setDocId("New");
-
                                             setTimeout(() => {
                                                 customerRef.current?.focus();
                                             }, 300);
                                         }
-
                                         if (nextProcess === "close") {
                                             onClose();
                                         }
@@ -307,7 +353,6 @@ const JobCardForm = ({
             { condition: !d.customerId, title: "Customer is required!" },
             { condition: !d.orderEntryId, title: "Order No is required!" },
             { condition: !d.productionType, title: "Production Type is required!" },
-            // { condition: !d.orderType, title: "Order Type is required!" },
             { condition: !d.styleItemId, title: "Item Description is required!" },
             { condition: !d.orderQty, title: "Order Quantity is required!" },
             { condition: !d.followUpId, title: "Follow-Up is required!" },
@@ -347,10 +392,8 @@ const JobCardForm = ({
                 setOrderStyleItems([]);
                 return;
             }
-
             try {
                 const res = await getOrderById(orderEntryId).unwrap();
-
                 setOrderStyleItems(
                     res?.data?.orderItems?.map(item => item?.styleItemId) || []
                 );
@@ -358,7 +401,6 @@ const JobCardForm = ({
                 console.error("Failed to load order style items", err);
             }
         };
-
         loadOrderStyleItems();
     }, [orderEntryId]);
 
@@ -445,10 +487,42 @@ const JobCardForm = ({
             const paddedPlates = [...rawPlates];
             while (paddedPlates.length < 6) paddedPlates.push({ plateName: "", qty: "" });
             setPlateDetails(paddedPlates);
+            setIsAmendment(data?.isAmendment || false);
         } catch (err) {
             console.error("Failed to load order style items", err);
         }
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // Task 3 helpers — per-field completion-lock flags
+    // ─────────────────────────────────────────────────────────────
+
+    // Board quality checkboxes — each item locked individually
+    const isBoardQualityLocked = (boardItemId) => isItemCompleted("boardQuality", boardItemId);
+
+    // Board (other/board dropdown) locked if its route step is completed
+    const isBoardLocked = boardId ? isItemCompleted("board", boardId) : false;
+
+    // Cutting detail fields locked when boardQuality AND board are both done
+    // (they belong to the boardQuality stage in production flow)
+    const isCuttingLocked =
+        boardItems.length > 0 &&
+        boardItems.every((bid) => isItemCompleted("boardQuality", bid));
+
+    // Printing checkboxes — each locked individually
+    const isPrintingItemLocked = (printId) => isItemCompleted("printing", printId);
+
+    // Process details checkboxes — each locked individually
+    const isProcessItemLocked = (procId) => isItemCompleted("process", procId);
+
+    // Lamination rows — each locked individually
+    const isLaminationItemLocked = (laminationProcId) => isItemCompleted("lamination", laminationProcId);
+
+    // Varnish rows — each locked individually
+    const isVarnishItemLocked = (varnishProcId) => isItemCompleted("varnish", varnishProcId);
+
+    // Finishing checkboxes — each locked individually
+    const isFinishingItemLocked = (finId) => isItemCompleted("finishing", finId);
 
     const headerContent = (
         <div className="flex flex-col xl:flex-row gap-1">
@@ -458,7 +532,6 @@ const JobCardForm = ({
                     <div className="w-40"><ReusableInput label="Job Card No" readOnly value={docId} /></div>
                     <div className="w-28"><ReusableInput label="Job Card Date" value={docDate} type="date" readOnly disabled /></div>
                     <div className="mt-4">
-
                         <CheckBoxNew
                             name="Is Repeated"
                             readOnly={readOnly}
@@ -470,7 +543,6 @@ const JobCardForm = ({
                     </div>
                     {
                         isRepeatedJobCard && (
-
                             <div className="w-40">
                                 <DropdownNew
                                     name="Job Card No"
@@ -495,7 +567,6 @@ const JobCardForm = ({
                     <DropdownNew name="Customer"
                         dataList={id ? customerList?.data?.filter((i) => i?.isCustomer) : customerList?.data?.filter((i) => i?.active && i?.isCustomer)}
                         value={customerId} setValue={setCustomerId} required readOnly={readOnly} disabled={readOnly || childRecord.current > 0} ref={customerRef} />
-
                 </div>
             </div>
 
@@ -527,7 +598,6 @@ const JobCardForm = ({
                                     setJobCardSizeDetails([]);
                                     return;
                                 }
-
                                 const res = await getOrderById(selectedValue?.id).unwrap();
                                 setSelectedOrderData(res?.data);
                                 setItemGroupId("");
@@ -547,7 +617,6 @@ const JobCardForm = ({
                                 setOrderStyleItems(res?.data?.orderItems?.map(item => item?.styleItemId) || []);
                             }}
                         />
-
                     </div>
                     <div className="w-28">
                         <DropdownInput name="Production Type" options={productionTypes} value={productionType} setValue={setProductionType} required readOnly={true} disabled={readOnly} />
@@ -572,12 +641,9 @@ const JobCardForm = ({
                                         selectedOrderData?.orderItems?.find(
                                             item => item.styleItemId === selectedValue?.id
                                         );
-
-                                    // ✅ SET ORDER QTY
                                     setOrderQty(selectedOrderItem?.orderQty || "");
                                     setTrackingType(selectedOrderItem?.trackingType || "");
                                     setOrderItemId(selectedOrderItem?.id)
-                                    // ✅ SET SIZE BREAKUP
                                     setJobCardSizeDetails(
                                         selectedOrderItem?.sizeBreakup?.map((s) => ({
                                             sizeId: s.sizeId || "",
@@ -602,32 +668,29 @@ const JobCardForm = ({
                     {
                         itemType !== "LABEL" && (
                             <>
-
                                 <div className="w-20">
                                     <TextInput name="Order Qty" value={orderQty} setValue={setOrderQty} readOnly={true} required type="number"
                                         className="text-right w-full" onFocus={(e) => e.target.select()}
                                         onBlur={(e) => setOrderQty(e.target.value ? Number(e.target.value).toFixed(3) : "")} />
                                 </div>
                                 <div className="w-28">
-                                    <TextInput name="Tag/Card Ups" value={tagCardUps} setValue={setTagCardUps} readOnly={readOnly} className="w-full text-right" onFocus={(e) => e.target.select()} />
+                                    <TextInput name="Tag/Card Ups" value={tagCardUps} setValue={setTagCardUps} readOnly={readOnly} className="w-full text-right" onFocus={(e) => e.target.select()} disabled={isDisabledPermission} />
                                 </div>
                                 <div className="w-28">
-                                    <TextInput name="Job Run Time (Hours)" value={jobRunTime} setValue={setJobRunTime} readOnly={readOnly} className="w-full text-right" type="number" onFocus={(e) => e.target.select()} />
+                                    <TextInput name="Job Run Time (Hours)" value={jobRunTime} setValue={setJobRunTime} readOnly={readOnly} className="w-full text-right" type="number" onFocus={(e) => e.target.select()} disabled={isDisabledPermission} />
                                 </div>
                             </>)
                     }
                     <div className="w-56">
-
                         <DropdownNew name="Follow Up"
                             dataList={id ? employeeList?.data : employeeList?.data?.filter((i) => i?.active)}
-                            value={followUpId} setValue={setFollowUpId} required readOnly={readOnly} disabled={readOnly} />
+                            value={followUpId} setValue={setFollowUpId} required readOnly={readOnly} disabled={isDisabledPermission} />
                     </div>
                     <div className="w-56">
                         <DropdownNew name="Designer"
                             dataList={id ? employeeList?.data : employeeList?.data?.filter((i) => i?.active)}
-                            value={designerId} setValue={setDesignerId} required readOnly={readOnly} disabled={readOnly} />
+                            value={designerId} setValue={setDesignerId} required readOnly={readOnly} disabled={isDisabledPermission} />
                     </div>
-
                 </div>
             </div>
 
@@ -635,18 +698,15 @@ const JobCardForm = ({
                 <h2 className="text-xs font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
                     QR Code
                 </h2>
-
                 {docId && docId !== "New" ? (
                     <div className="flex flex-col items-center justify-center gap-1">
                         <div className="flex flex-col items-center justify-center w-28 h-28 border-2 border-dashed border-slate-200 rounded bg-white">
                             <QRCodeCanvas
-                                ref={qrRef}
                                 value={JSON.stringify({ id, docId })}
                                 size={80}
                                 className="border border-slate-200 rounded"
                                 level="H"
                             />
-
                             <span className="text-[9px] font-bold text-slate-700 mt-1 tracking-tight">
                                 {docId}
                             </span>
@@ -655,11 +715,7 @@ const JobCardForm = ({
                 ) : (
                     <div className="flex justify-center items-center mt-2 w-28">
                         <div className="w-28 h-28 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded bg-white text-slate-400 text-[10px] font-medium text-center leading-tight">
-                            <span>
-                                QR appears
-                                <br />
-                                after save
-                            </span>
+                            <span>QR appears<br />after save</span>
                         </div>
                     </div>
                 )}
@@ -671,51 +727,73 @@ const JobCardForm = ({
         <div className="h-full overflow-auto">
             {
                 itemType !== "LABEL" && (
-                    <div className="grid grid-cols-4  gap-x-2 items-start min-w-max">
+                    <div className="grid grid-cols-4 gap-x-2 items-start min-w-max">
 
                         {/* COL 1 — Board */}
                         <div className="flex flex-col gap-2">
                             <SectionCard title="Board Quality">
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-3">
                                     {boardList?.map((item) => (
-                                        <CheckBox key={item.id} name={item.name} value={boardItems.includes(item.id)}
-                                            setValue={() => toggleArr(setBoardItems, item.id)} readOnly={readOnly} />
+                                        <CheckBox
+                                            key={item.id}
+                                            name={item.name}
+                                            value={boardItems.includes(item.id)}
+                                            setValue={() => toggleArr(setBoardItems, item.id)}
+                                            readOnly={readOnly}
+                                            // Task 3: disable if this board quality is completed in route
+                                            disabled={isDisabledPermission || isBoardQualityLocked(item.id)}
+                                        />
                                     ))}
                                 </div>
                             </SectionCard>
                             <SectionCard title="Cutting Details">
                                 <div className="grid grid-cols-2 gap-x-3 min-h-[220px]">
                                     <Field label="GSM">
-                                        <DropdownWithModal name="" options={dropDownListObject(id ? gsmList?.data : gsmList?.data?.filter((i) => i?.active), "name", "id")}
-                                            value={gsmId} setValue={setGsmId} readOnly={readOnly} addNewLabel="+ Add GSM" childComponent={Gsm} addNewModalWidth="w-[30%] h-[45%]" />
+                                        <DropdownWithModal name=""
+                                            options={dropDownListObject(id ? gsmList?.data : gsmList?.data?.filter((i) => i?.active), "name", "id")}
+                                            value={gsmId} setValue={setGsmId} readOnly={readOnly}
+                                            addNewLabel="+ Add GSM" childComponent={Gsm} addNewModalWidth="w-[30%] h-[45%]"
+                                            // Task 3: lock if cutting stage is completed
+                                            disabled={isDisabledPermission || isCuttingLocked}
+                                        />
                                     </Field>
                                     <Field label="Others / Board">
-                                        <DropdownWithModal name="" options={dropDownListObject(id ? boardData?.data : boardData?.data?.filter((i) => i?.active), "name", "id")}
-                                            value={boardId} setValue={setBoardId} readOnly={readOnly} addNewLabel="+ Add Board" childComponent={BoardMaster} addNewModalWidth="w-[30%] h-[45%]" />
+                                        <DropdownWithModal name=""
+                                            options={dropDownListObject(id ? boardData?.data : boardData?.data?.filter((i) => i?.active), "name", "id")}
+                                            value={boardId} setValue={setBoardId} readOnly={readOnly}
+                                            addNewLabel="+ Add Board" childComponent={BoardMaster} addNewModalWidth="w-[30%] h-[45%]"
+                                            disabled={isDisabledPermission || isBoardLocked}
+                                        />
                                     </Field>
                                     <Field label="Full Board">
-                                        <DropdownWithModal name="" options={dropDownListObject(id ? sizeList?.data : sizeList?.data?.filter((i) => i?.active), "name", "id")}
-                                            value={fullBoardId} setValue={setFullBoardId} readOnly={readOnly} addNewLabel="+ Add Size" childComponent={Size} addNewModalWidth="w-[30%] h-[45%]" />
-                                        {/* <TextInput name="" value={fullBoardId} setValue={setFullBoardId} readOnly={readOnly} type="number" className="text-right w-full" /> */}
+                                        <DropdownWithModal name=""
+                                            options={dropDownListObject(id ? sizeList?.data : sizeList?.data?.filter((i) => i?.active), "name", "id")}
+                                            value={fullBoardId} setValue={setFullBoardId} readOnly={readOnly}
+                                            addNewLabel="+ Add Size" childComponent={Size} addNewModalWidth="w-[30%] h-[45%]"
+                                            disabled={isDisabledPermission || isCuttingLocked}
+                                        />
                                     </Field>
                                     <Field label="Cutting Size">
-                                        <DropdownWithModal name="" options={dropDownListObject(id ? sizeList?.data : sizeList?.data?.filter((i) => i?.active), "name", "id")}
-                                            value={cuttingSizeId} setValue={setCuttingSizeId} readOnly={readOnly} addNewLabel="+ Add Size" childComponent={Size} addNewModalWidth="w-[30%] h-[45%]" />
-                                        {/* <TextInput name="" value={cuttingSizeId} setValue={setCuttingSizeId} readOnly={readOnly} className="w-full" /> */}
+                                        <DropdownWithModal name=""
+                                            options={dropDownListObject(id ? sizeList?.data : sizeList?.data?.filter((i) => i?.active), "name", "id")}
+                                            value={cuttingSizeId} setValue={setCuttingSizeId} readOnly={readOnly}
+                                            addNewLabel="+ Add Size" childComponent={Size} addNewModalWidth="w-[30%] h-[45%]"
+                                            disabled={isDisabledPermission || isCuttingLocked}
+                                        />
                                     </Field>
                                     <Field label="No. of Sheets">
-                                        <TextInput name="" value={noOfPockets} setValue={setNoOfPockets} readOnly={readOnly} type="number" className="w-full text-right" />
+                                        <TextInput name="" value={noOfPockets} setValue={setNoOfPockets} readOnly={readOnly}
+                                            type="number" className="w-full text-right"
+                                            disabled={isDisabledPermission || isCuttingLocked}
+                                        />
                                     </Field>
                                     <Field label="Running Qty">
-                                        <TextInput name="" value={runningQty} setValue={setRunningQty} readOnly={readOnly} type="number" className="w-full text-right" />
+                                        <TextInput name="" value={runningQty} setValue={setRunningQty} readOnly={readOnly}
+                                            type="number" className="w-full text-right"
+                                            disabled={isDisabledPermission || isCuttingLocked}
+                                        />
                                     </Field>
                                 </div>
-                                {/* <div className="grid grid-cols-2 gap-x-3 gap-y-3 mt-2.5 pt-2 border-t border-slate-100">
-                                    <CheckBox name="4 Color" value={isFourColor} setValue={setIsFourColor} readOnly={readOnly} />
-                                    <CheckBox name="Cut Color" value={isCutColor} setValue={setIsCutColor} readOnly={readOnly} />
-                                    <CheckBox name="Front" value={isFront} setValue={setIsFront} readOnly={readOnly} />
-                                    <CheckBox name="Front & Back" value={isFrontAndBack} setValue={setIsFrontAndBack} readOnly={readOnly} />
-                                </div> */}
                             </SectionCard>
                         </div>
 
@@ -723,43 +801,59 @@ const JobCardForm = ({
                             <SectionCard title="Printing Details">
                                 <div className="grid grid-cols-2 gap-y-4">
                                     {printingList?.map((item) => (
-                                        <CheckBox key={item.id} name={item.name} value={selectedPrinting.includes(item.id)}
-                                            setValue={() => toggleArr(setSelectedPrinting, item.id)} readOnly={readOnly} />
+                                        <CheckBox
+                                            key={item.id}
+                                            name={item.name}
+                                            value={selectedPrinting.includes(item.id)}
+                                            setValue={() => toggleArr(setSelectedPrinting, item.id)}
+                                            readOnly={readOnly}
+                                            // Task 3: lock if this printing step is completed
+                                            disabled={isDisabledPermission || isPrintingItemLocked(item.id)}
+                                        />
                                     ))}
                                 </div>
                             </SectionCard>
                             <SectionCard title="Plate & Die Details">
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                                     <Field label="Plate Details">
-                                        <DropdownWithModal name="" options={dropDownListObject(id ? plateList?.data : plateList?.data?.filter((i) => i?.active), "name", "id")}
-                                            value={plateId} setValue={setPlateId} readOnly={readOnly} addNewLabel="+ Add Plate" childComponent={PlateMaster} addNewModalWidth="w-[30%] h-[45%]" />
+                                        <DropdownWithModal name=""
+                                            options={dropDownListObject(id ? plateList?.data : plateList?.data?.filter((i) => i?.active), "name", "id")}
+                                            value={plateId} setValue={setPlateId} readOnly={readOnly}
+                                            addNewLabel="+ Add Plate" childComponent={PlateMaster} addNewModalWidth="w-[30%] h-[45%]"
+                                            disabled={isDisabledPermission}
+                                        />
                                     </Field>
                                     <Field label="Die Details">
-                                        <DropdownWithModal name="" options={dropDownListObject(id ? dieList?.data : dieList?.data?.filter((i) => i?.active), "name", "id")}
-                                            value={dieId} setValue={setDieId} readOnly={readOnly} addNewLabel="+ Add Die" childComponent={DieMaster} addNewModalWidth="w-[30%] h-[45%]" />
+                                        <DropdownWithModal name=""
+                                            options={dropDownListObject(id ? dieList?.data : dieList?.data?.filter((i) => i?.active), "name", "id")}
+                                            value={dieId} setValue={setDieId} readOnly={readOnly}
+                                            addNewLabel="+ Add Die" childComponent={DieMaster} addNewModalWidth="w-[30%] h-[45%]"
+                                            disabled={isDisabledPermission}
+                                        />
                                     </Field>
                                     <div className="col-span-1">
-
                                         <Field label="Total Plate Sets">
-                                            <TextInput name="" value={totalPlatesets} setValue={setTotalPlatesets} type={"number"} readOnly={readOnly} className=" w-full text-right " />
+                                            <TextInput name="" value={totalPlatesets} setValue={setTotalPlatesets} type={"number"}
+                                                readOnly={readOnly} className=" w-full text-right"
+                                                disabled={isDisabledPermission}
+                                            />
                                         </Field>
                                     </div>
                                 </div>
                             </SectionCard>
                             <SectionCard title="Plate Set & Size Details">
-                                <div className=" min-h-[72px] space-y-3">
-                                    <div className=" justify-center items-center">
-                                        <button onClick={() => setPlateModalOpen(true)} className="border flex justify-center gap-1 items-center w-auto  rounded-md text-[10px] bg-green-700 font-semibold uppercase tracking-wider text-white p-1">
+                                <div className="min-h-[72px] space-y-3">
+                                    <div className="justify-center items-center">
+                                        <button onClick={() => setPlateModalOpen(true)} className="border flex justify-center gap-1 items-center w-auto rounded-md text-[10px] bg-green-700 font-semibold uppercase tracking-wider text-white p-1">
                                             Add Plate Set <Plus className="size-3" />
                                         </button>
                                     </div>
-                                    <div className=" justify-center items-center">
-                                        <button onClick={() => setSizeModalOpen(true)} className="border w-auto  rounded-md text-[10px] bg-blue-700 font-semibold uppercase tracking-wider text-white p-1">
+                                    <div className="justify-center items-center">
+                                        <button onClick={() => setSizeModalOpen(true)} className="border w-auto rounded-md text-[10px] bg-blue-700 font-semibold uppercase tracking-wider text-white p-1">
                                             View Size Details
                                         </button>
                                     </div>
                                 </div>
-
                             </SectionCard>
                         </div>
 
@@ -767,64 +861,109 @@ const JobCardForm = ({
                             <SectionCard title="Process Details">
                                 <div className="grid grid-cols-2 gap-y-4 min-h-[165px]">
                                     {defaultList?.map((item) => (
-                                        <CheckBox key={item.id} name={item.name} value={selectedProcesses.includes(item.id)}
-                                            setValue={() => toggleArr(setSelectedProcesses, item.id)} readOnly={readOnly} />
+                                        <CheckBox
+                                            key={item.id}
+                                            name={item.name}
+                                            value={selectedProcesses.includes(item.id)}
+                                            setValue={() => toggleArr(setSelectedProcesses, item.id)}
+                                            readOnly={readOnly}
+                                            // Task 3: lock if this process step is completed
+                                            disabled={isDisabledPermission || isProcessItemLocked(item.id)}
+                                        />
                                     ))}
                                 </div>
                             </SectionCard>
                             <SectionCard title="Lamination Details">
                                 {laminationList?.length > 0
-                                    ? (<><LVHeader />{laminationList.map((item) => { const sel = laminations.find((l) => l.processId === item.id); return <LVRow key={item.id} item={item} selected={sel} onMain={() => toggleLV(setLaminations, item.id)} onFront={() => toggleLVProp(setLaminations, item.id, "isFront")} onFrontBack={() => toggleLVProp(setLaminations, item.id, "isFrontAndBack")} readOnly={readOnly} />; })}</>)
+                                    ? (
+                                        <>
+                                            <LVHeader />
+                                            {laminationList.map((item) => {
+                                                const sel = laminations.find((l) => l.processId === item.id);
+                                                // Task 3: lock if this lamination step is completed
+                                                const laminLocked = isLaminationItemLocked(item.id);
+                                                return (
+                                                    <LVRow
+                                                        key={item.id} item={item} selected={sel}
+                                                        onMain={() => toggleLV(setLaminations, item.id)}
+                                                        onFront={() => toggleLVProp(setLaminations, item.id, "isFront")}
+                                                        onFrontBack={() => toggleLVProp(setLaminations, item.id, "isFrontAndBack")}
+                                                        readOnly={readOnly || isDisabledPermission || laminLocked}
+                                                    />
+                                                );
+                                            })}
+                                        </>
+                                    )
                                     : <p className="text-xs text-slate-400 italic">No lamination options configured.</p>}
                             </SectionCard>
                         </div>
 
                         <div className="flex flex-col gap-2">
-
                             <SectionCard title="Varnish Details">
                                 {varnishList?.length > 0
-                                    ? (<><LVHeader />{varnishList.map((item) => { const sel = varnishes.find((v) => v.processId === item.id); return <LVRow key={item.id} item={item} selected={sel} onMain={() => toggleLV(setVarnishes, item.id)} onFront={() => toggleLVProp(setVarnishes, item.id, "isFront")} onFrontBack={() => toggleLVProp(setVarnishes, item.id, "isFrontAndBack")} readOnly={readOnly} />; })}</>)
+                                    ? (
+                                        <>
+                                            <LVHeader />
+                                            {varnishList.map((item) => {
+                                                const sel = varnishes.find((v) => v.processId === item.id);
+                                                // Task 3: lock if this varnish step is completed
+                                                const varnishLocked = isVarnishItemLocked(item.id);
+                                                return (
+                                                    <LVRow
+                                                        key={item.id} item={item} selected={sel}
+                                                        onMain={() => toggleLV(setVarnishes, item.id)}
+                                                        onFront={() => toggleLVProp(setVarnishes, item.id, "isFront")}
+                                                        onFrontBack={() => toggleLVProp(setVarnishes, item.id, "isFrontAndBack")}
+                                                        readOnly={readOnly || isDisabledPermission || varnishLocked}
+                                                    />
+                                                );
+                                            })}
+                                        </>
+                                    )
                                     : <p className="text-xs text-slate-400 italic">No varnish options configured.</p>}
                             </SectionCard>
                             <SectionCard title="Machines">
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-4 min-h-[132px]">
                                     {machineList?.data?.filter((item) => id ? true : item.active).map((item) => (
-                                        <CheckBox key={item.id} name={`${item.name}${item.Size?.name ? ` (${item.Size.name})` : ""}`} value={selectedMachines.includes(item.id)}
-                                            setValue={() => toggleArr(setSelectedMachines, item.id)} readOnly={readOnly} />
+                                        <CheckBox
+                                            key={item.id}
+                                            name={`${item.name}${item.Size?.name ? ` (${item.Size.name})` : ""}`}
+                                            value={selectedMachines.includes(item.id)}
+                                            setValue={() => toggleArr(setSelectedMachines, item.id)}
+                                            readOnly={readOnly}
+                                            // Machines have no route type, never locked by completion
+                                            disabled={isDisabledPermission}
+                                        />
                                     ))}
                                 </div>
                             </SectionCard>
                         </div>
 
                     </div>
-
                 )
             }
             {
                 itemType === "LABEL" && (
-                    <div className="flex items-start min-w-max mx-2 h-full" >
+                    <div className="flex items-start min-w-max mx-2 h-full">
                         <div className="w-full h-full flex gap-2">
                             <SectionCard title="Label Details" className="max-w-full h-full">
                                 <div className="flex gap-16">
-
                                     <div className="grid grid-cols-3 gap-y-2 gap-x-2 h-full">
                                         <div className="">
-
-
-                                            <TextInput name="Label Quality" value={findFromList(styleItemId, styleItemList?.data, "name")} setValue={setLabelQuality} readOnly={true} className="w-full" />
-
+                                            <TextInput name="Label Quality" value={findFromList(styleItemId, styleItemList?.data, "name")} setValue={setLabelQuality} readOnly={true} className="w-full" disabled={isDisabledPermission} />
                                         </div>
                                         <div className="">
-                                            <DropdownWithModal name="Label Size" options={dropDownListObject(id ? sizeList?.data : sizeList?.data?.filter((i) => i?.active), "name", "id")}
-                                                value={labelSizeId} setValue={setLabelSizeId} readOnly={readOnly} addNewLabel="+ Add Size" childComponent={Size} addNewModalWidth="w-[30%] h-[45%]" />
+                                            <DropdownWithModal name="Label Size"
+                                                options={dropDownListObject(id ? sizeList?.data : sizeList?.data?.filter((i) => i?.active), "name", "id")}
+                                                value={labelSizeId} setValue={setLabelSizeId} readOnly={readOnly}
+                                                addNewLabel="+ Add Size" childComponent={Size} addNewModalWidth="w-[30%] h-[45%]"
+                                                disabled={isDisabledPermission}
+                                            />
                                         </div>
                                         <div className="">
-
-                                            <TextInput name="Total Meter" value={totalMeter} setValue={setTotalMeter} readOnly={readOnly} type="number" className="w-full text-right" />
-
+                                            <TextInput name="Total Meter" value={totalMeter} setValue={setTotalMeter} readOnly={readOnly} type="number" className="w-full text-right" disabled={isDisabledPermission} />
                                         </div>
                                         <div className="">
-
                                             <DropdownInput
                                                 name="Block"
                                                 options={blockTypes}
@@ -832,12 +971,9 @@ const JobCardForm = ({
                                                 setValue={(value) => setBlock(value)}
                                                 required={true}
                                                 readOnly={readOnly}
-                                                disabled={childRecord.current > 0 || readOnly}
-                                                beforeChange={() => {
-                                                    setBlockDate(null)
-                                                }}
+                                                disabled={childRecord.current > 0 || readOnly || isDisabledPermission}
+                                                beforeChange={() => { setBlockDate(null) }}
                                             />
-
                                         </div>
                                         {
                                             block === "OLD" && (
@@ -846,119 +982,76 @@ const JobCardForm = ({
                                                         name="Block Date"
                                                         value={blockDate}
                                                         setValue={setBlockDate}
-                                                        disabled={readOnly}
+                                                        disabled={readOnly || isDisabledPermission}
                                                         required={false}
                                                         type="date"
                                                     />
                                                 </div>
                                             )
                                         }
-
                                         <div className="">
-
-                                            <TextInput name="Label Qty" value={orderQty} setValue={setOrderQty} readOnly={true} type="number" className="w-full text-right" />
-
+                                            <TextInput name="Label Qty" value={orderQty} setValue={setOrderQty} readOnly={true} type="number" className="w-full text-right" disabled={isDisabledPermission} />
                                         </div>
                                         <div className="">
-
-                                            <TextInput name="Roll Qty" value={rollQty} setValue={setRollQty} readOnly={readOnly} type="number" className="w-full text-right" />
-
+                                            <TextInput name="Roll Qty" value={rollQty} setValue={setRollQty} readOnly={readOnly} type="number" className="w-full text-right" disabled={isDisabledPermission} />
                                         </div>
-                                        {/* <div className="">
-
-
-                                            <TextInput name="Cut & Seal" value={cutAndSeal} setValue={setCutAndSeal} readOnly={readOnly} className="w-full" />
-
-                                        </div>
-                                        <div className="col-span-3" >
-                                            <label
-                                                className={`md:text-start block text-[11px] font-bold text-slate-700 mb-1`}
-                                            >
-                                                Remarks
-                                            </label>
-                                            <textarea name="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} readOnly={readOnly} className="w-full h-full focus:outline-none border-slate-300 border focus:ring-1 text-[11px] p-1 rounded-md focus:border-indigo-500 " />
-                                        </div> */}
-
                                     </div>
-
                                 </div>
                             </SectionCard>
                             <SectionCard title="Finishing Processes" className="w-1/3">
                                 <div className="grid grid-cols-2 gap-y-4">
                                     {finishingList?.map((item) => (
-                                        <CheckBox key={item.id} name={item.name} value={selectedFinishing.includes(item.id)}
-                                            setValue={() => toggleArr(setSelectedFinishing, item.id)} readOnly={readOnly} />
+                                        <CheckBox
+                                            key={item.id}
+                                            name={item.name}
+                                            value={selectedFinishing.includes(item.id)}
+                                            setValue={() => toggleArr(setSelectedFinishing, item.id)}
+                                            readOnly={readOnly}
+                                            // Task 3: lock if this finishing step is completed
+                                            disabled={isDisabledPermission || isFinishingItemLocked(item.id)}
+                                        />
                                     ))}
                                 </div>
                             </SectionCard>
                             <SectionCard title="Size Wise Qty Details" className="w-1/3">
                                 <div>
-                                    {/* Main content area */}
                                     <div className="bg-white px-4 py-1 shadow-sm">
-
-                                        <div className=" overflow-y-auto">
-
-
+                                        <div className="overflow-y-auto">
                                             <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
                                                 <thead>
                                                     <tr>
-                                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-6">
-                                                            S.No
-                                                        </th>
-                                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-20 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
-                                                            Size
-                                                        </th>
-                                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
-                                                            Qty
-                                                        </th>
+                                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-6">S.No</th>
+                                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-20 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">Size</th>
+                                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">Qty</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {jobCardSizeDetails?.map(
-                                                        (item, idx) => (
-                                                            <tr
-                                                                key={idx}
-                                                                className="h-8 hover:bg-slate-50 transition-colors"
-                                                            >
-                                                                <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">
-                                                                    {idx + 1}
-                                                                </td>
-                                                                <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
-                                                                    {sizeList?.data?.find((s) => s.id === item.sizeId)
-                                                                        ?.name || "All Items"}
-                                                                </td>
-                                                                <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                                    <input
-                                                                        type="number"
-                                                                        className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
-                                                                        value={item.qty}
-                                                                        disabled={true}
-
-                                                                    />
-                                                                </td>
-                                                            </tr>
-                                                        ),
-                                                    )}
+                                                    {jobCardSizeDetails?.map((item, idx) => (
+                                                        <tr key={idx} className="h-8 hover:bg-slate-50 transition-colors">
+                                                            <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">{idx + 1}</td>
+                                                            <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
+                                                                {sizeList?.data?.find((s) => s.id === item.sizeId)?.name || "All Items"}
+                                                            </td>
+                                                            <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                                <input type="number" className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white" value={item.qty} disabled={true} />
+                                                            </td>
+                                                        </tr>
+                                                    ))}
                                                 </tbody>
                                             </table>
-
-                                            {(!jobCardSizeDetails ||
-                                                jobCardSizeDetails.length === 0) && (
-                                                    <div className="text-center p-8 text-slate-400 text-sm font-medium italic">
-                                                        No items found for this tracking mode.
-                                                    </div>
-                                                )}
+                                            {(!jobCardSizeDetails || jobCardSizeDetails.length === 0) && (
+                                                <div className="text-center p-8 text-slate-400 text-sm font-medium italic">
+                                                    No items found for this tracking mode.
+                                                </div>
+                                            )}
                                         </div>
-
                                     </div>
                                 </div>
                             </SectionCard>
-
                         </div>
                     </div>
                 )
             }
-
         </div>
     );
 
@@ -966,7 +1059,6 @@ const JobCardForm = ({
         <>
             <div className="flex gap-2">
                 <div className="w-3/4">
-
                     <ProcessRoutePanel
                         selectedProcesses={selectedProcesses} laminations={laminations} varnishes={varnishes}
                         defaultList={defaultList} laminationList={laminationList} varnishList={varnishList}
@@ -974,34 +1066,28 @@ const JobCardForm = ({
                         boardItems={boardItems} boardId={boardId} printingList={printingList}
                         boardList={boardList} selectedPrinting={selectedPrinting}
                         selectedFinishing={selectedFinishing} finishingList={finishingList}
+                        isAmendment={isAmendment} setIsAmendment={setIsAmendment}
+                        // Task 1 & 2: pass raw DB route so panel can look up step statuses
+                        dbProcessRoute={dbProcessRoute}
                     />
                 </div>
                 <div className="border border-slate-200 p-1 bg-white rounded-md shadow-sm w-1/4">
-                    <h2 className="font-medium text-indigo-600 text-[11px]">
-                        REMARKS
-                    </h2>
+                    <h2 className="font-medium text-indigo-600 text-[11px]">REMARKS</h2>
                     <textarea
                         readOnly={readOnly}
                         value={remarks}
-                        onChange={(e) => {
-                            setRemarks(e.target.value);
-                        }}
+                        onChange={(e) => { setRemarks(e.target.value); }}
+                        disabled={isDisabledPermission}
                         className="w-full h-11 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
                         placeholder="Additional Remarks..."
                         onKeyDown={(e) => {
                             if (e.ctrlKey && e.key === "Enter") {
                                 e.preventDefault();
-
                                 const textarea = e.target;
                                 const start = textarea.selectionStart;
                                 const end = textarea.selectionEnd;
-
-                                const newValue =
-                                    remarks.substring(0, start) + "\n" + remarks.substring(end);
-
+                                const newValue = remarks.substring(0, start) + "\n" + remarks.substring(end);
                                 setRemarks(newValue);
-
-                                // ✅ Restore focus + cursor properly
                                 requestAnimationFrame(() => {
                                     textarea.focus();
                                     textarea.setSelectionRange(start + 1, start + 1);
@@ -1010,40 +1096,22 @@ const JobCardForm = ({
                         }}
                     />
                 </div>
-
             </div>
-
 
             <div className="flex justify-between items-center mt-2">
                 <div className="flex gap-2 flex-wrap">
-                    {
-                        !readOnly && (
-
-                            <button onClick={() => saveData("close")} onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    e.preventDefault()
-                                    saveData("close")
-                                }
-                            }} disabled={readOnly || isDisabled}
-                                className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium">
-                                <HiOutlineRefresh className="w-3.5 h-3.5" /> Save & Close
-                            </button>
-                        )
-                    }
-                    {
-                        !readOnly && (
-
-                            <button onClick={() => saveData("new")} onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    e.preventDefault()
-                                    saveData("new")
-                                }
-                            }} disabled={readOnly || isDisabled}
-                                className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium">
-                                <FiSave className="w-3.5 h-3.5" /> Save & New
-                            </button>
-                        )
-                    }
+                    {!readOnly && (
+                        <button onClick={() => saveData("close")} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveData("close") } }} disabled={readOnly || isDisabledPermission}
+                            className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium">
+                            <HiOutlineRefresh className="w-3.5 h-3.5" /> Save & Close
+                        </button>
+                    )}
+                    {!readOnly && (
+                        <button onClick={() => saveData("new")} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveData("new") } }} disabled={readOnly || isDisabledPermission}
+                            className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium">
+                            <FiSave className="w-3.5 h-3.5" /> Save & New
+                        </button>
+                    )}
                     {status === "REJECTED" && (
                         <button onClick={() => saveData("close", { submitApproval: true })} disabled={readOnly}
                             title="Submit Approval" className="bg-green-700 text-white px-2 py-1 rounded hover:bg-green-800 flex items-center text-xs">
@@ -1066,23 +1134,13 @@ const JobCardForm = ({
                 <div className="flex gap-2">
                     {id && readOnly && (
                         <button disabled={status === "PENDING" && !canApprove} onClick={() => hasPermission(() => setReadOnly(false), "edit")}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                    e.preventDefault()
-                                    hasPermission(() => setReadOnly(false), "edit")
-                                }
-                            }}
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); hasPermission(() => setReadOnly(false), "edit") } }}
                             className="bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 flex items-center gap-1.5 text-xs font-medium">
                             <FiEdit2 className="w-3.5 h-3.5" /> Edit
                         </button>
                     )}
                     <button onClick={() => openPrintModal()}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                e.preventDefault()
-                                openPrintModal()
-                            }
-                        }}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); openPrintModal() } }}
                         className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs">
                         <FiPrinter className="w-4 h-4 mr-2" /> Print
                     </button>
@@ -1093,34 +1151,16 @@ const JobCardForm = ({
 
     return (
         <>
-            <Modal
-                isOpen={plateModalOpen}
-                onClose={() => {
-                    setPlateModalOpen(false)
-                }}
-                widthClass="w-[500px]"
-            >
+            <Modal isOpen={plateModalOpen} onClose={() => { setPlateModalOpen(false) }} widthClass="w-[500px]">
                 <div className="bg-slate-100 p-3 rounded-lg">
-                    {/* Header section like the reference image */}
                     <div className="bg-white p-3 rounded-lg flex justify-between items-center mb-3 shadow-sm">
-                        <h3 className="text-[16px] font-bold text-slate-800">
-                            Plate Set Details
-                        </h3>
+                        <h3 className="text-[16px] font-bold text-slate-800">Plate Set Details</h3>
                         <div className="flex gap-2">
-                            <button
-                                className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold transition-colors flex items-center gap-1 shadow-sm"
-                                onClick={() => setPlateModalOpen(false)}
-                            >
-                                Done
-                            </button>
+                            <button className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold transition-colors flex items-center gap-1 shadow-sm" onClick={() => setPlateModalOpen(false)}>Done</button>
                         </div>
-
                     </div>
-
-                    {/* Main content area */}
                     <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
                         <div className="h-[220px] overflow-y-auto">
-
                             <table className="w-full border-collapse text-[11px]">
                                 <thead>
                                     <tr className="bg-gray-100 text-gray-700 h-7">
@@ -1129,16 +1169,7 @@ const JobCardForm = ({
                                         <th className="border border-gray-300 px-1 py-1 text-center w-16">Qty</th>
                                         {!readOnly && (
                                             <th className="border border-gray-300 px-1 py-1 text-center w-10">
-                                                <button
-                                                    onClick={() =>
-                                                        setPlateDetails(prev => [...prev, { plateName: "", qty: "" }])
-                                                    }
-                                                    className="flex items-center justify-center mx-auto p-0.5 bg-indigo-100 hover:bg-indigo-200 rounded"
-                                                    title="Add plate row"
-                                                    tabIndex={-1}
-                                                >
-                                                    Actions
-                                                </button>
+                                                <button onClick={() => setPlateDetails(prev => [...prev, { plateName: "", qty: "" }])} className="flex items-center justify-center mx-auto p-0.5 bg-indigo-100 hover:bg-indigo-200 rounded" title="Add plate row" tabIndex={-1} disabled={isDisabledPermission}>Actions</button>
                                             </th>
                                         )}
                                     </tr>
@@ -1148,65 +1179,23 @@ const JobCardForm = ({
                                         <tr key={idx} className={idx % 2 === 0 ? "bg-white h-7" : "bg-gray-50 h-7"}>
                                             <td className="border border-gray-300 text-center text-[10px] text-gray-500">{idx + 1}</td>
                                             <td className="border border-gray-300 p-0">
-                                                <input
-                                                    type="text"
-                                                    className="w-full px-1 py-0.5 bg-transparent text-[11px] outline-none focus:bg-white"
-                                                    value={row.plateName}
-                                                    onChange={e => {
-                                                        const next = [...plateDetails];
-                                                        next[idx] = { ...next[idx], plateName: e.target.value };
-                                                        setPlateDetails(next);
-                                                    }}
-                                                    disabled={readOnly}
-                                                    placeholder="Plate name"
-                                                />
+                                                <input type="text" className="w-full px-1 py-0.5 bg-transparent text-[11px] outline-none focus:bg-white" value={row.plateName}
+                                                    onChange={e => { const next = [...plateDetails]; next[idx] = { ...next[idx], plateName: e.target.value }; setPlateDetails(next); }}
+                                                    disabled={readOnly || isDisabledPermission} placeholder="Plate name" />
                                             </td>
                                             <td className="border border-gray-300 p-0">
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    className="w-full px-1 py-0.5 text-right bg-transparent text-[11px] outline-none focus:bg-white"
-                                                    value={row.qty}
-                                                    onChange={e => {
-                                                        const next = [...plateDetails];
-                                                        next[idx] = { ...next[idx], qty: e.target.value };
-                                                        setPlateDetails(next);
-                                                    }}
-                                                    onBlur={e => {
-                                                        const next = [...plateDetails];
-                                                        next[idx] = { ...next[idx], qty: e.target.value ? Number(e.target.value) : "" };
-                                                        setPlateDetails(next);
-                                                    }}
-                                                    onFocus={e => e.target.select()}
-                                                    disabled={readOnly}
-                                                    placeholder="0"
-                                                />
+                                                <input type="number" min="0" className="w-full px-1 py-0.5 text-right bg-transparent text-[11px] outline-none focus:bg-white" value={row.qty}
+                                                    onChange={e => { const next = [...plateDetails]; next[idx] = { ...next[idx], qty: e.target.value }; setPlateDetails(next); }}
+                                                    onBlur={e => { const next = [...plateDetails]; next[idx] = { ...next[idx], qty: e.target.value ? Number(e.target.value) : "" }; setPlateDetails(next); }}
+                                                    onFocus={e => e.target.select()} disabled={readOnly || isDisabledPermission} placeholder="0" />
                                             </td>
                                             {!readOnly && (
                                                 <td className="border border-gray-300 text-center">
                                                     <div className="flex items-center justify-center gap-0.5">
-                                                        <button
-                                                            onClick={() =>
-                                                                setPlateDetails(prev => [...prev, { plateName: "", qty: "" }])
-                                                            }
-                                                            className="p-0.5 bg-blue-50 hover:bg-blue-100 rounded"
-                                                            title="Add row"
-                                                            tabIndex={-1}
-                                                        >
+                                                        <button onClick={() => setPlateDetails(prev => [...prev, { plateName: "", qty: "" }])} className="p-0.5 bg-blue-50 hover:bg-blue-100 rounded" title="Add row" tabIndex={-1} disabled={isDisabledPermission}>
                                                             <Plus size={11} className="text-blue-700" />
                                                         </button>
-                                                        <button
-                                                            onClick={() =>
-                                                                setPlateDetails(prev => {
-                                                                    const next = prev.filter((_, i) => i !== idx);
-                                                                    // keep at least 1 row
-                                                                    return next.length > 0 ? next : [{ plateName: "", qty: "" }];
-                                                                })
-                                                            }
-                                                            className="p-0.5 bg-red-50 hover:bg-red-100 rounded"
-                                                            title="Delete row"
-                                                            tabIndex={-1}
-                                                        >
+                                                        <button onClick={() => setPlateDetails(prev => { const next = prev.filter((_, i) => i !== idx); return next.length > 0 ? next : [{ plateName: "", qty: "" }]; })} className="p-0.5 bg-red-50 hover:bg-red-100 rounded" title="Delete row" tabIndex={-1} disabled={isDisabledPermission}>
                                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-red-700" viewBox="0 0 20 20" fill="currentColor">
                                                                 <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                                                             </svg>
@@ -1218,82 +1207,43 @@ const JobCardForm = ({
                                     ))}
                                 </tbody>
                             </table>
-
                         </div>
                     </div>
                 </div>
             </Modal>
-            <Modal
-                isOpen={sizeModalOpen}
-                onClose={() => {
-                    setSizeModalOpen(false)
-                }}
-                widthClass="w-[550px]"
-            >
+
+            <Modal isOpen={sizeModalOpen} onClose={() => { setSizeModalOpen(false) }} widthClass="w-[550px]">
                 <div className="bg-slate-100 p-3 rounded-lg">
-                    {/* Header section like the reference image */}
                     <div className="bg-white p-3 rounded-lg flex justify-between items-center mb-3 shadow-sm">
-                        <h3 className="text-[16px] font-bold text-slate-800">
-                            Size Wise Details
-                        </h3>
+                        <h3 className="text-[16px] font-bold text-slate-800">Size Wise Details</h3>
                         <div className="flex gap-2">
-                            <button
-                                className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold transition-colors flex items-center gap-1 shadow-sm"
-                                onClick={() => setSizeModalOpen(false)}
-                            >
-                                Done
-                            </button>
+                            <button className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold transition-colors flex items-center gap-1 shadow-sm" onClick={() => setSizeModalOpen(false)}>Done</button>
                         </div>
                     </div>
-
-                    {/* Main content area */}
                     <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
                         <div className="h-[220px] overflow-y-auto">
-
                             <table className="w-[420px] border-separate border-spacing-0 border-t border-l border-slate-200">
                                 <thead>
                                     <tr>
-                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-6">
-                                            S.No
-                                        </th>
-                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-40 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
-                                            Size
-                                        </th>
-                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">
-                                            Qty
-                                        </th>
+                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-black uppercase w-6">S.No</th>
+                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-40 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">Size</th>
+                                        <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-black uppercase">Qty</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {jobCardSizeDetails?.map(
-                                        (item, idx) => (
-                                            <tr
-                                                key={idx}
-                                                className="h-8 hover:bg-slate-50 transition-colors"
-                                            >
-                                                <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">
-                                                    {idx + 1}
-                                                </td>
-                                                <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
-                                                    {sizeList?.data?.find((s) => s.id === item.sizeId)
-                                                        ?.name || "All Items"}
-                                                </td>
-                                                <td className="border-b border-r border-slate-200 px-1 py-0">
-                                                    <input
-                                                        type="number"
-                                                        className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
-                                                        value={item.qty}
-                                                        disabled={true}
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ),
-                                    )}
+                                    {jobCardSizeDetails?.map((item, idx) => (
+                                        <tr key={idx} className="h-8 hover:bg-slate-50 transition-colors">
+                                            <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">{idx + 1}</td>
+                                            <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
+                                                {sizeList?.data?.find((s) => s.id === item.sizeId)?.name || "All Items"}
+                                            </td>
+                                            <td className="border-b border-r border-slate-200 px-1 py-0">
+                                                <input type="number" className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white" value={item.qty} disabled={true} />
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
-
-
-
                             {!jobCardSizeDetails && (
                                 <div className="text-center p-8 text-slate-400 text-sm font-medium italic">
                                     No size Details found for this Item.
@@ -1303,6 +1253,7 @@ const JobCardForm = ({
                     </div>
                 </div>
             </Modal>
+
             <Modal isOpen={approvalModal} onClose={() => setApprovalModal(false)} widthClass="w-[420px]">
                 <div className="space-y-4">
                     <h2 className={`text-base font-semibold ${actionType === "APPROVE" ? "text-green-700" : "text-blue-700"}`}>
@@ -1338,7 +1289,6 @@ const JobCardForm = ({
                 </div>
             </Modal>
 
-            {/* ── Print Modal ─────────────────────────────────────── */}
             <Modal isOpen={printModalOpen}
                 onClose={() => {
                     setPrintModalOpen(false);

@@ -1,7 +1,7 @@
 import { useDispatch } from "react-redux";
 import { getCommonParams } from "../../../Utils/helper";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
-import { useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
+import { useGetBranchByIdQuery, useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
 import { useEffect, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
@@ -10,6 +10,7 @@ import ProductionOutwardReport from "./ProductionOutwardReport.jsx";
 import ProductionOutwardForm from "./ProductionOutwardForm.jsx";
 import { UserPermissions } from "../../../Utils/UserPermissions.js";
 import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
+import Swal from "sweetalert2";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -20,6 +21,9 @@ const index = () => {
 
     const dispatch = useDispatch();
     const { branchId, companyId, finYearId, userId } = getCommonParams();
+    const { data: branchData } = useGetBranchByIdQuery(branchId, {
+        skip: !branchId,
+    });
     const params = {
         branchId,
         companyId,
@@ -141,6 +145,7 @@ const index = () => {
                         supplierList={supplierList}
                         branchList={branchList}
                         hasPermission={hasPermission}
+                        branchData={branchData}
                     />
                 </div>
             )}
