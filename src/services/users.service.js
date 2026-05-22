@@ -24,6 +24,11 @@ const xprisma = prisma.$extends({
 
 async function login(req) {
     const { username, password } = req.body
+
+    const deviceby = req?.headers['x-platform']
+
+    
+    
     const data = await xprisma.user.findUnique({
         where: {
             username: username
@@ -80,10 +85,10 @@ async function login(req) {
             userName: data.username,
             userRole: data.role
         },
-        "RANDOM-TOKEN",
-        { expiresIn: "24h" }
+         "RANDOM-TOKEN",
+        { expiresIn: deviceby == "android" ? "30m" : "24h" }
     );
-    return { statusCode: 0, message: "Login Successfull", token, userInfo: data };
+    return { statusCode: 0, message: "Login Successfull", token,refresh_token:token, userInfo: data };
 }
 
 async function get(req) {
