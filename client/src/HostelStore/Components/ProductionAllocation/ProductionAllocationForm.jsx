@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import Swal from "sweetalert2";
-import { TextInput, DropdownInput, DateInputNew, DropdownNew, CheckBoxNew } from "../../../Inputs";
+import { TextInput, DropdownInput, DateInputNew, DropdownNew, CheckBoxNew, FxSelectWithAdd } from "../../../Inputs";
 import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
 import { dropDownListObject, dropDownListObjectMultiple } from "../../../Utils/contructObject";
 import moment from "moment";
@@ -11,23 +11,17 @@ import { IoArrowBackCircleSharp } from "react-icons/io5";
 import { FiEdit2, FiSave, FiPrinter, FiEye } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
 import {
-    useGetOrderEntryQuery,
-    useLazyGetOrderEntryByIdQuery,
-} from "../../../redux/uniformService/OrderEntryService";
-import {
-    CommonFormFooter,
     TransactionActions,
     TransactionLayout,
 } from "../../../Basic/components/Reuseable";
-import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
-import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
+import { useGetPartyByIdQuery, useGetPartyQuery } from "../../../redux/services/PartyMasterService";
 import { PartyMaster } from "../index.js";
-import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { useAddProductionAllocationMutation, useDeleteProductionAllocationMutation, useGetProductionAllocationByIdQuery, useGetProductionAllocationQuery, useUpdateProductionAllocationMutation } from "../../../redux/uniformService/ProductionAllocationService.js";
 import JobCardApi, { useGetJobCardListQuery } from "../../../redux/uniformService/JobCardService.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
 import { useDispatch } from "react-redux";
+import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
 
 const ProductionAllocationForm = ({
     readOnly,
@@ -37,6 +31,7 @@ const ProductionAllocationForm = ({
     onClose,
     termsData,
     customerList,
+    hasPermission,
 }) => {
     const { branchId, companyId, finYearId, userId } = getCommonParams();
 
@@ -59,6 +54,7 @@ const ProductionAllocationForm = ({
         type: "",
         isInHouse: false,
         isOutSide: false,
+        supplierId: "",
     }));
     const [allocationDetails, setAllocationDetails] = useState(
         DEFAULT_ROWS
@@ -91,6 +87,9 @@ const ProductionAllocationForm = ({
     const { data: processList } = useGetProcessMasterQuery({ params: { companyId, branchId } }, {
         skip: !companyId || !branchId,
     });
+    const { data: supplierList } = useGetPartyQuery({ params: { companyId, branchId } }, {
+        skip: !companyId || !branchId,
+    });
 
     const [addData] = useAddProductionAllocationMutation();
     const [updateData] = useUpdateProductionAllocationMutation();
@@ -112,6 +111,7 @@ const ProductionAllocationForm = ({
                 type: item.type || "",
                 isInHouse: item.isInHouse || false,
                 isOutSide: item.isOutSide || false,
+                supplierId: item.supplierId || "",
             })) || DEFAULT_ROWS);
         childRecord.current = data?.childRecord ? data?.childRecord : 0;
     }, []);
@@ -134,7 +134,63 @@ const ProductionAllocationForm = ({
         await handleSave("new");
     };
 
+    const validateData = () => {
+        // Job Card validation
+        if (!jobCardId) {
+            Swal.fire({
+                title: "Error",
+                text: "Job Card No is required",
+                icon: "error",
+                confirmButtonColor: "#d33",
+            });
+
+            customerRef.current?.focus();
+            return false;
+        }
+
+        // Only valid rows
+        const validRows = allocationDetails?.filter(
+            (item) => item?.processId && item?.seqNo
+        );
+
+        // Allocation details required
+        if (validRows?.length === 0) {
+            Swal.fire({
+                title: "Error",
+                text: "Allocation Details is required",
+                icon: "error",
+                confirmButtonColor: "#d33",
+            });
+
+            return false;
+        }
+
+        // Row validations
+        for (let i = 0; i < validRows.length; i++) {
+            const row = validRows[i];
+
+            // Must select InHouse or Outside
+            if (!row.isInHouse && !row.isOutSide) {
+                Swal.fire({
+                    title: "Error",
+                    text: `Please select In House or Outside in row ${i + 1}`,
+                    icon: "error",
+                    confirmButtonColor: "#d33",
+                });
+
+                return false;
+            }
+
+        }
+
+        return true;
+    };
+
     const handleSave = async (pendingAction = null) => {
+        if (!validateData()) {
+            return;
+        }
+
         const payload = {
             userId,
             branchId,
@@ -149,28 +205,6 @@ const ProductionAllocationForm = ({
             allocationDetails: allocationDetails?.filter(item => item?.processId && item?.seqNo)
         };
 
-        if (!jobCardId) {
-            Swal.fire({
-                title: "Error",
-                text: "Job Card No is required",
-                icon: "error",
-                confirmButtonColor: "#d33",
-            });
-            return;
-        }
-
-        if (allocationDetails?.filter(item => item?.processId && item?.seqNo)?.length === 0) {
-            Swal.fire({
-                title: "Error",
-                text: "Allocation Details is required",
-                icon: "error",
-                confirmButtonColor: "#d33",
-            });
-            return;
-        }
-
-
-
         try {
             let savedId = id;
             if (id) {
@@ -180,6 +214,7 @@ const ProductionAllocationForm = ({
                         customerRef.current.focus();
                     }
                 });
+                invalidateJobCardModule();
             } else {
                 const res = await addData(payload).unwrap();
                 savedId = res.data.id;
@@ -304,11 +339,11 @@ const ProductionAllocationForm = ({
             hoverLabel: "Edit",
             label: "Edit",
             iconOnly: false,
-            onClick: () => setReadOnly(false),
+            onClick: () => hasPermission(() => setReadOnly(false), "edit"),
             onKeyDown: (e) => {
                 if (e.key === "Enter") {
                     e.preventDefault();
-                    setReadOnly(false);
+                    hasPermission(() => setReadOnly(false), "edit");
                 }
             },
             className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
@@ -455,6 +490,10 @@ const ProductionAllocationForm = ({
                                         <th className="border border-slate-300 px-2 py-1 w-28">
                                             Outside
                                         </th>
+                                        {/* 
+                                        <th className="border border-slate-300 px-2 py-1 w-64">
+                                            Supplier
+                                        </th> */}
                                     </tr>
                                 </thead>
 
@@ -476,7 +515,7 @@ const ProductionAllocationForm = ({
                                                         const temp = [...allocationDetails];
 
                                                         temp[index].isInHouse = val;
-
+                                                        temp[index].supplierId = null;
                                                         if (val) {
                                                             temp[index].isOutSide = false;
                                                         }
@@ -504,6 +543,27 @@ const ProductionAllocationForm = ({
                                                     disabled={!row.processId}
                                                 />
                                             </td>
+                                            {/* <td className="border border-gray-300">
+                                                <FxSelectWithAdd
+                                                    value={row.supplierId}
+                                                    onChange={(val) => {
+                                                        const temp = [...allocationDetails];
+                                                        temp[index].supplierId = val;
+                                                        setAllocationDetails(temp);
+                                                    }}
+                                                    options={
+                                                        supplierList?.data
+                                                            ?.filter((p) => p.active)
+                                                            .map((p) => ({ label: p.name, value: p.id })) || []
+                                                    }
+                                                    readOnly={readOnly || row.isInHouse || !row.processId} // Read-only from Order Entry
+                                                    placeholder=""
+                                                    addNew={true}
+                                                    childComponent={PartyMaster}
+                                                    addNewModalWidth="w-[90%] h-[90%]"
+                                                />
+                                            </td> */}
+
                                         </tr>
                                     ))}
                                 </tbody>

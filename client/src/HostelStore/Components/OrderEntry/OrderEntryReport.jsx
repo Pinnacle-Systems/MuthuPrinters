@@ -16,6 +16,7 @@ import Modal from "../../../UiComponents/Modal";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { FiCheck } from "react-icons/fi";
 import { toast } from "react-toastify";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 const OrderEntryReport = ({
     onClick,
     onView,
@@ -44,6 +45,7 @@ const OrderEntryReport = ({
     const [actionType, setActionType] = useState(""); // "APPROVE" | "REJECT"
     const [remarks, setRemarks] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
+    const { hasPermission } = UserPermissions();
 
     const dispatch = useDispatch();
     const [addApprovalStatus] = useAddApprovalStausMutation();
@@ -555,7 +557,7 @@ const OrderEntryReport = ({
                                                         {rowActions && (
                                                             <td className="px-2 py-1">
                                                                 <div className="flex items-center justify-center">
-                                                                    <div className="flex items-center gap-1.5 pr-2 border-r border-gray-300">
+                                                                    {/* <div className="flex items-center gap-1.5 pr-2 border-r border-gray-300">
                                                                         {onCreateJobCard && (
                                                                             <Tooltip title="Create Job Card" arrow>
                                                                                 <button
@@ -581,14 +583,14 @@ const OrderEntryReport = ({
                                                                             </Tooltip>
                                                                         )}
 
-                                                                    </div>
+                                                                    </div> */}
                                                                     {/* VIEW / EDIT / DELETE */}
                                                                     <div className="flex items-center gap-1 pl-2">
                                                                         {onView && (
                                                                             <Tooltip title="View" arrow>
                                                                                 <button
                                                                                     className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
-                                                                                    onClick={() => onView(dataObj.id)}
+                                                                                    onClick={() => hasPermission(() => onView(dataObj.id), "read")}
                                                                                 >
                                                                                     <svg
                                                                                         xmlns="http://www.w3.org/2000/svg"
@@ -610,7 +612,7 @@ const OrderEntryReport = ({
                                                                             <Tooltip title="Edit" arrow>
                                                                                 <button
                                                                                     className="text-green-600 gap-1 px-1   bg-green-50 rounded"
-                                                                                    onClick={() => onEdit(dataObj.id)}
+                                                                                    onClick={() => hasPermission(() => onEdit(dataObj.id), "edit")}
                                                                                 >
                                                                                     <svg
                                                                                         xmlns="http://www.w3.org/2000/svg"
@@ -638,7 +640,7 @@ const OrderEntryReport = ({
                                                                                             ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
                                                                                             : "bg-red-50 text-red-800 hover:bg-red-100"
                                                                                         }`}
-                                                                                    onClick={() => onDelete(dataObj.id)}
+                                                                                    onClick={() => hasPermission(() => onDelete(dataObj.id), "delete")}
                                                                                     disabled={dataObj.childRecord > 0}
                                                                                 >
                                                                                     <svg

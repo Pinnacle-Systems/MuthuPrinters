@@ -30,7 +30,6 @@ const buildDesiredKeys = (
 ) => {
     const keys = [];
 
-    // ── Board qualities (multi-select) ──
     boardList.forEach((p) => {
         if (boardItems.includes(p.id)) {
             keys.push(makeKey("boardQuality", p.id));
@@ -51,7 +50,6 @@ const buildDesiredKeys = (
             keys.push(makeKey("process", p.id));
     });
 
-
     laminationList.forEach((p) => {
         const e = laminations.find((l) => l.processId === p.id);
         if (!e) return;
@@ -70,7 +68,6 @@ const buildDesiredKeys = (
         if (selectedFinishing.includes(p.id))
             keys.push(makeKey("finishing", p.id));
     });
-
 
     return keys;
 };
@@ -96,17 +93,32 @@ const resolveLabel = (key, defaultList, laminationList, varnishList, boardList =
 };
 
 // ─────────────────────────────────────────────────────────────
-// Type badge
+// Derive a key-string → status map from DB processRoute array
+// singleData.data.processRoute has { type, processId, status, isFront, isFrontAndBack }
 // ─────────────────────────────────────────────────────────────
-const typeTag = (key) => {
-    const { type } = parseKey(key);
-    if (type === "boardQuality") return { label: "BRD", cls: "text-rose-600   bg-rose-50   border-rose-200" };
-    if (type === "board") return { label: "BRD", cls: "text-rose-600   bg-rose-50   border-rose-200" };
-    if (type === "printing") return { label: "PRN", cls: "text-indigo-600 bg-indigo-50 border-indigo-200" };
-    if (type === "lamination") return { label: "LAM", cls: "text-emerald-600 bg-emerald-50 border-emerald-200" };
-    if (type === "varnish") return { label: "VAR", cls: "text-amber-600  bg-amber-50  border-amber-200" };
-    if (type === "finishing") return { label: "FIN", cls: "text-indigo-600 bg-indigo-50 border-indigo-200" };
-    return { label: "PRC", cls: "text-indigo-600 bg-indigo-50 border-indigo-200" };
+export const buildStatusMap = (dbProcessRoute = []) => {
+    const map = {};
+    dbProcessRoute.forEach((r) => {
+        const sub = r.isFront ? "front" : r.isFrontAndBack ? "frontback" : "";
+        const key = makeKey(r.type, r.processId, sub);
+        map[key] = r.status; // "COMPLETED" | "PENDING" | "NOT_STARTED"
+    });
+    return map;
+};
+
+/**
+ * Returns a Set of { type, processId } pairs whose status === "COMPLETED".
+ * Used by JobCardForm to disable fields for completed route steps.
+ */
+export const buildCompletedSet = (dbProcessRoute = []) => {
+    const set = new Set();
+    dbProcessRoute.forEach((r) => {
+        if (r.status === "COMPLETED") {
+            // Store as "type:processId" so callers can check membership
+            set.add(`${r.type}:${r.processId}`);
+        }
+    });
+    return set;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -129,7 +141,17 @@ export const ProcessRoutePanel = ({
     finishingList = [],
     setProcessRoute,
     readOnly = false,
+    isAmendment,
+    setIsAmendment,
+    // NEW: pass singleData?.data?.processRoute (the raw DB array) so we can
+    // look up live statuses without changing the string-key structure.
+    dbProcessRoute = [],
 }) => {
+
+    // Build a key → status lookup from the DB route
+    const statusMap = buildStatusMap(dbProcessRoute);
+
+    const anyCompleted = dbProcessRoute.some((r) => r.status === "COMPLETED");
 
     // ── Auto-sync: mirror form state into route ──────────────────
     useEffect(() => {
@@ -149,11 +171,6 @@ export const ProcessRoutePanel = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedProcesses, laminations, varnishes, boardId, boardItems, selectedPrinting, selectedFinishing]);
 
-    const removeFromRoute = (idx) => {
-        if (readOnly) return;
-        setProcessRoute((prev) => prev.filter((_, i) => i !== idx));
-    };
-
     return (
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
 
@@ -162,11 +179,30 @@ export const ProcessRoutePanel = ({
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">
                     Process Route
                 </h3>
-                <span className="text-[9px] text-slate-400">
-                    {processRoute.length > 0
-                        ? `${processRoute.length} step${processRoute.length > 1 ? "s" : ""}`
-                        : "No steps"}
-                </span>
+
+                <div className="flex items-center gap-3">
+                    {/* ── Task 2: Amendment checkbox shown when any step is completed ── */}
+                    {anyCompleted && (
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={!!isAmendment}
+                                onChange={() => !readOnly && setIsAmendment((prev) => !prev)}
+                                disabled={readOnly}
+                                className="w-[13px] h-[13px] min-w-[13px] rounded border border-slate-400 accent-amber-500 cursor-pointer disabled:cursor-not-allowed"
+                            />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">
+                                IS Amendment
+                            </span>
+                        </label>
+                    )}
+
+                    {/* <span className="text-[9px] text-slate-400">
+                        {processRoute.length > 0
+                            ? `${processRoute.length} step${processRoute.length > 1 ? "s" : ""}`
+                            : "No steps"}
+                    </span> */}
+                </div>
             </div>
 
             {/* ── Body ────────────────────────────────────────────── */}
@@ -179,45 +215,49 @@ export const ProcessRoutePanel = ({
                     <div className="overflow-x-auto">
                         <div className="flex items-center min-w-max py-0.5 gap-0">
                             {processRoute.map((key, idx) => {
-                                const tag = typeTag(key);
                                 const label = resolveLabel(key, defaultList, laminationList, varnishList, boardList, printingList, finishingList);
                                 const isLast = idx === processRoute.length - 1;
+
+                                // ── Task 1: look up status for this step ──
+                                const stepStatus = statusMap[key];
+                                const isCompleted = stepStatus === "COMPLETED";
 
                                 return (
                                     <div key={key} className="flex items-center">
 
                                         {/* ── Node ───────────────────────────────── */}
-                                        <div className="relative group flex items-center gap-1.5 h-6 pl-2 pr-6 rounded border border-slate-400 bg-white hover:border-slate-500 transition-colors">
-
+                                        <div
+                                            className={`relative group flex items-center gap-1.5 h-6 pl-2 pr-4 rounded transition-colors
+                                                ${isCompleted
+                                                    ? "border border-green-500 bg-green-50"
+                                                    : "border border-slate-400 bg-white hover:border-slate-500"
+                                                }`}
+                                        >
                                             {/* Seq number */}
-                                            <span className="text-[10px] font-semibold text-slate-700 leading-none w-3 text-center shrink-0">
+                                            <span
+                                                className={`text-[10px] font-semibold leading-none w-3 text-center shrink-0
+                                                    ${isCompleted ? "text-green-700" : "text-slate-700"}`}
+                                            >
                                                 {idx + 1}
                                             </span>
 
                                             {/* Divider */}
-                                            <span className="w-px h-3 bg-slate-200 shrink-0" />
-
-                                            {/* Type badge */}
-                                            {/* <span className={`text-[8px] font-bold px-1 py-0.5 rounded border leading-none shrink-0 ${tag.cls}`}>
-                                                {tag.label}
-                                            </span> */}
+                                            <span className={`w-px h-3 shrink-0 ${isCompleted ? "bg-green-200" : "bg-slate-200"}`} />
 
                                             {/* Process name */}
-                                            <span className="text-[10px] font-medium text-slate-700 whitespace-nowrap leading-none">
+                                            <span
+                                                className={`text-[10px] font-medium whitespace-nowrap leading-none
+                                                    ${isCompleted ? "text-green-700" : "text-slate-700"}`}
+                                            >
                                                 {label}
                                             </span>
 
-                                            {/* Remove ✕ */}
-                                            {/* {!readOnly && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeFromRoute(idx)}
-                                                    className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-slate-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity leading-none"
-                                                    title="Remove from route"
-                                                >
-                                                    ✕
-                                                </button>
-                                            )} */}
+                                            {/* Completed tick badge */}
+                                            {isCompleted && (
+                                                <span className="text-[9px] text-green-600 font-bold leading-none ml-0.5" title="Completed">
+                                                    ✓
+                                                </span>
+                                            )}
                                         </div>
 
                                         {/* Connector */}
@@ -241,8 +281,6 @@ export const ProcessRoutePanel = ({
 
 // ─────────────────────────────────────────────────────────────
 // DB serializer
-// Converts route key array → shape ready for Prisma createMany
-// Includes isFront + isFrontAndBack derived from the key sub
 // ─────────────────────────────────────────────────────────────
 export const routeKeysToDb = (processRoute) =>
     processRoute

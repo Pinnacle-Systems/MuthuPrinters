@@ -33,6 +33,19 @@ const ProductionOutwardApi = createApi({
       },
       providesTags: ["productionOutward"],
     }),
+    getProductionOutwardJobCardDtls: builder.query({
+      query: ({ params }) => {
+        return {
+          url: `${PRODUCTION_OUTWARD_API}/getOutwardJobCardDtls`,
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+          params,
+        };
+      },
+      providesTags: ["productionOutward"],
+    }),
     getProductionOutwardById: builder.query({
       query: (id) => {
         return {
@@ -57,7 +70,8 @@ const ProductionOutwardApi = createApi({
       invalidatesTags: ["productionOutward"],
     }),
     updateProductionOutward: builder.mutation({
-      query: ({ id, body }) => {
+      query: (payload) => {
+        const { id, ...body } = payload;
         return {
           url: `${PRODUCTION_OUTWARD_API}/${id}`,
           method: "PUT",
@@ -79,6 +93,7 @@ const ProductionOutwardApi = createApi({
 export const {
   useGetProductionOutwardQuery,
   useGetProductionOutwardByIdQuery,
+  useGetProductionOutwardJobCardDtlsQuery,
   useLazyGetProductionOutwardByIdQuery,
   useAddProductionOutwardMutation,
   useUpdateProductionOutwardMutation,

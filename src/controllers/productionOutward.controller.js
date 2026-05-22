@@ -5,6 +5,7 @@ import {
   create as _create,
   update as _update,
   remove as _remove,
+  getOutwardJobCardDtls as _getOutwardJobCardDtls,
 } from "../services/productionOutward.service.js";
 
 async function get(req, res, next) {
@@ -80,4 +81,12 @@ async function remove(req, res, next) {
   }
 }
 
-export { get, getOne, create, update, remove };
+async function getOutwardJobCardDtls(req, res, next) {
+  try {
+    res.json(await _getOutwardJobCardDtls(req));
+  } catch (err) {
+    console.error(`Error`, err.message);
+  }
+}
+
+export { get, getOne, create, update, remove, getOutwardJobCardDtls };

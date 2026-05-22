@@ -726,13 +726,16 @@ const PurchaseReturnForm = ({
           showTermSelect={true}
           termValue={termsId}
           onTermChange={(value) => setTermsId(value)}
-          termOptions={(
-            id ? termsData?.data : termsData?.data?.filter((item) => item?.active)
-          )?.map((item) => ({
-            value: item?.id,
-            label: item?.name,
-            templateText: item?.description || "",
-          })) || []}
+          termOptions={
+            (id
+              ? termsData?.data
+              : termsData?.data?.filter((item) => item?.active)
+            )?.map((item) => ({
+              value: item?.id,
+              label: item?.name,
+              templateText: item?.description || "",
+            })) || []
+          }
           totalsRows={[
             {
               key: "totalReturnQty",
@@ -758,9 +761,9 @@ const PurchaseReturnForm = ({
                 }
               }}
               disabled={readOnly}
-              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
+              className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex h-6 items-center text-xs font-medium"
             >
-              <HiOutlineRefresh className="w-4 h-4 mr-2" />
+              <HiOutlineRefresh className="w-3.5 h-3.5 mr-2" />
               Save & Close
             </button>
             <button
@@ -773,9 +776,9 @@ const PurchaseReturnForm = ({
                 }
               }}
               disabled={readOnly}
-              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
+              className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex h-6 items-center text-xs font-medium"
             >
-              <FiSave className="w-4 h-4 mr-2" />
+              <FiSave className="w-3.5 h-3.5 mr-2" />
               Save & New
             </button>
           </div>
@@ -784,21 +787,21 @@ const PurchaseReturnForm = ({
             {!id ||
               (readOnly && (
                 <button
-                  className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-sm"
+                  className="bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700 flex h-6 items-center text-xs font-medium"
                   onClick={() => setReadOnly(false)}
                 >
-                  <FiEdit2 className="w-4 h-4 mr-2" />
+                  <FiEdit2 className="w-3.5 h-3.5 mr-2" />
                   Edit
                 </button>
               ))}
             <button
-              className="bg-slate-600 text-white px-4 py-1 rounded-md hover:bg-slate-700 flex items-center text-sm"
+              className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex h-6 items-center text-xs font-medium"
               onClick={() => {
                 // handlePrint()
                 setPrintModalOpen(true);
               }}
             >
-              <FiPrinter className="w-4 h-4 mr-2" />
+              <FiPrinter className="w-3.5 h-3.5 mr-2" />
               Print
             </button>
           </div>

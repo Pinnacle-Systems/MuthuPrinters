@@ -19,7 +19,7 @@ import tw from "../../../Utils/tailwind-react-pdf";
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 import { FiEdit2, FiSave, FiPrinter, FiEye } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
-import {
+import OrderEntryApi, {
     useGetOrderEntryQuery,
     useLazyGetOrderEntryByIdQuery,
 } from "../../../redux/uniformService/OrderEntryService";
@@ -40,6 +40,7 @@ import { PartyMaster } from "../index.js";
 import { BankMaster, CurrencyMaster, PayTermMaster } from "../../../Basic/components/index.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { conversionTypes } from "../../../Utils/DropdownData.js";
+import { useDispatch } from "react-redux";
 
 const EMPTY_ROW = {
     styleItemId: "",
@@ -76,6 +77,7 @@ const ProformaInvoiceForm = ({
     currencyList,
     cityList,
     bankList,
+    hasPermission
 }) => {
     const { branchId, companyId, finYearId, userId } = getCommonParams();
 
@@ -119,6 +121,7 @@ const ProformaInvoiceForm = ({
         contactPerson: "",
         phone: "",
     });
+    const dispatch = useDispatch();
 
     const { data: allData } = useGetProformaInvoiceQuery({
         params: { branchId },
@@ -384,6 +387,7 @@ const ProformaInvoiceForm = ({
                     }
                 });
             }
+            dispatch(OrderEntryApi.util.invalidateTags(["orderEntry"]));
             setReadOnly(true);
             dispatchInvalidate();
 
@@ -511,7 +515,7 @@ const ProformaInvoiceForm = ({
             icon: <FiEdit2 className="h-4 w-4" />,
             hoverLabel: "Edit",
             iconOnly: true,
-            onClick: () => setReadOnly(false),
+            onClick: () => hasPermission(() => setReadOnly(false), "edit"),
             className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
             hidden: !readOnly || !id || isOldVersion,
         },

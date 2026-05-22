@@ -87,6 +87,11 @@ async function get(req) {
           sequence: "asc",
         },
       },
+      _count: {
+        select: {
+          productionOutwards: true,
+        },
+      },
     },
 
     orderBy: {
@@ -99,10 +104,13 @@ async function get(req) {
     );
   }
 
-  let result = data;
+  let result = data?.map((item) => ({
+    ...item,
+    childRecord: item._count.productionOutwards,
+  }));
 
   if (pagination) {
-    result = data.slice(
+    result = result.slice(
       (pageNumber - 1) * parseInt(dataPerPage),
       pageNumber * parseInt(dataPerPage),
     );
@@ -229,6 +237,8 @@ async function create(body) {
             isInHouse: Boolean(item.isInHouse),
 
             isOutSide: Boolean(item.isOutSide),
+
+            supplierId: item.supplierId ? parseInt(item.supplierId) : null,
           })),
         },
       },
@@ -298,6 +308,8 @@ async function update(id, body) {
             isInHouse: Boolean(item.isInHouse),
 
             isOutSide: Boolean(item.isOutSide),
+
+            supplierId: item.supplierId ? parseInt(item.supplierId) : null,
           })),
         },
       },

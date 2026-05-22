@@ -13,6 +13,9 @@ import { useDeleteProductionAllocationMutation } from "../../../redux/uniformSer
 import ProductionAllocationReport from "./ProductionAllocationReport.jsx";
 import ProductionAllocationForm from "./ProductionAllocationForm.jsx";
 import JobCardApi from "../../../redux/uniformService/JobCardService.js";
+import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
+import { UserPermissions } from "../../../Utils/UserPermissions";
+import Swal from "sweetalert2";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
@@ -21,6 +24,7 @@ const index = () => {
 
     const dispatch = useDispatch();
     const { branchId, companyId, finYearId, userId } = getCommonParams();
+    const { hasPermission } = UserPermissions();
     const params = {
         branchId,
         companyId,
@@ -56,7 +60,7 @@ const index = () => {
 
             try {
                 let deldata = await removeData(id).unwrap();
-                dispatch(JobCardApi.util.invalidateTags(["jobCard"]));
+                invalidateJobCardModule();
                 dispatchInvalidate();
                 if (deldata?.statusCode == 1) {
                     Swal.fire({
@@ -98,6 +102,13 @@ const index = () => {
         skip: !branchId,
     });
 
+    const handleCreate = () => {
+        hasPermission(() => {
+            setShowForm(true);
+            onNew();
+        }, "create");
+    };
+
     return (
         <>
             <div
@@ -114,10 +125,7 @@ const index = () => {
                     <div className="flex items-center gap-2">
                         <button
                             className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800  py-1 rounded-md flex items-center gap-2 text-xs px-2"
-                            onClick={() => {
-                                setShowForm(true);
-                                onNew();
-                            }}
+                            onClick={handleCreate}
                         >
                             <FaPlus /> Create New
                         </button>
@@ -131,6 +139,7 @@ const index = () => {
                         onDelete={handleDelete}
                         itemsPerPage={10}
                         userData={userData?.data}
+                        hasPermission={hasPermission}
                     />
                 </div>
             </div>
@@ -152,6 +161,7 @@ const index = () => {
                         userData={userData?.data}
                         termsData={termsData}
                         branchData={branchData}
+                        hasPermission={hasPermission}
                     />
                 </div>
             )}

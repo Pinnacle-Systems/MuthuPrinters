@@ -13,6 +13,8 @@ import { Size } from "..";
 import { dropDownListObject } from "../../../Utils/contructObject";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
+import { useGetDepartmentQuery } from "../../../redux/services/DepartmentMasterService";
+import { DepartmentMaster } from "../../../Basic/components";
 
 export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
     const [form, setForm] = useState(false);
@@ -20,7 +22,8 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     const [readOnly, setReadOnly] = useState(false);
     const [id, setId] = useState("");
     const [name, setName] = useState("");
-    const [sizeId, setSizeId] = useState("")
+    const [sizeId, setSizeId] = useState("");
+    const [departmentId, setDepartmentId] = useState("");
     const [active, setActive] = useState(true);
     const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
@@ -47,6 +50,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         data: sizeList,
 
     } = useGetSizeMasterQuery({ params });
+    const { data: departmentList } = useGetDepartmentQuery({ params });
     const [trigger, { data: LazyData }] = useLazyGetMachineMasterByIdQuery();
 
     const [addData] = useAddMachineMasterMutation();
@@ -67,6 +71,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             setActive(id ? (data?.active ? data.active : false) : true);
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
             setSizeId(data?.sizeId ? data.sizeId : "");
+            setDepartmentId(data?.departmentId ? data.departmentId : "");
         },
         [id],
     );
@@ -82,11 +87,12 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         companyId: secureLocalStorage.getItem(
             sessionStorage.getItem("sessionId") + "userCompanyId",
         ),
-        sizeId
+        sizeId,
+        departmentId,
     };
 
     const validateData = (data) => {
-        if (data.name) {
+        if (data.name && data.departmentId) {
             return true;
         }
         return false;
@@ -271,7 +277,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                     <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
                         <div className="space-y-4 ">
                             <fieldset className=" rounded mt-2">
-                                <div className="grid grid-cols-2 my-2 gap-x-2">
+                                <div className="grid grid-cols-2 my-3 gap-x-4">
                                     <div className="w-[50%">
                                         <TextInput
                                             name="Machine"
@@ -299,11 +305,34 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                                             setValue={(val) => {
                                                 setSizeId(val);
                                             }}
-                                            required={true}
                                             readOnly={readOnly}
                                             // disabled={childRecord.current > 0}
                                             addNewLabel="+ Add New Size"
                                             childComponent={Size}
+                                            addNewModalWidth="w-[40%] h-[45%]"
+                                        />
+                                    </div>
+                                    <div className=" mt-3">
+                                        <DropdownWithModal
+                                            name="Department"
+                                            options={dropDownListObject(
+                                                id
+                                                    ? departmentList?.data
+                                                    : departmentList?.data?.filter(
+                                                        (item) => item?.active,
+                                                    ),
+                                                "name",
+                                                "id",
+                                            )}
+                                            value={departmentId}
+                                            setValue={(val) => {
+                                                setDepartmentId(val);
+                                            }}
+                                            required={true}
+                                            readOnly={readOnly}
+                                            // disabled={childRecord.current > 0}
+                                            addNewLabel="+ Add New Department"
+                                            childComponent={DepartmentMaster}
                                             addNewModalWidth="w-[40%] h-[45%]"
                                         />
                                     </div>
@@ -447,7 +476,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                     <Modal
                         isOpen={form}
                         form={form}
-                        widthClass={"w-[600px] h-[350px]"}
+                        widthClass={"w-[600px] h-[400px]"}
                         onClose={() => {
                             setForm(false);
                             syncFormWithDb(undefined);

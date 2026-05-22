@@ -1,22 +1,29 @@
 import { useDispatch } from "react-redux";
 import { getCommonParams } from "../../../Utils/helper";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
-import { useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
+import { useGetBranchByIdQuery, useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
 import { useEffect, useState } from "react";
 import { FaPlus } from "react-icons/fa";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { useDeleteProductionOutwardMutation } from "../../../redux/uniformService/ProductionOutwardService.js";
 import ProductionOutwardReport from "./ProductionOutwardReport.jsx";
 import ProductionOutwardForm from "./ProductionOutwardForm.jsx";
+import { UserPermissions } from "../../../Utils/UserPermissions.js";
+import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
+import Swal from "sweetalert2";
 
 const index = () => {
     const [showForm, setShowForm] = useState(false);
     const [id, setId] = useState("");
     const [readOnly, setReadOnly] = useState(false);
+    const { hasPermission } = UserPermissions();
 
 
     const dispatch = useDispatch();
     const { branchId, companyId, finYearId, userId } = getCommonParams();
+    const { data: branchData } = useGetBranchByIdQuery(branchId, {
+        skip: !branchId,
+    });
     const params = {
         branchId,
         companyId,
@@ -45,8 +52,8 @@ const index = () => {
 
             try {
                 let deldata = await removeData(id).unwrap();
-                // dispatch(ProformaInvoiceApi.util.invalidateTags(["proformaInvoice"]));
-                dispatchInvalidate();
+                invalidateJobCardModule();
+                // dispatchInvalidate();
                 if (deldata?.statusCode == 1) {
                     Swal.fire({
                         icon: "error",
@@ -83,6 +90,13 @@ const index = () => {
     const { data: supplierList } = useGetPartyQuery({ params: { ...params } });
     const { data: branchList } = useGetBranchQuery({ params: { ...params } });
 
+    const handleCreate = () => {
+        hasPermission(() => {
+            setShowForm(true);
+            onNew();
+        }, "create");
+    };
+
     return (
         <>
             <div
@@ -92,17 +106,14 @@ const index = () => {
                 <div className="flex flex-col sm:flex-row justify-between bg-white py-1 px-1 items-start sm:items-center mb-4 gap-x-4 rounded-tl-lg rounded-tr-lg shadow-sm border border-gray-200">
                     <div>
                         <h1 className="text-lg font-bold text-gray-800">
-                            Production Outward Report
+                            Process Issue Report
                         </h1>
                     </div>
 
                     <div className="flex items-center gap-2">
                         <button
                             className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800  py-1 rounded-md flex items-center gap-2 text-xs px-2"
-                            onClick={() => {
-                                setShowForm(true);
-                                onNew();
-                            }}
+                            onClick={handleCreate}
                         >
                             <FaPlus /> Create New
                         </button>
@@ -133,6 +144,8 @@ const index = () => {
                         setShowForm={setShowForm}
                         supplierList={supplierList}
                         branchList={branchList}
+                        hasPermission={hasPermission}
+                        branchData={branchData}
                     />
                 </div>
             )}

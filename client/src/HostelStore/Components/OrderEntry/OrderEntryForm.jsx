@@ -49,6 +49,7 @@ import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMas
 import { useGetSizeTemplateQuery } from "../../../redux/services/SizeTemplateMaster.js";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
 import { useDispatch } from "react-redux";
+import JobCardApi from "../../../redux/uniformService/JobCardService.js";
 
 const OrderEntryForm = ({
     onClose,
@@ -61,7 +62,8 @@ const OrderEntryForm = ({
     branchList,
     canApprove,
     userData,
-    branchData
+    branchData,
+    hasPermission,
 }) => {
     const today = new Date();
     const [docDate, setDocDate] = useState(
@@ -249,7 +251,6 @@ const OrderEntryForm = ({
                     showConfirmButton: false,
                     timer: 2000,
                     didClose: () => {
-                        dispatchInvalidate();
 
                         if (returnData.statusCode === 0) {
                             if (nextProcess == "new") {
@@ -268,7 +269,9 @@ const OrderEntryForm = ({
                         }
                     },
                 });
+                dispatchInvalidate();
                 dispatch(ProformaInvoiceApi.util.invalidateTags(["proformaInvoice"]));
+                dispatch(JobCardApi.util.invalidateTags(["jobCard"]));
             }
         } catch (error) {
             console.log("handle", error);
@@ -1244,7 +1247,7 @@ const OrderEntryForm = ({
                             {/* Left Buttons */}
                             <div className="flex gap-2 flex-wrap">
                                 {
-                                    !isDisabled && (
+                                    !isDisabled && !readOnly && (
                                         <>
 
                                             <button
@@ -1351,7 +1354,7 @@ const OrderEntryForm = ({
                                     (readOnly && (
                                         <button
                                             className="bg-yellow-600 text-white px-4 py-1 rounded hover:bg-yellow-700 flex items-center text-xs"
-                                            onClick={() => setReadOnly(false)}
+                                            onClick={() => hasPermission(() => setReadOnly(false), "edit")}
                                             disabled={isDisabled}
                                         >
                                             <FiEdit2 className="w-4 h-4 mr-2" />
