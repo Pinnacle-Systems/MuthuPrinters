@@ -373,7 +373,7 @@ const ProductionOutwardForm = ({
 
     const { data: singleData, isFetching: isSingleFetching, isLoading: isSingleLoading } =
         useGetProductionOutwardByIdQuery(id, { skip: !id });
-    const { data: jobCardList } = useGetJobCardListQuery({ params: { companyId, branchId } });
+    const { data: jobCardList } = useGetJobCardListQuery({ params: { companyId, branchId, isProcessIssue: true } });
     const { data: productionAllocationList } = useGetAllocationListQuery({ params: { companyId, branchId } });
     const { data: processList } = useGetProcessMasterQuery({ params: { companyId } });
     const [addData] = useAddProductionOutwardMutation();
@@ -644,7 +644,9 @@ const ProductionOutwardForm = ({
                     <div className="flex gap-2">
                         <DropdownNew
                             name="Job Card No"
-                            dataList={jobCardList?.data}
+                            dataList={jobCardList?.data.filter(item =>
+                                id || item.childRecordIssue === 0
+                            )}
                             value={jobCardId}
                             setValue={setJobCardId}
                             required
