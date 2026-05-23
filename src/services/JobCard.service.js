@@ -188,7 +188,7 @@ async function get(req) {
 }
 
 async function getJobCardList(req) {
-  const { branchId, companyId } = req.query;
+  const { branchId, companyId, isDropdown } = req.query;
 
   let result = await prisma.jobCard.findMany({
     where: {
@@ -219,21 +219,90 @@ async function getJobCardList(req) {
     },
   });
 
-  console.log("Job Card List Result:", result?.processRoute);
+  let approvalLogMap = {};
+  let activeConfigs = [];
+  let hasApproval = false;
 
-  const data = result.map((item) => ({
-    id: item.id,
-    docId: item.docId,
-    orderQty: item.orderQty,
-    styleItemId: item.styleItemId,
-    styleItemName: item.StyleItem?.name || "",
-    customerName: item.customer?.name || "",
+  if (isDropdown) {
+    const approvalSetup = await getModuleApprovalSetup(
+      REFERENCE_PAGE,
+      branchId,
+    );
+    const module = approvalSetup?.module;
+    hasApproval = approvalSetup?.hasApproval;
 
-    orderEntryDocId: item.OrderEntry?.docId || "",
+    const jobCardIds = result.map((o) => o.id);
 
-    processRoute: item.processRoute || [],
-    productionAllocationId: item.productionAllocations?.[0]?.id || null,
-  }));
+    const approvalLogs = await prisma.approvalLog.findMany({
+      where: { referencePage: REFERENCE_PAGE, referenceId: { in: jobCardIds } },
+      select: {
+        id: true,
+        referenceId: true,
+        status: true,
+        remarks: true,
+        currentLevel: true,
+        LevelLogs: {
+          select: {
+            action: true,
+            levelNo: true,
+            userId: true,
+            createdAt: true,
+            User: { select: { id: true, username: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+     approvalLogMap = approvalLogs.reduce((acc, log) => {
+      acc[log.referenceId] = log;
+      return acc;
+    }, {});
+
+     activeConfigs =
+      hasApproval && module
+        ? await prisma.approvalConfig.findMany({
+            where: {
+              moduleId: module.id,
+              branchId: parseInt(branchId),
+              active: true,
+            },
+            include: {
+              ConfigConditions: {
+                include: { Field: true, Operator: true, CompareField: true },
+              },
+              approvalLevels: {
+                include: { LevelUsers: true },
+                orderBy: { levelNo: "asc" },
+              },
+            },
+          })
+        : [];
+  }
+
+  const data = result.map((item) => {
+    const log = approvalLogMap[item.id] ?? null;
+
+    let shouldTrigger = false;
+
+    if (!log && hasApproval && activeConfigs.length > 0) {
+      shouldTrigger = evaluateConfigs(activeConfigs, item);
+    }
+
+    return {
+      id: item.id,
+      docId: item.docId,
+      orderQty: item.orderQty,
+      styleItemId: item.styleItemId,
+      styleItemName: item.StyleItem?.name || "",
+      customerName: item.customer?.name || "",
+      orderEntryDocId: item.OrderEntry?.docId || "",
+      processRoute: item.processRoute || [],
+      productionAllocationId: item.productionAllocations?.[0]?.id || null,
+
+      approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+    };
+  });
 
   return { statusCode: 0, data };
 }
@@ -377,7 +446,7 @@ async function create(body) {
       orderQty,
       customerId,
       gsmId,
-      boardId,
+      otherBoardId,
       fullBoardId,
       noOfPockets,
       cuttingSizeId,
@@ -482,7 +551,7 @@ async function create(body) {
           customerId: customerId ? Number(customerId) : null,
 
           gsmId: gsmId ? Number(gsmId) : null,
-          boardId: boardId ? Number(boardId) : null,
+          otherBoardId: otherBoardId ? Number(otherBoardId) : null,
 
           fullBoardId: fullBoardId ? Number(fullBoardId) : null,
           noOfPockets: noOfPockets ? parseInt(noOfPockets) : null,
@@ -527,7 +596,7 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safeBoardItems.map((id) => ({
-                    boardId: Number(id),
+                    processId: Number(id),
                   })),
                 },
               }
@@ -602,7 +671,7 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safeProcessRoute.map((r, idx) => ({
-                    processId: Number(r.processId || r.boardId),
+                    processId: Number(r.processId),
                     type: r.type,
                     sequence: idx + 1,
                     isFront: !!r.isFront,
@@ -679,7 +748,7 @@ async function update(id, body) {
       orderQty,
       customerId,
       gsmId,
-      boardId,
+      otherBoardId,
       fullBoardId,
       noOfPockets,
       cuttingSizeId,
@@ -850,6 +919,7 @@ async function update(id, body) {
                 sequence: r.sequence,
                 isFront: Boolean(r.isFront),
                 isFrontAndBack: Boolean(r.isFrontAndBack),
+                status: "NOT_STARTED",
               };
             }),
           });
@@ -874,20 +944,58 @@ async function update(id, body) {
         if (allocation) {
           // Build a sequence lookup from the (now-synced) incoming processRoute
           // key: "type:processId"  →  value: sequence (1-based)
-          const routeSequenceMap = {};
-          processRoute.forEach((r, idx) => {
-            routeSequenceMap[`${r.type}:${Number(r.processId)}`] = idx + 1;
+          const existingDtlMap = {};
+          allocation.allocationDetails.forEach((d) => {
+            existingDtlMap[`${d.type}:${d.processId}`] = d;
           });
 
-          // Update each dtl row whose type+processId appears in the route
-          for (const dtl of allocation.allocationDetails) {
-            const key = `${dtl.type}:${dtl.processId}`;
-            if (routeSequenceMap[key] !== undefined) {
+          const incomingDtlMap = {};
+          processRoute.forEach((r, idx) => {
+            incomingDtlMap[`${r.type}:${r.processId}`] = {
+              ...r,
+              sequence: idx + 1,
+            };
+          });
+
+          // DELETE removed rows
+          const deleteIds = Object.keys(existingDtlMap)
+            .filter((k) => !incomingDtlMap[k])
+            .map((k) => existingDtlMap[k].id);
+
+          if (deleteIds.length) {
+            await tx.productionAllocationDtl.deleteMany({
+              where: { id: { in: deleteIds } },
+            });
+          }
+
+          // UPDATE existing
+          for (const key of Object.keys(incomingDtlMap)) {
+            if (existingDtlMap[key]) {
               await tx.productionAllocationDtl.update({
-                where: { id: dtl.id },
-                data: { sequence: routeSequenceMap[key] },
+                where: { id: existingDtlMap[key].id },
+                data: {
+                  sequence: incomingDtlMap[key].sequence,
+                },
               });
             }
+          }
+
+          // INSERT new
+          const insertRows = Object.keys(incomingDtlMap)
+            .filter((k) => !existingDtlMap[k])
+            .map((k) => ({
+              productionAllocationId: allocation.id,
+              processId: incomingDtlMap[k].processId,
+              type: incomingDtlMap[k].type,
+              sequence: incomingDtlMap[k].sequence,
+              isInHouse: true,
+              isOutSide: false,
+            }));
+
+          if (insertRows.length) {
+            await tx.productionAllocationDtl.createMany({
+              data: insertRows,
+            });
           }
         }
       }
@@ -903,7 +1011,7 @@ async function update(id, body) {
           orderQty: orderQty ? parseInt(orderQty) : null,
           customerId: customerId ? parseInt(customerId) : null,
           gsmId: gsmId ? parseInt(gsmId) : null,
-          boardId: boardId ? parseInt(boardId) : null,
+          otherBoardId: otherBoardId ? parseInt(otherBoardId) : null,
           fullBoardId: fullBoardId ? parseInt(fullBoardId) : null,
           noOfPockets: noOfPockets ? parseInt(noOfPockets) : null,
           cuttingSizeId: cuttingSizeId ? Number(cuttingSizeId) : null,
@@ -945,7 +1053,7 @@ async function update(id, body) {
               ? {
                   createMany: {
                     data: boardItems.map((bId) => ({
-                      boardId: parseInt(bId),
+                      processId: parseInt(bId),
                     })),
                   },
                 }
