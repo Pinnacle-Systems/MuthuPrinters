@@ -5,6 +5,7 @@ import { NoRecordFound } from '../configs/Responses.js';
 
 async function get(req) {
     const { companyId, active } = req.query
+    
     let data;
      data = await prisma.department.findMany({
         where: {
@@ -19,6 +20,9 @@ async function get(req) {
             }
         }
     });
+
+   
+    
     return {
         statusCode: 0, data: data = data.map(order => ({
             ...order,
