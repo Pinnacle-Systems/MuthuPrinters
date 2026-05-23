@@ -306,6 +306,22 @@ async function getRefList(req) {
       refNo: true,
       docId: true,
       customerId: true,
+      orderItems: {
+        select: {
+          id: true,
+          styleItemId:true,
+          jobCards: {
+            select: {
+              id: true,
+            },
+          },
+          _count: {
+            select: {
+              jobCards: true,
+            },
+          },
+        },
+      },
     },
     distinct: isRefDistinct === "true" ? ["refNo"] : ["docId"],
     orderBy: {
@@ -387,6 +403,19 @@ async function getRefList(req) {
         : [];
 
     data = data.map((order) => {
+      const totalItems = order.orderItems.length;
+
+      const createdItems = order.orderItems.filter(
+        (item) => item._count.jobCards > 0,
+      ).length;
+
+      let creationStatus = "NOT_CREATED";
+
+      if (totalItems > 0 && createdItems === totalItems) {
+        creationStatus = "FULLY_CREATED";
+      } else if (createdItems > 0) {
+        creationStatus = "PARTIALLY_CREATED";
+      }
       const log = approvalLogMap[order.id] ?? null;
 
       let shouldTrigger = false;
@@ -397,7 +426,12 @@ async function getRefList(req) {
 
       return {
         ...order,
+        creationStatus,
         approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+        orderItems: order.orderItems.map((item) => ({
+          ...item,
+          childRecordCount: item._count.jobCards,
+        })),
       };
     });
   }

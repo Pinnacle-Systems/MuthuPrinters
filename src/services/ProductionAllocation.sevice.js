@@ -239,6 +239,8 @@ async function create(body) {
             isOutSide: Boolean(item.isOutSide),
 
             supplierId: item.supplierId ? parseInt(item.supplierId) : null,
+
+            processRouteId: item.processRouteId ? parseInt(item.processRouteId) : null
           })),
         },
       },
@@ -310,6 +312,8 @@ async function update(id, body) {
             isOutSide: Boolean(item.isOutSide),
 
             supplierId: item.supplierId ? parseInt(item.supplierId) : null,
+
+            processRouteId: item.processRouteId ? parseInt(item.processRouteId) : null
           })),
         },
       },

@@ -222,8 +222,8 @@ model User {
   productionOutwardsUpdatedBy    ProductionOutward[]    @relation("updatedBy")
   productionInwardsCreatedBy     ProductionInward[]     @relation("InwardCreatedBy")
   productionInwardsUpdatedBy     ProductionInward[]     @relation("InwardUpdatedBy")
-  processBillsCreatedBy              ProcessBill[]          @relation(name: "createdBy")
-  processBillsUpdatedBy              ProcessBill[]          @relation(name: "updatedBy")
+  processBillsCreatedBy          ProcessBill[]          @relation(name: "createdBy")
+  processBillsUpdatedBy          ProcessBill[]          @relation(name: "updatedBy")
 }
 
 model Employee {
@@ -350,7 +350,7 @@ model Department {
   Company   Company    @relation(fields: [companyId], references: [id])
   companyId Int
 
-  machines   Machine[]
+  machines Machine[]
 }
 
 enum PageType {
@@ -489,7 +489,7 @@ model Party {
 
   productionAllocationDtls ProductionAllocationDtl[]
   productionInwards        ProductionInward[]
-  processBills              ProcessBill[]
+  processBills             ProcessBill[]
 }
 
 model PartyBranch {
@@ -1875,6 +1875,8 @@ model Process {
   productionInwardDtls             ProductionInwardDtl[]
   inwardProcessDtls                InwardProcessDtl[]
   billingProcesses                 BillingProcess[]
+  jobCards                         JobCard[]
+  boardQualitys                    BoardQuality[]
 }
 
 model ProcessGroup {
@@ -1945,6 +1947,8 @@ model JobCard {
   gsm                Gsm?        @relation(fields: [gsmId], references: [id])
   Board              Board?      @relation(fields: [boardId], references: [id])
   boardId            Int?
+  otherBoardId       Int?
+  OtherBoard         Process?    @relation(fields: [otherBoardId], references: [id])
   fullBoard          Int?
   noOfPockets        Int?
   cuttingSize        String?
@@ -2020,6 +2024,8 @@ model BoardQuality {
   JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
   boardId   Int?
   Board     Board?   @relation(fields: [boardId], references: [id])
+  processId Int?
+  Process   Process? @relation(fields: [processId], references: [id])
 }
 
 model FinishingProcess {
@@ -2143,6 +2149,8 @@ model ProcessRoute {
   isFrontAndBack Boolean  @default(false)
   status         String?
   completedQty   Int?
+
+  productionAllocationDtls ProductionAllocationDtl[]
 }
 
 model ProformaInvoice {
@@ -2282,30 +2290,33 @@ model ProductionAllocation {
 }
 
 model ProductionAllocationDtl {
-  id                     Int                  @id @default(autoincrement())
+  id                     Int                    @id @default(autoincrement())
   productionAllocationId Int
-  ProductionAllocation   ProductionAllocation @relation(fields: [productionAllocationId], references: [id], onDelete: Cascade)
-  isInHouse              Boolean              @default(false)
-  isOutSide              Boolean              @default(false)
+  ProductionAllocation   ProductionAllocation   @relation(fields: [productionAllocationId], references: [id], onDelete: Cascade)
+  isInHouse              Boolean                @default(false)
+  isOutSide              Boolean                @default(false)
   processId              Int?
-  Process                Process?             @relation(fields: [processId], references: [id])
+  Process                Process?               @relation(fields: [processId], references: [id])
   type                   String?
   sequence               Int?
-  Supplier               Party?               @relation(fields: [supplierId], references: [id])
+  Supplier               Party?                 @relation(fields: [supplierId], references: [id])
   supplierId             Int?
-
-  productionOutwardDtls ProductionOutwardDtl[]
+  processRouteId         Int?
+  ProcessRoute           ProcessRoute?          @relation(fields: [processRouteId], references: [id])
+  isFront                Boolean                @default(false)
+  isFrontAndBack         Boolean                @default(false)
+  productionOutwardDtls  ProductionOutwardDtl[]
 }
 
 model Machine {
-  id        Int      @id @default(autoincrement())
-  name      String?
-  active    Boolean? @default(true)
-  Company   Company? @relation(fields: [companyId], references: [id])
-  companyId Int?
-  Size      Size?    @relation(fields: [sizeId], references: [id])
-  sizeId    Int?
-  Department Department? @relation(fields: [departmentId], references: [id])
+  id           Int         @id @default(autoincrement())
+  name         String?
+  active       Boolean?    @default(true)
+  Company      Company?    @relation(fields: [companyId], references: [id])
+  companyId    Int?
+  Size         Size?       @relation(fields: [sizeId], references: [id])
+  sizeId       Int?
+  Department   Department? @relation(fields: [departmentId], references: [id])
   departmentId Int?
 
   machineDetails MachineDetails[]
@@ -2403,7 +2414,7 @@ model ProductionInward {
   TaxTemplate         TaxTemplate?       @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
   taxTemplateId       Int?
 
-  inwardDetails ProductionInwardDtl[]
+  inwardDetails   ProductionInwardDtl[]
   processBillDtls ProcessBillDtl[]
 }
 
@@ -2476,7 +2487,7 @@ model ProcessBillDtl {
   JobCard            JobCard?          @relation(fields: [jobCardId], references: [id])
   productionInwardId Int?
   ProductionInward   ProductionInward? @relation(fields: [productionInwardId], references: [id])
-  
+
   billingProcesses BillingProcess[]
 }
 

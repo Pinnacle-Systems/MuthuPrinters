@@ -50,7 +50,7 @@ const JobCardForm = ({
     const [orderQty, setOrderQty] = useState("");
     const [printModalOpen, setPrintModalOpen] = useState(false);
     const [gsmId, setGsmId] = useState("");
-    const [boardId, setBoardId] = useState("");
+    const [otherBoardId, setOtherBoardId] = useState("");
     const [fullBoardId, setFullBoardId] = useState("");
     const [noOfPockets, setNoOfPockets] = useState("");
     const [cuttingSizeId, setCuttingSizeId] = useState("");
@@ -111,7 +111,7 @@ const JobCardForm = ({
     const params = { companyId: secureLocalStorage.getItem(sessionStorage.getItem("sessionId") + "userCompanyId") };
 
     const { data: processList } = useGetProcessMasterQuery({ params });
-    const { data: boardData } = useGetBoardMasterQuery({ params });
+    // const { data: boardData } = useGetBoardMasterQuery({ params });
     const { data: processGroupList } = useGetProcessGroupMasterQuery({ params });
     const { data: orderList } = useGetRefListQuery({ params: { companyId, branchId } });
     const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { companyId, branchId } });
@@ -124,7 +124,8 @@ const JobCardForm = ({
     const filterByGroup = (groupName) =>
         processList?.data?.filter((p) => getGroupIds(groupName).includes(p.id)) || [];
 
-    const boardList = boardData?.data?.filter((i) => id ? true : i?.active) || [];
+    // const boardList = boardData?.data?.filter((i) => id ? true : i?.active) || [];
+    const boardList = filterByGroup("BOARD QUALITY");
     const printingList = filterByGroup("PRINTING");
     const defaultList = filterByGroup("DEFAULT");
     const laminationList = filterByGroup("LAMINATION");
@@ -141,6 +142,8 @@ const JobCardForm = ({
     // route steps. Fields bound to these steps will be disabled.
     // ─────────────────────────────────────────────────────────────
     const dbProcessRoute = singleData?.data?.processRoute || [];
+    const anyCompleted = dbProcessRoute.some((r) => r.status === "COMPLETED");
+    const routeFieldsLocked = anyCompleted && !isAmendment;
 
     const completedSet = useMemo(
         () => buildCompletedSet(dbProcessRoute),
@@ -178,7 +181,7 @@ const JobCardForm = ({
         boardItems.length > 0 &&
         boardItems.every((bid) => isItemCompleted("boardQuality", bid));
 
-    const boardCompleted = isCompletedInRoute("board", boardId);
+    const boardCompleted = isCompletedInRoute("board", otherBoardId);
 
     // Cutting details are tied to boardQuality / board steps in route
     // We lock them when ALL board-related steps are completed
@@ -212,7 +215,7 @@ const JobCardForm = ({
         setPlateId(data?.plateId || "");
         setDieId(data?.dieId || "");
         setTotalPlatesets(data?.totalPlatesets || "");
-        setBoardItems(data?.boardQualities?.map((b) => b.boardId) || []);
+        setBoardItems(data?.boardQualities?.map((b) => b.processId) || []);
         setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
         setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
         setSelectedFinishing(data?.finishingProcesses?.map((f) => f.processId) || []);
@@ -220,7 +223,7 @@ const JobCardForm = ({
         setVarnishes(data?.varnishDetails?.map((v) => ({ processId: v.varnishId, isFront: v.isFront, isFrontAndBack: v.isFrontAndBack })) || []);
         setSelectedMachines(data?.machineDetails?.map((m) => m.macId) || []);
         setOrderEntryId(data?.orderEntryId || "");
-        setBoardId(data?.boardId || "");
+        setOtherBoardId(data?.otherBoardId || "");
         setJobRunTime(data?.jobRunTime || "");
         setProcessRoute(
             data?.processRoute
@@ -276,7 +279,7 @@ const JobCardForm = ({
 
     const formData = {
         id, docDate, branchId, userId, finYearId, orderType, orderQty, customerId,
-        boardItems, gsmId, boardId, remarks, fullBoardId, noOfPockets, cuttingSizeId,
+        boardItems, gsmId, otherBoardId, remarks, fullBoardId, noOfPockets, cuttingSizeId,
         runningQty, plateId, dieId,
         totalPlatesets, selectedProcesses, laminations, varnishes, selectedMachines,
         orderEntryId, jobRunTime, processRoute: routeKeysToDb(processRoute),
@@ -426,7 +429,7 @@ const JobCardForm = ({
             const data = result?.data;
             if (!data) return;
             setGsmId(data?.gsmId || "");
-            setBoardId(data?.boardId || "");
+            setOtherBoardId(data?.otherBoardId || "");
             setFullBoardId(data?.fullBoardId || "");
             setNoOfPockets(data?.noOfPockets || "");
             setCuttingSizeId(data?.cuttingSizeId || "");
@@ -434,7 +437,7 @@ const JobCardForm = ({
             setPlateId(data?.plateId || "");
             setDieId(data?.dieId || "");
             setTotalPlatesets(data?.totalPlatesets || "");
-            setBoardItems(data?.boardQualities?.map((b) => b.boardId) || []);
+            setBoardItems(data?.boardQualities?.map((b) => b.processId) || []);
             setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
             setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
             setSelectedFinishing(data?.finishingProcesses?.map((f) => f.processId) || []);
@@ -498,31 +501,33 @@ const JobCardForm = ({
     // ─────────────────────────────────────────────────────────────
 
     // Board quality checkboxes — each item locked individually
-    const isBoardQualityLocked = (boardItemId) => isItemCompleted("boardQuality", boardItemId);
+    const isBoardQualityLocked = (boardItemId) => isItemCompleted("boardQuality", boardItemId) || routeFieldsLocked;
 
     // Board (other/board dropdown) locked if its route step is completed
-    const isBoardLocked = boardId ? isItemCompleted("board", boardId) : false;
+    const isBoardLocked = otherBoardId
+        ? (isItemCompleted("board", otherBoardId) || routeFieldsLocked)
+        : routeFieldsLocked;
 
     // Cutting detail fields locked when boardQuality AND board are both done
     // (they belong to the boardQuality stage in production flow)
-    const isCuttingLocked =
+    const isCuttingLocked = routeFieldsLocked ||
         boardItems.length > 0 &&
         boardItems.every((bid) => isItemCompleted("boardQuality", bid));
 
     // Printing checkboxes — each locked individually
-    const isPrintingItemLocked = (printId) => isItemCompleted("printing", printId);
+    const isPrintingItemLocked = (printId) => isItemCompleted("printing", printId) || routeFieldsLocked;
 
     // Process details checkboxes — each locked individually
-    const isProcessItemLocked = (procId) => isItemCompleted("process", procId);
+    const isProcessItemLocked = (procId) => isItemCompleted("process", procId) || routeFieldsLocked;
 
     // Lamination rows — each locked individually
-    const isLaminationItemLocked = (laminationProcId) => isItemCompleted("lamination", laminationProcId);
+    const isLaminationItemLocked = (laminationProcId) => isItemCompleted("lamination", laminationProcId) || routeFieldsLocked;
 
     // Varnish rows — each locked individually
-    const isVarnishItemLocked = (varnishProcId) => isItemCompleted("varnish", varnishProcId);
+    const isVarnishItemLocked = (varnishProcId) => isItemCompleted("varnish", varnishProcId) || routeFieldsLocked;
 
     // Finishing checkboxes — each locked individually
-    const isFinishingItemLocked = (finId) => isItemCompleted("finishing", finId);
+    const isFinishingItemLocked = (finId) => isItemCompleted("finishing", finId) || routeFieldsLocked;
 
     const headerContent = (
         <div className="flex flex-col xl:flex-row gap-1">
@@ -579,7 +584,10 @@ const JobCardForm = ({
                                 ["APPROVED", "NOT_CONFIGURED"].includes(
                                     item?.approvalStatus?.status
                                 ) &&
-                                item?.customerId === customerId
+                                item?.customerId === customerId &&
+                                (
+                                    id || item?.creationStatus !== "FULLY_CREATED"
+                                )
                             )} value={orderEntryId} setValue={setOrderEntryId} required readOnly={readOnly} disabled={readOnly || childRecord.current > 0} otherField={"docId"}
                             beforeChange={async (selectedValue) => {
                                 if (isRepeatedJobCard && refJobCardId) {
@@ -606,7 +614,7 @@ const JobCardForm = ({
                                 setOrderQty("");
                                 setJobCardSizeDetails([]);
                                 setBoardItems([]);
-                                setBoardId("");
+                                setOtherBoardId("");
                                 setSelectedPrinting([]);
                                 setSelectedProcesses([]);
                                 setSelectedMachines([]);
@@ -614,7 +622,13 @@ const JobCardForm = ({
                                 setPlateDetails([]);
                                 setVarnishes([]);
                                 setProductionType(res?.data?.productionType);
-                                setOrderStyleItems(res?.data?.orderItems?.map(item => item?.styleItemId) || []);
+                                setOrderStyleItems(
+                                    res?.data?.orderItems
+                                        ?.filter(item =>
+                                            id || item?.childRecordCount === 0
+                                        )
+                                        ?.map(item => item?.styleItemId) || []
+                                );
                             }}
                         />
                     </div>
@@ -659,7 +673,7 @@ const JobCardForm = ({
                                     setVarnishes([]);
                                     setSelectedPrinting([]);
                                     setPlateDetails([]);
-                                    setBoardId("")
+                                    setOtherBoardId("")
                                     setSelectedFinishing([]);
                                 }
                             }
@@ -684,12 +698,12 @@ const JobCardForm = ({
                     <div className="w-56">
                         <DropdownNew name="Follow Up"
                             dataList={id ? employeeList?.data : employeeList?.data?.filter((i) => i?.active)}
-                            value={followUpId} setValue={setFollowUpId} required readOnly={readOnly} disabled={isDisabledPermission} />
+                            value={followUpId} setValue={setFollowUpId} required readOnly={readOnly} disabled={isDisabledPermission || readOnly} />
                     </div>
                     <div className="w-56">
                         <DropdownNew name="Designer"
                             dataList={id ? employeeList?.data : employeeList?.data?.filter((i) => i?.active)}
-                            value={designerId} setValue={setDesignerId} required readOnly={readOnly} disabled={isDisabledPermission} />
+                            value={designerId} setValue={setDesignerId} required readOnly={readOnly} disabled={isDisabledPermission || readOnly} />
                     </div>
                 </div>
             </div>
@@ -759,8 +773,8 @@ const JobCardForm = ({
                                     </Field>
                                     <Field label="Others / Board">
                                         <DropdownWithModal name=""
-                                            options={dropDownListObject(id ? boardData?.data : boardData?.data?.filter((i) => i?.active), "name", "id")}
-                                            value={boardId} setValue={setBoardId} readOnly={readOnly}
+                                            options={dropDownListObject(id ? boardList : boardList?.filter((i) => i?.active), "name", "id")}
+                                            value={otherBoardId} setValue={setOtherBoardId} readOnly={readOnly}
                                             addNewLabel="+ Add Board" childComponent={BoardMaster} addNewModalWidth="w-[30%] h-[45%]"
                                             disabled={isDisabledPermission || isBoardLocked}
                                         />
@@ -1063,7 +1077,7 @@ const JobCardForm = ({
                         selectedProcesses={selectedProcesses} laminations={laminations} varnishes={varnishes}
                         defaultList={defaultList} laminationList={laminationList} varnishList={varnishList}
                         processRoute={processRoute} setProcessRoute={setProcessRoute} readOnly={readOnly}
-                        boardItems={boardItems} boardId={boardId} printingList={printingList}
+                        boardItems={boardItems} otherBoardId={otherBoardId} printingList={printingList}
                         boardList={boardList} selectedPrinting={selectedPrinting}
                         selectedFinishing={selectedFinishing} finishingList={finishingList}
                         isAmendment={isAmendment} setIsAmendment={setIsAmendment}
