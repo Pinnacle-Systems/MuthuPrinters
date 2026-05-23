@@ -6,6 +6,8 @@ import {
   update as _update,
   remove as _remove,
   getJobCardList as _getJobCardList,
+  get_mob_joblist  as _get_mob_joblist
+
 } from "../services/JobCard.service.js";
 
 async function get(req, res, next) {
@@ -15,6 +17,15 @@ async function get(req, res, next) {
     console.error(`Error `, err.message);
   }
 }
+
+async function get_mob_joblist(req, res, next) {
+  try {
+    res.json(await _get_mob_joblist(req));
+  } catch (err) {
+    console.error(`Error `, err.message);
+  }
+}
+
 
 async function getJobCardList(req, res, next) {
   try {
@@ -92,4 +103,4 @@ async function remove(req, res, next) {
   }
 }
 
-export { get, getOne, create, update, remove, getJobCardList };
+export { get, getOne, create, update, remove, getJobCardList,get_mob_joblist };

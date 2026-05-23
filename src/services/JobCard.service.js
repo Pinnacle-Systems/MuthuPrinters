@@ -51,7 +51,7 @@ async function get(req) {
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
-  console.log("req",req?.query);
+ 
   
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
@@ -190,6 +190,167 @@ async function get(req) {
   return { statusCode: 0, data: resolvedData, nextDocId: newDocId, totalCount };
 }
 
+
+
+
+
+async function get_mob_joblist(req) {
+  const {
+    branchId,
+    pagination,
+    pageNumber,
+    dataPerPage,
+    searchDocNo,
+    searchDocDate,
+    searchProductionType,
+    finYearId,
+    searchCustomer,
+  } = req.query;
+
+  let finYearDate = await getFinYearStartTimeEndTime(finYearId);
+
+ 
+  
+  const shortCode = finYearDate
+    ? getYearShortCodeForFinYear(
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
+    : "";
+
+  let newDocId = await getNextDocId(
+    branchId,
+    shortCode,
+    finYearDate?.startDateStartTime,
+    finYearDate?.endDateEndTime,
+  );
+
+  let data = await prisma.jobCard.findMany({
+    where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
+      AND: finYearDate
+        ? [
+            { createdAt: { gte: finYearDate.startTime } },
+            { createdAt: { lte: finYearDate.endTime } },
+          ]
+        : undefined,
+      docId: searchDocNo ? { contains: searchDocNo } : undefined,
+      productionType: searchProductionType
+        ? { contains: searchProductionType }
+        : undefined,
+      customer: {
+        name: searchCustomer ? { contains: searchCustomer } : undefined,
+      },
+    },
+    include: {
+      processRoute :true,
+      productionAllocations : true
+   },
+    orderBy: { id: "desc" },
+  });
+  if (searchDocDate) {
+    data = data.filter((item) =>
+      String(getDateFromDateTime(item.createdAt)).includes(searchDocDate),
+    );
+  }
+
+
+
+  
+  let totalCount = data.length;
+
+  // if (pagination) {
+  //   data = data.slice(
+  //     (pageNumber - 1) * parseInt(dataPerPage),
+  //     pageNumber * dataPerPage,
+  //   );
+  // }
+
+  const { module, hasApproval } = await getModuleApprovalSetup(
+    REFERENCE_PAGE,
+    branchId,
+  );
+
+  // ── fetch all relevant approval logs in one query ─────────────────────────
+  const jobCardIds = data.map((o) => o.id);
+
+  const approvalLogs = await prisma.approvalLog.findMany({
+    where: { referencePage: REFERENCE_PAGE, referenceId: { in: jobCardIds } },
+    select: {
+      id: true,
+      referenceId: true,
+      status: true,
+      remarks: true,
+      currentLevel: true,
+      LevelLogs: {
+        select: {
+          action: true,
+          levelNo: true,
+          userId: true,
+          createdAt: true,
+          User: { select: { id: true, username: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+
+  const approvalLogMap = approvalLogs.reduce((acc, log) => {
+    acc[log.referenceId] = log;
+    return acc;
+  }, {});
+
+  // ── fetch active configs only if approval is set up ───────────────────────
+  const activeConfigs =
+    hasApproval && module
+      ? await prisma.approvalConfig.findMany({
+          where: {
+            moduleId: module.id,
+            branchId: parseInt(branchId),
+            active: true,
+          },
+          include: {
+            ConfigConditions: {
+              include: { Field: true, Operator: true, CompareField: true },
+            },
+            approvalLevels: {
+              include: { LevelUsers: true },
+              orderBy: { levelNo: "asc" },
+            },
+          },
+        })
+      : [];
+
+  // ── resolve approval status per record ───────────────────────────────────
+  let resolvedData = data.map((jobCard) => {
+    const log = approvalLogMap[jobCard.id] ?? null;
+
+    let shouldTrigger = false;
+    if (!log && hasApproval && activeConfigs.length > 0) {
+      shouldTrigger = evaluateConfigs(activeConfigs, jobCard);
+    }
+
+    return {
+      ...jobCard,
+      approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+    
+    };
+  });
+
+
+    console.log("process data",data);
+
+  if (pagination) {
+    resolvedData = resolvedData.slice(
+      (pageNumber - 1) * parseInt(dataPerPage),
+      pageNumber * parseInt(dataPerPage),
+    );
+  }
+
+  return { statusCode: 0, data: resolvedData, nextDocId: newDocId, totalCount };
+}
+
+
 async function getJobCardList(req) {
   const { branchId, companyId } = req.query;
 
@@ -211,7 +372,7 @@ async function getJobCardList(req) {
       OrderEntry: { select: { docId: true } },
       StyleItem: { select: { name: true } },
       productionAllocations: {
-        select: {
+         select: {
           id: true,
           docId: true,
         },
@@ -1104,4 +1265,4 @@ async function remove(id) {
   }
 }
 
-export { get, getOne, create, update, remove, getJobCardList };
+export { get, getOne, create, update, remove, getJobCardList , get_mob_joblist};
