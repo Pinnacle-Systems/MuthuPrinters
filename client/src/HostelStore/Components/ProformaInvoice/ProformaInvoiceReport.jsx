@@ -11,6 +11,7 @@ import {
 import { useGetBranchByIdQuery } from "../../../redux/services/BranchMasterService";
 import { CheckCircle, XCircle, Clock } from "lucide-react";
 import { toast } from "react-toastify";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 const ProformaInvoiceReport = ({
     onView,
@@ -42,6 +43,7 @@ const ProformaInvoiceReport = ({
 
     const [totalCount, setTotalCount] = useState(0);
     const [currentPageNumber, setCurrentPageNumber] = useState(1);
+    const { hasPermission } = UserPermissions();
 
     const searchFields = {
         serachDocNo,
@@ -365,7 +367,7 @@ const ProformaInvoiceReport = ({
                                                     <Tooltip title="View" arrow>
                                                         <button
                                                             className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
-                                                            onClick={() => onView(item.id)}
+                                                            onClick={() => hasPermission(() => onView(item.id), "read")}
                                                         >
                                                             <svg
                                                                 xmlns="http://www.w3.org/2000/svg"
@@ -385,7 +387,7 @@ const ProformaInvoiceReport = ({
                                                     <Tooltip title="Edit" arrow>
                                                         <button
                                                             className="text-green-600 gap-1 px-1   bg-green-50 rounded"
-                                                            onClick={() => onEdit(item.id)}
+                                                            onClick={() => hasPermission(() => onEdit(item.id), "edit")}
                                                         >
                                                             <svg
                                                                 xmlns="http://www.w3.org/2000/svg"
@@ -408,7 +410,7 @@ const ProformaInvoiceReport = ({
                                                                     ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
                                                                     : "bg-red-50 text-red-800 hover:bg-red-100"
                                                                 }`}
-                                                            onClick={() => onDelete(item.id)}
+                                                            onClick={() => hasPermission(() => onDelete(item.id), "delete")}
                                                             disabled={item.childRecord > 0}
                                                         >
                                                             <svg

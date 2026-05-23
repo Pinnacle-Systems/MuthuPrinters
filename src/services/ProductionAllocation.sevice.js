@@ -1,6 +1,9 @@
 import { prisma } from "../lib/prisma.js";
 import { NoRecordFound } from "../configs/Responses.js";
-import { getYearShortCodeForFinYear } from "../utils/helper.js";
+import {
+  getDateFromDateTime,
+  getYearShortCodeForFinYear,
+} from "../utils/helper.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 
@@ -36,20 +39,29 @@ async function get(req) {
     pageNumber,
     dataPerPage,
     searchDocNo,
+    searchDocDate,
+    searchJobCard,
+    searchStyleItem,
   } = req.query;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
-  const data = await prisma.productionAllocation.findMany({
+  let data = await prisma.productionAllocation.findMany({
     where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
       docId: searchDocNo ? { contains: searchDocNo } : undefined,
-
       AND: finYearDate
         ? [
             { createdAt: { gte: finYearDate.startDateStartTime } },
             { createdAt: { lte: finYearDate.endDateEndTime } },
           ]
         : undefined,
+      JobCard: {
+        docId: searchJobCard ? { contains: searchJobCard } : undefined,
+      },
+      StyleItem: {
+        name: searchStyleItem ? { contains: searchStyleItem } : undefined,
+      },
     },
 
     include: {
@@ -75,17 +87,30 @@ async function get(req) {
           sequence: "asc",
         },
       },
+      _count: {
+        select: {
+          productionOutwards: true,
+        },
+      },
     },
 
     orderBy: {
       id: "desc",
     },
   });
+  if (searchDocDate) {
+    data = data.filter((item) =>
+      String(getDateFromDateTime(item.createdAt)).includes(searchDocDate),
+    );
+  }
 
-  let result = data;
+  let result = data?.map((item) => ({
+    ...item,
+    childRecord: item._count.productionOutwards,
+  }));
 
   if (pagination) {
-    result = data.slice(
+    result = result.slice(
       (pageNumber - 1) * parseInt(dataPerPage),
       pageNumber * parseInt(dataPerPage),
     );
@@ -96,6 +121,27 @@ async function get(req) {
     totalCount: data.length,
     data: result,
   };
+}
+
+async function getAllocationList(req) {
+  const { branchId, companyId } = req.query;
+
+  let data = await prisma.productionAllocation.findMany({
+    where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
+    },
+    select: {
+      id: true,
+      docId: true,
+      jobCardId: true,
+      allocationDetails: true,
+    },
+    orderBy: {
+      docId: "desc",
+    },
+  });
+
+  return { statusCode: 0, data };
 }
 
 async function getOne(id) {
@@ -177,6 +223,8 @@ async function create(body) {
 
       styleItemId: styleItemId ? parseInt(styleItemId) : null,
 
+      branchId: parseInt(branchId),
+
       allocationDetails: {
         createMany: {
           data: allocationDetails.map((item) => ({
@@ -189,6 +237,8 @@ async function create(body) {
             isInHouse: Boolean(item.isInHouse),
 
             isOutSide: Boolean(item.isOutSide),
+
+            supplierId: item.supplierId ? parseInt(item.supplierId) : null,
           })),
         },
       },
@@ -213,6 +263,7 @@ async function update(id, body) {
     jobCardId,
     styleItemId,
     allocationDetails,
+    branchId,
   } = body;
 
   const found = await prisma.productionAllocation.findUnique({
@@ -232,6 +283,8 @@ async function update(id, body) {
 
     data: {
       docDate: docDate ? new Date(docDate) : null,
+
+      branchId: parseInt(branchId),
 
       remarks,
 
@@ -255,6 +308,8 @@ async function update(id, body) {
             isInHouse: Boolean(item.isInHouse),
 
             isOutSide: Boolean(item.isOutSide),
+
+            supplierId: item.supplierId ? parseInt(item.supplierId) : null,
           })),
         },
       },
@@ -294,4 +349,4 @@ async function remove(id) {
   };
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove, getAllocationList };

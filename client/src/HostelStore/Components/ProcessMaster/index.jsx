@@ -9,6 +9,7 @@ import { statusDropdown } from "../../../Utils/DropdownData";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 import { useAddProcessMasterMutation, useDeleteProcessMasterMutation, useGetProcessMasterByIdQuery, useGetProcessMasterQuery, useLazyGetProcessMasterByIdQuery, useUpdateProcessMasterMutation } from "../../../redux/services/ProcessMasterService";
 import { Checkbox } from "@mui/material";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
     const [form, setForm] = useState(false);
@@ -42,6 +43,14 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     const [addData] = useAddProcessMasterMutation();
     const [updateData] = useUpdateProcessMasterMutation();
     const [removeData] = useDeleteProcessMasterMutation();
+
+    const { hasPermission } = UserPermissions();
+    const handleCreate = () => {
+        hasPermission(() => {
+            setForm(true);
+            onNew();
+        }, "create");
+    };
 
     const syncFormWithDb = useCallback(
         (data) => {
@@ -215,7 +224,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             header: "Process",
             accessor: (item) => item?.name,
             //   cellClass: () => "font-medium  text-gray-900",
-            className: "font-medium text-gray-900 text-center uppercase w-72",
+            className: "font-medium text-gray-900 text-left uppercase w-72",
         },
 
         {
@@ -395,10 +404,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                 <h5 className="text-lg font-bold text-gray-800">Process Master</h5>
                 <div className="flex items-center">
                     <button
-                        onClick={() => {
-                            setForm(true);
-                            onNew();
-                        }}
+                        onClick={handleCreate}
                         className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
                     >
                         + Add New Process

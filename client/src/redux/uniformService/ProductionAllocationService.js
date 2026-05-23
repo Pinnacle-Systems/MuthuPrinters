@@ -33,6 +33,19 @@ const ProductionAllocationApi = createApi({
       },
       providesTags: ["productionAllocation"],
     }),
+    getAllocationList: builder.query({
+      query: ({ params }) => {
+        return {
+          url: PRODUCTION_ALLOCATION_API + "/allocationList",
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+          params,
+        };
+      },
+      providesTags: ["productionAllocation"],
+    }),
     getProductionAllocationById: builder.query({
       query: (id) => {
         return {
@@ -78,6 +91,7 @@ const ProductionAllocationApi = createApi({
 
 export const {
   useGetProductionAllocationQuery,
+  useGetAllocationListQuery,
   useGetProductionAllocationByIdQuery,
   useLazyGetProductionAllocationByIdQuery,
   useAddProductionAllocationMutation,

@@ -171,7 +171,11 @@ async function getOne(id) {
         },
       },
       attachments: true,
-      Branch: true,
+      Branch: {
+        include: {
+          company: true,
+        },
+      },
       Bank: true,
       customer: true,
       _count: {
@@ -218,7 +222,10 @@ async function create(body) {
     deliveryId,
     carriageCharge,
     bankId,
+    conversionType,
   } = body;
+
+  console.log(conversionType, "conversionType");
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
@@ -260,6 +267,7 @@ async function create(body) {
       deliveryId: deliveryId ? parseInt(deliveryId) : null,
       carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
       bankId: bankId ? parseInt(bankId) : null,
+      conversionType: conversionType || null,
       items: {
         createMany: {
           data: JSON.parse(items || "[]").map((item) => ({
@@ -323,6 +331,7 @@ async function update(id, body, files) {
     deliveryId,
     carriageCharge,
     bankId,
+    conversionType,
   } = body;
 
   const parseItems = JSON.parse(items || "[]");
@@ -422,6 +431,7 @@ async function update(id, body, files) {
   const data = await prisma.proformaInvoice.update({
     where: { id: parseInt(id) },
     data: {
+      branchId: parseInt(branchId),
       docDate: docDate ? new Date(docDate) : null,
       userDate: userDate ? new Date(userDate) : null,
       deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
@@ -446,7 +456,7 @@ async function update(id, body, files) {
       ...(isApproved !== undefined && {
         isApproved: isApproved === "true" || isApproved === true,
       }),
-
+      conversionType: conversionType || null,
       items: isTableChanged
         ? {
             createMany: {

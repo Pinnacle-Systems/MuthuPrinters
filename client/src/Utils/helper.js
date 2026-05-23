@@ -15,22 +15,22 @@ export function generateSessionId(length = 8) {
 }
 
 export function findDateInRange(fromDate, toDate, checkDate) {
-    const from = new Date(fromDate);
-    const to = new Date(toDate);
-    const check = new Date(checkDate);
+  const from = new Date(fromDate);
+  const to = new Date(toDate);
+  const check = new Date(checkDate);
 
-    if (
-        Number.isNaN(from.getTime()) ||
-        Number.isNaN(to.getTime()) ||
-        Number.isNaN(check.getTime())
-    ) {
-        return false;
-    }
-
-    if (from <= check && check <= to) {
-        return true;
-    }
+  if (
+    Number.isNaN(from.getTime()) ||
+    Number.isNaN(to.getTime()) ||
+    Number.isNaN(check.getTime())
+  ) {
     return false;
+  }
+
+  if (from <= check && check <= to) {
+    return true;
+  }
+  return false;
 }
 
 export function latestExpireDateWithinNDays(

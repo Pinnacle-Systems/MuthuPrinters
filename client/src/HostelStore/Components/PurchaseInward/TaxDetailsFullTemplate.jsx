@@ -3,6 +3,7 @@ import { discountTypes } from '../../../Utils/DropdownData';
 
 const TaxDetailsFullTemplate = ({ inwardItems, currentIndex: index, setCurrentSelectedIndex, readOnly, handleInputChange, id,
     onCloseFocus,
+    isSupplierOutside,
 
 }) => {
 
@@ -100,23 +101,30 @@ const TaxDetailsFullTemplate = ({ inwardItems, currentIndex: index, setCurrentSe
                         </td>
                     </tr>
 
-                    <tr className='h-7'>
-                        <td className="border border-gray-500">CGST</td>
-                        <td className="border border-gray-500 tes  text-right" colSpan={2}
-                        >
-                            {(row?.totals?.cgst)?.toFixed(2)}
+                    {isSupplierOutside ? (
+                        <tr className="h-7">
+                            <td className="border border-gray-500">IGST</td>
+                            <td className="border border-gray-500 text-right" colSpan={2}>
+                                {row?.totals?.igst?.toFixed(2)}
+                            </td>
+                        </tr>
+                    ) : (
+                        <>
+                            <tr className="h-7">
+                                <td className="border border-gray-500">CGST</td>
+                                <td className="border border-gray-500 text-right" colSpan={2}>
+                                    {row?.totals?.cgst?.toFixed(2)}
+                                </td>
+                            </tr>
 
-                        </td>
-                    </tr>
-
-                    <tr className='h-7'>
-                        <td className="border border-gray-500">SGST</td>
-                        <td className="border border-gray-500  text-right" colSpan={2}
-                        >
-                            {(row?.totals?.sgst)?.toFixed(2)}
-
-                        </td>
-                    </tr>
+                            <tr className="h-7">
+                                <td className="border border-gray-500">SGST</td>
+                                <td className="border border-gray-500 text-right" colSpan={2}>
+                                    {row?.totals?.sgst?.toFixed(2)}
+                                </td>
+                            </tr>
+                        </>
+                    )}
 
                     <tr className='h-7'>
                         <td className="border border-gray-500">Net Amount</td>

@@ -55,7 +55,12 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     const [updateData] = useUpdateCurrencyMutation();
     const [removeData] = useDeleteCurrencyMutation();
 
-
+    const handleCreate = () => {
+        hasPermission(() => {
+            setForm(true);
+            onNew();
+        }, "create");
+    };
 
     const syncFormWithDb = useCallback(
         (data) => {
@@ -458,10 +463,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                 <h5 className="text-lg font-bold text-gray-800">Currency Master</h5>
                 <div className="flex items-center">
                     <button
-                        onClick={() => {
-                            setForm(true);
-                            onNew();
-                        }}
+                        onClick={handleCreate}
                         className="bg-white border h-6  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
                     >
                         + Add New Currency

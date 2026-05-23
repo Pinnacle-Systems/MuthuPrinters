@@ -23,6 +23,7 @@ import { dropDownListObject } from "../../../Utils/contructObject";
 import Modal from "../../../UiComponents/Modal";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 import { toast } from "react-toastify";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 const MODEL = "Location Master";
 
@@ -86,6 +87,14 @@ export default function Form({
   const [addData] = useAddLocationMasterMutation();
   const [updateData] = useUpdateLocationMasterMutation();
   const [removeData] = useDeleteLocationMasterMutation();
+
+  const { hasPermission } = UserPermissions();
+  const handleCreate = () => {
+    hasPermission(() => {
+      setForm(true);
+      onNew();
+    }, "create");
+  };
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -568,10 +577,7 @@ export default function Form({
         </h5>
         <div className="flex items-center">
           <button
-            onClick={() => {
-              setForm(true);
-              onNew();
-            }}
+            onClick={handleCreate}
             className="bg-white border font-segoe border-green-600 text-green-600 hover:bg-green-700 hover:text-white text-xs px-2  rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             + Add New Location

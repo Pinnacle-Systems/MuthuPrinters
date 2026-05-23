@@ -243,15 +243,10 @@ const OrderEntryPrintFormat = ({ data, customerDetails, branchData, qrCodeDataUr
         return breakup.map((sb) => {
             const size = findFromList(sb.sizeId, sizeList?.data, "name");
             const qty = Number(sb.qty);
-            const range = sb.barcodeFrom ? `${sb.barcodeFrom}-${sb.barcodeTo}` : "";
 
-            if (row.trackingType === "Barcode")
-                return `${range} / Qty: ${qty}`;
-            if (row.trackingType === "SizeTemplate")
-                return `${size || "All"}: ${qty}`;
-            if (row.trackingType === "SizeTemplateBarcode")
-                return `${size || "All"} / ${range} / Qty: ${qty}`;
-            return null;
+
+            return `${size || "All"}: ${qty}`;
+
         }).filter(Boolean).join("  |  ");
     };
 

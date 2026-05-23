@@ -125,6 +125,10 @@ model Branch {
   orderEntries          OrderEntry[]
   jobCards              JobCard[]
   proformaInvoices      ProformaInvoice[]
+  productionAllocations ProductionAllocation[]
+  productionOutwards    ProductionOutward[]
+  productionInwards     ProductionInward[]
+  processBills          ProcessBill[]
 }
 
 model UserOnBranch {
@@ -214,6 +218,12 @@ model User {
   proformaInvoicesUpdatedBy      ProformaInvoice[]      @relation(name: "proformaUpdatedBy")
   productionAllocationsCreatedBy ProductionAllocation[] @relation(name: "AllocationCreatedBy")
   productionAllocationsUpdatedBy ProductionAllocation[] @relation(name: "AllocationUpdatedBy")
+  productionOutwardsCreatedBy    ProductionOutward[]    @relation("createdBy")
+  productionOutwardsUpdatedBy    ProductionOutward[]    @relation("updatedBy")
+  productionInwardsCreatedBy     ProductionInward[]     @relation("InwardCreatedBy")
+  productionInwardsUpdatedBy     ProductionInward[]     @relation("InwardUpdatedBy")
+  processBillsCreatedBy              ProcessBill[]          @relation(name: "createdBy")
+  processBillsUpdatedBy              ProcessBill[]          @relation(name: "updatedBy")
 }
 
 model Employee {
@@ -339,6 +349,8 @@ model Department {
   doctor    Employee[] @relation()
   Company   Company    @relation(fields: [companyId], references: [id])
   companyId Int
+
+  machines   Machine[]
 }
 
 enum PageType {
@@ -473,6 +485,11 @@ model Party {
   orderEntries          OrderEntry[]
   JobCard               JobCard[]
   proformaInvoices      ProformaInvoice[]
+  productionOutwards    ProductionOutward[]
+
+  productionAllocationDtls ProductionAllocationDtl[]
+  productionInwards        ProductionInward[]
+  processBills              ProcessBill[]
 }
 
 model PartyBranch {
@@ -1139,7 +1156,9 @@ model TaxTemplate {
   pos                 Po[]
   purchaseBillEntries PurchaseBillEntry[]
   purchaseInwards     PurchaseInward[]
+  productionInwards   ProductionInward[]
   proformaInvoices    ProformaInvoice[]
+  processBills        ProcessBill[]
 }
 
 model TaxTemplateDetails {
@@ -1602,6 +1621,8 @@ model Size {
   jobCardFullBoardSize   JobCard[]                @relation("fullBoardSize")
   jobCardCuttingSize     JobCard[]                @relation("cuttingSizeDtl")
   jobCardSizeDetails     JobCardSizeBreakup[]
+  Machine                Machine[]
+  jobCardLabelSize       JobCard[]                @relation("labelSize")
 }
 
 model Gsm {
@@ -1841,12 +1862,19 @@ model Process {
   isOutsideJob     Boolean?           @default(false)
   processGroupList ProcessGroupList[]
 
-  laminationDetails       LaminationDetails[]
-  varnishDetails          VarnishDetails[]
-  machineDetails          MachineDetails[]
-  processDetails          ProcessDetails[]
-  processRoute            ProcessRoute[]
-  ProductionAllocationDtl ProductionAllocationDtl[]
+  laminationDetails                LaminationDetails[]
+  varnishDetails                   VarnishDetails[]
+  machineDetails                   MachineDetails[]
+  processDetails                   ProcessDetails[]
+  processRoute                     ProcessRoute[]
+  ProductionAllocationDtl          ProductionAllocationDtl[]
+  finishingProcess                 FinishingProcess[]
+  printingDetails                  PrintingDetails[]
+  productionOutwardDtlsProcess     ProductionOutwardDtl[]    @relation("process")
+  productionOutwardDtlsPrevProcess ProductionOutwardDtl[]    @relation("prevProcess")
+  productionInwardDtls             ProductionInwardDtl[]
+  inwardProcessDtls                InwardProcessDtl[]
+  billingProcesses                 BillingProcess[]
 }
 
 model ProcessGroup {
@@ -1947,6 +1975,8 @@ model JobCard {
   FullBoardSize      Size?       @relation("fullBoardSize", fields: [fullBoardId], references: [id])
   cuttingSizeId      Int?
   CuttingSizeDtl     Size?       @relation("cuttingSizeDtl", fields: [cuttingSizeId], references: [id])
+  labelSizeId        Int?
+  LabelSize          Size?       @relation("labelSize", fields: [labelSizeId], references: [id])
   itemGroupId        Int?
   ItemGroup          ItemGroup?  @relation(fields: [itemGroupId], references: [id])
   itemType           String?
@@ -1959,7 +1989,12 @@ model JobCard {
   labelQuality       String?
   block              String?
   orderItemId        Int?
+  totalMeter         Int?
   OrderItems         OrderItems? @relation(fields: [orderItemId], references: [id])
+  blockDate          DateTime?
+  isRepeatedJobCard  Boolean?    @default(false)
+  refJobCardId       Int?
+  RefJobCard         JobCard?    @relation("RepeatedJobCard", fields: [refJobCardId], references: [id])
 
   boardQualities        BoardQuality[]
   processDetails        ProcessDetails[]
@@ -1969,6 +2004,14 @@ model JobCard {
   processRoute          ProcessRoute[]
   jobCardSizeDetails    JobCardSizeBreakup[]
   productionAllocations ProductionAllocation[]
+  printingDetails       PrintingDetails[]
+  plateDetails          PlateDetails[]
+  finishingProcesses    FinishingProcess[]
+  JobCards              JobCard[]              @relation("RepeatedJobCard")
+  productionOutwards    ProductionOutward[]
+  productionInwards     ProductionInward[]
+  productionInwardDtls  ProductionInwardDtl[]
+  processBillDtls       ProcessBillDtl[]
 }
 
 model BoardQuality {
@@ -1977,6 +2020,30 @@ model BoardQuality {
   JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
   boardId   Int?
   Board     Board?   @relation(fields: [boardId], references: [id])
+}
+
+model FinishingProcess {
+  id        Int      @id @default(autoincrement())
+  jobCardId Int?
+  JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processId Int?
+  Process   Process? @relation(fields: [processId], references: [id])
+}
+
+model PrintingDetails {
+  id        Int      @id @default(autoincrement())
+  jobCardId Int?
+  JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processId Int?
+  Process   Process? @relation(fields: [processId], references: [id])
+}
+
+model PlateDetails {
+  id        Int      @id @default(autoincrement())
+  jobCardId Int?
+  JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  plateName String?
+  qty       Int?
 }
 
 model ProcessDetails {
@@ -2013,6 +2080,8 @@ model MachineDetails {
   JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
   machineId Int?
   Machine   Process? @relation(fields: [machineId], references: [id])
+  macId     Int?
+  Mac       Machine? @relation(fields: [macId], references: [id])
 }
 
 model OrderItems {
@@ -2072,6 +2141,8 @@ model ProcessRoute {
   sequence       Int
   isFront        Boolean  @default(false)
   isFrontAndBack Boolean  @default(false)
+  status         String?
+  completedQty   Int?
 }
 
 model ProformaInvoice {
@@ -2120,6 +2191,7 @@ model ProformaInvoice {
   carriageCharge    Float?
   bankId            Int?
   Bank              Bank?                 @relation(fields: [bankId], references: [id])
+  conversionType    String?
   orderEntries      OrderEntry[]
 }
 
@@ -2201,8 +2273,12 @@ model ProductionAllocation {
   remarks     String?
   styleItemId Int?
   StyleItem   StyleItem? @relation(fields: [styleItemId], references: [id])
+  Branch      Branch?    @relation(fields: [branchId], references: [id])
+  branchId    Int?
 
   allocationDetails ProductionAllocationDtl[]
+
+  productionOutwards ProductionOutward[]
 }
 
 model ProductionAllocationDtl {
@@ -2215,6 +2291,10 @@ model ProductionAllocationDtl {
   Process                Process?             @relation(fields: [processId], references: [id])
   type                   String?
   sequence               Int?
+  Supplier               Party?               @relation(fields: [supplierId], references: [id])
+  supplierId             Int?
+
+  productionOutwardDtls ProductionOutwardDtl[]
 }
 
 model Machine {
@@ -2223,6 +2303,12 @@ model Machine {
   active    Boolean? @default(true)
   Company   Company? @relation(fields: [companyId], references: [id])
   companyId Int?
+  Size      Size?    @relation(fields: [sizeId], references: [id])
+  sizeId    Int?
+  Department Department? @relation(fields: [departmentId], references: [id])
+  departmentId Int?
+
+  machineDetails MachineDetails[]
 }
 
 model Notification {
@@ -2240,4 +2326,164 @@ model Notification {
 
   createdAt  DateTime @default(now())
   isResolved Boolean  @default(false)
+}
+
+model ProductionOutward {
+  id                     Int                   @id @default(autoincrement())
+  docId                  String
+  docDate                DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  createdById            Int?
+  createdBy              User?                 @relation("createdBy", fields: [createdById], references: [id])
+  updatedById            Int?
+  updatedBy              User?                 @relation("updatedBy", fields: [updatedById], references: [id])
+  jobCardId              Int
+  JobCard                JobCard               @relation(fields: [jobCardId], references: [id])
+  productionAllocationId Int?
+  ProductionAllocation   ProductionAllocation? @relation(fields: [productionAllocationId], references: [id])
+  supplierId             Int?
+  Supplier               Party?                @relation(fields: [supplierId], references: [id])
+  remarks                String?
+
+  Branch                   Branch?                @relation(fields: [branchId], references: [id])
+  branchId                 Int?
+  dcNo                     String?
+  vehicleNo                String?
+  productionOutwardDetails ProductionOutwardDtl[]
+
+  productionInwards    ProductionInward[]
+  productionInwardDtls ProductionInwardDtl[]
+}
+
+model ProductionOutwardDtl {
+  id                        Int                      @id @default(autoincrement())
+  productionOutwardId       Int
+  ProductionOutward         ProductionOutward        @relation(fields: [productionOutwardId], references: [id], onDelete: Cascade)
+  processId                 Int?
+  Process                   Process?                 @relation("process", fields: [processId], references: [id])
+  sentQty                   Float?
+  sequence                  Int?
+  prevProcessId             Int?
+  prevProcess               Process?                 @relation("prevProcess", fields: [prevProcessId], references: [id])
+  productionAllocationDtlId Int?
+  ProductionAllocationDtl   ProductionAllocationDtl? @relation(fields: [productionAllocationDtlId], references: [id])
+
+  productionInwardDtls ProductionInwardDtl[]
+}
+
+model ProductionInward {
+  id                  Int                @id @default(autoincrement())
+  docId               String
+  docDate             DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  createdById         Int?
+  createdBy           User?              @relation("InwardCreatedBy", fields: [createdById], references: [id])
+  updatedById         Int?
+  updatedBy           User?              @relation("InwardUpdatedBy", fields: [updatedById], references: [id])
+  productionOutwardId Int?
+  ProductionOutward   ProductionOutward? @relation(fields: [productionOutwardId], references: [id])
+  supplierId          Int?
+  Supplier            Party?             @relation(fields: [supplierId], references: [id])
+  remarks             String?
+  Branch              Branch?            @relation(fields: [branchId], references: [id])
+  branchId            Int?
+  jobCardId           Int?
+  JobCard             JobCard?           @relation(fields: [jobCardId], references: [id])
+  inwardType          String?
+  dcNo                String?
+  dcDate              DateTime?
+  vehicleNo           String?
+  receiptType         String?
+  invNo               String?
+  netBillValue        Float?
+  discountType        String?
+  discountValue       Float?
+  TaxTemplate         TaxTemplate?       @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
+  taxTemplateId       Int?
+
+  inwardDetails ProductionInwardDtl[]
+  processBillDtls ProcessBillDtl[]
+}
+
+model ProductionInwardDtl {
+  id                   Int                   @id @default(autoincrement())
+  productionInwardId   Int
+  ProductionInward     ProductionInward      @relation(fields: [productionInwardId], references: [id], onDelete: Cascade)
+  outwardDetailId      Int?
+  ProductionOutwardDtl ProductionOutwardDtl? @relation(fields: [outwardDetailId], references: [id])
+  receivedQty          Float?
+  wastageQty           Float?
+  acceptedQty          Float?
+  processId            Int?
+  Process              Process?              @relation(fields: [processId], references: [id])
+  price                Float?
+  discountType         String?
+  discountValue        Float?
+  taxPercent           Float?
+  jobCardId            Int?
+  JobCard              JobCard?              @relation(fields: [jobCardId], references: [id])
+  productionOutwardId  Int?
+  ProductionOutward    ProductionOutward?    @relation(fields: [productionOutwardId], references: [id])
+
+  inwardProcessDtls InwardProcessDtl[]
+}
+
+model InwardProcessDtl {
+  id                    Int                 @id @default(autoincrement())
+  productionInwardDtlId Int
+  ProductionInwardDtl   ProductionInwardDtl @relation(fields: [productionInwardDtlId], references: [id], onDelete: Cascade)
+  processId             Int?
+  Process               Process?            @relation(fields: [processId], references: [id])
+}
+
+model ProcessBill {
+  id            Int          @id @default(autoincrement())
+  docId         String
+  docDate       DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  createdById   Int?
+  createdBy     User?        @relation("createdBy", fields: [createdById], references: [id])
+  updatedById   Int?
+  updatedBy     User?        @relation("updatedBy", fields: [updatedById], references: [id])
+  supplierId    Int?
+  Supplier      Party?       @relation(fields: [supplierId], references: [id])
+  remarks       String?
+  Branch        Branch?      @relation(fields: [branchId], references: [id])
+  branchId      Int?
+  netBillValue  Float?
+  discountType  String?
+  discountValue Float?
+  TaxTemplate   TaxTemplate? @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
+  taxTemplateId Int?
+
+  processBillDtls ProcessBillDtl[]
+}
+
+model ProcessBillDtl {
+  id                 Int               @id @default(autoincrement())
+  processBilldId     Int
+  ProcessBill        ProcessBill       @relation(fields: [processBilldId], references: [id], onDelete: Cascade)
+  acceptedQty        Float?
+  billedQty          Float?
+  price              Float?
+  discountType       String?
+  discountValue      Float?
+  taxPercent         Float?
+  jobCardId          Int?
+  JobCard            JobCard?          @relation(fields: [jobCardId], references: [id])
+  productionInwardId Int?
+  ProductionInward   ProductionInward? @relation(fields: [productionInwardId], references: [id])
+  
+  billingProcesses BillingProcess[]
+}
+
+model BillingProcess {
+  id               Int            @id @default(autoincrement())
+  processBillDtlId Int
+  ProcessBillDtl   ProcessBillDtl @relation(fields: [processBillDtlId], references: [id], onDelete: Cascade)
+  processId        Int?
+  Process          Process?       @relation(fields: [processId], references: [id])
 }

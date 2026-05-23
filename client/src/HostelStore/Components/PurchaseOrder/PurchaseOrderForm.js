@@ -720,8 +720,8 @@ const PurchaseOrderForm = ({
             key: "save-close",
             icon: (
               <span className={actionIconPairClass}>
-                <FiSave className="h-4 w-4" />
-                <HiX className="h-4 w-4" />
+                <FiSave className="h-3.5 w-3.5" />
+                <HiX className="h-3.5 w-3.5" />
               </span>
             ),
             hoverLabel: "Save & Close",
@@ -744,8 +744,8 @@ const PurchaseOrderForm = ({
                   key: "save-new",
                   icon: (
                     <span className={actionIconPairClass}>
-                      <FiSave className="h-4 w-4" />
-                      <HiOutlineRefresh className="h-4 w-4" />
+                      <FiSave className="h-3.5 w-3.5" />
+                      <HiOutlineRefresh className="h-3.5 w-3.5" />
                     </span>
                   ),
                   hoverLabel: "Save & New",
@@ -772,7 +772,7 @@ const PurchaseOrderForm = ({
       : [
           {
             key: "submit-approval",
-            icon: <FiSend className="h-4 w-4" />,
+            icon: <FiSend className="h-3.5 w-3.5" />,
             hoverLabel: "Submit Approval",
             iconOnly: true,
             onClick: () => {
@@ -792,7 +792,7 @@ const PurchaseOrderForm = ({
       ? [
           {
             key: "send-back",
-            icon: <MdKeyboardDoubleArrowLeft className="h-4 w-4" />,
+            icon: <MdKeyboardDoubleArrowLeft className="h-3.5 w-3.5" />,
             hoverLabel: "Send Back for Review",
             iconOnly: true,
             onClick: () => handleApprovalAction("REJECT"),
@@ -807,7 +807,7 @@ const PurchaseOrderForm = ({
           },
           {
             key: "approve",
-            icon: <FiCheck className="h-4 w-4" />,
+            icon: <FiCheck className="h-3.5 w-3.5" />,
             hoverLabel: "Approve",
             iconOnly: true,
             onClick: () => handleApprovalAction("APPROVE"),
@@ -830,7 +830,7 @@ const PurchaseOrderForm = ({
       : [
           {
             key: "edit",
-            icon: <FiEdit2 className="h-4 w-4" />,
+            icon: <FiEdit2 className="h-3.5 w-3.5" />,
             hoverLabel: "Edit",
             iconOnly: true,
             onClick: () => setReadOnly(false),
@@ -839,7 +839,7 @@ const PurchaseOrderForm = ({
         ]),
     {
       key: "summary",
-      icon: <FiEye className="h-4 w-4" />,
+      icon: <FiEye className="h-3.5 w-3.5" />,
       hoverLabel: "View PO Summary",
       iconOnly: true,
       onClick: () => {
@@ -871,7 +871,7 @@ const PurchaseOrderForm = ({
     },
     {
       key: "print",
-      icon: <FiPrinter className="h-4 w-4" />,
+      icon: <FiPrinter className="h-3.5 w-3.5" />,
       hoverLabel: "Print",
       iconOnly: true,
       onClick: () => {
@@ -1797,6 +1797,7 @@ const PurchaseOrderForm = ({
             colorList={colorList}
             termsRef={termsRef}
             gsmList={gsmList}
+            isSupplierOutside={isSupplierOutside}
           />
         }
         footer={footerContent}

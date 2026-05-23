@@ -51,7 +51,6 @@ export default function Form({
   const [active, setActive] = useState(true);
   const [country, setCountry] = useState("");
   const [gstNo, setGstNo] = useState("");
-  const { hasPermission } = UserPermissions();
 
   const [searchValue, setSearchValue] = useState("");
 
@@ -86,6 +85,14 @@ export default function Form({
   const [addData] = useAddStateMutation();
   const [updateData] = useUpdateStateMutation();
   const [removeData] = useDeleteStateMutation();
+
+  const { hasPermission } = UserPermissions();
+  const handleCreate = () => {
+    hasPermission(() => {
+      setForm(true);
+      onNew();
+    }, "create");
+  };
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -511,13 +518,6 @@ export default function Form({
       </div>
     );
   }
-
-  const handleCreate = () => {
-    hasPermission(() => {
-      setForm(true);
-      onNew();
-    }, "create");
-  };
 
   return (
     // <div

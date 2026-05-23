@@ -40,6 +40,7 @@ import Modal from "../../../UiComponents/Modal";
 import { PartyMaster, TaxTemplate } from "..";
 import { DropdownWithModal } from "../../../Inputs/Reuseable";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
+import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 
 const PurchaseBillEntryForm = ({
   onClose,
@@ -97,7 +98,13 @@ const PurchaseBillEntryForm = ({
   const [updateData] = useUpdatePurchaseBillEntryMutation();
   const dispatch = useDispatch();
   const searchFields = { searchDocId, searchPIDate, searchInvNo, searchDcNo };
+  const { data: supplierData } = useGetPartyByIdQuery(supplierId, {
+    skip: !supplierId,
+  });
 
+  const isSupplierOutside = useMemo(() => {
+    return supplierData?.data?.City?.state?.name !== "TAMILNADU";
+  }, [supplierData]);
   const {
     data: purchaseInwarddata,
     isFetching: isSingleInwardFetching,
@@ -264,12 +271,12 @@ const PurchaseBillEntryForm = ({
     const { items, ...totals } =
       calculateTaxWithHSNBreakupAndInsertIntoInwardItems(
         structuredClone(inwardItems), // clone to avoid mutating state
-        false,
+        isSupplierOutside,
         discountType,
         discountValue,
       );
     return { items, totals };
-  }, [inwardItems, discountType, discountValue]);
+  }, [inwardItems, discountType, discountValue, isSupplierOutside]);
 
   const enrichedItemsList = enrichedItems?.items || [];
   const totals = enrichedItems?.totals || {};
@@ -669,6 +676,7 @@ const PurchaseBillEntryForm = ({
             setSearchDcNo={setSearchDcNo}
             taxTemplateId={taxTemplateId}
             fromInwardId={fromInwardId}
+            isSupplierOutside={isSupplierOutside}
           />
         </fieldset>
 
@@ -739,51 +747,55 @@ const PurchaseBillEntryForm = ({
         <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
           {/* Left Buttons */}
           <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => saveData("close")}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  saveData("close");
-                  e.stopPropagation();
-                }
-              }}
-              disabled={readOnly}
-              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
-            >
-              <HiOutlineRefresh className="w-4 h-4 mr-2" />
-              Save & Close
-            </button>
-            <button
-              onClick={() => saveData("new")}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  saveData("new");
-                }
-              }}
-              disabled={readOnly}
-              className="bg-indigo-500 text-white px-4 py-1 rounded-md hover:bg-indigo-600 flex items-center text-sm"
-            >
-              <FiSave className="w-4 h-4 mr-2" />
-              Save & New
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => saveData("close")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    saveData("close");
+                    e.stopPropagation();
+                  }
+                }}
+                disabled={readOnly}
+                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex h-6 items-center text-xs font-medium"
+              >
+                <HiOutlineRefresh className="w-3.5 h-3.5 mr-2" />
+                Save & Close
+              </button>
+            )}
+            {!readOnly && (
+              <button
+                onClick={() => saveData("new")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    saveData("new");
+                  }
+                }}
+                disabled={readOnly}
+                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex h-6 items-center text-xs font-medium"
+              >
+                <FiSave className="w-3.5 h-3.5 mr-2" />
+                Save & New
+              </button>
+            )}
           </div>
 
           <div className="flex gap-2 flex-wrap">
             {!id ||
               (readOnly && (
                 <button
-                  className="bg-yellow-600 text-white px-4 py-1 rounded-md hover:bg-yellow-700 flex items-center text-sm"
+                  className="bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700 flex h-6 items-center text-xs font-medium"
                   onClick={() => setReadOnly(false)}
                 >
-                  <FiEdit2 className="w-4 h-4 mr-2" />
+                  <FiEdit2 className="w-3.5 h-3.5 mr-2" />
                   Edit
                 </button>
               ))}
             <button
-              className="text-sm bg-blue-600 text-white font-semibold hover:bg-blue-800 transition p-1  rounded"
+              className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-800 flex h-6 items-center text-xs font-medium"
               onClick={() => {
                 if (!taxTemplateId) {
                   toast.info("Please Select Tax Template !", {

@@ -33,6 +33,7 @@ import ApprovalDetails from "./ApprovalDetails";
 import { getCommonParams, ModeChip } from "../../../Utils/helper";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
 import RuleBuilder from "./RuleBuilder";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 const MODEL = "Approval Configuration";
 
@@ -79,6 +80,13 @@ export default function Form({
   const [addData] = useAddApprovalMutation();
   const [updateData] = useUpdateApprovalMutation();
   const [removeData] = useDeleteApprovalMutation();
+  const { hasPermission } = UserPermissions();
+  const handleCreate = () => {
+    hasPermission(() => {
+      setForm(true);
+      onNew();
+    }, "create");
+  };
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -551,7 +559,10 @@ export default function Form({
         <div className="flex items-center gap-2">
           <button
             className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800 py-1 rounded-md flex items-center gap-2 text-xs px-2 shadow-sm transition-all duration-200"
-            onClick={onNew}
+            onClick={() => {
+              handleCreate();
+              onNew();
+            }}
           >
             <FaPlus /> Create New Workflow
           </button>

@@ -19,7 +19,7 @@ import tw from "../../../Utils/tailwind-react-pdf";
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 import { FiEdit2, FiSave, FiPrinter, FiEye } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
-import {
+import OrderEntryApi, {
     useGetOrderEntryQuery,
     useLazyGetOrderEntryByIdQuery,
 } from "../../../redux/uniformService/OrderEntryService";
@@ -39,6 +39,8 @@ import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import { PartyMaster } from "../index.js";
 import { BankMaster, CurrencyMaster, PayTermMaster } from "../../../Basic/components/index.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
+import { conversionTypes } from "../../../Utils/DropdownData.js";
+import { useDispatch } from "react-redux";
 
 const EMPTY_ROW = {
     styleItemId: "",
@@ -75,6 +77,7 @@ const ProformaInvoiceForm = ({
     currencyList,
     cityList,
     bankList,
+    hasPermission
 }) => {
     const { branchId, companyId, finYearId, userId } = getCommonParams();
 
@@ -104,6 +107,7 @@ const ProformaInvoiceForm = ({
     const [selectedQuoteVersion, setSelectedQuoteVersion] = useState("Latest");
     const [availableVersions, setAvailableVersions] = useState([]);
     const [bankId, setBankId] = useState("");
+    const [conversionType, setConversionType] = useState("DOZEN");
     const childRecord = useRef(0);
 
     const customerRef = useRef(null);
@@ -117,6 +121,7 @@ const ProformaInvoiceForm = ({
         contactPerson: "",
         phone: "",
     });
+    const dispatch = useDispatch();
 
     const { data: allData } = useGetProformaInvoiceQuery({
         params: { branchId },
@@ -171,6 +176,7 @@ const ProformaInvoiceForm = ({
             setCarriageCharge(parseFloat(data.carriageCharge).toFixed(2) || "");
             setWeightInKg(parseFloat(data.weightInKg).toFixed(3) || "");
             setBankId(data.bankId || "");
+            setConversionType(data.conversionType || "DOZEN");
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
 
             let loadedVersions = [];
@@ -210,53 +216,26 @@ const ProformaInvoiceForm = ({
         }
     }, [selectedQuoteVersion, singleData, id, availableVersions]);
 
-    // useEffect(() => {
-    //     if (orderEntryId) {
-    //         const fetchOrderDetails = async () => {
-    //             try {
-    //                 const res = await triggerGetOrderById(orderEntryId).unwrap();
-    //                 if (res.data) {
-    //                     const order = res.data;
-    //                     setCustomerId(order.customerId);
+    useEffect(() => {
+        if (!conversionType) return;
 
-    //                     if (!id) {
-    //                         setTermsId(order.termsId || "");
-    //                         setTermsAndCondition(order.termsAndCondition || "");
-    //                         setTaxTemplateId(order.taxTemplateId || "");
+        setItems((prev) =>
+            prev.map((item) => {
+                const qty = parseFloat(item.qty) || 0;
+                const price = parseFloat(item.price) || 0;
+                const dozen = qty / 12;
 
-    //                         if (order.orderItems && order.orderItems.length > 0) {
-    //                             const mappedItems = order.orderItems.map((oi) => ({
-    //                                 styleItemId: oi.styleItemId,
-    //                                 qty: parseFloat(oi.orderQty) || 0,
-    //                                 price: 0,
-    //                                 taxPercent: parseFloat(oi.Hsn?.tax) || 0,
-    //                                 discountType: "Percentage",
-    //                                 discountValue: 0,
-    //                                 amount: 0,
-    //                                 sizeId: oi.sizeId,
-    //                                 uomId: oi.uomId,
-    //                                 gsmId: oi.gsmId,
-    //                                 hsnId: oi.hsnId,
-    //                             }));
-    //                             setItems(padItems(mappedItems));
-    //                         }
-    //                     }
-
-    //                     if (order.customer) {
-    //                         setCustomerDetails({
-    //                             name: order.customer.name || "",
-    //                             contactPerson: order.customer.contactPersonName || "",
-    //                             phone: order.customer.contactNumber || "",
-    //                         });
-    //                     }
-    //                 }
-    //             } catch (error) {
-    //                 console.error("Failed to fetch order details", error);
-    //             }
-    //         };
-    //         fetchOrderDetails();
-    //     }
-    // }, [orderEntryId, triggerGetOrderById, id]);
+                return {
+                    ...item,
+                    dozen: dozen ? dozen.toFixed(2) : "",
+                    amount:
+                        conversionType === "DOZEN"
+                            ? dozen && price ? (dozen * price).toFixed(2) : ""
+                            : qty && price ? (qty * price).toFixed(2) : "",
+                };
+            })
+        );
+    }, [conversionType]);
 
     useEffect(() => {
         customerRef.current?.focus();
@@ -385,7 +364,8 @@ const ProformaInvoiceForm = ({
             deliveryDate,
             weightInKg,
             carriageCharge,
-            bankId
+            bankId,
+            conversionType
         };
 
         try {
@@ -407,6 +387,7 @@ const ProformaInvoiceForm = ({
                     }
                 });
             }
+            dispatch(OrderEntryApi.util.invalidateTags(["orderEntry"]));
             setReadOnly(true);
             dispatchInvalidate();
 
@@ -534,7 +515,7 @@ const ProformaInvoiceForm = ({
             icon: <FiEdit2 className="h-4 w-4" />,
             hoverLabel: "Edit",
             iconOnly: true,
-            onClick: () => setReadOnly(false),
+            onClick: () => hasPermission(() => setReadOnly(false), "edit"),
             className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
             hidden: !readOnly || !id || isOldVersion,
         },
@@ -568,21 +549,18 @@ const ProformaInvoiceForm = ({
             className:
                 "bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md transition",
         },
-        {
-            key: "print",
-            icon: <FiPrinter className="h-4 w-4" />,
-            hoverLabel: "Print",
-            iconOnly: true,
-            onClick: () => setPrintModalOpen(true),
-            onKeyDown: (e) => {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setPrintModalOpen(true);
-                }
-            },
-            className: `bg-slate-600 hover:bg-slate-700 ${actionButtonClass}`,
-        },
+        ...(id
+            ? [
+                {
+                    key: "print",
+                    icon: <FiPrinter className="h-4 w-4" />,
+                    hoverLabel: "Print",
+                    iconOnly: true,
+                    onClick: () => setPrintModalOpen(true),
+                    className: `bg-slate-600 hover:bg-slate-700 ${actionButtonClass}`,
+                },
+            ]
+            : []),
     ].filter((a) => !a.hidden);
 
     const shippingAccordion = (
@@ -650,6 +628,18 @@ const ProformaInvoiceForm = ({
                             type="date"
                             required={true}
                         />
+                        <div className="col-span-1 flex flex-col gap-1">
+                            <DropdownInput
+                                name="Conversion"
+                                options={conversionTypes}
+                                value={conversionType}
+                                setValue={(value) => setConversionType(value)}
+                                required={true}
+                                readOnly={readOnly}
+                                disabled={childRecord.current > 0 || readOnly}
+                            />
+
+                        </div>
                         <TextInput
                             name="WeightInKg (KG)"
                             value={weightInKg}
@@ -668,27 +658,25 @@ const ProformaInvoiceForm = ({
                                 e.target.select();
                             }}
                         />
-                        {
-                            isCustomerExport && (
-                                <TextInput
-                                    name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
-                                    value={carriageCharge}
-                                    setValue={setCarriageCharge}
-                                    disabled={readOnly}
-                                    type="number"
-                                    min="0"
-                                    className="text-right"
-                                    onBlur={(e) =>
-                                        setCarriageCharge(
-                                            e.target.value ? Number(e.target.value).toFixed(2) : "",
-                                        )
-                                    }
-                                    onFocus={(e) => {
-                                        e.target.select();
-                                    }}
-                                />
-                            )
-                        }
+
+                        <TextInput
+                            name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
+                            value={carriageCharge}
+                            setValue={setCarriageCharge}
+                            disabled={readOnly}
+                            type="number"
+                            min="0"
+                            className="text-right"
+                            onBlur={(e) =>
+                                setCarriageCharge(
+                                    e.target.value ? Number(e.target.value).toFixed(2) : "",
+                                )
+                            }
+                            onFocus={(e) => {
+                                e.target.select();
+                            }}
+                        />
+
                         <div className="col-span-2">
                             <DropdownWithModal
                                 name="Advising Bank"
@@ -712,7 +700,6 @@ const ProformaInvoiceForm = ({
                                 disabled={readOnly}
                             />
                         </div>
-
 
                     </div>
                 </div>
@@ -923,9 +910,9 @@ const ProformaInvoiceForm = ({
             isSupplierOutside,
             discountType,
             discountValue,
-            true
+            conversionType === "DOZEN" ? true : false
         );
-    }, [items, isSupplierOutside, discountType, discountValue]);
+    }, [items, isSupplierOutside, discountType, discountValue, conversionType]);
 
     const versionDropdown = (
         <div className="flex items-center gap-2 ml-2">
@@ -1066,11 +1053,15 @@ const ProformaInvoiceForm = ({
                 widthClass={"w-[90%] h-[90%]"}
             >
                 <PDFViewer style={tw("w-full h-full")}>
-                    <ProformaInvoicePrintFormat data={singleData?.data}
+                    <ProformaInvoicePrintFormat data={{
+                        ...singleData?.data,
+                        items: items.filter((i) => i.styleItemId), // ✅ only current version's filled items
+                    }}
                         taxDetails={enrichedData}
                         isCustomerExport={isCustomerExport}
                         cityList={cityList}
                         currencyList={currencyList}
+                        payTermList={payTermList}
                     />
                 </PDFViewer>
             </Modal>
@@ -1095,6 +1086,8 @@ const ProformaInvoiceForm = ({
                         isCurrencySymbol={isCurrencySymbol}
                         termsRef={termsRef}
                         isCustomerExport={isCustomerExport}
+                        conversionType={conversionType}
+                        isSupplierOutside={isSupplierOutside}
                     />
                 }
                 footer={footerContent}

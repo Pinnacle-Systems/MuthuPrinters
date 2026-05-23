@@ -14,6 +14,7 @@ import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoSer
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { FiCheck } from "react-icons/fi";
 import { toast } from "react-toastify";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 const JobCardReport = ({
     onClick,
@@ -31,7 +32,7 @@ const JobCardReport = ({
 
     const [dataPerPage, setDataPerPage] = useState("10");
     const [searchDocNo, setSearchDocNo] = useState("");
-    const [searchDate, setSearchDate] = useState("");
+    const [searchDocDate, setSearchDocDate] = useState("");
     const [searchCustomer, setSearchCustomer] = useState("");
     const [searchProductionType, setSearchProductionType] = useState("");
 
@@ -42,13 +43,14 @@ const JobCardReport = ({
     const [actionType, setActionType] = useState(""); // "APPROVE" | "REJECT"
     const [remarks, setRemarks] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
+    const { hasPermission } = UserPermissions();
 
     const dispatch = useDispatch();
     const [addApprovalStatus] = useAddApprovalStausMutation();
 
     const searchFields = {
         searchDocNo,
-        searchDate,
+        searchDocDate,
         searchCustomer,
         searchProductionType,
     };
@@ -57,7 +59,7 @@ const JobCardReport = ({
         setCurrentPageNumber(1);
     }, [
         searchDocNo,
-        searchDate,
+        searchDocDate,
         searchCustomer,
         searchProductionType,
     ]);
@@ -419,9 +421,9 @@ const JobCardReport = ({
                                                 type="text"
                                                 className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
                                                 placeholder="Search"
-                                                value={searchDate}
+                                                value={searchDocDate}
                                                 onChange={(e) => {
-                                                    setSearchDate(e.target.value);
+                                                    setSearchDocDate(e.target.value);
                                                 }}
                                             />
                                         </th>
@@ -553,7 +555,7 @@ const JobCardReport = ({
                                                                         <Tooltip title="View" arrow>
                                                                             <button
                                                                                 className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
-                                                                                onClick={() => onView(dataObj.id)}
+                                                                                onClick={() => hasPermission(() => onView(dataObj.id), "read")}
                                                                             >
                                                                                 <svg
                                                                                     xmlns="http://www.w3.org/2000/svg"
@@ -575,7 +577,7 @@ const JobCardReport = ({
                                                                         <Tooltip title="Edit" arrow>
                                                                             <button
                                                                                 className="text-green-600 gap-1 px-1   bg-green-50 rounded"
-                                                                                onClick={() => onEdit(dataObj.id)}
+                                                                                onClick={() => hasPermission(() => onEdit(dataObj.id), "edit")}
                                                                             >
                                                                                 <svg
                                                                                     xmlns="http://www.w3.org/2000/svg"
@@ -603,7 +605,7 @@ const JobCardReport = ({
                                                                                         ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
                                                                                         : "bg-red-50 text-red-800 hover:bg-red-100"
                                                                                     }`}
-                                                                                onClick={() => onDelete(dataObj.id)}
+                                                                                onClick={() => hasPermission(() => onDelete(dataObj.id), "delete")}
                                                                                 disabled={dataObj.childRecord > 0}
                                                                             >
                                                                                 <svg

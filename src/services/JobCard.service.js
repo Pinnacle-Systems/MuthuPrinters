@@ -203,25 +203,39 @@ async function getJobCardList(req) {
       orderQty: true,
       styleItemId: true,
       customer: { select: { name: true } },
-      processRoute: true,
+      processRoute: {
+        orderBy: {
+          sequence: "asc",
+        },
+      },
       OrderEntry: { select: { docId: true } },
+      StyleItem: { select: { name: true } },
+      productionAllocations: {
+        select: {
+          id: true,
+          docId: true,
+        },
+      },
     },
     orderBy: {
       docId: "desc",
     },
   });
 
+  console.log("Job Card List Result:", result?.processRoute);
+
   const data = result.map((item) => ({
     id: item.id,
     docId: item.docId,
     orderQty: item.orderQty,
     styleItemId: item.styleItemId,
-
+    styleItemName: item.StyleItem?.name || "",
     customerName: item.customer?.name || "",
 
     orderEntryDocId: item.OrderEntry?.docId || "",
 
     processRoute: item.processRoute || [],
+    productionAllocationId: item.productionAllocations?.[0]?.id || null,
   }));
 
   return { statusCode: 0, data };
@@ -253,8 +267,12 @@ async function getOne(id) {
       },
       processRoute: {
         include: { Process: { select: { id: true, name: true } } },
+        orderBy: { sequence: "asc" },
       },
       jobCardSizeDetails: true,
+      printingDetails: true,
+      finishingProcesses: true,
+      plateDetails: true,
       _count: {
         select: {
           productionAllocations: true,
@@ -401,7 +419,15 @@ async function create(body) {
       processRoute,
       trackingType,
       jobCardSizeDetails,
+      selectedPrinting,
+      selectedFinishing,
       orderItemId,
+      plateDetails,
+      labelSizeId,
+      totalMeter,
+      blockDate,
+      isRepeatedJobCard,
+      refJobCardId,
     } = body;
 
     // ─────────────────────────────
@@ -414,6 +440,9 @@ async function create(body) {
     const safeMachines = safeArray(selectedMachines);
     const safeProcessRoute = safeArray(processRoute);
     const safeJobCardSizeDetails = safeArray(jobCardSizeDetails);
+    const safeSelectedPrinting = safeArray(selectedPrinting);
+    const safePlateDetails = safeArray(plateDetails);
+    const safeFinishingDetails = safeArray(selectedFinishing);
 
     // ─────────────────────────────
     // FIN YEAR + DOC ID
@@ -451,7 +480,7 @@ async function create(body) {
 
           orderEntryId: orderEntryId ? Number(orderEntryId) : null,
           orderType: orderType || null,
-          orderQty: orderQty ? Number(orderQty) : null,
+          orderQty: orderQty ? parseInt(orderQty) : null,
           orderItemId: orderItemId ? Number(orderItemId) : null,
           customerId: customerId ? Number(customerId) : null,
 
@@ -459,9 +488,9 @@ async function create(body) {
           boardId: boardId ? Number(boardId) : null,
 
           fullBoardId: fullBoardId ? Number(fullBoardId) : null,
-          noOfPockets: noOfPockets ? Number(noOfPockets) : null,
+          noOfPockets: noOfPockets ? parseInt(noOfPockets) : null,
           cuttingSizeId: cuttingSizeId ? Number(cuttingSizeId) : null,
-          runningQty: runningQty ? Number(runningQty) : null,
+          runningQty: runningQty ? parseInt(runningQty) : null,
 
           isFourColor: !!isFourColor,
           isCutColor: !!isCutColor,
@@ -488,16 +517,41 @@ async function create(body) {
           followUpId: followUpId ? Number(followUpId) : null,
           labelQuality: labelQuality || null,
           block: block || null,
-          labelQty: labelQty ? Number(labelQty) : null,
-          rollQty: rollQty ? Number(rollQty) : null,
+          labelQty: labelQty ? parseInt(labelQty) : null,
+          rollQty: rollQty ? parseInt(rollQty) : null,
           cutAndSeal: cutAndSeal || null,
           trackingType: trackingType || null,
-
+          labelSizeId: labelSizeId ? Number(labelSizeId) : null,
+          totalMeter: totalMeter ? parseInt(totalMeter) : null,
+          blockDate: blockDate ? new Date(blockDate) : null,
+          isRepeatedJobCard: !!isRepeatedJobCard,
+          refJobCardId: refJobCardId ? Number(refJobCardId) : null,
           boardQualities: safeBoardItems.length
             ? {
                 createMany: {
                   data: safeBoardItems.map((id) => ({
                     boardId: Number(id),
+                  })),
+                },
+              }
+            : undefined,
+
+          printingDetails: safeSelectedPrinting.length
+            ? {
+                createMany: {
+                  data: safeSelectedPrinting.map((id) => ({
+                    processId: Number(id),
+                  })),
+                },
+              }
+            : undefined,
+
+          plateDetails: safePlateDetails.length
+            ? {
+                createMany: {
+                  data: safePlateDetails.map((p) => ({
+                    plateName: p.plateName,
+                    qty: p.qty ? Number(p.qty) : null,
                   })),
                 },
               }
@@ -541,7 +595,7 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safeMachines.map((id) => ({
-                    machineId: Number(id),
+                    macId: Number(id),
                   })),
                 },
               }
@@ -551,11 +605,12 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safeProcessRoute.map((r, idx) => ({
-                    processId: Number(r.processId),
+                    processId: Number(r.processId || r.boardId),
                     type: r.type,
                     sequence: idx + 1,
                     isFront: !!r.isFront,
                     isFrontAndBack: !!r.isFrontAndBack,
+                    status: "NOT_STARTED",
                   })),
                 },
               }
@@ -569,6 +624,16 @@ async function create(body) {
                     qty: s.qty ? Number(s.qty) : null,
                     barcodeFrom: s.barcodeFrom || null,
                     barcodeTo: s.barcodeTo || null,
+                  })),
+                },
+              }
+            : undefined,
+
+          finishingProcesses: safeFinishingDetails.length
+            ? {
+                createMany: {
+                  data: safeFinishingDetails.map((id) => ({
+                    processId: Number(id),
                   })),
                 },
               }
@@ -657,6 +722,15 @@ async function update(id, body) {
       trackingType,
       jobCardSizeDetails,
       orderItemId,
+      selectedPrinting,
+      plateDetails,
+      labelSizeId,
+      selectedFinishing,
+      totalMeter,
+      blockDate,
+      isRepeatedJobCard,
+      refJobCardId,
+      isAmendment,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -676,6 +750,10 @@ async function update(id, body) {
     await prisma.$transaction(async (tx) => {
       // Delete all child records first, then recreate (simplest safe strategy)
       await tx.boardQuality.deleteMany({ where: { jobCardId: parseInt(id) } });
+      await tx.printingDetails.deleteMany({
+        where: { jobCardId: parseInt(id) },
+      });
+      await tx.plateDetails.deleteMany({ where: { jobCardId: parseInt(id) } });
       await tx.processDetails.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
@@ -688,10 +766,135 @@ async function update(id, body) {
       await tx.machineDetails.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
-      await tx.processRoute.deleteMany({ where: { jobCardId: parseInt(id) } });
       await tx.jobCardSizeBreakup.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
+      await tx.finishingProcess.deleteMany({
+        where: { jobCardId: parseInt(id) },
+      });
+
+      if (processRoute.length > 0) {
+        // Fetch current DB rows for this job card
+        const existingRouteRows = await tx.processRoute.findMany({
+          where: { jobCardId: parseInt(id) },
+          select: {
+            id: true,
+            processId: true,
+            type: true,
+            isFront: true,
+            isFrontAndBack: true,
+          },
+        });
+
+        // Build a lookup key identical to the frontend: "type:processId[:sub]"
+        const makeRouteKey = (type, processId, isFront, isFrontAndBack) => {
+          const sub = isFrontAndBack ? "frontback" : isFront ? "front" : "";
+          return `${type}:${processId}${sub ? `:${sub}` : ""}`;
+        };
+
+        const existingKeyToRow = {};
+        existingRouteRows.forEach((row) => {
+          existingKeyToRow[
+            makeRouteKey(
+              row.type,
+              row.processId,
+              row.isFront,
+              row.isFrontAndBack,
+            )
+          ] = row;
+        });
+
+        // Build desired key set from the incoming payload
+        const incomingKeyToRoute = {};
+        processRoute.forEach((r, idx) => {
+          const key = makeRouteKey(
+            r.type,
+            Number(r.processId),
+            Boolean(r.isFront),
+            Boolean(r.isFrontAndBack),
+          );
+          incomingKeyToRoute[key] = { ...r, sequence: idx + 1 };
+        });
+
+        // Delete rows that are no longer in the incoming payload
+        const keysToDelete = Object.keys(existingKeyToRow).filter(
+          (k) => !incomingKeyToRoute[k],
+        );
+        if (keysToDelete.length > 0) {
+          const idsToDelete = keysToDelete.map((k) => existingKeyToRow[k].id);
+          await tx.processRoute.deleteMany({
+            where: { id: { in: idsToDelete } },
+          });
+        }
+
+        // Update sequence on rows that already exist (keep status/completedQty untouched)
+        const keysToUpdate = Object.keys(incomingKeyToRoute).filter(
+          (k) => existingKeyToRow[k],
+        );
+        for (const key of keysToUpdate) {
+          await tx.processRoute.update({
+            where: { id: existingKeyToRow[key].id },
+            data: { sequence: incomingKeyToRoute[key].sequence },
+          });
+        }
+
+        // Insert rows that are new
+        const keysToInsert = Object.keys(incomingKeyToRoute).filter(
+          (k) => !existingKeyToRow[k],
+        );
+        if (keysToInsert.length > 0) {
+          await tx.processRoute.createMany({
+            data: keysToInsert.map((k) => {
+              const r = incomingKeyToRoute[k];
+              return {
+                jobCardId: parseInt(id),
+                processId: Number(r.processId),
+                type: r.type,
+                sequence: r.sequence,
+                isFront: Boolean(r.isFront),
+                isFrontAndBack: Boolean(r.isFrontAndBack),
+              };
+            }),
+          });
+        }
+      } else {
+        // Incoming payload has no routes — delete all existing rows
+        await tx.processRoute.deleteMany({
+          where: { jobCardId: parseInt(id) },
+        });
+      }
+      if (isAmendment) {
+        const allocation = await tx.productionAllocation.findFirst({
+          where: { jobCardId: parseInt(id) },
+          select: {
+            id: true,
+            allocationDetails: {
+              select: { id: true, processId: true, type: true },
+            },
+          },
+        });
+
+        if (allocation) {
+          // Build a sequence lookup from the (now-synced) incoming processRoute
+          // key: "type:processId"  →  value: sequence (1-based)
+          const routeSequenceMap = {};
+          processRoute.forEach((r, idx) => {
+            routeSequenceMap[`${r.type}:${Number(r.processId)}`] = idx + 1;
+          });
+
+          // Update each dtl row whose type+processId appears in the route
+          for (const dtl of allocation.allocationDetails) {
+            const key = `${dtl.type}:${dtl.processId}`;
+            if (routeSequenceMap[key] !== undefined) {
+              await tx.productionAllocationDtl.update({
+                where: { id: dtl.id },
+                data: { sequence: routeSequenceMap[key] },
+              });
+            }
+          }
+        }
+      }
+
       data = await tx.jobCard.update({
         where: { id: parseInt(id) },
         data: {
@@ -735,7 +938,11 @@ async function update(id, body) {
           cutAndSeal: cutAndSeal || null,
           trackingType: trackingType || null,
           orderItemId: orderItemId ? Number(orderItemId) : null,
-
+          labelSizeId: labelSizeId ? Number(labelSizeId) : null,
+          totalMeter: totalMeter ? Number(totalMeter) : null,
+          blockDate: blockDate ? new Date(blockDate) : null,
+          isRepeatedJobCard: !!isRepeatedJobCard,
+          refJobCardId: refJobCardId ? Number(refJobCardId) : null,
           boardQualities:
             boardItems.length > 0
               ? {
@@ -746,6 +953,27 @@ async function update(id, body) {
                   },
                 }
               : undefined,
+
+          printingDetails: selectedPrinting.length
+            ? {
+                createMany: {
+                  data: selectedPrinting.map((id) => ({
+                    processId: Number(id),
+                  })),
+                },
+              }
+            : undefined,
+
+          plateDetails: plateDetails.length
+            ? {
+                createMany: {
+                  data: plateDetails.map((p) => ({
+                    plateName: p.plateName,
+                    qty: p.qty ? Number(p.qty) : null,
+                  })),
+                },
+              }
+            : undefined,
 
           processDetails:
             selectedProcesses.length > 0
@@ -789,25 +1017,12 @@ async function update(id, body) {
               ? {
                   createMany: {
                     data: selectedMachines.map((mId) => ({
-                      machineId: parseInt(mId),
+                      macId: parseInt(mId),
                     })),
                   },
                 }
               : undefined,
 
-          processRoute: processRoute.length
-            ? {
-                createMany: {
-                  data: processRoute.map((r, idx) => ({
-                    processId: parseInt(r.processId),
-                    type: r.type,
-                    sequence: idx + 1,
-                    isFront: Boolean(r.isFront),
-                    isFrontAndBack: Boolean(r.isFrontAndBack),
-                  })),
-                },
-              }
-            : undefined,
           jobCardSizeDetails: jobCardSizeDetails.length
             ? {
                 createMany: {
@@ -816,6 +1031,15 @@ async function update(id, body) {
                     qty: s.qty ? Number(s.qty) : null,
                     barcodeFrom: s.barcodeFrom || null,
                     barcodeTo: s.barcodeTo || null,
+                  })),
+                },
+              }
+            : undefined,
+          finishingProcesses: selectedFinishing.length
+            ? {
+                createMany: {
+                  data: selectedFinishing.map((id) => ({
+                    processId: Number(id),
                   })),
                 },
               }
