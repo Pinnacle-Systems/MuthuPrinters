@@ -24,6 +24,11 @@ const xprisma = prisma.$extends({
 
 async function login(req) {
     const { username, password } = req.body
+
+    const deviceby = req?.headers['x-platform']
+
+
+    
     const data = await xprisma.user.findUnique({
         where: {
             username: username
@@ -45,13 +50,42 @@ async function login(req) {
                             }
                         }
                     },
+                   
                 }
-            }
+            },
+             Employee:{
+include:{
+  branchId:true,
+},
+include:{
+  Branch:{
+    select:{
+      companyId:true
+    }
+  }
+}
+                     }
         }
     })
+
+
+
     if (!data) {
         return { statusCode: 1, message: "Username doesn't exists" }
     };
+
+
+    const branchdata = data?.Employee?.Branch
+    const CompanyId =  branchdata?.companyId
+
+
+    const FinyearData = await xprisma?.finYear?.findFirst({
+        where : {
+            companyId : CompanyId,
+            active:true
+        }
+    })
+
     const isMatched = await bcrypt.compare(password, data.password);
     if (!isMatched) return { statusCode: 1, message: "Invalid Password" };
 
@@ -73,17 +107,25 @@ async function login(req) {
             return subscriptionResult;
         }
     }
+    
 
     const token = jwt.sign(
         {
-            userId: data.id,
-            userName: data.username,
-            userRole: data.role
+    userId   : data.id,
+    userName : data.username,
+    roleId   : data.role.id,       
+    roleName : data.role.name,      
+    companyId: data.role.companyId,
+    finyearId: FinyearData?.id
         },
-        "RANDOM-TOKEN",
-        { expiresIn: "24h" }
+         "RANDOM-TOKEN",
+        { expiresIn: deviceby == "android" ? "30m" : "24h" }
     );
-    return { statusCode: 0, message: "Login Successfull", token, userInfo: data };
+
+
+    
+    
+    return { statusCode: 0, message: "Login Successfull", token,refresh_token:token, userInfo:  data , finyearId : FinyearData };
 }
 
 async function get(req) {

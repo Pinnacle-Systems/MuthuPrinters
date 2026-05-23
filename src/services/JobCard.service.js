@@ -50,6 +50,9 @@ async function get(req) {
   } = req.query;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
+
+  console.log("req",req?.query);
+  
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
         finYearDate?.startDateStartTime,
