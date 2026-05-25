@@ -351,6 +351,7 @@ model Department {
   companyId Int
 
   machines Machine[]
+  processes Process[]
 }
 
 enum PageType {
@@ -1860,6 +1861,8 @@ model Process {
   Company          Company?           @relation(fields: [companyId], references: [id])
   companyId        Int?
   isOutsideJob     Boolean?           @default(false)
+  Department       Department?        @relation(fields: [departmentId],references: [id])
+  departmentId     Int?
   processGroupList ProcessGroupList[]
 
   laminationDetails                LaminationDetails[]

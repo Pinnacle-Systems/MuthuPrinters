@@ -214,17 +214,17 @@ const InwardDetails = ({
                                     Accepted Qty
                                 </th>
                                 {
-                                    receiptType === "Against Invoice" && (
+                                    receiptType === "AGAINST_INVOICE" && (
                                         <th className={`w-20 px-4 py-2 text-center font-medium border border-gray-300`}>
                                             Price<span className="text-red-500">*</span>
                                         </th>
                                     )}
-                                {receiptType === "Against Invoice" && (
+                                {receiptType === "AGAINST_INVOICE" && (
                                     <th className={`w-20 px-1 py-2 text-center font-medium `}>
                                         Gross
                                     </th>
                                 )}
-                                {receiptType === "Against Invoice" && (
+                                {receiptType === "AGAINST_INVOICE" && (
                                     <th className={`w-16 px-1 py-2 text-center font-medium border border-gray-300`}>
                                         Tax
                                     </th>
@@ -328,7 +328,7 @@ const InwardDetails = ({
                                         </td>
 
                                         {
-                                            receiptType === "Against Invoice" && (
+                                            receiptType === "AGAINST_INVOICE" && (
                                                 <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
                                                     <input
                                                         ref={(el) => (actionRefs.current[index] = el)}
@@ -373,7 +373,7 @@ const InwardDetails = ({
                                                     />
                                                 </td>
                                             )}
-                                        {receiptType === "Against Invoice" && (
+                                        {receiptType === "AGAINST_INVOICE" && (
                                             <td className=" border border-gray-300 text-[11px]">
                                                 <input
                                                     type="number"
@@ -391,7 +391,7 @@ const InwardDetails = ({
                                                 />
                                             </td>
                                         )}
-                                        {receiptType === "Against Invoice" && (
+                                        {receiptType === "AGAINST_INVOICE" && (
                                             <td className="  border border-gray-300 text-[11px] text-right ">
                                                 <button
                                                     disabled={!row?.jobCardId}
@@ -435,14 +435,14 @@ const InwardDetails = ({
                                     {inwardDetails?.reduce((s, r) => s + (Number(r.acceptedQty) || 0), 0) || ""}
                                 </td>
                                 {
-                                    receiptType === "Against Invoice" && (
+                                    receiptType === "AGAINST_INVOICE" && (
                                         <td className="text-right border border-gray-300 px-1 font-medium ">
                                             {inwardDetails
                                                 ?.reduce((sum, row) => sum + (Number(row.price) || 0), 0)
                                                 .toFixed(2)}
                                         </td>
                                     )}
-                                {receiptType === "Against Invoice" && (
+                                {receiptType === "AGAINST_INVOICE" && (
                                     <td className="text-right border border-gray-300 px-1 font-medium ">
                                         {inwardDetails
                                             ?.reduce((sum, row) => {
@@ -453,7 +453,7 @@ const InwardDetails = ({
                                             .toFixed(2)}
                                     </td>
                                 )}
-                                {receiptType === "Against Invoice" && (
+                                {receiptType === "AGAINST_INVOICE" && (
                                     <td
                                         className="text-right border border-gray-300"
                                         colSpan={1}

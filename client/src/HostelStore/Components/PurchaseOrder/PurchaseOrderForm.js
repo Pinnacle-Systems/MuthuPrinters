@@ -82,6 +82,7 @@ const PurchaseOrderForm = ({
   branchData,
   gsmList,
   userData,
+  hasPermission,
 }) => {
   const today = new Date();
   const [pendingAction, setPendingAction] = useState(null);
@@ -833,7 +834,7 @@ const PurchaseOrderForm = ({
             icon: <FiEdit2 className="h-3.5 w-3.5" />,
             hoverLabel: "Edit",
             iconOnly: true,
-            onClick: () => setReadOnly(false),
+            onClick: () => hasPermission(() => setReadOnly(false), "edit"),
             className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
           },
         ]),

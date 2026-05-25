@@ -51,8 +51,8 @@ async function get(req) {
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
-  console.log("req",req?.query);
-  
+  console.log("req", req?.query);
+
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
         finYearDate?.startDateStartTime,
@@ -191,11 +191,16 @@ async function get(req) {
 }
 
 async function getJobCardList(req) {
-  const { branchId, companyId, isDropdown } = req.query;
+  const { branchId, companyId, isDropdown, isProcessIssue } = req.query;
 
   let result = await prisma.jobCard.findMany({
     where: {
       branchId: branchId ? parseInt(branchId) : undefined,
+      ...(isProcessIssue && {
+        productionAllocations: {
+          some: {},
+        },
+      }),
     },
     select: {
       id: true,
@@ -216,6 +221,20 @@ async function getJobCardList(req) {
           docId: true,
         },
       },
+      ...(isDropdown && {
+        _count: {
+          select: {
+            productionAllocations: true,
+          },
+        },
+      }),
+      ...(isProcessIssue && {
+        _count: {
+          select: {
+            productionOutwards: true,
+          },
+        },
+      }),
     },
     orderBy: {
       docId: "desc",
@@ -257,12 +276,12 @@ async function getJobCardList(req) {
       },
     });
 
-     approvalLogMap = approvalLogs.reduce((acc, log) => {
+    approvalLogMap = approvalLogs.reduce((acc, log) => {
       acc[log.referenceId] = log;
       return acc;
     }, {});
 
-     activeConfigs =
+    activeConfigs =
       hasApproval && module
         ? await prisma.approvalConfig.findMany({
             where: {
@@ -304,6 +323,8 @@ async function getJobCardList(req) {
       productionAllocationId: item.productionAllocations?.[0]?.id || null,
 
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+      childRecord: item?._count?.productionAllocations || 0,
+      childRecordIssue: item?._count?.productionOutwards || 0,
     };
   });
 

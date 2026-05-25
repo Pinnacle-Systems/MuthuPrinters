@@ -19,6 +19,7 @@ import {
   createApprovalLog,
 } from "../utils/approvalHelper.js";
 import moment from "moment";
+import { itemGroup, jobCard } from "../routes/index.js";
 const REFERENCE_PAGE = "ORDER ENTRY";
 
 async function getNextDocId(
@@ -309,7 +310,7 @@ async function getRefList(req) {
       orderItems: {
         select: {
           id: true,
-          styleItemId:true,
+          styleItemId: true,
           jobCards: {
             select: {
               id: true,
@@ -439,6 +440,46 @@ async function getRefList(req) {
   return { statusCode: 0, data };
 }
 
+async function geOrderItemsList(req) {
+  const { orderEntryId } = req.query;
+
+  let data = await prisma.orderItems.findMany({
+    where: {
+      orderEntryId: parseInt(orderEntryId),
+    },
+    select: {
+      id: true,
+      styleItemId: true,
+      itemGroupId: true,
+      ItemGroup: {
+        select: {
+          name: true,
+        },
+      },
+      StyleItem: {
+        select: {
+          name: true,
+        },
+      },
+      _count: {
+        select: {
+          jobCards: true,
+        },
+      },
+    },
+  });
+
+  const result = data.map((item) => ({
+    id: item.styleItemId,
+    childRecord: item._count.jobCards,
+    name: item.StyleItem?.name || "",
+    itemGroupId: item.itemGroupId,
+    itemGroupName: item.ItemGroup?.name
+  }));
+
+  return { statusCode: 0, data: result };
+}
+
 async function getOne(id) {
   const data = await prisma.orderEntry.findUnique({
     where: {
@@ -457,6 +498,11 @@ async function getOne(id) {
           Hsn: {
             select: {
               name: true,
+            },
+          },
+          _count: {
+            select: {
+              jobCards: true,
             },
           },
         },
@@ -478,7 +524,6 @@ async function getOne(id) {
       },
     },
   });
-  console.log(data);
 
   if (!data) return NoRecordFound("Purchase Inward");
   const { module, hasApproval } = await getModuleApprovalSetup(
@@ -534,6 +579,11 @@ async function getOne(id) {
     statusCode: 0,
     data: {
       ...data,
+      orderItems: data.orderItems.map((item) => ({
+        ...item,
+        childRecord: item._count.jobCards,
+        _count: undefined,
+      })),
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
       childRecord: data._count.JobCard,
       approvalLog: log,
@@ -975,4 +1025,4 @@ async function remove(id) {
   return { statusCode: 0, data };
 }
 
-export { get, getOne, create, update, remove, getRefList };
+export { get, getOne, create, update, remove, getRefList, geOrderItemsList };
