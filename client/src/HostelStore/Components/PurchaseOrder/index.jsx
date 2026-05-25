@@ -28,6 +28,7 @@ import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService.js";
 import { useGetUserByIdQuery } from "../../../redux/services/UsersMasterService.js";
 import { push } from "../../../redux/features/opentabs";
+import { UserPermissions } from "../../../Utils/UserPermissions.js";
 
 export default function Form() {
   const [showForm, setShowForm] = useState(false);
@@ -38,7 +39,10 @@ export default function Form() {
   const [selectedPoId, setSelectedPoId] = useState("");
 
   const openTabs = useSelector((state) => state.openTabs);
-  const previewPOId = useMemo(() => openTabs.tabs.find(i => i.name === "PURCHASE ORDER")?.previewId, [openTabs]);
+  const previewPOId = useMemo(
+    () => openTabs.tabs.find((i) => i.name === "PURCHASE ORDER")?.previewId,
+    [openTabs],
+  );
 
   const dispatch = useDispatch();
   const { branchId, companyId, finYearId, userId } = getCommonParams();
@@ -55,7 +59,7 @@ export default function Form() {
   const { data: branchData } = useGetBranchByIdQuery(branchId, {
     skip: !branchId,
   });
-  const { data: userData } = useGetUserByIdQuery(userId)
+  const { data: userData } = useGetUserByIdQuery(userId);
   const [
     trigger,
     {
@@ -70,6 +74,7 @@ export default function Form() {
     setReadOnly(true);
   };
   const [dispatchInvalidate] = useInvalidateTags();
+  const { hasPermission } = UserPermissions();
 
   const handleEdit = (orderId) => {
     setId(orderId);
@@ -161,11 +166,18 @@ export default function Form() {
   const { data: gsmList } = useGetGsmMasterQuery({ params });
 
   useEffect(() => {
-    if (!previewPOId) return
+    if (!previewPOId) return;
     setId(previewPOId);
     setShowForm(true);
     // dispatch(push({ name: "PURCHASE ORDER", previewId: null }))
-  }, [previewPOId, dispatch])
+  }, [previewPOId, dispatch]);
+
+  const handleCreate = () => {
+    hasPermission(() => {
+      setShowForm(true);
+      onNew();
+    }, "create");
+  };
 
   return (
     <>
@@ -183,10 +195,7 @@ export default function Form() {
           <div className="flex items-center gap-2">
             <button
               className="hover:bg-green-700 bg-white border border-green-700 hover:text-white text-green-800  py-1 rounded-md flex items-center gap-2 text-xs px-2"
-              onClick={() => {
-                setShowForm(true);
-                onNew();
-              }}
+              onClick={handleCreate}
             >
               <FaPlus /> Create New
             </button>
@@ -233,6 +242,7 @@ export default function Form() {
             branchData={branchData}
             gsmList={gsmList}
             userData={userData?.data}
+            hasPermission={hasPermission}
           />
         </div>
       )}

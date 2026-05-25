@@ -20,7 +20,7 @@ import Modal from "../../../UiComponents/Modal/index.js";
 import { PDFViewer } from "@react-pdf/renderer";
 import tw from "../../../Utils/tailwind-react-pdf.js";
 import JobCardPrintFormat from "./JobCardPrintFormat.jsx";
-import { useGetRefListQuery, useLazyGetOrderEntryByIdQuery } from "../../../redux/uniformService/OrderEntryService.js";
+import { useGetOrderItemsListQuery, useGetRefListQuery, useLazyGetOrderEntryByIdQuery } from "../../../redux/uniformService/OrderEntryService.js";
 import { invalidateOrderEntryModule } from "../../../redux/Dispatch/OrderInvalidateTags.js";
 import { ProcessRoutePanel, routeKeysToDb, buildCompletedSet } from "./ProcessRoutePanel.jsx";
 import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoServices.js";
@@ -87,7 +87,7 @@ const JobCardForm = ({
     const [labelQty, setLabelQty] = useState("");
     const [rollQty, setRollQty] = useState("");
     const [cutAndSeal, setCutAndSeal] = useState("");
-    const [orderStyleItems, setOrderStyleItems] = useState([]);
+    // const [orderStyleItems, setOrderStyleItems] = useState([]);
     const [jobCardSizeDetails, setJobCardSizeDetails] = useState([]);
     const [selectedOrderData, setSelectedOrderData] = useState(null);
     const [trackingType, setTrackingType] = useState("Barcode");
@@ -114,10 +114,11 @@ const JobCardForm = ({
     // const { data: boardData } = useGetBoardMasterQuery({ params });
     const { data: processGroupList } = useGetProcessGroupMasterQuery({ params });
     const { data: orderList } = useGetRefListQuery({ params: { companyId, branchId } });
-    const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { companyId, branchId } });
+    // const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { companyId, branchId } });
     const { data: sizeList } = useGetSizeMasterQuery({ params: { companyId, branchId } });
     const { data: machineList } = useGetMachineMasterQuery({ params: { companyId, branchId } });
     const { data: jobCardList } = useGetJobCardListQuery({ params: { companyId, branchId } });
+    const { data: styleItemList } = useGetOrderItemsListQuery({ params: { orderEntryId } });
 
     const getGroupIds = (groupName) =>
         processGroupList?.data?.find((g) => g.name === groupName)?.processGroupList?.map((i) => i.processId) || [];
@@ -389,23 +390,23 @@ const JobCardForm = ({
         }
     }, [formOrderCustomerId, fromOrderId, fromOrderType, fromOrderQty]);
 
-    useEffect(() => {
-        const loadOrderStyleItems = async () => {
-            if (!orderEntryId) {
-                setOrderStyleItems([]);
-                return;
-            }
-            try {
-                const res = await getOrderById(orderEntryId).unwrap();
-                setOrderStyleItems(
-                    res?.data?.orderItems?.map(item => item?.styleItemId) || []
-                );
-            } catch (err) {
-                console.error("Failed to load order style items", err);
-            }
-        };
-        loadOrderStyleItems();
-    }, [orderEntryId]);
+    // useEffect(() => {
+    //     const loadOrderStyleItems = async () => {
+    //         if (!orderEntryId) {
+    //             setOrderStyleItems([]);
+    //             return;
+    //         }
+    //         try {
+    //             const res = await getOrderById(orderEntryId).unwrap();
+    //             setOrderStyleItems(
+    //                 res?.data?.orderItems?.map(item => item?.styleItemId) || []
+    //             );
+    //         } catch (err) {
+    //             console.error("Failed to load order style items", err);
+    //         }
+    //     };
+    //     loadOrderStyleItems();
+    // }, [orderEntryId]);
 
     const handleApprovalAction = (type) => { setActionType(type); setApprovalRemarks(""); setApprovalModal(true); };
     const handleConfirmAction = async () => {
@@ -601,7 +602,7 @@ const JobCardForm = ({
                                     setOrderQty("");
                                     setTagCardUps("");
                                     setJobRunTime("");
-                                    setOrderStyleItems([]);
+                                    // setOrderStyleItems([]);
                                     setSelectedOrderData(null);
                                     setJobCardSizeDetails([]);
                                     return;
@@ -622,13 +623,16 @@ const JobCardForm = ({
                                 setPlateDetails([]);
                                 setVarnishes([]);
                                 setProductionType(res?.data?.productionType);
-                                setOrderStyleItems(
-                                    res?.data?.orderItems
-                                        ?.filter(item =>
-                                            id || item?.childRecordCount === 0
-                                        )
-                                        ?.map(item => item?.styleItemId) || []
-                                );
+                                // const filteredItems =
+                                //     res?.data?.orderItems
+                                //         ?.filter(item =>
+                                //             item?.childRecord === 0 ||
+                                //             item?.id === orderItemId
+                                //         )
+                                //         ?.map(item => item?.styleItemId) || [];
+
+                                // setOrderStyleItems(filteredItems);
+
                             }}
                         />
                     </div>
@@ -636,9 +640,8 @@ const JobCardForm = ({
                         <DropdownInput name="Production Type" options={productionTypes} value={productionType} setValue={setProductionType} required readOnly={true} disabled={readOnly} />
                     </div>
                     <div className="w-48">
-                        <DropdownNew name="Item Description" dataList={styleItemList?.data?.filter(item =>
-                            orderStyleItems ? orderStyleItems.includes(item.id) : true
-                        )} value={styleItemId} setValue={setStyleItemId} required readOnly={readOnly} disabled={readOnly || childRecord.current > 0}
+                        <DropdownNew name="Item Description" dataList={styleItemList?.data?.filter((item) => id ? true : item.childRecord === 0)
+                        } value={styleItemId} setValue={setStyleItemId} required disabled={readOnly || childRecord.current > 0}
                             beforeChange={
                                 (selectedValue) => {
                                     if (isRepeatedJobCard && refJobCardId) {
@@ -650,7 +653,7 @@ const JobCardForm = ({
                                         return;
                                     }
                                     setItemGroupId(selectedValue?.itemGroupId);
-                                    setItemType(selectedValue?.ItemGroup?.name);
+                                    setItemType(selectedValue?.itemGroupName);
                                     const selectedOrderItem =
                                         selectedOrderData?.orderItems?.find(
                                             item => item.styleItemId === selectedValue?.id

@@ -644,9 +644,10 @@ const ProductionOutwardForm = ({
                     <div className="flex gap-2">
                         <DropdownNew
                             name="Job Card No"
-                            dataList={jobCardList?.data.filter(item =>
-                                id || item.childRecordIssue === 0
-                            )}
+                            dataList={jobCardList?.data
+                                // .filter(item =>
+                                // id || item.childRecordIssue === 0)
+                            }
                             value={jobCardId}
                             setValue={setJobCardId}
                             required
