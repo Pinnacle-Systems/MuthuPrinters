@@ -51,7 +51,7 @@ async function get(req) {
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
- 
+
   
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
@@ -194,6 +194,203 @@ async function get(req) {
 
 
 
+// get job card Details
+async function get_mob_jobcard(req) {
+   const parsedId = parseInt(req?.query?.id);
+   if (isNaN(parsedId)) throw new Error('Invalid Job Card ID');
+
+  try {
+    const data = await prisma.jobCard.findUnique({
+      where: { id: parsedId },
+      select: {
+        id             : true,
+        docId          : true,
+        createdAt      : true,
+        productionType : true,
+        branchId       : true,
+        customer  : { select: { id: true, name: true } },
+        gsm       : { select: { id: true, name: true } },
+        Branch    : { select: { branchName: true } },
+        Plate     : { select: { id: true, name: true } },
+        Die       : { select: { id: true, name: true } },
+
+        boardQualities: {
+          select: {
+            id   : true,
+            Board: { select: { id: true, name: true } },
+          },
+        },
+        processDetails: {
+          select: {
+            id     : true,
+            Process: { select: { id: true, name: true } },
+          },
+        },
+        laminationDetails: {
+          select: {
+            id        : true,
+            Lamination: { select: { id: true, name: true } },
+          },
+        },
+        varnishDetails: {
+          select: {
+            id     : true,
+            Varnish: { select: { id: true, name: true } },
+          },
+        },
+        machineDetails: {
+          select: {
+            id     : true,
+            Machine: { select: { id: true, name: true } },
+          },
+        },
+
+        // ─── Process Route ─────────────────
+        processRoute: {
+          select: {
+            id      : true,
+            status  : true,
+            sequence: true,
+            Process : { select: { id: true, name: true } },
+            productionAllocationDtls: {
+              select: {
+                id       : true,
+                isInHouse: true,
+              },
+            },
+          },
+          orderBy: { sequence: 'asc' },
+        },
+
+        // ─── Other Details ─────────────────
+        jobCardSizeDetails : true,
+        printingDetails    : true,
+        finishingProcesses : true,
+        plateDetails       : true,
+
+        _count: {
+          select: { productionAllocations: true },
+        },
+      },
+    });
+
+    if (!data) return NoRecordFound('Job Card');
+
+    // ── Approval setup ────────────────────
+    const { module, hasApproval } = await getModuleApprovalSetup(
+      REFERENCE_PAGE,
+      data.branchId,
+    );
+
+    let log           = null;
+    let shouldTrigger = false;
+
+    if (hasApproval && module) {
+      log = await prisma.approvalLog.findFirst({
+        where: {
+          referencePage: REFERENCE_PAGE,
+          referenceId  : data.id,
+        },
+        include: {
+          LevelLogs: {
+            include: { User: { select: { id: true, username: true } } },
+            orderBy : { createdAt: 'asc' },
+          },
+        },
+      });
+
+      if (!log) {
+        const activeConfigs = await prisma.approvalConfig.findMany({
+          where: {
+            moduleId : module.id,
+            branchId : parseInt(branchId || data.branchId),
+            active   : true,
+          },
+          include: {
+            ConfigConditions: {
+              include: {
+                Field        : true,
+                Operator     : true,
+                CompareField : true,
+              },
+            },
+          },
+        });
+
+        if (activeConfigs.length > 0) {
+          shouldTrigger = evaluateConfigs(activeConfigs, data);
+        }
+      }
+    }
+
+    // ── Resolve approval status ───────────
+    const resolvedData = {
+      ...data,
+      approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+      approvalLog   : log,
+      childRecord   : data._count.productionAllocations,
+    };
+
+    // ── Same logic as filtered_ but for single object ──
+    const status    = resolvedData?.approvalStatus?.status;
+    const isAllowed = status === 'APPROVED' || status === 'NOT_CONFIGURED';
+
+    if (!isAllowed) {
+      return {
+        statusCode: 1,
+        message   : 'Job Card is not approved or configured',
+      };
+    }
+
+    // ── Find last NOT_STARTED process route ──
+    const lastNotStarted = resolvedData?.processRoute?.find(
+      (last_taken) => last_taken?.status === 'NOT_STARTED'
+    ) ?? null;
+
+    return {
+      statusCode: 0,
+      data: {
+        // ─── Core ──────────────────────────
+        id            : resolvedData?.id,
+        docId         : resolvedData?.docId,
+        createdAt     : resolvedData?.createdAt,
+        productionType: resolvedData?.productionType,
+        quantity      : resolvedData?.quantity,
+        childRecord   : resolvedData?.childRecord,
+
+        // ─── Approval ──────────────────────
+        approvalStatus  : resolvedData?.approvalStatus,  // ✅ full object not .status
+        approvalLog     : resolvedData?.approvalLog,
+
+        // ─── Process Route ─────────────────
+        processRoute    : lastNotStarted,               // ✅ only NOT_STARTED route
+        allProcessRoutes: resolvedData?.processRoute,   // ✅ full list for timeline
+
+        // ─── Relations ─────────────────────
+        customer : resolvedData?.customer,
+        gsm      : resolvedData?.gsm,
+        Branch   : resolvedData?.Branch,
+        Plate    : resolvedData?.Plate,
+        Die      : resolvedData?.Die,
+
+        // ─── Details ───────────────────────
+        boardQualities    : resolvedData?.boardQualities,
+        processDetails    : resolvedData?.processDetails,
+        laminationDetails : resolvedData?.laminationDetails,
+        varnishDetails    : resolvedData?.varnishDetails,
+        machineDetails    : resolvedData?.machineDetails,
+        jobCardSizeDetails: resolvedData?.jobCardSizeDetails,
+        printingDetails   : resolvedData?.printingDetails,
+        finishingProcesses: resolvedData?.finishingProcesses,
+        plateDetails      : resolvedData?.plateDetails,
+      },
+    };
+
+  } catch (error) {
+    throw new Error(`Failed to fetch job card: ${error.message}`);
+  }
+}
+
 async function get_mob_joblist(req) {
   const {
     branchId,
@@ -243,8 +440,12 @@ async function get_mob_joblist(req) {
       },
     },
     include: {
-      processRoute :true,
-      productionAllocations : true
+      processRoute :{
+        include : {
+          productionAllocationDtls : true
+        }
+      },
+      
    },
     orderBy: { id: "desc" },
   });
@@ -338,21 +539,41 @@ async function get_mob_joblist(req) {
   });
 
 
-    console.log("process data",data);
+ var filtered_ = resolvedData
+  ?.filter((resolved_) => {
+    const status = resolved_?.approvalStatus?.status;
+    return status === "APPROVED" || status === "NOT_CONFIGURED";
+  })
+  ?.map((routes) => {
+    const lastNotStarted = routes?.processRoute?.find(
+      (last_taken) => last_taken?.status === "NOT_STARTED"
+    );
+    return {
+      id :routes?.id ,
+      processRoute: lastNotStarted,
+     docId: routes?. docId,
+     approvalStatus : routes?.status
+    };
+  });
+
+ 
+  
+
+             //  data[1]?.processRoute[0]?.productionAllocationDtls[0]?.isInHouse
 
   if (pagination) {
-    resolvedData = resolvedData.slice(
+      filtered_ = filtered_.slice(
       (pageNumber - 1) * parseInt(dataPerPage),
       pageNumber * parseInt(dataPerPage),
     );
   }
 
-  return { statusCode: 0, data: resolvedData, nextDocId: newDocId, totalCount };
+  return { statusCode: 0, data: filtered_, nextDocId: newDocId, totalCount };
 }
 
 
 async function getJobCardList(req) {
-  const { branchId, companyId } = req.query;
+  const { branchId, companyId, isDropdown } = req.query;
 
   let result = await prisma.jobCard.findMany({
     where: {
@@ -383,21 +604,90 @@ async function getJobCardList(req) {
     },
   });
 
-  console.log("Job Card List Result:", result?.processRoute);
+  let approvalLogMap = {};
+  let activeConfigs = [];
+  let hasApproval = false;
 
-  const data = result.map((item) => ({
-    id: item.id,
-    docId: item.docId,
-    orderQty: item.orderQty,
-    styleItemId: item.styleItemId,
-    styleItemName: item.StyleItem?.name || "",
-    customerName: item.customer?.name || "",
+  if (isDropdown) {
+    const approvalSetup = await getModuleApprovalSetup(
+      REFERENCE_PAGE,
+      branchId,
+    );
+    const module = approvalSetup?.module;
+    hasApproval = approvalSetup?.hasApproval;
 
-    orderEntryDocId: item.OrderEntry?.docId || "",
+    const jobCardIds = result.map((o) => o.id);
 
-    processRoute: item.processRoute || [],
-    productionAllocationId: item.productionAllocations?.[0]?.id || null,
-  }));
+    const approvalLogs = await prisma.approvalLog.findMany({
+      where: { referencePage: REFERENCE_PAGE, referenceId: { in: jobCardIds } },
+      select: {
+        id: true,
+        referenceId: true,
+        status: true,
+        remarks: true,
+        currentLevel: true,
+        LevelLogs: {
+          select: {
+            action: true,
+            levelNo: true,
+            userId: true,
+            createdAt: true,
+            User: { select: { id: true, username: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+     approvalLogMap = approvalLogs.reduce((acc, log) => {
+      acc[log.referenceId] = log;
+      return acc;
+    }, {});
+
+     activeConfigs =
+      hasApproval && module
+        ? await prisma.approvalConfig.findMany({
+            where: {
+              moduleId: module.id,
+              branchId: parseInt(branchId),
+              active: true,
+            },
+            include: {
+              ConfigConditions: {
+                include: { Field: true, Operator: true, CompareField: true },
+              },
+              approvalLevels: {
+                include: { LevelUsers: true },
+                orderBy: { levelNo: "asc" },
+              },
+            },
+          })
+        : [];
+  }
+
+  const data = result.map((item) => {
+    const log = approvalLogMap[item.id] ?? null;
+
+    let shouldTrigger = false;
+
+    if (!log && hasApproval && activeConfigs.length > 0) {
+      shouldTrigger = evaluateConfigs(activeConfigs, item);
+    }
+
+    return {
+      id: item.id,
+      docId: item.docId,
+      orderQty: item.orderQty,
+      styleItemId: item.styleItemId,
+      styleItemName: item.StyleItem?.name || "",
+      customerName: item.customer?.name || "",
+      orderEntryDocId: item.OrderEntry?.docId || "",
+      processRoute: item.processRoute || [],
+      productionAllocationId: item.productionAllocations?.[0]?.id || null,
+
+      approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+    };
+  });
 
   return { statusCode: 0, data };
 }
@@ -541,7 +831,7 @@ async function create(body) {
       orderQty,
       customerId,
       gsmId,
-      boardId,
+      otherBoardId,
       fullBoardId,
       noOfPockets,
       cuttingSizeId,
@@ -646,7 +936,7 @@ async function create(body) {
           customerId: customerId ? Number(customerId) : null,
 
           gsmId: gsmId ? Number(gsmId) : null,
-          boardId: boardId ? Number(boardId) : null,
+          otherBoardId: otherBoardId ? Number(otherBoardId) : null,
 
           fullBoardId: fullBoardId ? Number(fullBoardId) : null,
           noOfPockets: noOfPockets ? parseInt(noOfPockets) : null,
@@ -691,7 +981,7 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safeBoardItems.map((id) => ({
-                    boardId: Number(id),
+                    processId: Number(id),
                   })),
                 },
               }
@@ -766,7 +1056,7 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safeProcessRoute.map((r, idx) => ({
-                    processId: Number(r.processId || r.boardId),
+                    processId: Number(r.processId),
                     type: r.type,
                     sequence: idx + 1,
                     isFront: !!r.isFront,
@@ -843,7 +1133,7 @@ async function update(id, body) {
       orderQty,
       customerId,
       gsmId,
-      boardId,
+      otherBoardId,
       fullBoardId,
       noOfPockets,
       cuttingSizeId,
@@ -1014,6 +1304,7 @@ async function update(id, body) {
                 sequence: r.sequence,
                 isFront: Boolean(r.isFront),
                 isFrontAndBack: Boolean(r.isFrontAndBack),
+                status: "NOT_STARTED",
               };
             }),
           });
@@ -1038,20 +1329,58 @@ async function update(id, body) {
         if (allocation) {
           // Build a sequence lookup from the (now-synced) incoming processRoute
           // key: "type:processId"  →  value: sequence (1-based)
-          const routeSequenceMap = {};
-          processRoute.forEach((r, idx) => {
-            routeSequenceMap[`${r.type}:${Number(r.processId)}`] = idx + 1;
+          const existingDtlMap = {};
+          allocation.allocationDetails.forEach((d) => {
+            existingDtlMap[`${d.type}:${d.processId}`] = d;
           });
 
-          // Update each dtl row whose type+processId appears in the route
-          for (const dtl of allocation.allocationDetails) {
-            const key = `${dtl.type}:${dtl.processId}`;
-            if (routeSequenceMap[key] !== undefined) {
+          const incomingDtlMap = {};
+          processRoute.forEach((r, idx) => {
+            incomingDtlMap[`${r.type}:${r.processId}`] = {
+              ...r,
+              sequence: idx + 1,
+            };
+          });
+
+          // DELETE removed rows
+          const deleteIds = Object.keys(existingDtlMap)
+            .filter((k) => !incomingDtlMap[k])
+            .map((k) => existingDtlMap[k].id);
+
+          if (deleteIds.length) {
+            await tx.productionAllocationDtl.deleteMany({
+              where: { id: { in: deleteIds } },
+            });
+          }
+
+          // UPDATE existing
+          for (const key of Object.keys(incomingDtlMap)) {
+            if (existingDtlMap[key]) {
               await tx.productionAllocationDtl.update({
-                where: { id: dtl.id },
-                data: { sequence: routeSequenceMap[key] },
+                where: { id: existingDtlMap[key].id },
+                data: {
+                  sequence: incomingDtlMap[key].sequence,
+                },
               });
             }
+          }
+
+          // INSERT new
+          const insertRows = Object.keys(incomingDtlMap)
+            .filter((k) => !existingDtlMap[k])
+            .map((k) => ({
+              productionAllocationId: allocation.id,
+              processId: incomingDtlMap[k].processId,
+              type: incomingDtlMap[k].type,
+              sequence: incomingDtlMap[k].sequence,
+              isInHouse: true,
+              isOutSide: false,
+            }));
+
+          if (insertRows.length) {
+            await tx.productionAllocationDtl.createMany({
+              data: insertRows,
+            });
           }
         }
       }
@@ -1067,7 +1396,7 @@ async function update(id, body) {
           orderQty: orderQty ? parseInt(orderQty) : null,
           customerId: customerId ? parseInt(customerId) : null,
           gsmId: gsmId ? parseInt(gsmId) : null,
-          boardId: boardId ? parseInt(boardId) : null,
+          otherBoardId: otherBoardId ? parseInt(otherBoardId) : null,
           fullBoardId: fullBoardId ? parseInt(fullBoardId) : null,
           noOfPockets: noOfPockets ? parseInt(noOfPockets) : null,
           cuttingSizeId: cuttingSizeId ? Number(cuttingSizeId) : null,
@@ -1109,7 +1438,7 @@ async function update(id, body) {
               ? {
                   createMany: {
                     data: boardItems.map((bId) => ({
-                      boardId: parseInt(bId),
+                      processId: parseInt(bId),
                     })),
                   },
                 }
@@ -1265,4 +1594,4 @@ async function remove(id) {
   }
 }
 
-export { get, getOne, create, update, remove, getJobCardList , get_mob_joblist};
+export { get, getOne, create, update, remove, getJobCardList , get_mob_joblist,get_mob_jobcard};

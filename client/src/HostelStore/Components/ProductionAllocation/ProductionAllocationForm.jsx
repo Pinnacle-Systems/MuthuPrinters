@@ -55,6 +55,7 @@ const ProductionAllocationForm = ({
         isInHouse: false,
         isOutSide: false,
         supplierId: "",
+        processRouteId:""
     }));
     const [allocationDetails, setAllocationDetails] = useState(
         DEFAULT_ROWS
@@ -80,7 +81,7 @@ const ProductionAllocationForm = ({
     const { data: supplierData } = useGetPartyByIdQuery(customerId, {
         skip: !customerId,
     });
-    const { data: jobCardList } = useGetJobCardListQuery({ params: { companyId, branchId } });
+    const { data: jobCardList } = useGetJobCardListQuery({ params: { companyId, branchId, isDropdown: true } });
     const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { companyId, branchId } }, {
         skip: !companyId || !branchId,
     });
@@ -112,6 +113,7 @@ const ProductionAllocationForm = ({
                 isInHouse: item.isInHouse || false,
                 isOutSide: item.isOutSide || false,
                 supplierId: item.supplierId || "",
+                processRouteId: item.processRouteId || "",
             })) || DEFAULT_ROWS);
         childRecord.current = data?.childRecord ? data?.childRecord : 0;
     }, []);
@@ -277,6 +279,7 @@ const ProductionAllocationForm = ({
                 type: route?.type || "",
                 isInHouse: route?.processId ? !isOutside : false,
                 isOutSide: route?.processId ? isOutside : false,
+                processRouteId: route?.id || ""
             };
         });
         setAllocationDetails(mappedRows);
@@ -388,7 +391,10 @@ const ProductionAllocationForm = ({
                             <div className="w-44">
                                 <DropdownNew
                                     name="Job Card No"
-                                    dataList={jobCardList?.data}
+                                    dataList={jobCardList?.data.filter(item =>
+                                        ["APPROVED", "NOT_CONFIGURED"].includes(
+                                            item?.approvalStatus?.status
+                                        ))}
                                     value={jobCardId}
                                     setValue={setJobCardId}
                                     required

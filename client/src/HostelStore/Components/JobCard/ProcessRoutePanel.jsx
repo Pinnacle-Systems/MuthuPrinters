@@ -16,7 +16,7 @@ const parseKey = (key) => {
 const buildDesiredKeys = (
     boardItems = [],
     boardList,
-    boardId = "",
+    otherBoardId = "",
     selectedPrinting,
     printingList,
     selectedProcesses,
@@ -36,8 +36,8 @@ const buildDesiredKeys = (
         }
     });
 
-    if (boardId) {
-        keys.push(makeKey("board", boardId));
+    if (otherBoardId) {
+        keys.push(makeKey("board", otherBoardId));
     }
 
     printingList.forEach((p) => {
@@ -127,7 +127,7 @@ export const buildCompletedSet = (dbProcessRoute = []) => {
 export const ProcessRoutePanel = ({
     boardItems = [],
     boardList = [],
-    boardId = "",
+    otherBoardId = "",
     selectedPrinting = [],
     printingList = [],
     selectedProcesses = [],
@@ -156,7 +156,7 @@ export const ProcessRoutePanel = ({
     // ── Auto-sync: mirror form state into route ──────────────────
     useEffect(() => {
         const desired = buildDesiredKeys(
-            boardItems, boardList, boardId,
+            boardItems, boardList, otherBoardId,
             selectedPrinting, printingList,
             selectedProcesses, defaultList,
             laminations, laminationList,
@@ -169,7 +169,7 @@ export const ProcessRoutePanel = ({
             return [...kept, ...added];
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedProcesses, laminations, varnishes, boardId, boardItems, selectedPrinting, selectedFinishing]);
+    }, [selectedProcesses, laminations, varnishes, otherBoardId, boardItems, selectedPrinting, selectedFinishing]);
 
     return (
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">

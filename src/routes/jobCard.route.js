@@ -6,7 +6,7 @@ import {
   create,
   update,
   remove,
-  getJobCardList,get_mob_joblist
+  getJobCardList,get_mob_joblist,get_mob_jobcard
 } from "../controllers/jobCard.controller.js";
 
 
@@ -14,6 +14,7 @@ router.post("/", create);
 
 router.get("/", get);
 router?.get("/get_mob_joblist",get_mob_joblist)
+router?.get("/get_mob_jobcard",get_mob_jobcard)
 router.get("/jobCardList", getJobCardList);
 router.put("/:id", update);
 
