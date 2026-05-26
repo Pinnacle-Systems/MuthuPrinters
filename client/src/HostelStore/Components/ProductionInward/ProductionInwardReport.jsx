@@ -17,6 +17,46 @@ const COLUMNS = [
         key: "supplier", label: "Supplier", width: "w-80",
         render: (row) => row?.Supplier?.name
     },
+    {
+        key: "status",
+        label: "Status",
+        width: "w-40",
+        render: (row) => {
+            const statusConfig = {
+                "Fully Billed": {
+                    bg: "bg-green-100",
+                    text: "text-green-700",
+                    label: "Fully Billed",
+                },
+                "Not Billed": {
+                    bg: "bg-red-100",
+                    text: "text-red-700",
+                    label: "Not Billed",
+                },
+            };
+
+            const config =
+                statusConfig[row?.status] ||
+                {
+                    bg: "bg-gray-100",
+                    text: "text-gray-700",
+                    label: row?.status || "-",
+                };
+
+            return (
+                <span
+                    className={`
+                    inline-flex items-center justify-center
+                    px-2 py-0.5 rounded-full
+                    text-[11px] font-semibold
+                    ${config.bg} ${config.text}
+                `}
+                >
+                    {config.label}
+                </span>
+            );
+        },
+    }
 ];
 
 // Outward No has no search — only include searchable keys here

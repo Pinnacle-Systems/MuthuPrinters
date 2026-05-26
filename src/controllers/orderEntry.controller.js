@@ -6,6 +6,7 @@ import {
   update as _update,
   remove as _remove,
   getRefList as _getRefList,
+  geOrderItemsList as _geOrderItemsList
 } from "../services/orderEntry.service.js";
 
 async function get(req, res, next) {
@@ -19,6 +20,14 @@ async function get(req, res, next) {
 async function getRefList(req, res, next) {
   try {
     res.json(await _getRefList(req));
+  } catch (err) {
+    console.error(`Error `, err.message);
+  }
+}
+
+async function geOrderItemsList(req, res, next) {
+  try {
+    res.json(await _geOrderItemsList(req));
   } catch (err) {
     console.error(`Error `, err.message);
   }
@@ -90,4 +99,4 @@ async function remove(req, res, next) {
   }
 }
 
-export { get, getOne, create, update, remove, getRefList };
+export { get, getOne, create, update, remove, getRefList ,geOrderItemsList};

@@ -290,11 +290,11 @@ const Notification = () => {
                     <table className="w-full text-left text-gray-600">
                       <thead className="text-gray-500 uppercase text-[10px] bg-gray-100 sticky top-0">
                         <tr>
-                          <th className="px-3 py-2">Type</th>
+                          <th className="px-3 py-2 w-10">Type</th>
                           <th className="px-3 py-2">Message</th>
-                          <th className="px-3 py-2">Doc ID</th>
+                          {/* <th className="px-3 py-2">Doc ID</th> */}
                           {/* <th className="px-2 py-2">Is Read</th> */}
-                          <th className="px-2 py-2">View</th>
+                          {/* <th className="px-2 py-2">View</th> */}
                           {/* <th className="px-2 py-2">Mark</th> */}
                         </tr>
                       </thead>
@@ -303,7 +303,7 @@ const Notification = () => {
                           <tr
                             key={log.id}
                             className={`border-b hover:bg-gray-50 cursor-pointer ${!log.isRead ? "bg-red-50/40" : ""}`}
-                            onClick={() => openRecord(log)}
+                            // onClick={() => openRecord(log)}
                           >
                             {/* Type badge */}
                             <td className="px-3 py-2.5 whitespace-nowrap">
@@ -319,17 +319,17 @@ const Notification = () => {
                               {log.message}
                             </td>
                             {/* Reference Doc */}
-                            <td className="px-3 py-2.5 text-blue-500 font-medium whitespace-nowrap">
+                            {/* <td className="px-3 py-2.5 text-blue-500 font-medium whitespace-nowrap">
                               #{log.referenceId}
-                            </td>
+                            </td> */}
                             {/* Is Read */}
                             {/* <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
                               <ReadBadge isRead={log.isRead} />
                             </td> */}
                             {/* View */}
-                            <td className="px-2 py-2.5" onClick={e => { e.stopPropagation(); openRecord(log); }}>
+                            {/* <td className="px-2 py-2.5" onClick={e => { e.stopPropagation(); openRecord(log); }}>
                               <button className="text-blue-500 hover:text-blue-700">{VIEW}</button>
-                            </td>
+                            </td> */}
                             {/* Mark read */}
                             {/* <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
                               <button

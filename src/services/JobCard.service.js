@@ -52,7 +52,6 @@ async function get(req) {
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
 
-  
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
         finYearDate?.startDateStartTime,
@@ -192,7 +191,7 @@ async function get(req) {
 
 
 
-
+/* Mobile Api's*/
 
 // get job card Details
 async function get_mob_jobcard(req) {
@@ -342,10 +341,16 @@ async function get_mob_jobcard(req) {
       };
     }
 
+
+    var Sorted_Sequence = resolvedData?.processRoute?.sort((a,b) => a.sequence - b.sequence)
+
     // ── Find last NOT_STARTED process route ──
     const lastNotStarted = resolvedData?.processRoute?.find(
-      (last_taken) => last_taken?.status === 'NOT_STARTED'
+      (last_taken) => last_taken?.status === 'NOT_STARTED' ||  last_taken?.status === 'IN_PROGRESS'
     ) ?? null;
+
+   
+    
 
     return {
       statusCode: 0,
@@ -392,6 +397,7 @@ async function get_mob_jobcard(req) {
 }
 
 async function get_mob_joblist(req) {
+  
   const {
     branchId,
     pagination,
@@ -539,14 +545,17 @@ async function get_mob_joblist(req) {
   });
 
 
+  
+
  var filtered_ = resolvedData
   ?.filter((resolved_) => {
     const status = resolved_?.approvalStatus?.status;
     return status === "APPROVED" || status === "NOT_CONFIGURED";
   })
   ?.map((routes) => {
-    const lastNotStarted = routes?.processRoute?.find(
-      (last_taken) => last_taken?.status === "NOT_STARTED"
+    var Sorted_Sequence = routes?.processRoute?.sort((a,b) => a.sequence - b.sequence)
+    const lastNotStarted = Sorted_Sequence?.find(
+      (last_taken) => last_taken?.status === "NOT_STARTED"  ||  last_taken?.status === 'IN_PROGRESS'
     );
     return {
       id :routes?.id ,
@@ -557,6 +566,7 @@ async function get_mob_joblist(req) {
   });
 
  
+  
   
 
              //  data[1]?.processRoute[0]?.productionAllocationDtls[0]?.isInHouse
@@ -571,13 +581,45 @@ async function get_mob_joblist(req) {
   return { statusCode: 0, data: filtered_, nextDocId: newDocId, totalCount };
 }
 
+async function getMachinebydep(req) {
+
+ const { id } = req.query;
+
+  var result = await prisma.department.findUnique({
+  where:{id: Number(id || 0)},
+  include:{
+    machines:{select:{name:true,id:true}}
+  }
+})
+
+
+return {statusCode:0,data:result}
+
+
+
+  
+  
+}
+
+
+
+
+
+/* End Mobile Api's*/
+
+
 
 async function getJobCardList(req) {
-  const { branchId, companyId, isDropdown } = req.query;
+  const { branchId, companyId, isDropdown, isProcessIssue } = req.query;
 
   let result = await prisma.jobCard.findMany({
     where: {
       branchId: branchId ? parseInt(branchId) : undefined,
+      ...(isProcessIssue && {
+        productionAllocations: {
+          some: {},
+        },
+      }),
     },
     select: {
       id: true,
@@ -598,6 +640,20 @@ async function getJobCardList(req) {
           docId: true,
         },
       },
+      ...(isDropdown && {
+        _count: {
+          select: {
+            productionAllocations: true,
+          },
+        },
+      }),
+      ...(isProcessIssue && {
+        _count: {
+          select: {
+            productionOutwards: true,
+          },
+        },
+      }),
     },
     orderBy: {
       docId: "desc",
@@ -639,12 +695,12 @@ async function getJobCardList(req) {
       },
     });
 
-     approvalLogMap = approvalLogs.reduce((acc, log) => {
+    approvalLogMap = approvalLogs.reduce((acc, log) => {
       acc[log.referenceId] = log;
       return acc;
     }, {});
 
-     activeConfigs =
+    activeConfigs =
       hasApproval && module
         ? await prisma.approvalConfig.findMany({
             where: {
@@ -686,6 +742,8 @@ async function getJobCardList(req) {
       productionAllocationId: item.productionAllocations?.[0]?.id || null,
 
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+      childRecord: item?._count?.productionAllocations || 0,
+      childRecordIssue: item?._count?.productionOutwards || 0,
     };
   });
 
@@ -1594,4 +1652,4 @@ async function remove(id) {
   }
 }
 
-export { get, getOne, create, update, remove, getJobCardList , get_mob_joblist,get_mob_jobcard};
+export { get, getOne, create, update, remove, getJobCardList , get_mob_joblist,get_mob_jobcard,getMachinebydep};

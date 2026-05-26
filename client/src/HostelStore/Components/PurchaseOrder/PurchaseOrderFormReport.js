@@ -20,6 +20,7 @@ import { toast } from "react-toastify";
 import { findFromList } from "../../../Utils/helper";
 import { useGetPagesQuery } from "../../../redux/services/PageMasterService";
 import { invalidatePurchaseModule } from "../../../redux/Dispatch/PurchaseInvalidateTags";
+import { UserPermissions } from "../../../Utils/UserPermissions";
 
 const PurchaseOrderFormReport = ({
   onClick,
@@ -78,6 +79,7 @@ const PurchaseOrderFormReport = ({
   const openTabs = useSelector((state) => state.openTabs);
   const activeTab = openTabs.tabs.find((tab) => tab.active);
   const { data: pageData } = useGetPagesQuery({});
+  const { hasPermission } = UserPermissions();
 
   const currentPageId =
     (pageData?.data || []).find((i) => i.name === activeTab.name)?.id || "";
@@ -818,7 +820,12 @@ const PurchaseOrderFormReport = ({
                                     <Tooltip title="View" arrow>
                                       <button
                                         className="text-blue-600  flex items-center   px-1  bg-blue-50 rounded"
-                                        onClick={() => onView(dataObj.id)}
+                                        onClick={() =>
+                                          hasPermission(
+                                            () => onView(dataObj.id),
+                                            "read",
+                                          )
+                                        }
                                       >
                                         <svg
                                           xmlns="http://www.w3.org/2000/svg"
@@ -840,7 +847,12 @@ const PurchaseOrderFormReport = ({
                                     <Tooltip title="Edit" arrow>
                                       <button
                                         className="text-green-600 gap-1 px-1   bg-green-50 rounded"
-                                        onClick={() => onEdit(dataObj.id)}
+                                        onClick={() =>
+                                          hasPermission(
+                                            () => onEdit(dataObj.id),
+                                            "edit",
+                                          )
+                                        }
                                       >
                                         <svg
                                           xmlns="http://www.w3.org/2000/svg"
@@ -869,7 +881,12 @@ const PurchaseOrderFormReport = ({
       ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
       : "bg-red-50 text-red-800 hover:bg-red-100"
   }`}
-                                        onClick={() => onDelete(dataObj.id)}
+                                        onClick={() =>
+                                          hasPermission(
+                                            () => onDelete(dataObj.id),
+                                            "delete",
+                                          )
+                                        }
                                         disabled={dataObj.childRecord > 0}
                                       >
                                         <svg

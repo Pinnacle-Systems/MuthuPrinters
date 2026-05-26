@@ -393,8 +393,8 @@ const ProductionAllocationForm = ({
                                     name="Job Card No"
                                     dataList={jobCardList?.data.filter(item =>
                                         ["APPROVED", "NOT_CONFIGURED"].includes(
-                                            item?.approvalStatus?.status
-                                        ))}
+                                            item?.approvalStatus?.status) && (id || item.childRecord === 0)
+                                        )}
                                     value={jobCardId}
                                     setValue={setJobCardId}
                                     required

@@ -203,11 +203,27 @@ async function get(req) {
   return {
     statusCode: 0,
 
-    data: data.map((item) => ({
-      ...item,
-      status: getProductionInwardStatus(item),
-      childRecord: item._count.processBillDtls,
-    })),
+    data: data.map((item) => {
+      const childRecord = item._count.processBillDtls;
+
+      let status = "Not Billed";
+
+      // 🔹 Against Invoice → always fully billed
+      if (item.receiptType === "AGAINST_INVOICE") {
+        status = "Fully Billed";
+      }
+
+      // 🔹 Other receipt types
+      else if (childRecord > 0) {
+        status = "Fully Billed";
+      }
+
+      return {
+        ...item,
+        status,
+        childRecord,
+      };
+    }),
 
     nextDocId: newDocId,
 
@@ -294,6 +310,8 @@ async function getInwardJobCardDtls(req) {
       supplierId: supplierId ? parseInt(supplierId) : undefined,
 
       docId: searchDocId ? { contains: searchDocId } : undefined,
+
+      receiptType: "WITHOUT_INVOICE",
 
       docDate: searchDocDate
         ? {

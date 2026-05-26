@@ -6,6 +6,7 @@ import {
   create,
   update,
   remove,
+  UpdateProcess
 } from "../controllers/process.controller.js";
 
 router.post("/", create);
@@ -15,6 +16,8 @@ router.get("/", get);
 router.get("/:id", getOne);
 
 router.put("/:id", update);
+
+router.put("/Update/Process",UpdateProcess)
 
 router.delete("/:id", remove);
 

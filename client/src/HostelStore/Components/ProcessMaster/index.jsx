@@ -10,6 +10,10 @@ import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardN
 import { useAddProcessMasterMutation, useDeleteProcessMasterMutation, useGetProcessMasterByIdQuery, useGetProcessMasterQuery, useLazyGetProcessMasterByIdQuery, useUpdateProcessMasterMutation } from "../../../redux/services/ProcessMasterService";
 import { Checkbox } from "@mui/material";
 import { UserPermissions } from "../../../Utils/UserPermissions";
+import { DepartmentMaster } from "../../../Basic/components";
+import { DropdownWithModal } from "../../../Inputs/Reuseable";
+import { dropDownListObject } from "../../../Utils/contructObject";
+import { useGetDepartmentQuery } from "../../../redux/services/DepartmentMasterService";
 
 export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
     const [form, setForm] = useState(false);
@@ -18,6 +22,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
     const [id, setId] = useState("");
     const [name, setName] = useState("");
     const [active, setActive] = useState(true);
+    const [departmentId, setDepartmentId] = useState("")
     const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
 
     const [searchValue, setSearchValue] = useState("");
@@ -39,6 +44,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         isLoading: isSingleLoading,
     } = useGetProcessMasterByIdQuery(id, { skip: !id });
     const [trigger, { data: LazyData }] = useLazyGetProcessMasterByIdQuery();
+    const {
+        data: departmentList,
+    } = useGetDepartmentQuery({ params });
 
     const [addData] = useAddProcessMasterMutation();
     const [updateData] = useUpdateProcessMasterMutation();
@@ -74,10 +82,11 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             sessionStorage.getItem("sessionId") + "userCompanyId",
         ),
         isOutsideJob,
+        departmentId
     };
 
     const validateData = (data) => {
-        if (data.name) {
+        if (data.name && data?.departmentId) {
             return true;
         }
         return false;
@@ -200,6 +209,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         setSearchValue("");
         syncFormWithDb(undefined);
         setReadOnly(false);
+        setDepartmentId("");
     };
 
     const ACTIVE = (
@@ -274,6 +284,31 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                                             ref={countryNameRef}
                                         />
                                     </div>
+                                    <div className="w-[50%]">
+                                        <DropdownWithModal
+                                            name="Department"
+                                            options={dropDownListObject(
+                                                id
+                                                    ? departmentList?.data
+                                                    : departmentList?.data?.filter((item) => item?.active),
+                                                "name",
+                                                "id",
+                                            )}
+                                            value={departmentId}
+                                            setValue={setDepartmentId}
+                                            required={true}
+                                            readOnly={readOnly}
+                                            className={`w-[150px]`}
+                                            disabled={childRecord.current > 0}
+                                            addNewLabel="+ Add New Department"
+                                            childComponent={DepartmentMaster}
+                                            addNewModalWidth="w-[40%] h-[48%]"
+                                        />
+                                    </div>
+
+                                </div>
+                                <div className="flex gap-x-10 items-center mt-5">
+
                                     <div className="flex items-center">
                                         <Checkbox
                                             checked={isOutsideJob}
@@ -288,17 +323,17 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                                             IsOutside
                                         </label>
                                     </div>
+                                    <ToggleButton
+                                        name=""
+                                        options={statusDropdown}
+                                        value={active}
+                                        setActive={setActive}
+                                        // required={true}
+                                        readOnly={readOnly}
+                                        ref={toggleButtonRef}
+                                        onKeyDown={handlers.handleToggleKeyDown}
+                                    />
                                 </div>
-                                <ToggleButton
-                                    name="Status"
-                                    options={statusDropdown}
-                                    value={active}
-                                    setActive={setActive}
-                                    required={true}
-                                    readOnly={readOnly}
-                                    ref={toggleButtonRef}
-                                    onKeyDown={handlers.handleToggleKeyDown}
-                                />
                             </fieldset>
                         </div>
                     </div>

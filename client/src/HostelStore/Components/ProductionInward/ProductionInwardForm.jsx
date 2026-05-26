@@ -258,7 +258,7 @@ const ProductionInwardForm = ({
 
     const validateData = (data) => {
         const items = data?.inwardDetails || [];
-        const isAgainstInvoice = data.receiptType === "Against Invoice";
+        const isAgainstInvoice = data.receiptType === "AGAINST_INVOICE";
         const isAmountMatched =
             Number(data?.netBillValue).toFixed(2) ===
             parseFloat(totals?.net || 0).toFixed(2);
@@ -485,7 +485,7 @@ const ProductionInwardForm = ({
                                     />
                                 </div>
                                 {
-                                    receiptType === "Against Invoice" && (
+                                    receiptType === "AGAINST_INVOICE" && (
 
                                         <DropdownInput
                                             name="Tax Type"
@@ -496,9 +496,9 @@ const ProductionInwardForm = ({
                                             )}
                                             value={taxTemplateId}
                                             setValue={setTaxTemplateId}
-                                            required={receiptType === "Against Invoice"}
+                                            required={receiptType === "AGAINST_INVOICE"}
                                             readOnly={readOnly}
-                                            disabled={receiptType !== "Against Invoice" || childRecord.current > 0 || readOnly}
+                                            disabled={receiptType !== "AGAINST_INVOICE" || childRecord.current > 0 || readOnly}
                                         />
                                     )
                                 }
@@ -532,8 +532,8 @@ const ProductionInwardForm = ({
                                     value={invNo}
                                     setValue={setInvNo}
                                     readOnly={readOnly}
-                                    required={receiptType === "Against Invoice"}
-                                    disabled={receiptType !== "Against Invoice" || readOnly}
+                                    required={receiptType === "AGAINST_INVOICE"}
+                                    disabled={receiptType !== "AGAINST_INVOICE" || readOnly}
                                 />
                                 <div className="w-28">
                                     <TextInput
@@ -541,7 +541,7 @@ const ProductionInwardForm = ({
                                         value={netBillValue}
                                         setValue={setNetBillValue}
                                         readOnly={readOnly || childRecord.current > 0}
-                                        required={receiptType === "Against Invoice"}
+                                        required={receiptType === "AGAINST_INVOICE"}
                                         type={"number"}
                                         onFocus={(e) => {
                                             e.target.select();
@@ -551,7 +551,7 @@ const ProductionInwardForm = ({
                                                 e.target.value ? Number(e.target.value).toFixed(2) : "",
                                             )
                                         }
-                                        disabled={receiptType !== "Against Invoice"}
+                                        disabled={receiptType !== "AGAINST_INVOICE"}
                                         className={"text-right"}
                                     />
                                 </div>
@@ -560,7 +560,7 @@ const ProductionInwardForm = ({
                                     value={dcNo}
                                     setValue={setDcNo}
                                     readOnly={readOnly}
-                                    required={receiptType !== "Against Invoice"}
+                                    required={receiptType !== "AGAINST_INVOICE"}
                                 />
                                 <div className="w-28">
                                     <DateInputNew
@@ -695,7 +695,7 @@ const ProductionInwardForm = ({
 
                             <div className="rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
                                 {
-                                    receiptType === "Against Invoice" && (
+                                    receiptType === "AGAINST_INVOICE" && (
 
                                         <div>
                                             <h2 className="mb-1 text-[12px] font-bold text-slate-700">
@@ -781,7 +781,7 @@ const ProductionInwardForm = ({
                                             Edit
                                         </button>
                                     ))}
-                                {receiptType === "Against Invoice" && (
+                                {receiptType === "AGAINST_INVOICE" && (
                                     <button
                                         className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-800 flex items-center text-xs font-medium"
                                         onClick={() => {
