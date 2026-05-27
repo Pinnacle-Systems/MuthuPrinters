@@ -12,3 +12,4 @@ export { default as NotificationApi } from "./NotificationService";
 export { default as ProductionOutwardApi } from "./ProductionOutwardService";
 export { default as ProductionInwardApi } from "./ProductionInwardService";
 export { default as ProcessBillApi } from "./ProcessBillService";
+export { default as SalesDeliveryApi } from "./SalesDeliveryService";
