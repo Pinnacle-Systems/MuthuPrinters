@@ -2187,7 +2187,8 @@ model pushLogs{
    id             Int      @id @default(autoincrement())
    Userid         Int
    User            User @relation(fields: [Userid],references: [id])
-   pushtime       DateTime
+   pushtime       DateTime?
+   resumetime     DateTime?
    productionlog  Int
    productionempPunch  productionempPunch @relation(fields: [productionlog],references: [id])
    }

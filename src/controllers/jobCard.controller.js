@@ -8,7 +8,8 @@ import {
   getJobCardList as _getJobCardList,
   get_mob_joblist  as _get_mob_joblist,
   get_mob_jobcard as _get_mob_jobcard,
-  getMachinebydep  as _getMachinebydep
+  getMachinebydep  as _getMachinebydep,
+  getEmployeeTakenJobcard as _getEmployeeTakenJobcard
 
 } from "../services/JobCard.service.js";
 
@@ -20,13 +21,30 @@ async function get(req, res, next) {
   }
 }
 
+async function getEmployeeTakenJobcard(req, res, next) {
+
+   try {
+    res.json(await _getEmployeeTakenJobcard(req));
+  } catch (err) {
+    console.error(`Error `, err.message);
+     res.statusCode(500).json({ statusCode: 0,
+  data: null,
+  message: err.message,})
+  }
+  
+}
+
 
 async function getMachinebydep(req, res, next) {
 
-    try {
+   try {
     res.json(await _getMachinebydep(req));
   } catch (err) {
+   
     console.error(`Error `, err.message);
+      res.status(500).json({ statusCode: 0,
+  data: null,
+  message: err.message,})
   }
   
 }
@@ -37,6 +55,9 @@ async function get_mob_jobcard(req, res, next) {
     res.json(await _get_mob_jobcard(req));
   } catch (err) {
     console.error(`Error `, err.message);
+    res.status(500).json({ statusCode: 0,
+  data: null,
+  message: err.message,})
   }
 }
 
@@ -44,7 +65,11 @@ async function get_mob_joblist(req, res, next) {
   try {
     res.json(await _get_mob_joblist(req));
   } catch (err) {
+    
     console.error(`Error `, err.message);
+     res.status(500).json({ statusCode: 0,
+  data: null,
+  message: err.message,})
   }
 }
 
@@ -53,7 +78,9 @@ async function getJobCardList(req, res, next) {
   try {
     res.json(await _getJobCardList(req));
   } catch (err) {
+  
     console.error(`Error `, err.message);
+       res.status(500).json({message:err})
   }
 }
 
@@ -125,4 +152,4 @@ async function remove(req, res, next) {
   }
 }
 
-export { get, getOne, create, update, remove, getJobCardList,get_mob_joblist, get_mob_jobcard, getMachinebydep };
+export { get, getOne, create, update, remove, getJobCardList,get_mob_joblist, get_mob_jobcard, getMachinebydep , getEmployeeTakenJobcard};

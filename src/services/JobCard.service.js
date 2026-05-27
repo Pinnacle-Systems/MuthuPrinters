@@ -196,6 +196,41 @@ async function get(req) {
 // get job card Details
 async function get_mob_jobcard(req) {
    const parsedId = parseInt(req?.query?.id);
+   const userId   = parseInt(req?.query?.userid)
+   const processRouteId = parseInt(req?.query?.processRouteId)
+
+
+ var check_punch_result = await prisma.productionempPunch?.findFirst({
+       where : {
+       jobCardId :  Number(parsedId || 0),
+       processRouteId :  Number(processRouteId || 0 ),
+       },
+       include:{
+        pushLogs:true,
+        ProcessRoute:{
+         include :{ Process:true }
+        }
+       },
+      orderBy: {
+       createAt: "desc", 
+      },
+
+     })
+
+
+    //  var pushlog =  check_punch_result?.pushLogs?.findLast(flast=> flast.pushtime && flast.resumetime)
+     var pushlog_last_ =  check_punch_result?.pushLogs?.findLast(flast=> flast.pushtime && !flast.resumetime )
+     
+
+     if(check_punch_result?.Userid != userId && check_punch_result && !pushlog_last_  && check_punch_result?.ProcessRoute?.status == "IN_PROGRESS" ) {
+      throw new Error("Already another user taken this jobcard");
+     }else if(check_punch_result?.ProcessRoute == "COMPLETED"){
+
+      throw new Error("Already completed and  taken this jobcard");
+
+     }
+
+
    if (isNaN(parsedId)) throw new Error('Invalid Job Card ID');
 
   try {
@@ -272,6 +307,26 @@ async function get_mob_jobcard(req) {
         },
       },
     });
+
+     var punch_result = await prisma.productionempPunch?.findFirst({
+       where : {
+       Userid : Number(userId || 0),
+       jobCardId :  Number(data?.id),
+       processRouteId :  Number(processRouteId || 0 ),
+       },
+       include:{
+        pushLogs:true,
+        ProcessRoute:true
+       },
+
+        orderBy: {
+       createAt: "desc", // latest record first
+      },
+
+     })
+
+     console.log(punch_result);
+     
 
     if (!data) return NoRecordFound('Job Card');
 
@@ -362,7 +417,7 @@ async function get_mob_jobcard(req) {
         productionType: resolvedData?.productionType,
         quantity      : resolvedData?.quantity,
         childRecord   : resolvedData?.childRecord,
-
+        punch_data     : punch_result,
         // ─── Approval ──────────────────────
         approvalStatus  : resolvedData?.approvalStatus,  // ✅ full object not .status
         approvalLog     : resolvedData?.approvalLog,
@@ -448,7 +503,12 @@ async function get_mob_joblist(req) {
     include: {
       processRoute :{
         include : {
-          productionAllocationDtls : true
+          productionAllocationDtls : true,
+          Process:{
+            include:{
+              Department : true
+            }
+          }
         }
       },
       
@@ -561,7 +621,8 @@ async function get_mob_joblist(req) {
       id :routes?.id ,
       processRoute: lastNotStarted,
      docId: routes?. docId,
-     approvalStatus : routes?.status
+     approvalStatus : routes?.status,
+     process:routes?.processRoute?.Process
     };
   });
 
@@ -590,7 +651,7 @@ async function getMachinebydep(req) {
   include:{
     machines:{select:{name:true,id:true}}
   }
-})
+ })
 
 
 return {statusCode:0,data:result}
@@ -602,6 +663,27 @@ return {statusCode:0,data:result}
 }
 
 
+async function getEmployeeTakenJobcard(req) {
+
+   const {userid}=req?.query
+
+  var result = await prisma.productionempPunch?.findFirst({
+    where : {
+       Userid : Number(userid || 0)
+    },
+    include:{
+      pushLogs:true,
+      ProcessRoute:true
+    },
+     orderBy: {
+       createAt: "desc", 
+     },
+
+  })
+
+  return {statusCode:0,data:result}
+  
+}
 
 
 
@@ -1652,4 +1734,4 @@ async function remove(id) {
   }
 }
 
-export { get, getOne, create, update, remove, getJobCardList , get_mob_joblist,get_mob_jobcard,getMachinebydep};
+export { get, getOne, create, update, remove, getJobCardList , get_mob_joblist,get_mob_jobcard,getMachinebydep,getEmployeeTakenJobcard};

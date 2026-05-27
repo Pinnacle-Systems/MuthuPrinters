@@ -137,6 +137,83 @@ async function UpdateProcess(req) {
   return {statusCode:1,data};  // ✅ return after transaction completes
 }
 
+
+
+
+async function UpdatePushProcess(req) {
+  const {  flag, productionlogid, userId, id } = req?.body;
+
+   const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istTime = new Date(now.getTime() + istOffset);
+  const istISOString = istTime.toISOString();
+
+  //const currentDate = istTime.toISOString();       
+  const currentTime = istTime.toISOString()        
+
+  let data;
+
+ console.log("Flog",{
+         
+          pushtime: istISOString,
+          productionlog : productionlogid,
+          Userid : userId,
+        });
+ 
+  
+
+  await prisma.$transaction(async (tx) => {
+
+    let addMain_punch_log;
+    
+   if (flag === "PAUSE") {
+
+      
+      addMain_punch_log = await tx.pushLogs.create({
+
+        data: {
+         
+          pushtime: istISOString,
+          productionlog : productionlogid,
+          Userid : userId,
+        },
+      });
+
+    } else if (flag === "RESUME") {
+
+
+      const lastPausedLog = await tx.pushLogs.findFirst({
+  where: {
+    productionlog: productionlogid,
+    Userid:        userId,
+    pushtime:     { not: null },   
+    resumetime:    null,           
+  },
+  orderBy: {
+    pushtime: 'desc',              
+  },
+});
+      
+      addMain_punch_log = await tx.pushLogs.update({
+        where: {
+    id: lastPausedLog.id,           // ✅ unique id — safe to update
+       },
+        data: {
+          resumetime: istISOString,
+        }
+      });
+    }
+
+
+    
+    data =  addMain_punch_log 
+  });
+
+
+   console.log("process PUSH",{statusCode:1,data});
+  return {statusCode:1,data};  
+}
+
 async function update(id, body) {
   const { name, active, companyId, isOutsideJob, departmentId } = await body;
   const dataFound = await prisma.process.findUnique({
@@ -169,4 +246,4 @@ async function remove(id) {
   return { statusCode: 0, data };
 }
 
-export { get, getOne, create, update, remove,UpdateProcess };
+export { get, getOne, create, update, remove,UpdateProcess,UpdatePushProcess };

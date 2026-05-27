@@ -7,7 +7,8 @@ import {
   update,
   remove,
   getJobCardList,get_mob_joblist,get_mob_jobcard,
-  getMachinebydep
+  getMachinebydep,
+  getEmployeeTakenJobcard
 } from "../controllers/jobCard.controller.js";
 
 
@@ -15,6 +16,9 @@ router.post("/", create);
 
 router.get("/", get);
 router?.get("/get_mob_joblist",get_mob_joblist)
+
+router?.get("/getEmployeeTakenJobcard",getEmployeeTakenJobcard)
+
 router?.get("/get_mob_jobcard",get_mob_jobcard)
 router.get("/jobCardList", getJobCardList);
 router.get("/getMachinebydep",getMachinebydep)
