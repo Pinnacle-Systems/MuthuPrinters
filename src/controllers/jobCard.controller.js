@@ -55,6 +55,7 @@ async function get_mob_jobcard(req, res, next) {
     res.json(await _get_mob_jobcard(req));
   } catch (err) {
     console.error(`Error `, err.message);
+    
     res.status(500).json({ statusCode: 0,
   data: null,
   message: err.message,})
