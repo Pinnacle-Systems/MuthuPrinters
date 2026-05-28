@@ -170,6 +170,7 @@ const Sidebar = ({
     "PURCHASE",
     "PRODUCTION",
     "OUTSIDE PROCESS",
+    "SALES",
   ];
 
   const sorted = order

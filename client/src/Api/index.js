@@ -70,3 +70,4 @@ export const MACHINE_API = "machine";
 export const PRODUCTION_OUTWARD_API = "productionOutward";
 export const PRODUCTION_INWARD_API = "productionInward";
 export const PROCESS_BILL_API = "processBill";
+export const SALES_DELIVERY_API = "salesDelivery";

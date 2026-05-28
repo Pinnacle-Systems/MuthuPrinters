@@ -74,6 +74,7 @@ import {
   productionOutward,
   productionInward,
   processBill,
+  salesDelivery,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -82,7 +83,6 @@ const app = express();
 // app.use(express.json());
 
 app.use((req, res, next) => {
-
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
     "Access-Control-Allow-Headers",
@@ -181,6 +181,7 @@ app.use("/machine", machine);
 app.use("/productionOutward", productionOutward);
 app.use("/productionInward", productionInward);
 app.use("/processBill", processBill);
+app.use("/salesDelivery", salesDelivery);
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;

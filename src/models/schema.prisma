@@ -129,6 +129,7 @@ model Branch {
   productionOutwards    ProductionOutward[]
   productionInwards     ProductionInward[]
   processBills          ProcessBill[]
+  salesDeliveries       SalesDelivery[]
 }
 
 model UserOnBranch {
@@ -227,6 +228,8 @@ model User {
 
   pushLogs                      pushLogs[]
   productionemplog              productionempPunch[]
+  salesDeliveriesCreatedBy       SalesDelivery[]        @relation(name: "createdBy")
+  salesDeliveriesUpdatedBy       SalesDelivery[]        @relation(name: "updatedBy")
 }
 
 model Employee {
@@ -495,6 +498,7 @@ model Party {
   productionAllocationDtls ProductionAllocationDtl[]
   productionInwards        ProductionInward[]
   processBills             ProcessBill[]
+  salesDeliveries          SalesDelivery[]
 }
 
 model PartyBranch {
@@ -626,6 +630,7 @@ model Uom {
   styleItems             StyleItem[]
   orderItems             OrderItems[]
   proformaInvoiceItems   ProformaInvoiceItem[]
+  salesDeliveryItems     SalesDeliveryItems[]
 }
 
 model ProductUomPriceDetails {
@@ -979,6 +984,7 @@ model StyleItem {
   proformaInvoiceItems   ProformaInvoiceItem[]
   JobCards               JobCard[]
   productionAllocations  ProductionAllocation[]
+  salesDeliveryItems     SalesDeliveryItems[]
 }
 
 model DeliveryChallan {
@@ -1164,6 +1170,7 @@ model TaxTemplate {
   productionInwards   ProductionInward[]
   proformaInvoices    ProformaInvoice[]
   processBills        ProcessBill[]
+  salesDeliveries     SalesDelivery[]
 }
 
 model TaxTemplateDetails {
@@ -1193,6 +1200,7 @@ model Hsn {
   purchaseBillEntryItems PurchaseBillEntryItems[]
   proformaInvoiceItems   ProformaInvoiceItem[]
   orderItems             OrderItems[]
+  salesDeliveryItems     SalesDeliveryItems[]
 }
 
 model BranchType {
@@ -1312,6 +1320,7 @@ model TermsAndConditions {
   purchaseCancels       PurchaseCancel[]
   orderEntries          OrderEntry[]
   proformaInvoices      ProformaInvoice[]
+  salesDeliveries       SalesDelivery[]
 }
 
 model PayTerm {
@@ -1326,6 +1335,7 @@ model PayTerm {
   aliasName        String?
   pos              Po[]
   proformaInvoices ProformaInvoice[]
+  salesDeliveries  SalesDelivery[]
 }
 
 model PurchaseInward {
@@ -1854,6 +1864,7 @@ model OrderEntry {
   validTo           DateTime?
   attachments       attachments[]
   JobCard           JobCard[]
+  salesDeliveries   SalesDelivery[]
 
   orderItems OrderItems[]
 }
@@ -1865,7 +1876,7 @@ model Process {
   Company          Company?           @relation(fields: [companyId], references: [id])
   companyId        Int?
   isOutsideJob     Boolean?           @default(false)
-  Department       Department?        @relation(fields: [departmentId],references: [id])
+  Department       Department?        @relation(fields: [departmentId], references: [id])
   departmentId     Int?
   processGroupList ProcessGroupList[]
 
@@ -2538,4 +2549,55 @@ model BillingProcess {
   ProcessBillDtl   ProcessBillDtl @relation(fields: [processBillDtlId], references: [id], onDelete: Cascade)
   processId        Int?
   Process          Process?       @relation(fields: [processId], references: [id])
+}
+
+model SalesDelivery {
+  id                 Int                  @id @default(autoincrement())
+  docId              String
+  docDate            DateTime?
+  deliveryDate       DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  createdById        Int?
+  createdBy          User?                @relation("createdBy", fields: [createdById], references: [id])
+  updatedById        Int?
+  updatedBy          User?                @relation("updatedBy", fields: [updatedById], references: [id])
+  branchId           Int?
+  Branch             Branch?              @relation(fields: [branchId], references: [id])
+  customerId         Int?
+  Customer           Party?               @relation(fields: [customerId], references: [id])
+  orderEntryId       Int?
+  OrderEntry         OrderEntry?          @relation(fields: [orderEntryId], references: [id])
+  dcNo               String?
+  vehicleNo          String?
+  deliveryType       String?
+  remarks            String?
+  discountType       String?
+  discountValue      Float?
+  TaxTemplate        TaxTemplate?         @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
+  taxTemplateId      Int?
+  termsAndCondition  String?
+  Terms              TermsAndConditions?  @relation(fields: [termsId], references: [id])
+  termsId            Int?
+  PayTerm            PayTerm?             @relation(fields: [payTermId], references: [id])
+  payTermId          Int?
+  salesDeliveryItems SalesDeliveryItems[]
+}
+
+model SalesDeliveryItems {
+  id              Int           @id @default(autoincrement())
+  salesDeliveryId Int
+  SalesDelivery   SalesDelivery @relation(fields: [salesDeliveryId], references: [id], onDelete: Cascade)
+  styleItemId     Int?
+  StyleItem       StyleItem?    @relation(fields: [styleItemId], references: [id])
+  qty             Float?
+  price           Float?
+  amount          Float?
+  discountType    String?
+  discountValue   Float?
+  taxPercent      Float?
+  uomId           Int?
+  Uom             Uom?          @relation(fields: [uomId], references: [id])
+  hsnId           Int?
+  Hsn             Hsn?          @relation(fields: [hsnId], references: [id])
 }
