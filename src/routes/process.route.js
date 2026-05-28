@@ -7,7 +7,8 @@ import {
   update,
   remove,
   UpdateProcess,
-  UpdatePushProcess
+  UpdatePushProcess,
+  UpdateCurrentProcess
 } from "../controllers/process.controller.js";
 
 router.post("/", create);
@@ -21,6 +22,8 @@ router.put("/:id", update);
 router.put("/Update/Process",UpdateProcess)
 
 router.put("/Update/PushProcess",UpdatePushProcess)
+
+router.put("/Update/CurrentProcess",UpdateCurrentProcess)
 
 router.delete("/:id", remove);
 
