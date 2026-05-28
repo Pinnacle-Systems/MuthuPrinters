@@ -346,7 +346,7 @@ async function create(body) {
           },
 
           data: {
-            status: "PENDING",
+            status: "IN_PROGRESS",
             completedQty: item.sentQty ? parseInt(item.sentQty) : 0,
           },
         }),
@@ -466,7 +466,7 @@ async function update(id, body) {
           },
 
           data: {
-            status: "PENDING",
+            status: "IN_PROGRESS",
 
             completedQty: item.sentQty ? parseInt(item.sentQty) : 0,
           },

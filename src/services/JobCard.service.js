@@ -51,7 +51,6 @@ async function get(req) {
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
-
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
         finYearDate?.startDateStartTime,
@@ -189,92 +188,90 @@ async function get(req) {
   return { statusCode: 0, data: resolvedData, nextDocId: newDocId, totalCount };
 }
 
-
-
 /* Mobile Api's*/
 
 // get job card Details
 async function get_mob_jobcard(req) {
-   const parsedId = parseInt(req?.query?.id);
-   const userId   = parseInt(req?.query?.userid)
-   const processRouteId = parseInt(req?.query?.processRouteId)
+  const parsedId = parseInt(req?.query?.id);
+  const userId = parseInt(req?.query?.userid);
+  const processRouteId = parseInt(req?.query?.processRouteId);
 
-
- var check_punch_result = await prisma.productionempPunch?.findFirst({
-       where : {
-       jobCardId :  Number(parsedId || 0),
-       processRouteId :  Number(processRouteId || 0 ),
-       },
-       include:{
-        pushLogs:true,
-        ProcessRoute:{
-         include :{ Process:true }
-        }
-       },
-      orderBy: {
-       createAt: "desc", 
+  var check_punch_result = await prisma.productionempPunch?.findFirst({
+    where: {
+      jobCardId: Number(parsedId || 0),
+      processRouteId: Number(processRouteId || 0),
+    },
+    include: {
+      pushLogs: true,
+      ProcessRoute: {
+        include: { Process: true },
       },
+    },
+    orderBy: {
+      createAt: "desc",
+    },
+  });
 
-     })
+  //  var pushlog =  check_punch_result?.pushLogs?.findLast(flast=> flast.pushtime && flast.resumetime)
+  var pushlog_last_ = check_punch_result?.pushLogs?.findLast(
+    (flast) => flast.pushtime && !flast.resumetime,
+  );
 
+  if (
+    check_punch_result?.Userid != userId &&
+    check_punch_result &&
+    !pushlog_last_ &&
+    check_punch_result?.ProcessRoute?.status == "IN_PROGRESS"
+  ) {
+    throw new Error("Already another user taken this jobcard");
+  } else if (check_punch_result?.ProcessRoute == "COMPLETED") {
+    throw new Error("Already completed and  taken this jobcard");
+  }
 
-    //  var pushlog =  check_punch_result?.pushLogs?.findLast(flast=> flast.pushtime && flast.resumetime)
-     var pushlog_last_ =  check_punch_result?.pushLogs?.findLast(flast=> flast.pushtime && !flast.resumetime )
-     
-
-     if(check_punch_result?.Userid != userId && check_punch_result && !pushlog_last_  && check_punch_result?.ProcessRoute?.status == "IN_PROGRESS" ) {
-      throw new Error("Already another user taken this jobcard");
-     }else if(check_punch_result?.ProcessRoute == "COMPLETED"){
-
-      throw new Error("Already completed and  taken this jobcard");
-
-     }
-
-
-   if (isNaN(parsedId)) throw new Error('Invalid Job Card ID');
+  if (isNaN(parsedId)) throw new Error("Invalid Job Card ID");
 
   try {
     const data = await prisma.jobCard.findUnique({
       where: { id: parsedId },
       select: {
-        id             : true,
-        docId          : true,
-        createdAt      : true,
-        productionType : true,
-        branchId       : true,
-        customer  : { select: { id: true, name: true } },
-        gsm       : { select: { id: true, name: true } },
-        Branch    : { select: { branchName: true } },
-        Plate     : { select: { id: true, name: true } },
-        Die       : { select: { id: true, name: true } },
+        id: true,
+        docId: true,
+        createdAt: true,
+        productionType: true,
+        branchId: true,
+        customer: { select: { id: true, name: true } },
+        gsm: { select: { id: true, name: true } },
+        Branch: { select: { branchName: true } },
+        Plate: { select: { id: true, name: true } },
+        Die: { select: { id: true, name: true } },
 
         boardQualities: {
           select: {
-            id   : true,
+            id: true,
             Board: { select: { id: true, name: true } },
           },
         },
         processDetails: {
           select: {
-            id     : true,
+            id: true,
             Process: { select: { id: true, name: true } },
           },
         },
         laminationDetails: {
           select: {
-            id        : true,
+            id: true,
             Lamination: { select: { id: true, name: true } },
           },
         },
         varnishDetails: {
           select: {
-            id     : true,
+            id: true,
             Varnish: { select: { id: true, name: true } },
           },
         },
         machineDetails: {
           select: {
-            id     : true,
+            id: true,
             Machine: { select: { id: true, name: true } },
           },
         },
@@ -282,25 +279,25 @@ async function get_mob_jobcard(req) {
         // ─── Process Route ─────────────────
         processRoute: {
           select: {
-            id      : true,
-            status  : true,
+            id: true,
+            status: true,
             sequence: true,
-            Process : { select: { id: true, name: true } },
+            Process: { select: { id: true, name: true } },
             productionAllocationDtls: {
               select: {
-                id       : true,
+                id: true,
                 isInHouse: true,
               },
             },
           },
-          orderBy: { sequence: 'asc' },
+          orderBy: { sequence: "asc" },
         },
 
         // ─── Other Details ─────────────────
-        jobCardSizeDetails : true,
-        printingDetails    : true,
-        finishingProcesses : true,
-        plateDetails       : true,
+        jobCardSizeDetails: true,
+        printingDetails: true,
+        finishingProcesses: true,
+        plateDetails: true,
 
         _count: {
           select: { productionAllocations: true },
@@ -308,27 +305,25 @@ async function get_mob_jobcard(req) {
       },
     });
 
-     var punch_result = await prisma.productionempPunch?.findFirst({
-       where : {
-       Userid : Number(userId || 0),
-       jobCardId :  Number(data?.id),
-       processRouteId :  Number(processRouteId || 0 ),
-       },
-       include:{
-        pushLogs:true,
-        ProcessRoute:true
-       },
-
-        orderBy: {
-       createAt: "desc", // latest record first
+    var punch_result = await prisma.productionempPunch?.findFirst({
+      where: {
+        Userid: Number(userId || 0),
+        jobCardId: Number(data?.id),
+        processRouteId: Number(processRouteId || 0),
+      },
+      include: {
+        pushLogs: true,
+        ProcessRoute: true,
       },
 
-     })
+      orderBy: {
+        createAt: "desc", // latest record first
+      },
+    });
 
-     console.log(punch_result);
-     
+    console.log(punch_result);
 
-    if (!data) return NoRecordFound('Job Card');
+    if (!data) return NoRecordFound("Job Card");
 
     // ── Approval setup ────────────────────
     const { module, hasApproval } = await getModuleApprovalSetup(
@@ -336,19 +331,19 @@ async function get_mob_jobcard(req) {
       data.branchId,
     );
 
-    let log           = null;
+    let log = null;
     let shouldTrigger = false;
 
     if (hasApproval && module) {
       log = await prisma.approvalLog.findFirst({
         where: {
           referencePage: REFERENCE_PAGE,
-          referenceId  : data.id,
+          referenceId: data.id,
         },
         include: {
           LevelLogs: {
             include: { User: { select: { id: true, username: true } } },
-            orderBy : { createdAt: 'asc' },
+            orderBy: { createdAt: "asc" },
           },
         },
       });
@@ -356,16 +351,16 @@ async function get_mob_jobcard(req) {
       if (!log) {
         const activeConfigs = await prisma.approvalConfig.findMany({
           where: {
-            moduleId : module.id,
-            branchId : parseInt(branchId || data.branchId),
-            active   : true,
+            moduleId: module.id,
+            branchId: parseInt(branchId || data.branchId),
+            active: true,
           },
           include: {
             ConfigConditions: {
               include: {
-                Field        : true,
-                Operator     : true,
-                CompareField : true,
+                Field: true,
+                Operator: true,
+                CompareField: true,
               },
             },
           },
@@ -381,78 +376,77 @@ async function get_mob_jobcard(req) {
     const resolvedData = {
       ...data,
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
-      approvalLog   : log,
-      childRecord   : data._count.productionAllocations,
+      approvalLog: log,
+      childRecord: data._count.productionAllocations,
     };
 
     // ── Same logic as filtered_ but for single object ──
-    const status    = resolvedData?.approvalStatus?.status;
-    const isAllowed = status === 'APPROVED' || status === 'NOT_CONFIGURED';
+    const status = resolvedData?.approvalStatus?.status;
+    const isAllowed = status === "APPROVED" || status === "NOT_CONFIGURED";
 
     if (!isAllowed) {
       return {
         statusCode: 1,
-        message   : 'Job Card is not approved or configured',
+        message: "Job Card is not approved or configured",
       };
     }
 
-
-    var Sorted_Sequence = resolvedData?.processRoute?.sort((a,b) => a.sequence - b.sequence)
+    var Sorted_Sequence = resolvedData?.processRoute?.sort(
+      (a, b) => a.sequence - b.sequence,
+    );
 
     // ── Find last NOT_STARTED process route ──
-    const lastNotStarted = resolvedData?.processRoute?.find(
-      (last_taken) => last_taken?.status === 'NOT_STARTED' ||  last_taken?.status === 'IN_PROGRESS'
-    ) ?? null;
-
-   
-    
+    const lastNotStarted =
+      resolvedData?.processRoute?.find(
+        (last_taken) =>
+          last_taken?.status === "NOT_STARTED" ||
+          last_taken?.status === "IN_PROGRESS",
+      ) ?? null;
 
     return {
       statusCode: 0,
       data: {
         // ─── Core ──────────────────────────
-        id            : resolvedData?.id,
-        docId         : resolvedData?.docId,
-        createdAt     : resolvedData?.createdAt,
+        id: resolvedData?.id,
+        docId: resolvedData?.docId,
+        createdAt: resolvedData?.createdAt,
         productionType: resolvedData?.productionType,
-        quantity      : resolvedData?.quantity,
-        childRecord   : resolvedData?.childRecord,
-        punch_data     : punch_result,
+        quantity: resolvedData?.quantity,
+        childRecord: resolvedData?.childRecord,
+        punch_data: punch_result,
         // ─── Approval ──────────────────────
-        approvalStatus  : resolvedData?.approvalStatus,  // ✅ full object not .status
-        approvalLog     : resolvedData?.approvalLog,
+        approvalStatus: resolvedData?.approvalStatus, // ✅ full object not .status
+        approvalLog: resolvedData?.approvalLog,
 
         // ─── Process Route ─────────────────
-        processRoute    : lastNotStarted,               // ✅ only NOT_STARTED route
-        allProcessRoutes: resolvedData?.processRoute,   // ✅ full list for timeline
+        processRoute: lastNotStarted, // ✅ only NOT_STARTED route
+        allProcessRoutes: resolvedData?.processRoute, // ✅ full list for timeline
 
         // ─── Relations ─────────────────────
-        customer : resolvedData?.customer,
-        gsm      : resolvedData?.gsm,
-        Branch   : resolvedData?.Branch,
-        Plate    : resolvedData?.Plate,
-        Die      : resolvedData?.Die,
+        customer: resolvedData?.customer,
+        gsm: resolvedData?.gsm,
+        Branch: resolvedData?.Branch,
+        Plate: resolvedData?.Plate,
+        Die: resolvedData?.Die,
 
         // ─── Details ───────────────────────
-        boardQualities    : resolvedData?.boardQualities,
-        processDetails    : resolvedData?.processDetails,
-        laminationDetails : resolvedData?.laminationDetails,
-        varnishDetails    : resolvedData?.varnishDetails,
-        machineDetails    : resolvedData?.machineDetails,
+        boardQualities: resolvedData?.boardQualities,
+        processDetails: resolvedData?.processDetails,
+        laminationDetails: resolvedData?.laminationDetails,
+        varnishDetails: resolvedData?.varnishDetails,
+        machineDetails: resolvedData?.machineDetails,
         jobCardSizeDetails: resolvedData?.jobCardSizeDetails,
-        printingDetails   : resolvedData?.printingDetails,
+        printingDetails: resolvedData?.printingDetails,
         finishingProcesses: resolvedData?.finishingProcesses,
-        plateDetails      : resolvedData?.plateDetails,
+        plateDetails: resolvedData?.plateDetails,
       },
     };
-
   } catch (error) {
     throw new Error(`Failed to fetch job card: ${error.message}`);
   }
 }
 
 async function get_mob_joblist(req) {
-  
   const {
     branchId,
     pagination,
@@ -467,8 +461,6 @@ async function get_mob_joblist(req) {
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
- 
-  
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
         finYearDate?.startDateStartTime,
@@ -501,18 +493,17 @@ async function get_mob_joblist(req) {
       },
     },
     include: {
-      processRoute :{
-        include : {
-          productionAllocationDtls : true,
-          Process:{
-            include:{
-              Department : true
-            }
-          }
-        }
+      processRoute: {
+        include: {
+          productionAllocationDtls: true,
+          Process: {
+            include: {
+              Department: true,
+            },
+          },
+        },
       },
-      
-   },
+    },
     orderBy: { id: "desc" },
   });
   if (searchDocDate) {
@@ -521,9 +512,6 @@ async function get_mob_joblist(req) {
     );
   }
 
-
-
-  
   let totalCount = data.length;
 
   // if (pagination) {
@@ -600,40 +588,36 @@ async function get_mob_joblist(req) {
     return {
       ...jobCard,
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
-    
     };
   });
 
+  var filtered_ = resolvedData
+    ?.filter((resolved_) => {
+      const status = resolved_?.approvalStatus?.status;
+      return status === "APPROVED" || status === "NOT_CONFIGURED";
+    })
+    ?.map((routes) => {
+      var Sorted_Sequence = routes?.processRoute?.sort(
+        (a, b) => a.sequence - b.sequence,
+      );
+      const lastNotStarted = Sorted_Sequence?.find(
+        (last_taken) =>
+          last_taken?.status === "NOT_STARTED" ||
+          last_taken?.status === "IN_PROGRESS",
+      );
+      return {
+        id: routes?.id,
+        processRoute: lastNotStarted,
+        docId: routes?.docId,
+        approvalStatus: routes?.status,
+        process: routes?.processRoute?.Process,
+      };
+    });
 
-  
-
- var filtered_ = resolvedData
-  ?.filter((resolved_) => {
-    const status = resolved_?.approvalStatus?.status;
-    return status === "APPROVED" || status === "NOT_CONFIGURED";
-  })
-  ?.map((routes) => {
-    var Sorted_Sequence = routes?.processRoute?.sort((a,b) => a.sequence - b.sequence)
-    const lastNotStarted = Sorted_Sequence?.find(
-      (last_taken) => last_taken?.status === "NOT_STARTED"  ||  last_taken?.status === 'IN_PROGRESS'
-    );
-    return {
-      id :routes?.id ,
-      processRoute: lastNotStarted,
-     docId: routes?. docId,
-     approvalStatus : routes?.status,
-     process:routes?.processRoute?.Process
-    };
-  });
-
- 
-  
-  
-
-             //  data[1]?.processRoute[0]?.productionAllocationDtls[0]?.isInHouse
+  //  data[1]?.processRoute[0]?.productionAllocationDtls[0]?.isInHouse
 
   if (pagination) {
-      filtered_ = filtered_.slice(
+    filtered_ = filtered_.slice(
       (pageNumber - 1) * parseInt(dataPerPage),
       pageNumber * parseInt(dataPerPage),
     );
@@ -643,53 +627,38 @@ async function get_mob_joblist(req) {
 }
 
 async function getMachinebydep(req) {
-
- const { id } = req.query;
+  const { id } = req.query;
 
   var result = await prisma.department.findUnique({
-  where:{id: Number(id || 0)},
-  include:{
-    machines:{select:{name:true,id:true}}
-  }
- })
+    where: { id: Number(id || 0) },
+    include: {
+      machines: { select: { name: true, id: true } },
+    },
+  });
 
-
-return {statusCode:0,data:result}
-
-
-
-  
-  
+  return { statusCode: 0, data: result };
 }
-
 
 async function getEmployeeTakenJobcard(req) {
-
-   const {userid}=req?.query
+  const { userid } = req?.query;
 
   var result = await prisma.productionempPunch?.findFirst({
-    where : {
-       Userid : Number(userid || 0)
+    where: {
+      Userid: Number(userid || 0),
     },
-    include:{
-      pushLogs:true,
-      ProcessRoute:true
+    include: {
+      pushLogs: true,
+      ProcessRoute: true,
     },
-     orderBy: {
-       createAt: "desc", 
-     },
+    orderBy: {
+      createAt: "desc",
+    },
+  });
 
-  })
-
-  return {statusCode:0,data:result}
-  
+  return { statusCode: 0, data: result };
 }
 
-
-
 /* End Mobile Api's*/
-
-
 
 async function getJobCardList(req) {
   const { branchId, companyId, isDropdown, isProcessIssue } = req.query;
@@ -717,7 +686,7 @@ async function getJobCardList(req) {
       OrderEntry: { select: { docId: true } },
       StyleItem: { select: { name: true } },
       productionAllocations: {
-         select: {
+        select: {
           id: true,
           docId: true,
         },
@@ -1019,6 +988,7 @@ async function create(body) {
       blockDate,
       isRepeatedJobCard,
       refJobCardId,
+      storeId,
     } = body;
 
     // ─────────────────────────────
@@ -1060,6 +1030,28 @@ async function create(body) {
     );
     let data;
 
+    const boardData = await prisma.process.findFirst({
+      where: {
+        id: parseInt(safeBoardItems[0]),
+      },
+      select: {
+        name: true,
+      },
+    });
+
+    const itemData = await prisma.styleItem.findFirst({
+      where: {
+        name: boardData?.name,
+      },
+      select: {
+        id: true,
+        uomId: true,
+        hsnId: true,
+        itemGroupId: true,
+        gsmId: true,
+      },
+    });
+
     await prisma.$transaction(async (tx) => {
       data = await tx.jobCard.create({
         data: {
@@ -1087,7 +1079,7 @@ async function create(body) {
           isCutColor: !!isCutColor,
           isFront: !!isFront,
           isFrontAndBack: !!isFrontAndBack,
-
+          storeId: parseInt(storeId),
           isCMYK: !!isCMYK,
           isCutColMachine: !!isCutColMachine,
           isFrontMachine: !!isFrontMachine,
@@ -1231,6 +1223,27 @@ async function create(body) {
             : undefined,
         },
       });
+      if (itemData) {
+        await tx.stock.create({
+          data: {
+            inOrOut: "Out",
+            processName: "Job Card",
+            createdById: parseInt(userId),
+            branchId: parseInt(branchId),
+            storeId: parseInt(storeId),
+            jobCardId: data.id,
+            styleItemId: itemData?.id || null,
+            uomId: itemData?.uomId || null,
+            hsnId: itemData?.hsnId || null,
+            qty:
+              noOfPockets && !isNaN(parseInt(noOfPockets))
+                ? -Math.abs(parseInt(noOfPockets))
+                : null,
+            itemGroupId: itemData?.itemGroupId || null,
+            gsmId: itemData?.gsmId || null,
+          },
+        });
+      }
       if (hasApproval && module) {
         // ✅ Dynamic include — pulls every relation any Field master references
         const includeClause = await buildIncludeForModule(module.id);
@@ -1252,8 +1265,6 @@ async function create(body) {
         );
       }
     });
-
-    console.log("✅ CREATED SUCCESS:", data);
 
     return { statusCode: 0, data };
   } catch (err) {
@@ -1322,6 +1333,7 @@ async function update(id, body) {
       isRepeatedJobCard,
       refJobCardId,
       isAmendment,
+      storeId,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -1338,6 +1350,27 @@ async function update(id, body) {
       branchId,
     );
     let data;
+    const boardData = await prisma.process.findFirst({
+      where: {
+        id: parseInt(boardItems[0]),
+      },
+      select: {
+        name: true,
+      },
+    });
+
+    const itemData = await prisma.styleItem.findFirst({
+      where: {
+        name: boardData?.name,
+      },
+      select: {
+        id: true,
+        uomId: true,
+        hsnId: true,
+        itemGroupId: true,
+        gsmId: true,
+      },
+    });
     await prisma.$transaction(async (tx) => {
       // Delete all child records first, then recreate (simplest safe strategy)
       await tx.boardQuality.deleteMany({ where: { jobCardId: parseInt(id) } });
@@ -1573,6 +1606,7 @@ async function update(id, body) {
           blockDate: blockDate ? new Date(blockDate) : null,
           isRepeatedJobCard: !!isRepeatedJobCard,
           refJobCardId: refJobCardId ? Number(refJobCardId) : null,
+          storeId: storeId ? Number(storeId) : null,
           boardQualities:
             boardItems.length > 0
               ? {
@@ -1676,6 +1710,29 @@ async function update(id, body) {
             : undefined,
         },
       });
+      if (itemData) {
+        await tx.stock.updateMany({
+          where: {
+            jobCardId: parseInt(data.id),
+          },
+          data: {
+            inOrOut: "Out",
+            processName: "Job Card",
+            updatedById: parseInt(userId),
+            branchId: parseInt(branchId),
+            storeId: parseInt(storeId),
+            styleItemId: itemData?.id || null,
+            uomId: itemData?.uomId || null,
+            hsnId: itemData?.hsnId || null,
+            qty:
+              noOfPockets && !isNaN(parseInt(noOfPockets))
+                ? -Math.abs(parseInt(noOfPockets))
+                : null,
+            itemGroupId: itemData?.itemGroupId || null,
+            gsmId: itemData?.gsmId || null,
+          },
+        });
+      }
       if (submitApproval && hasApproval && module) {
         await tx.approvalLog.deleteMany({
           where: {
@@ -1734,4 +1791,15 @@ async function remove(id) {
   }
 }
 
-export { get, getOne, create, update, remove, getJobCardList , get_mob_joblist,get_mob_jobcard,getMachinebydep,getEmployeeTakenJobcard};
+export {
+  get,
+  getOne,
+  create,
+  update,
+  remove,
+  getJobCardList,
+  get_mob_joblist,
+  get_mob_jobcard,
+  getMachinebydep,
+  getEmployeeTakenJobcard,
+};

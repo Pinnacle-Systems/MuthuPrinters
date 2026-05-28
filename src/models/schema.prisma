@@ -226,10 +226,10 @@ model User {
   processBillsCreatedBy          ProcessBill[]          @relation(name: "createdBy")
   processBillsUpdatedBy          ProcessBill[]          @relation(name: "updatedBy")
 
-  pushLogs                      pushLogs[]
-  productionemplog              productionempPunch[]
-  salesDeliveriesCreatedBy       SalesDelivery[]        @relation(name: "createdBy")
-  salesDeliveriesUpdatedBy       SalesDelivery[]        @relation(name: "updatedBy")
+  pushLogs                 pushLogs[]
+  productionemplog         productionempPunch[]
+  salesDeliveriesCreatedBy SalesDelivery[]      @relation(name: "createdBy")
+  salesDeliveriesUpdatedBy SalesDelivery[]      @relation(name: "updatedBy")
 }
 
 model Employee {
@@ -348,17 +348,16 @@ model City {
 }
 
 model Department {
-  id        Int        @id @default(autoincrement())
-  name      String
-  code      String
-  active    Boolean    @default(true)
-  doctor    Employee[] @relation()
-  Company   Company    @relation(fields: [companyId], references: [id])
-  companyId Int
+  id                 Int                  @id @default(autoincrement())
+  name               String
+  code               String
+  active             Boolean              @default(true)
+  doctor             Employee[]           @relation()
+  Company            Company              @relation(fields: [companyId], references: [id])
+  companyId          Int
   productionempPunch productionempPunch[]
-  machines Machine[]
-  processes Process[]
-  
+  machines           Machine[]
+  processes          Process[]
 }
 
 enum PageType {
@@ -802,6 +801,8 @@ model Stock {
   colorId               Int?
   Gsm                   Gsm?                 @relation(fields: [gsmId], references: [id])
   gsmId                 Int?
+  JobCard               JobCard?             @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  jobCardId             Int?
 }
 
 model SalesBill {
@@ -1424,6 +1425,7 @@ model Location {
   stocks                Stock[]
   purchaseInwardReturns PurchaseInwardReturn[]
   purchaseCancels       PurchaseCancel[]
+  jobCards              JobCard[]
 }
 
 model PurchaseInwardReturn {
@@ -2017,6 +2019,8 @@ model JobCard {
   isRepeatedJobCard  Boolean?    @default(false)
   refJobCardId       Int?
   RefJobCard         JobCard?    @relation("RepeatedJobCard", fields: [refJobCardId], references: [id])
+  Store              Location?   @relation(fields: [storeId], references: [id])
+  storeId            Int?
 
   boardQualities        BoardQuality[]
   processDetails        ProcessDetails[]
@@ -2034,7 +2038,8 @@ model JobCard {
   productionInwards     ProductionInward[]
   productionInwardDtls  ProductionInwardDtl[]
   processBillDtls       ProcessBillDtl[]
-    productionempPunch        productionempPunch[]
+  productionempPunch    productionempPunch[]
+  stocks                Stock[]
 }
 
 model BoardQuality {
@@ -2173,36 +2178,35 @@ model ProcessRoute {
   productionempPunch       productionempPunch[]
 }
 
-model productionempPunch{
-   id             Int      @id @default(autoincrement())
-   jobCardId      Int?
-   JobCard        JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
-   processRouteId  Int?
-   ProcessRoute    ProcessRoute? @relation(fields: [processRouteId], references: [id])
-   startDate       DateTime?
-   endDate         DateTime?
-   startTime       DateTime? @db.Time(0)
-   endTime       DateTime? @db.Time(0)
-   createAt        DateTime @default(now())
-   Userid         Int
-   User            User @relation(fields: [Userid],references: [id])
-   departmentid    Int
-   deparment      Department @relation(fields: [departmentid],references: [id])
-   Machineid      Int
-   Machine       Machine  @relation(fields: [Machineid],references: [id])
-   pushLogs      pushLogs[]
-
+model productionempPunch {
+  id             Int           @id @default(autoincrement())
+  jobCardId      Int?
+  JobCard        JobCard?      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processRouteId Int?
+  ProcessRoute   ProcessRoute? @relation(fields: [processRouteId], references: [id])
+  startDate      DateTime?
+  endDate        DateTime?
+  startTime      DateTime?     @db.Time(0)
+  endTime        DateTime?     @db.Time(0)
+  createAt       DateTime      @default(now())
+  Userid         Int
+  User           User          @relation(fields: [Userid], references: [id])
+  departmentid   Int
+  deparment      Department    @relation(fields: [departmentid], references: [id])
+  Machineid      Int
+  Machine        Machine       @relation(fields: [Machineid], references: [id])
+  pushLogs       pushLogs[]
 }
 
-model pushLogs{
-   id             Int      @id @default(autoincrement())
-   Userid         Int
-   User            User @relation(fields: [Userid],references: [id])
-   pushtime       DateTime?
-   resumetime     DateTime?
-   productionlog  Int
-   productionempPunch  productionempPunch @relation(fields: [productionlog],references: [id])
-   }
+model pushLogs {
+  id                 Int                @id @default(autoincrement())
+  Userid             Int
+  User               User               @relation(fields: [Userid], references: [id])
+  pushtime           DateTime?
+  resumetime         DateTime?
+  productionlog      Int
+  productionempPunch productionempPunch @relation(fields: [productionlog], references: [id])
+}
 
 model ProformaInvoice {
   id                Int                   @id @default(autoincrement())
@@ -2315,6 +2319,7 @@ model Bank {
   active    Boolean  @default(true)
 
   proformaInvoices ProformaInvoice[]
+  salesDeliveries  SalesDelivery[]
 }
 
 model ProductionAllocation {
@@ -2334,6 +2339,7 @@ model ProductionAllocation {
   StyleItem   StyleItem? @relation(fields: [styleItemId], references: [id])
   Branch      Branch?    @relation(fields: [branchId], references: [id])
   branchId    Int?
+  priority    String?
 
   allocationDetails ProductionAllocationDtl[]
 
@@ -2370,8 +2376,8 @@ model Machine {
   Department   Department? @relation(fields: [departmentId], references: [id])
   departmentId Int?
 
-  machineDetails MachineDetails[]
-  productionempPunch  productionempPunch[]
+  machineDetails     MachineDetails[]
+  productionempPunch productionempPunch[]
 }
 
 model Notification {
@@ -2581,6 +2587,8 @@ model SalesDelivery {
   termsId            Int?
   PayTerm            PayTerm?             @relation(fields: [payTermId], references: [id])
   payTermId          Int?
+  Bank               Bank?                @relation(fields: [bankId], references: [id])
+  bankId             Int?
   salesDeliveryItems SalesDeliveryItems[]
 }
 
