@@ -9,6 +9,9 @@ const adapter = new PrismaPg({ connectionString });
 const prisma =
   globalForPrisma.__muthuPrintersPrisma ?? new PrismaClient({ adapter });
 
+  
+ 
+
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.__muthuPrintersPrisma = prisma;
 }

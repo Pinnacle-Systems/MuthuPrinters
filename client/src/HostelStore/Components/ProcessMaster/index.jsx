@@ -299,7 +299,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                                             required={true}
                                             readOnly={readOnly}
                                             className={`w-[150px]`}
-                                            disabled={childRecord.current > 0}
+                                          //  disabled={childRecord.current > 0}
                                             addNewLabel="+ Add New Department"
                                             childComponent={DepartmentMaster}
                                             addNewModalWidth="w-[40%] h-[48%]"

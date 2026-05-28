@@ -1,4 +1,5 @@
-import { prisma } from "../lib/prisma.js";
+import { prisma, Prisma } from "../lib/prisma.js";
+
 
 import {
   get as _get,
@@ -6,6 +7,8 @@ import {
   create as _create,
   update as _update,
   remove as _remove,
+  UpdateProcess as _UpdateProcess,
+  UpdatePushProcess as _UpdatePushProcess
 } from "../services/process.service.js";
 
 async function get(req, res, next) {
@@ -21,6 +24,59 @@ async function getOne(req, res, next) {
     res.json(await _getOne(req.params.id));
   } catch (err) {
     console.error(`Error`, err.message);
+  }
+}
+
+
+async function UpdateProcess(req, res, next) {
+  try {
+    res.json(await _UpdateProcess(req));
+  } catch (error) {
+    console.error(`Error`, error.message);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) { // ✅ Fixed
+      if (error.code === "P2002") {
+        return res.status(200).json({
+          statusCode: 0,
+          message: `${error.meta.target.split("_")[1].toUpperCase()} Already exists`,
+        });
+      }
+      if (error.code === "P2025") { // ✅ Added
+        return res.status(200).json({
+          statusCode: 0,
+          message: "Record not found. Update failed.",
+        });
+      }
+    } else {
+      res.json({ statusCode: 1, message: error.message });
+    }
+  }
+}
+
+
+
+
+
+async function UpdatePushProcess(req, res, next) {
+  try {
+    res.json(await _UpdatePushProcess(req));
+  } catch (error) {
+    console.error(`Error`, error.message);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) { // ✅ Fixed
+      if (error.code === "P2002") {
+        return res.status(200).json({
+          statusCode: 0,
+          message: `${error.meta.target.split("_")[1].toUpperCase()} Already exists`,
+        });
+      }
+      if (error.code === "P2025") { // ✅ Added
+        return res.status(200).json({
+          statusCode: 0,
+          message: "Record not found. Update failed.",
+        });
+      }
+    } else {
+      res.json({ statusCode: 1, message: error.message });
+    }
   }
 }
 
@@ -80,4 +136,4 @@ async function remove(req, res, next) {
   }
 }
 
-export { get, getOne, create, update, remove };
+export { get, getOne, create, update, remove,UpdateProcess,UpdatePushProcess };

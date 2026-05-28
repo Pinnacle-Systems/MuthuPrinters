@@ -225,6 +225,9 @@ model User {
   productionInwardsUpdatedBy     ProductionInward[]     @relation("InwardUpdatedBy")
   processBillsCreatedBy          ProcessBill[]          @relation(name: "createdBy")
   processBillsUpdatedBy          ProcessBill[]          @relation(name: "updatedBy")
+
+  pushLogs                      pushLogs[]
+  productionemplog              productionempPunch[]
   salesDeliveriesCreatedBy       SalesDelivery[]        @relation(name: "createdBy")
   salesDeliveriesUpdatedBy       SalesDelivery[]        @relation(name: "updatedBy")
 }
@@ -352,9 +355,10 @@ model Department {
   doctor    Employee[] @relation()
   Company   Company    @relation(fields: [companyId], references: [id])
   companyId Int
-
-  machines  Machine[]
+  productionempPunch productionempPunch[]
+  machines Machine[]
   processes Process[]
+  
 }
 
 enum PageType {
@@ -2030,6 +2034,7 @@ model JobCard {
   productionInwards     ProductionInward[]
   productionInwardDtls  ProductionInwardDtl[]
   processBillDtls       ProcessBillDtl[]
+    productionempPunch        productionempPunch[]
 }
 
 model BoardQuality {
@@ -2165,7 +2170,39 @@ model ProcessRoute {
   completedQty   Int?
 
   productionAllocationDtls ProductionAllocationDtl[]
+  productionempPunch       productionempPunch[]
 }
+
+model productionempPunch{
+   id             Int      @id @default(autoincrement())
+   jobCardId      Int?
+   JobCard        JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+   processRouteId  Int?
+   ProcessRoute    ProcessRoute? @relation(fields: [processRouteId], references: [id])
+   startDate       DateTime?
+   endDate         DateTime?
+   startTime       DateTime? @db.Time(0)
+   endTime       DateTime? @db.Time(0)
+   createAt        DateTime @default(now())
+   Userid         Int
+   User            User @relation(fields: [Userid],references: [id])
+   departmentid    Int
+   deparment      Department @relation(fields: [departmentid],references: [id])
+   Machineid      Int
+   Machine       Machine  @relation(fields: [Machineid],references: [id])
+   pushLogs      pushLogs[]
+
+}
+
+model pushLogs{
+   id             Int      @id @default(autoincrement())
+   Userid         Int
+   User            User @relation(fields: [Userid],references: [id])
+   pushtime       DateTime?
+   resumetime     DateTime?
+   productionlog  Int
+   productionempPunch  productionempPunch @relation(fields: [productionlog],references: [id])
+   }
 
 model ProformaInvoice {
   id                Int                   @id @default(autoincrement())
@@ -2334,6 +2371,7 @@ model Machine {
   departmentId Int?
 
   machineDetails MachineDetails[]
+  productionempPunch  productionempPunch[]
 }
 
 model Notification {
