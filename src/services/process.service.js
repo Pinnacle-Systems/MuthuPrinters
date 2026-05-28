@@ -72,8 +72,23 @@ async function create(body) {
 }
 
 
+
+async function UpdateCurrentProcess(req) {
+  const { status, processId } = req?.body;
+
+  const data = await prisma.processRoute.update({
+    where: { id: Number(processId ?? 0) },
+    data: {
+      status,
+    },
+  });
+
+  return { statusCode: 1, data };
+}
+
+
 async function UpdateProcess(req) {
-  const { status, jobcardId, processId,flag, type, departmentId, machineId, userId, id } = req?.body;
+  const { status, jobcardId, processId,flag, type, departmentId, machineId, userId, id , completedQty} = req?.body;
 
   // Get current time in IST (UTC+5:30)
    const now = new Date();
@@ -117,12 +132,27 @@ async function UpdateProcess(req) {
       });
 
     } else if (flag === "STOP") {
+ console.log("com",completedQty)
+      if(!completedQty)  throw new Error("Completed Qty Must Be Entered")
+      if (Number(completedQty ?? 0) <= 0) throw new Error("Completed Qty must be greater than 0");
+
+         
+
+        await tx.processRoute.update({
+        where: {
+        id: Number(processId || 0),
+        },
+        data: {
+       completedQty : Number(completedQty),
+        },
+        });
       
       addMain_punch_log = await tx.productionempPunch.update({
         where: { id: Number(id) },  // ← real punchId from frontend
         data: {
           endDate: istISOString,
           endTime: istISOString,
+          
         },
       });
     }
@@ -246,4 +276,4 @@ async function remove(id) {
   return { statusCode: 0, data };
 }
 
-export { get, getOne, create, update, remove,UpdateProcess,UpdatePushProcess };
+export { get, getOne, create, update, remove,UpdateProcess,UpdatePushProcess,UpdateCurrentProcess };

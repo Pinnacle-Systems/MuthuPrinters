@@ -111,11 +111,11 @@ async function login(req) {
 
   const token = jwt.sign(
     {
-      userId: data.id,
-      userName: data.username,
-      roleId: data.role.id,
-      roleName: data.role.name,
-      companyId: data.role.companyId,
+      userId: data?.id,
+      userName: data?.username,
+      roleId: data?.role?.id,
+      roleName: data?.role?.name,
+      companyId: data?.role?.companyId,
       finyearId: FinyearData?.id,
     },
     "RANDOM-TOKEN",
