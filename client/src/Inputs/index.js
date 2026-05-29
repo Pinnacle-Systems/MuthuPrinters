@@ -32,6 +32,7 @@ import {
   focusPreviousGridField,
 } from "../Basic/components/Reuseable/gridNavigation";
 import { UserPermissions } from "../Utils/UserPermissions";
+import Swal from "sweetalert2";
 
 const FORM_LABEL_CLASS = "block text-[11px] font-bold text-slate-700 mb-1";
 const FORM_LABEL_MUTED_CLASS = "block text-[11px] font-bold text-gray-600 mb-1";
@@ -83,6 +84,7 @@ export const MultiSelectDropdown = ({
   onFocus,
   containerRef,
   onTabFromLastItem,
+  labelSize = "12px",
 }) => {
   const wrapperRef = useRef(null);
   const resolvedRef = containerRef || wrapperRef;
@@ -121,10 +123,10 @@ export const MultiSelectDropdown = ({
   return (
     <div
       ref={resolvedRef}
-      className={`m-0.5 md:grid-cols-2 items-center z-0 data ${className}`}
+      className={`m-0 md:grid-cols-2 items-center z-0 data ${className}`}
     >
       <label
-        className={`md:text-start block text-[11px] font-bold text-slate-700 mb-1${labelName}`}
+        className={`md:text-start block text-[${labelSize}] font-bold text-slate-700 mb-1 ${labelName}`}
       >
         {name}
       </label>
@@ -137,10 +139,15 @@ export const MultiSelectDropdown = ({
         hasSelectAll={false}
         styles={{
           menuPortal: (base) => ({ ...base, zIndex: 99999 }),
-          container: (base) => ({
+          control: (base) => ({
             ...base,
-            fontSize: "12px",
-            minHeight: "28px",
+            minHeight: "18px",
+            height: "18px",
+            borderRadius: "4px",
+            boxShadow: "none",
+            border: "1px solid #cbd5e1",
+            padding: "0px",
+            fontSize: "9px",
           }),
           control: (base) => ({
             ...base,
@@ -148,27 +155,45 @@ export const MultiSelectDropdown = ({
             borderRadius: "10px",
             boxShadow: "none",
             border: "1px solid #ccc",
-            minHeight: "28px",
+            minHeight: "22px",
           }),
           option: (base, state) => ({
             ...base,
-            fontSize: "12px",
+            fontSize: "10px",
             backgroundColor: state.isSelected ? "#e0e7ff" : "#fff",
             padding: "4px 8px",
+            color: state.isDisabled ? "#999" : "#000",
+            cursor: state.isDisabled ? "not-allowed" : "pointer",
           }),
           chips: (base) => ({
             ...base,
-            fontSize: "12px",
-            padding: "2px 4px",
+            fontSize: "8px",
+            padding: "0px 2px",
+            minHeight: "14px",
           }),
           searchBox: (base) => ({
             ...base,
-            fontSize: "12px",
+            fontSize: "10px",
             padding: "2px",
+          }),
+          dropdownButton: (base) => ({
+            ...base,
+            padding: "0px 4px",
+            height: "20px",
+          }),
+          clearButton: (base) => ({
+            ...base,
+            padding: "0px 2px",
+            height: "16px",
+          }),
+          valueContainer: (base) => ({
+            ...base,
+            padding: "0px 2px",
+            gap: "1px",
           }),
         }}
         className="custom-multiselect"
-        disabled={readOnly || disabled}
+        disabled={disabled}
         onBlur={onBlur}
         onFocus={onFocus}
       />
@@ -281,6 +306,7 @@ export const TextInput = forwardRef(
       autoFocus,
       onKeyDown,
       onFocus,
+      max,
     },
     ref,
   ) => {
@@ -289,8 +315,24 @@ export const TextInput = forwardRef(
         const val = Number(e.target.value);
 
         if (!isNaN(val) && val < 0) {
-          alert(`${name} cannot be negative`);
+          Swal.fire({
+            icon: "warning",
+            title: "Invalid Quantity",
+            text: `${name || "Value"} cannot be negative`,
+            confirmButtonColor: "#6366f1",
+          });
           setValue(""); // or "" if you prefer
+          return;
+        }
+
+        if (!isNaN(val) && max !== undefined && val > max) {
+          Swal.fire({
+            icon: "warning",
+            title: "Invalid Quantity",
+            text: `${name || "Value"} cannot exceed ${max}`,
+            confirmButtonColor: "#6366f1",
+          });
+          setValue(max);
           return;
         }
       }
