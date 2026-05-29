@@ -1032,6 +1032,47 @@ async function getOne(id) {
   });
 
   if (!data) return NoRecordFound("Job Card");
+
+  let stockQty = 0;
+
+  const boardId = data?.boardQualities?.[0]?.processId;
+  console.log(data?.noOfPockets, "noOfPockets");
+  if (boardId && data?.storeId) {
+    const boardData = await prisma.process.findFirst({
+      where: {
+        id: boardId,
+      },
+      select: {
+        name: true,
+      },
+    });
+    if (boardData) {
+      const itemData = await prisma.styleItem.findFirst({
+        where: {
+          name: boardData.name,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (itemData) {
+        const stockData = await prisma.stock.aggregate({
+          where: {
+            styleItemId: itemData.id,
+            storeId: data.storeId,
+          },
+          _sum: {
+            qty: true,
+          },
+        });
+
+        stockQty = (stockData?._sum?.qty || 0) + (data?.noOfPockets || 0);
+        console.log(stockQty, "stockQty");
+      }
+    }
+  }
+
   const { module, hasApproval } = await getModuleApprovalSetup(
     REFERENCE_PAGE,
     data.branchId,
@@ -1084,6 +1125,7 @@ async function getOne(id) {
     statusCode: 0,
     data: {
       ...data,
+      stockQty: stockQty,
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
       approvalLog: log,
       childRecord: data._count.productionAllocations,

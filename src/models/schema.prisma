@@ -2375,6 +2375,7 @@ model Machine {
   sizeId       Int?
   Department   Department? @relation(fields: [departmentId], references: [id])
   departmentId Int?
+  isDefault    Boolean?    @default(false)
 
   machineDetails     MachineDetails[]
   productionempPunch productionempPunch[]

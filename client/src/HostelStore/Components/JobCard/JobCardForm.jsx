@@ -523,7 +523,7 @@ const JobCardForm = ({
       { condition: !d.productionType, title: "Production Type is required!" },
       { condition: !d.styleItemId, title: "Item Description is required!" },
       { condition: !d.orderQty, title: "Order Quantity is required!" },
-      { condition: !d.runningQty, title: "Running Quantity is required!" },
+      // { condition: !d.runningQty, title: "Running Quantity is required!" },
       { condition: !d.followUpId, title: "Follow-Up is required!" },
       { condition: !d.designerId, title: "Designer is required!" },
       {
@@ -1075,11 +1075,11 @@ const JobCardForm = ({
       },
     },
     {
-      skip: !boardItems?.[0] || !storeId,
+      skip: !boardItems?.[0] || !storeId || id,
     },
   );
 
-  const stockQty = boardQtyData?.stockQty || 0;
+  const stockQty = boardQtyData?.stockQty || singleData?.data?.stockQty;
 
   const gridItemsContent = (
     <div className="h-full overflow-auto">
