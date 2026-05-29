@@ -237,6 +237,45 @@ async function get(req) {
   return { statusCode: 0, data, totalCount };
 }
 
+async function getBoardQty(req) {
+  const { boardId, storeId } = req.query;
+  const boardData = await prisma.process.findFirst({
+    where: {
+      id: parseInt(boardId),
+    },
+    select: {
+      name: true,
+    },
+  });
+  if (!boardData) {
+    return { statusCode: 404, message: "Board not found" };
+  }
+
+  const itemData = await prisma.styleItem.findFirst({
+    where: {
+      name: boardData.name,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!itemData) {
+    return { statusCode: 404, message: "Board not found" };
+  }
+  const stockQty = await prisma.stock.aggregate({
+    where: {
+      styleItemId: itemData.id,
+      storeId: parseInt(storeId),
+    },
+    _sum: {
+      qty: true,
+    },
+  });
+
+  return { statusCode: 0, stockQty: stockQty._sum.qty };
+}
+
 async function getOne(id, query) {
   const { productId, salesBillItemsId, isOn } = query;
   isOn: typeof isOn === "undefined" ? undefined : JSON.parse(isOn);
@@ -529,4 +568,13 @@ async function getStock(req, res) {
   }
 }
 
-export { get, getOne, getSearch, create, update, remove, getStock };
+export {
+  get,
+  getOne,
+  getSearch,
+  create,
+  update,
+  remove,
+  getStock,
+  getBoardQty,
+};

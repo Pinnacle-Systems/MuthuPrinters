@@ -817,31 +817,44 @@ async function update(id, body, files) {
   const isApproved = latestLog?.status === "APPROVED";
 
   if (isApproved) {
-    const parsedItems = typeof rawInwardItems === "string" ? JSON.parse(rawInwardItems) : rawInwardItems;
-    
+    const parsedItems =
+      typeof rawInwardItems === "string"
+        ? JSON.parse(rawInwardItems)
+        : rawInwardItems;
+
     const coreFieldsChanged =
       parseInt(dataFound.supplierId || 0) !== parseInt(supplierId || 0) ||
       parseInt(dataFound.storeId || 0) !== parseInt(storeId || 0) ||
       parseInt(dataFound.locationId || 0) !== parseInt(locationId || 0) ||
-      (dataFound.docDate && docDate && new Date(dataFound.docDate).toISOString().split('T')[0] !== new Date(docDate).toISOString().split('T')[0]) ||
-      (dataFound.dcDate && dcDate && new Date(dataFound.dcDate).toISOString().split('T')[0] !== new Date(dcDate).toISOString().split('T')[0]) ||
+      (dataFound.docDate &&
+        docDate &&
+        new Date(dataFound.docDate).toISOString().split("T")[0] !==
+          new Date(docDate).toISOString().split("T")[0]) ||
+      (dataFound.dcDate &&
+        dcDate &&
+        new Date(dataFound.dcDate).toISOString().split("T")[0] !==
+          new Date(dcDate).toISOString().split("T")[0]) ||
       dataFound.inwardType !== inwardType ||
       dataFound.dcNo !== dcNo ||
       dataFound.invNo !== invNo ||
       dataFound.receiptType !== receiptType ||
       parseInt(dataFound.taxTemplateId || 0) !== parseInt(taxTemplateId || 0) ||
       dataFound.discountType !== discountType ||
-      parseFloat(dataFound.discountValue || 0) !== parseFloat(discountValue || 0) ||
+      parseFloat(dataFound.discountValue || 0) !==
+        parseFloat(discountValue || 0) ||
       parseFloat(dataFound.netBillValue || 0) !== parseFloat(netBillValue || 0);
 
     const oldItems = dataFound.inwardItems;
     const itemsChanged =
       parsedItems.length !== oldItems.length ||
       parsedItems.some((newItem) => {
-        const oldItem = oldItems.find((o) => parseInt(o.id) === parseInt(newItem.id));
+        const oldItem = oldItems.find(
+          (o) => parseInt(o.id) === parseInt(newItem.id),
+        );
         if (!oldItem) return true; // new item
         return (
-          parseFloat(newItem.inwardQty || 0) !== parseFloat(oldItem.inwardQty || 0) ||
+          parseFloat(newItem.inwardQty || 0) !==
+            parseFloat(oldItem.inwardQty || 0) ||
           parseFloat(newItem.price || 0) !== parseFloat(oldItem.price || 0)
         );
       });
@@ -849,7 +862,8 @@ async function update(id, body, files) {
     if (coreFieldsChanged || itemsChanged) {
       return {
         statusCode: 1,
-        message: "This Purchase Inward is Approved. Only remarks, vehicle number, and attachments can be modified.",
+        message:
+          "This Purchase Inward is Approved. Only remarks, vehicle number, and attachments can be modified.",
       };
     }
   }

@@ -145,7 +145,7 @@ const ProcessTree = ({
             const isOutside = alloc?.isOutSide === true;
             const status = route.status?.toUpperCase();
             const isCompleted = status === "COMPLETED";
-            const isPending = status === "PENDING";
+            const isPending = status === "IN_PROGRESS";
             const completedQty = route.completedQty;
             const isChecked = selectedProcessIds.includes(route.processId);
             const isPrevDone = (() => {
@@ -153,7 +153,7 @@ const ProcessTree = ({
               if (idx > 0) {
                 const immediatePrev = sorted[idx - 1];
 
-                if (immediatePrev?.status?.toUpperCase() === "PENDING") {
+                if (immediatePrev?.status?.toUpperCase() === "IN_PROGRESS") {
                   return false;
                 }
               }
@@ -886,11 +886,11 @@ const ProductionOutwardForm = ({
           <div className="flex gap-2">
             <DropdownNew
               name="Job Card No"
-              dataList={
-                jobCardList?.data
-                // .filter(item =>
-                // id || item.childRecordIssue === 0)
-              }
+              dataList={jobCardList?.data?.filter((item) =>
+                item.processRoute?.some(
+                  (route) => route.status === "NOT_STARTED",
+                ),
+              )}
               value={jobCardId}
               setValue={setJobCardId}
               required

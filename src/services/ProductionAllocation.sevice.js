@@ -168,6 +168,11 @@ async function getOne(id) {
           sequence: "asc",
         },
       },
+      _count: {
+        select: {
+          productionOutwards: true,
+        },
+      },
     },
   });
 
@@ -177,7 +182,10 @@ async function getOne(id) {
 
   return {
     statusCode: 0,
-    data,
+    data: {
+      ...data,
+      childRecord: data._count.productionOutwards,
+    },
   };
 }
 
@@ -191,6 +199,7 @@ async function create(body) {
     jobCardId,
     styleItemId,
     allocationDetails,
+    priority,
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -225,6 +234,8 @@ async function create(body) {
 
       branchId: parseInt(branchId),
 
+      priority: priority || "MEDIUM",
+
       allocationDetails: {
         createMany: {
           data: allocationDetails.map((item) => ({
@@ -240,7 +251,13 @@ async function create(body) {
 
             supplierId: item.supplierId ? parseInt(item.supplierId) : null,
 
-            processRouteId: item.processRouteId ? parseInt(item.processRouteId) : null
+            processRouteId: item.processRouteId
+              ? parseInt(item.processRouteId)
+              : null,
+
+            isFrontAndBack: Boolean(item.isFrontAndBack),
+
+            isFront: Boolean(item.isFront),
           })),
         },
       },
@@ -266,6 +283,7 @@ async function update(id, body) {
     styleItemId,
     allocationDetails,
     branchId,
+    priority,
   } = body;
 
   const found = await prisma.productionAllocation.findUnique({
@@ -296,6 +314,8 @@ async function update(id, body) {
 
       styleItemId: styleItemId ? parseInt(styleItemId) : null,
 
+      priority: priority || "MEDIUM",
+
       allocationDetails: {
         deleteMany: {},
 
@@ -313,7 +333,13 @@ async function update(id, body) {
 
             supplierId: item.supplierId ? parseInt(item.supplierId) : null,
 
-            processRouteId: item.processRouteId ? parseInt(item.processRouteId) : null
+            processRouteId: item.processRouteId
+              ? parseInt(item.processRouteId)
+              : null,
+
+            isFrontAndBack: Boolean(item.isFrontAndBack),
+
+            isFront: Boolean(item.isFront),
           })),
         },
       },

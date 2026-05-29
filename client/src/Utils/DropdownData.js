@@ -171,6 +171,12 @@ export const productionTypes = [
   { show: "BULK", value: "BULK" },
 ];
 
+export const priorityTypes = [
+  { show: "HIGH", value: "HIGH" },
+  { show: "MEDIUM", value: "MEDIUM" },
+  { show: "LOW", value: "LOW" },
+];
+
 export const jobTypes = [
   { show: "Internal", value: "Internal" },
   { show: "External", value: "External" },
