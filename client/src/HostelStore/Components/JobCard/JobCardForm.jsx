@@ -538,10 +538,10 @@ const JobCardForm = ({
       //   condition: !d.storeId,
       //   title: "Store is required!",
       // },
-      {
-        condition: !d.noOfPockets,
-        title: "No of Sheets is required!",
-      },
+      // {
+      //   condition: !d.noOfPockets,
+      //   title: "No of Sheets is required!",
+      // },
     ];
     const failed = checks.find((c) => c.condition);
     if (failed) {
