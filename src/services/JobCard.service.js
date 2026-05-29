@@ -234,16 +234,17 @@ async function get_mob_jobcard(req) {
     const data = await prisma.jobCard.findUnique({
       where: { id: parsedId },
       select: {
-        id: true,
-        docId: true,
-        createdAt: true,
-        productionType: true,
-        branchId: true,
-        customer: { select: { id: true, name: true } },
-        gsm: { select: { id: true, name: true } },
-        Branch: { select: { branchName: true } },
-        Plate: { select: { id: true, name: true } },
-        Die: { select: { id: true, name: true } },
+        id             : true,
+        docId          : true,
+        createdAt      : true,
+        runningQty     :true,
+        productionType : true,
+        branchId       : true,
+        customer  : { select: { id: true, name: true } },
+        gsm       : { select: { id: true, name: true } },
+        Branch    : { select: { branchName: true } },
+        Plate     : { select: { id: true, name: true } },
+        Die       : { select: { id: true, name: true } },
 
         boardQualities: {
           select: {
@@ -282,7 +283,8 @@ async function get_mob_jobcard(req) {
             id: true,
             status: true,
             sequence: true,
-            Process: { select: { id: true, name: true } },
+            completedQty:true,
+            Process : { select: { id: true, name: true } },
             productionAllocationDtls: {
               select: {
                 id: true,
@@ -396,12 +398,12 @@ async function get_mob_jobcard(req) {
     );
 
     // ── Find last NOT_STARTED process route ──
-    const lastNotStarted =
-      resolvedData?.processRoute?.find(
-        (last_taken) =>
-          last_taken?.status === "NOT_STARTED" ||
-          last_taken?.status === "IN_PROGRESS",
-      ) ?? null;
+    const lastNotStarted = Sorted_Sequence?.find(
+      (last_taken) => last_taken?.status === 'NOT_STARTED' ||  last_taken?.status === 'IN_PROGRESS'
+    ) ?? null;
+
+   
+    
 
     return {
       statusCode: 0,
@@ -411,9 +413,10 @@ async function get_mob_jobcard(req) {
         docId: resolvedData?.docId,
         createdAt: resolvedData?.createdAt,
         productionType: resolvedData?.productionType,
-        quantity: resolvedData?.quantity,
-        childRecord: resolvedData?.childRecord,
-        punch_data: punch_result,
+        quantity      : resolvedData?.quantity,
+        runningQty :   resolvedData?.runningQty,
+        childRecord   : resolvedData?.childRecord,
+        punch_data     : punch_result,
         // ─── Approval ──────────────────────
         approvalStatus: resolvedData?.approvalStatus, // ✅ full object not .status
         approvalLog: resolvedData?.approvalLog,
@@ -445,6 +448,198 @@ async function get_mob_jobcard(req) {
     throw new Error(`Failed to fetch job card: ${error.message}`);
   }
 }
+
+
+
+async function get_mob_compl_jobcard(req) {
+  
+  const {
+    branchId,
+    pagination,
+    pageNumber,
+    dataPerPage,
+    searchDocNo,
+    searchDocDate,
+    searchProductionType,
+    finYearId,
+    searchCustomer,
+  } = req.query;
+
+  let finYearDate = await getFinYearStartTimeEndTime(finYearId);
+
+ 
+  
+  const shortCode = finYearDate
+    ? getYearShortCodeForFinYear(
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
+    : "";
+
+  let newDocId = await getNextDocId(
+    branchId,
+    shortCode,
+    finYearDate?.startDateStartTime,
+    finYearDate?.endDateEndTime,
+  );
+
+  let data = await prisma.jobCard.findMany({
+    where: {
+      branchId: branchId ? parseInt(branchId) : undefined,
+      AND: finYearDate
+        ? [
+            { createdAt: { gte: finYearDate.startTime } },
+            { createdAt: { lte: finYearDate.endTime } },
+          ]
+        : undefined,
+      docId: searchDocNo ? { contains: searchDocNo } : undefined,
+      productionType: searchProductionType
+        ? { contains: searchProductionType }
+        : undefined,
+      customer: {
+        name: searchCustomer ? { contains: searchCustomer } : undefined,
+      },
+    },
+    include: {
+      processRoute :{
+        include : {
+          productionAllocationDtls : true,
+          Process:{
+            include:{
+              Department : true
+            }
+          }
+        }
+      },
+      
+   },
+    orderBy: { id: "desc" },
+  });
+  if (searchDocDate) {
+    data = data.filter((item) =>
+      String(getDateFromDateTime(item.createdAt)).includes(searchDocDate),
+    );
+  }
+
+
+
+  
+  let totalCount = data.length;
+
+  // if (pagination) {
+  //   data = data.slice(
+  //     (pageNumber - 1) * parseInt(dataPerPage),
+  //     pageNumber * dataPerPage,
+  //   );
+  // }
+
+  const { module, hasApproval } = await getModuleApprovalSetup(
+    REFERENCE_PAGE,
+    branchId,
+  );
+
+  // ── fetch all relevant approval logs in one query ─────────────────────────
+  const jobCardIds = data.map((o) => o.id);
+
+  const approvalLogs = await prisma.approvalLog.findMany({
+    where: { referencePage: REFERENCE_PAGE, referenceId: { in: jobCardIds } },
+    select: {
+      id: true,
+      referenceId: true,
+      status: true,
+      remarks: true,
+      currentLevel: true,
+      LevelLogs: {
+        select: {
+          action: true,
+          levelNo: true,
+          userId: true,
+          createdAt: true,
+          User: { select: { id: true, username: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+
+  const approvalLogMap = approvalLogs.reduce((acc, log) => {
+    acc[log.referenceId] = log;
+    return acc;
+  }, {});
+
+  // ── fetch active configs only if approval is set up ───────────────────────
+  const activeConfigs =
+    hasApproval && module
+      ? await prisma.approvalConfig.findMany({
+          where: {
+            moduleId: module.id,
+            branchId: parseInt(branchId),
+            active: true,
+          },
+          include: {
+            ConfigConditions: {
+              include: { Field: true, Operator: true, CompareField: true },
+            },
+            approvalLevels: {
+              include: { LevelUsers: true },
+              orderBy: { levelNo: "asc" },
+            },
+          },
+        })
+      : [];
+
+  // ── resolve approval status per record ───────────────────────────────────
+  let resolvedData = data.map((jobCard) => {
+    const log = approvalLogMap[jobCard.id] ?? null;
+
+    let shouldTrigger = false;
+    if (!log && hasApproval && activeConfigs.length > 0) {
+      shouldTrigger = evaluateConfigs(activeConfigs, jobCard);
+    }
+
+    return {
+      ...jobCard,
+      approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+    
+    };
+  });
+
+
+  
+
+ var filtered_ = resolvedData
+  ?.filter((resolved_) => {
+    const status = resolved_?.approvalStatus?.status;
+    const Complted = resolved_?.processRoute?.every((fe)=> fe.status == "COMPLETED")
+    return (status === "APPROVED" || status === "NOT_CONFIGURED" )  && Complted;
+  })
+  ?.map((routes) => {
+    var Sorted_Sequence = routes?.processRoute?.sort((a,b) => a.sequence - b.sequence)
+    const lastNotStarted = Sorted_Sequence?.find(
+      (last_taken) => last_taken?.status === "NOT_STARTED"  ||  last_taken?.status === 'IN_PROGRESS'
+    );
+    return {
+      id :routes?.id ,
+      processRoute: lastNotStarted,
+     docId: routes?. docId,
+     approvalStatus : routes?.status,
+     process:routes?.processRoute?.Process
+    };
+  });
+
+
+             //  data[1]?.processRoute[0]?.productionAllocationDtls[0]?.isInHouse
+
+  if (pagination) {
+      filtered_ = filtered_.slice(
+      (pageNumber - 1) * parseInt(dataPerPage),
+      pageNumber * parseInt(dataPerPage),
+    );
+  }
+
+  return { statusCode: 0, data: filtered_, nextDocId: newDocId, totalCount };
+}
+
 
 async function get_mob_joblist(req) {
   const {
@@ -588,6 +783,30 @@ async function get_mob_joblist(req) {
     return {
       ...jobCard,
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
+    
+    };
+  });
+
+
+  
+
+ var filtered_ = resolvedData
+  ?.filter((resolved_) => {
+    const status = resolved_?.approvalStatus?.status;
+    const Complted = resolved_?.processRoute?.some((fe)=> fe.status == "IN_PROGRESS" || fe.status == "NOT_STARTED" )
+    return (status === "APPROVED" || status === "NOT_CONFIGURED") && Complted;
+  })
+  ?.map((routes) => {
+    var Sorted_Sequence = routes?.processRoute?.sort((a,b) => a.sequence - b.sequence)
+    const lastNotStarted = Sorted_Sequence?.find(
+      (last_taken) => last_taken?.status === "NOT_STARTED"  ||  last_taken?.status === 'IN_PROGRESS'
+    );
+    return {
+      id :routes?.id ,
+      processRoute: lastNotStarted,
+     docId: routes?. docId,
+     approvalStatus : routes?.status,
+     process:routes?.processRoute?.Process
     };
   });
 
@@ -643,8 +862,9 @@ async function getEmployeeTakenJobcard(req) {
   const { userid } = req?.query;
 
   var result = await prisma.productionempPunch?.findFirst({
-    where: {
-      Userid: Number(userid || 0),
+    where : {
+       Userid : Number(userid || 0),
+       endTime: null
     },
     include: {
       pushLogs: true,
@@ -655,7 +875,11 @@ async function getEmployeeTakenJobcard(req) {
     },
   });
 
-  return { statusCode: 0, data: result };
+
+
+
+  return {statusCode:0,data:result}
+  
 }
 
 /* End Mobile Api's*/
@@ -1791,15 +2015,4 @@ async function remove(id) {
   }
 }
 
-export {
-  get,
-  getOne,
-  create,
-  update,
-  remove,
-  getJobCardList,
-  get_mob_joblist,
-  get_mob_jobcard,
-  getMachinebydep,
-  getEmployeeTakenJobcard,
-};
+export { get, getOne, create, update, remove, getJobCardList , get_mob_joblist,get_mob_jobcard,getMachinebydep,getEmployeeTakenJobcard , get_mob_compl_jobcard};
