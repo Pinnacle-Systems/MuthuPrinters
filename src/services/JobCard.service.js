@@ -679,6 +679,7 @@ async function get_mob_joblist(req) {
       },
     },
     include: {
+      productionAllocations:true,
       processRoute: {
         include: {
           productionAllocationDtls: true,
@@ -777,6 +778,9 @@ async function get_mob_joblist(req) {
     };
   });
 
+
+  console.log("log",resolvedData);
+  
   var filtered_ = resolvedData
     ?.filter((resolved_) => {
       const status = resolved_?.approvalStatus?.status;
@@ -800,6 +804,7 @@ async function get_mob_joblist(req) {
         docId: routes?.docId,
         approvalStatus: routes?.status,
         process: routes?.processRoute?.Process,
+        priority : routes?.productionAllocations?.[0]?.priority ?? "LOW"
       };
     });
 
