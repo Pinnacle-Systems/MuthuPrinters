@@ -4,7 +4,6 @@ import {
   DateInputNew,
   DropdownInput,
   DropdownNew,
-  MultiSelectDropdown,
   ReusableInput,
   TextInput,
 } from "../../../Inputs";
@@ -16,11 +15,8 @@ import { toast } from "react-toastify";
 import { FiCheck, FiEdit2, FiPrinter, FiSave, FiSend } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
-import {
-  dropDownListObject,
-  multiSelectOption,
-} from "../../../Utils/contructObject";
-import { BoardMaster, DieMaster, Gsm, PlateMaster, Size } from "../index.js";
+import { dropDownListObject } from "../../../Utils/contructObject";
+import { DieMaster, PlateMaster, Size } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import {
   useAddJobCardMutation,
@@ -32,7 +28,6 @@ import {
 import { useGetProcessMasterQuery } from "../../../redux/services/ProcessMasterService.js";
 import { useGetProcessGroupMasterQuery } from "../../../redux/services/ProcessGroupMaster.service.js";
 import secureLocalStorage from "react-secure-storage";
-import { useGetBoardMasterQuery } from "../../../redux/services/boardService.js";
 import Modal from "../../../UiComponents/Modal/index.js";
 import { PDFViewer } from "@react-pdf/renderer";
 import tw from "../../../Utils/tailwind-react-pdf.js";
@@ -50,7 +45,6 @@ import {
 } from "./ProcessRoutePanel.jsx";
 import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoServices.js";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
-import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import TransactionLayout from "../../../Basic/components/Reuseable/TransactionLayout.jsx";
 import { QRCodeCanvas } from "qrcode.react";
 import { CheckBox, Field, LVHeader, LVRow, SectionCard } from "./Utils.jsx";
@@ -59,9 +53,23 @@ import { Plus } from "lucide-react";
 import { useGetMachineMasterQuery } from "../../../redux/services/MachineMasterService.js";
 import { invalidateJobCardModule } from "../../../redux/Dispatch/JobCardInvalidateTags.js";
 import QRCode from "qrcode";
-import { useGetBoardQtyQuery } from "../../../redux/services/StockService.js";
 import { LocationMaster } from "../../../Basic/components/index.js";
 import { useGetLocationMasterQuery } from "../../../redux/services/LocationMasterService.js";
+import BoardDetails, { emptyRow } from "./BoardDetails.jsx";
+
+// ─── helper: map DB boardQualities rows → BoardDetails row objects ───────────
+const mapBoardQualitiesToRows = (boardQualities) => {
+  if (!boardQualities?.length) return [];
+  return boardQualities.map((b) => ({
+    processId: b.processId || "", // support both shapes
+    gsmId: b.gsmId || "",
+    fullBoardId: b.fullBoardId || "",
+    stockQty: b.stockQty || "",
+    noOfSheets: b.noOfSheets || b.noOfPockets || "",
+  }));
+};
+
+const DEFAULT_BOARD_ROWS = 2;
 
 const JobCardForm = ({
   onClose,
@@ -93,16 +101,16 @@ const JobCardForm = ({
   const [docId, setDocId] = useState("");
   const [orderQty, setOrderQty] = useState("");
   const [printModalOpen, setPrintModalOpen] = useState(false);
-  const [gsmId, setGsmId] = useState("");
   const [otherBoardId, setOtherBoardId] = useState("");
-  const [fullBoardId, setFullBoardId] = useState("");
-  const [noOfPockets, setNoOfPockets] = useState("");
-  const [cuttingSizeId, setCuttingSizeId] = useState("");
-  const [runningQty, setRunningQty] = useState("");
   const [totalPlatesets, setTotalPlatesets] = useState("");
   const [plateId, setPlateId] = useState("");
   const [dieId, setDieId] = useState("");
-  const [boardItems, setBoardItems] = useState([]);
+  const [cuttingSizeId, setCuttingSizeId] = useState("");
+  const [splitType, setSplitType] = useState("");
+  const [boardItems, setBoardItems] = useState(
+    Array.from({ length: DEFAULT_BOARD_ROWS }, emptyRow),
+  );
+
   const [selectedPrinting, setSelectedPrinting] = useState([]);
   const [selectedProcesses, setSelectedProcesses] = useState([]);
   const [selectedMachines, setSelectedMachines] = useState([]);
@@ -131,7 +139,6 @@ const JobCardForm = ({
   const [labelQty, setLabelQty] = useState("");
   const [rollQty, setRollQty] = useState("");
   const [cutAndSeal, setCutAndSeal] = useState("");
-  // const [orderStyleItems, setOrderStyleItems] = useState([]);
   const [jobCardSizeDetails, setJobCardSizeDetails] = useState([]);
   const [selectedOrderData, setSelectedOrderData] = useState(null);
   const [trackingType, setTrackingType] = useState("Barcode");
@@ -152,6 +159,7 @@ const JobCardForm = ({
   const [isAmendment, setIsAmendment] = useState(false);
   const [storeId, setStoreId] = useState("");
   const qrRef = useRef(null);
+  const [runningQty, setRunningQty] = useState("");
   const params = {
     companyId: secureLocalStorage.getItem(
       sessionStorage.getItem("sessionId") + "userCompanyId",
@@ -159,12 +167,10 @@ const JobCardForm = ({
   };
 
   const { data: processList } = useGetProcessMasterQuery({ params });
-  // const { data: boardData } = useGetBoardMasterQuery({ params });
   const { data: processGroupList } = useGetProcessGroupMasterQuery({ params });
   const { data: orderList } = useGetRefListQuery({
     params: { companyId, branchId },
   });
-  // const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { companyId, branchId } });
   const { data: sizeList } = useGetSizeMasterQuery({
     params: { companyId, branchId },
   });
@@ -189,7 +195,6 @@ const JobCardForm = ({
     processList?.data?.filter((p) => getGroupIds(groupName).includes(p.id)) ||
     [];
 
-  // const boardList = boardData?.data?.filter((i) => id ? true : i?.active) || [];
   const boardList = filterByGroup("BOARD QUALITY");
   const printingList = filterByGroup("PRINTING");
   const defaultList = filterByGroup("DEFAULT");
@@ -202,14 +207,11 @@ const JobCardForm = ({
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetJobCardByIdQuery(id, { skip: !id });
+
   const status = singleData?.data?.approvalStatus?.status;
   const isDisabledPermission =
     (status === "APPROVED" || status === "PENDING") && !canApprove;
 
-  // ─────────────────────────────────────────────────────────────
-  // Task 3: Build a Set of "type:processId" strings for completed
-  // route steps. Fields bound to these steps will be disabled.
-  // ─────────────────────────────────────────────────────────────
   const dbProcessRoute = singleData?.data?.processRoute || [];
   const anyCompleted = dbProcessRoute.some((r) => r.status === "COMPLETED");
   const routeFieldsLocked = anyCompleted && !isAmendment;
@@ -220,17 +222,8 @@ const JobCardForm = ({
     [JSON.stringify(dbProcessRoute)],
   );
 
-  /**
-   * Returns true when ALL route entries that reference the given
-   * process IDs (by type) are COMPLETED, meaning the user should
-   * NOT be able to edit the corresponding form field.
-   *
-   * @param {"boardQuality"|"board"|"printing"|"process"|"lamination"|"varnish"|"finishing"} type
-   * @param {number|number[]} processIds  - single id or array of ids
-   */
   const isCompletedInRoute = (type, processIds) => {
     const ids = Array.isArray(processIds) ? processIds : [processIds];
-    // If none of the ids appear in the route at all, not locked
     const routeEntries = dbProcessRoute.filter(
       (r) => r.type === type && ids.includes(r.processId),
     );
@@ -238,20 +231,20 @@ const JobCardForm = ({
     return routeEntries.every((r) => r.status === "COMPLETED");
   };
 
-  /**
-   * For checkbox-group fields (boardItems, selectedPrinting, etc.),
-   * returns true if this SPECIFIC item id is completed in the route.
-   */
   const isItemCompleted = (type, itemId) =>
     completedSet.has(`${type}:${itemId}`);
 
-  // Derived: are ALL board qualities completed? → lock the whole board section
+  // ── Derive a plain array of boardIds for ProcessRoutePanel & lock helpers ──
+  const boardProcessIds = useMemo(
+    () => boardItems.filter((r) => r.processId).map((r) => r.processId),
+    [boardItems],
+  );
+
   const allBoardQualitiesCompleted =
-    boardItems.length > 0 &&
-    boardItems.every((bid) => isItemCompleted("boardQuality", bid));
+    boardProcessIds.length > 0 &&
+    boardProcessIds.every((bid) => isItemCompleted("boardQuality", bid));
 
   const boardCompleted = isCompletedInRoute("board", otherBoardId);
-
   const cuttingFieldsLocked = allBoardQualitiesCompleted && boardCompleted;
 
   const [addData] = useAddJobCardMutation();
@@ -260,6 +253,7 @@ const JobCardForm = ({
   const [getOrderById] = useLazyGetOrderEntryByIdQuery();
   const [getRefById] = useLazyGetJobCardByIdQuery();
 
+  // ── Sync form from DB data ────────────────────────────────────────────────
   const syncFormWithDb = useCallback((data) => {
     setDocId(data?.docId || "New");
     setDocDate(
@@ -275,15 +269,19 @@ const JobCardForm = ({
     setCustomerId(data?.customerId || "");
     setRemarks(data?.remarks || "");
     setOrderQty(data?.orderQty || "");
-    setGsmId(data?.gsmId || "");
-    setFullBoardId(data?.fullBoardId || "");
-    setNoOfPockets(data?.noOfPockets || "");
-    setCuttingSizeId(data?.cuttingSizeId || "");
-    setRunningQty(data?.runningQty || "");
     setPlateId(data?.plateId || "");
     setDieId(data?.dieId || "");
     setTotalPlatesets(data?.totalPlatesets || "");
-    setBoardItems(data?.boardQualities?.map((b) => b.processId) || []);
+    setCuttingSizeId(data?.cuttingSizeId || "");
+    setSplitType(data?.splitType || "");
+    // Map DB boardQualities → row objects; default to 2 empty rows
+    const mappedRows = mapBoardQualitiesToRows(data?.boardQualities);
+    setBoardItems(
+      mappedRows.length > 0
+        ? mappedRows
+        : Array.from({ length: DEFAULT_BOARD_ROWS }, emptyRow),
+    );
+
     setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
     setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
     setSelectedFinishing(
@@ -340,6 +338,7 @@ const JobCardForm = ({
     setIsRepeatedJobCard(data?.isRepeatedJobCard || false);
     setStoreId(data?.storeId || "");
     setRefJobCardId(data?.refJobCardId || "");
+    setRunningQty(data?.runningQty || "");
     const rawPlates = data?.plateDetails || [];
     const paddedPlates = [...rawPlates];
     while (paddedPlates.length < 6)
@@ -376,6 +375,7 @@ const JobCardForm = ({
       prev.map((l) => (l.processId === pid ? { ...l, [prop]: !l[prop] } : l)),
     );
 
+  // ── formData — boardItems sent as boardDetails (row objects) ─────────────
   const formData = {
     id,
     docDate,
@@ -385,14 +385,11 @@ const JobCardForm = ({
     orderType,
     orderQty,
     customerId,
-    boardItems,
-    gsmId,
+    // Legacy boardQualities field: array of {processId} for route/approval logic
+    boardQualities: boardItems.filter((r) => r.processId),
+    // New full board details
     otherBoardId,
     remarks,
-    fullBoardId,
-    noOfPockets,
-    cuttingSizeId,
-    runningQty,
     plateId,
     dieId,
     totalPlatesets,
@@ -430,6 +427,9 @@ const JobCardForm = ({
     refJobCardId,
     isAmendment,
     storeId,
+    cuttingSizeId,
+    splitType,
+    runningQty,
   };
 
   const openPrintModal = async (overrideId, overrideDocId) => {
@@ -477,22 +477,16 @@ const JobCardForm = ({
                 allowEscapeKey: true,
               }).then((result) => {
                 if (result.isConfirmed) {
-                  if (returnData?.data?.id) {
-                    setId(returnData.data.id);
-                  }
+                  if (returnData?.data?.id) setId(returnData.data.id);
                   setPendingPrint(true);
                 } else {
                   if (nextProcess === "new") {
                     syncFormWithDb(undefined);
                     setId("");
                     setDocId("New");
-                    setTimeout(() => {
-                      customerRef.current?.focus();
-                    }, 300);
+                    setTimeout(() => customerRef.current?.focus(), 300);
                   }
-                  if (nextProcess === "close") {
-                    onClose();
-                  }
+                  if (nextProcess === "close") onClose();
                 }
               });
             } else {
@@ -523,25 +517,17 @@ const JobCardForm = ({
       { condition: !d.productionType, title: "Production Type is required!" },
       { condition: !d.styleItemId, title: "Item Description is required!" },
       { condition: !d.orderQty, title: "Order Quantity is required!" },
-      // { condition: !d.runningQty, title: "Running Quantity is required!" },
       { condition: !d.followUpId, title: "Follow-Up is required!" },
       { condition: !d.designerId, title: "Designer is required!" },
       {
         condition: d.processRoute?.length === 0,
-        title: " Select at Least One Process",
+        title: "Select at Least One Process",
       },
       {
         condition: d.isRepeatedJobCard && !d.refJobCardId,
         title: "Reference Job Card is required!",
       },
-      // {
-      //   condition: !d.storeId,
-      //   title: "Store is required!",
-      // },
-      {
-        condition: !d.noOfPockets,
-        title: "No of Sheets is required!",
-      },
+      { condition: !d.storeId, title: "Store is required!" },
     ];
     const failed = checks.find((c) => c.condition);
     if (failed) {
@@ -579,6 +565,7 @@ const JobCardForm = ({
   useEffect(() => {
     customerRef.current?.focus();
   }, []);
+
   useEffect(() => {
     if (formOrderCustomerId && fromOrderId && fromOrderType && !id) {
       setCustomerId(formOrderCustomerId);
@@ -593,6 +580,7 @@ const JobCardForm = ({
     setApprovalRemarks("");
     setApprovalModal(true);
   };
+
   const handleConfirmAction = async () => {
     if (actionType === "REJECT" && !approvalRemarks.trim()) {
       toast.warning("Remarks required for sending back!");
@@ -636,16 +624,18 @@ const JobCardForm = ({
       const result = await getRefById(value?.id || value).unwrap();
       const data = result?.data;
       if (!data) return;
-      setGsmId(data?.gsmId || "");
       setOtherBoardId(data?.otherBoardId || "");
-      setFullBoardId(data?.fullBoardId || "");
-      setNoOfPockets(data?.noOfPockets || "");
-      setCuttingSizeId(data?.cuttingSizeId || "");
-      setRunningQty(data?.runningQty || "");
       setPlateId(data?.plateId || "");
       setDieId(data?.dieId || "");
       setTotalPlatesets(data?.totalPlatesets || "");
-      setBoardItems(data?.boardQualities?.map((b) => b.processId) || []);
+
+      const mappedRows = mapBoardQualitiesToRows(data?.boardQualities);
+      setBoardItems(
+        mappedRows.length > 0
+          ? mappedRows
+          : Array.from({ length: DEFAULT_BOARD_ROWS }, emptyRow),
+      );
+
       setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
       setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
       setSelectedFinishing(
@@ -709,58 +699,43 @@ const JobCardForm = ({
       setPlateDetails(paddedPlates);
       setIsAmendment(data?.isAmendment || false);
     } catch (err) {
-      console.error("Failed to load order style items", err);
+      console.error("Failed to load ref job card", err);
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // Task 3 helpers — per-field completion-lock flags
-  // ─────────────────────────────────────────────────────────────
-
-  // Board quality checkboxes — each item locked individually
+  // ── Completion-lock helpers ───────────────────────────────────────────────
   const isBoardQualityLocked = (boardItemId) =>
     isItemCompleted("boardQuality", boardItemId) || routeFieldsLocked;
 
-  // Board (other/board dropdown) locked if its route step is completed
   const isBoardLocked = otherBoardId
     ? isItemCompleted("board", otherBoardId) || routeFieldsLocked
     : routeFieldsLocked;
 
-  // Cutting detail fields locked when boardQuality AND board are both done
-  // (they belong to the boardQuality stage in production flow)
   const isCuttingLocked =
     routeFieldsLocked ||
-    (boardItems.length > 0 &&
-      boardItems.every((bid) => isItemCompleted("boardQuality", bid)));
+    (boardProcessIds.length > 0 &&
+      boardProcessIds.every((bid) => isItemCompleted("boardQuality", bid)));
 
-  // Printing checkboxes — each locked individually
   const isPrintingItemLocked = (printId) =>
     isItemCompleted("printing", printId) || routeFieldsLocked;
-
-  // Process details checkboxes — each locked individually
   const isProcessItemLocked = (procId) =>
     isItemCompleted("process", procId) || routeFieldsLocked;
-
-  // Lamination rows — each locked individually
   const isLaminationItemLocked = (laminationProcId) =>
     isItemCompleted("lamination", laminationProcId) || routeFieldsLocked;
-
-  // Varnish rows — each locked individually
   const isVarnishItemLocked = (varnishProcId) =>
     isItemCompleted("varnish", varnishProcId) || routeFieldsLocked;
-
-  // Finishing checkboxes — each locked individually
   const isFinishingItemLocked = (finId) =>
     isItemCompleted("finishing", finId) || routeFieldsLocked;
 
+  // ── HEADER ────────────────────────────────────────────────────────────────
   const headerContent = (
     <div className="flex flex-col xl:flex-row gap-1">
       <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
         <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
           Basic Details
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <div className="w-40">
+        <div className="flex gap-x-1">
+          <div className="w-32">
             <ReusableInput label="Job Card No" readOnly value={docId} />
           </div>
           <div className="w-28">
@@ -772,7 +747,9 @@ const JobCardForm = ({
               disabled
             />
           </div>
-          <div className="mt-4">
+        </div>
+        <div className="flex gap-x-2">
+          <div className="mt-5 mr-2">
             <CheckBoxNew
               name="Is Repeated"
               readOnly={readOnly}
@@ -783,7 +760,7 @@ const JobCardForm = ({
             />
           </div>
           {isRepeatedJobCard && (
-            <div className="w-40">
+            <div className="w-36 mt-2">
               <DropdownNew
                 name="Job Card No"
                 dataList={jobCardList?.data}
@@ -826,7 +803,7 @@ const JobCardForm = ({
         <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
           Order Details
         </h2>
-        <div className="flex gap-2 flex-wrap px-1">
+        <div className="flex gap-2 px-1">
           <div className="w-44">
             <DropdownNew
               name="Order No"
@@ -856,7 +833,6 @@ const JobCardForm = ({
                   setOrderQty("");
                   setTagCardUps("");
                   setJobRunTime("");
-                  // setOrderStyleItems([]);
                   setSelectedOrderData(null);
                   setJobCardSizeDetails([]);
                   return;
@@ -868,7 +844,9 @@ const JobCardForm = ({
                 setStyleItemId("");
                 setOrderQty("");
                 setJobCardSizeDetails([]);
-                setBoardItems([]);
+                setBoardItems(
+                  Array.from({ length: DEFAULT_BOARD_ROWS }, emptyRow),
+                );
                 setOtherBoardId("");
                 setSelectedPrinting([]);
                 setSelectedProcesses([]);
@@ -877,30 +855,10 @@ const JobCardForm = ({
                 setPlateDetails([]);
                 setVarnishes([]);
                 setProductionType(res?.data?.productionType);
-                // const filteredItems =
-                //     res?.data?.orderItems
-                //         ?.filter(item =>
-                //             item?.childRecord === 0 ||
-                //             item?.id === orderItemId
-                //         )
-                //         ?.map(item => item?.styleItemId) || [];
-
-                // setOrderStyleItems(filteredItems);
               }}
             />
           </div>
-          <div className="w-28">
-            <DropdownInput
-              name="Production Type"
-              options={productionTypes}
-              value={productionType}
-              setValue={setProductionType}
-              required
-              readOnly={true}
-              disabled={readOnly}
-            />
-          </div>
-          <div className="w-48">
+          <div className="w-64">
             <DropdownNew
               name="Item Description"
               dataList={styleItemList?.data?.filter((item) =>
@@ -934,7 +892,9 @@ const JobCardForm = ({
                     barcodeTo: s.barcodeTo || "",
                   })) || [],
                 );
-                setBoardItems([]);
+                setBoardItems(
+                  Array.from({ length: DEFAULT_BOARD_ROWS }, emptyRow),
+                );
                 setSelectedProcesses([]);
                 setSelectedMachines([]);
                 setLaminations([]);
@@ -947,50 +907,38 @@ const JobCardForm = ({
             />
           </div>
           {itemType !== "LABEL" && (
-            <>
-              <div className="w-20">
-                <TextInput
-                  name="Order Qty"
-                  value={orderQty}
-                  setValue={setOrderQty}
-                  readOnly={true}
-                  required
-                  type="number"
-                  className="text-right w-full"
-                  onFocus={(e) => e.target.select()}
-                  onBlur={(e) =>
-                    setOrderQty(
-                      e.target.value ? Number(e.target.value).toFixed(3) : "",
-                    )
-                  }
-                />
-              </div>
-              <div className="w-28">
-                <TextInput
-                  name="Tag/Card Ups"
-                  value={tagCardUps}
-                  setValue={setTagCardUps}
-                  readOnly={readOnly}
-                  className="w-full text-right"
-                  onFocus={(e) => e.target.select()}
-                  disabled={isDisabledPermission}
-                />
-              </div>
-              <div className="w-28">
-                <TextInput
-                  name="Job Run Time (Hours)"
-                  value={jobRunTime}
-                  setValue={setJobRunTime}
-                  readOnly={readOnly}
-                  className="w-full text-right"
-                  type="number"
-                  onFocus={(e) => e.target.select()}
-                  disabled={isDisabledPermission}
-                />
-              </div>
-            </>
+            <div className="w-20">
+              <TextInput
+                name="Order Qty"
+                value={orderQty}
+                setValue={setOrderQty}
+                readOnly={true}
+                required
+                type="number"
+                className="text-right w-full"
+                onFocus={(e) => e.target.select()}
+                onBlur={(e) =>
+                  setOrderQty(
+                    e.target.value ? Number(e.target.value).toFixed(3) : "",
+                  )
+                }
+              />
+            </div>
           )}
-          <div className="w-56">
+        </div>
+        <div className="flex gap-2 mt-1">
+          <div className="w-28">
+            <DropdownInput
+              name="Production Type"
+              options={productionTypes}
+              value={productionType}
+              setValue={setProductionType}
+              required
+              readOnly={true}
+              disabled={readOnly}
+            />
+          </div>
+          <div className="w-40">
             <DropdownNew
               name="Follow Up"
               dataList={
@@ -1005,7 +953,7 @@ const JobCardForm = ({
               disabled={isDisabledPermission || readOnly}
             />
           </div>
-          <div className="w-56">
+          <div className="w-40">
             <DropdownNew
               name="Designer"
               dataList={
@@ -1021,6 +969,56 @@ const JobCardForm = ({
             />
           </div>
         </div>
+      </div>
+
+      <div className="border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+          Other Details
+        </h2>
+        <div className="flex gap-2 flex-wrap px-1">
+          <div className="w-28">
+            <TextInput
+              name="Tag/Card Ups"
+              value={tagCardUps}
+              setValue={setTagCardUps}
+              readOnly={readOnly}
+              className="w-full text-right"
+              onFocus={(e) => e.target.select()}
+              disabled={isDisabledPermission}
+            />
+          </div>
+          <div className="w-28">
+            <TextInput
+              name="Job Run Time (Hours)"
+              value={jobRunTime}
+              setValue={setJobRunTime}
+              readOnly={readOnly}
+              className="w-full text-right"
+              type="number"
+              onFocus={(e) => e.target.select()}
+              disabled={isDisabledPermission}
+            />
+          </div>
+        </div>
+        <DropdownWithModal
+          name="Location"
+          options={dropDownListObject(
+            id
+              ? locationData?.data
+              : locationData?.data?.filter((item) => item?.active),
+            "storeName",
+            "id",
+          )}
+          value={storeId}
+          setValue={setStoreId}
+          required={true}
+          readOnly={readOnly}
+          className="w-[150px]"
+          addNewLabel="+ Add New Location"
+          childComponent={LocationMaster}
+          addNewModalWidth="w-[40%] h-[48%]"
+          disabled={isDisabledPermission || isCuttingLocked}
+        />
       </div>
 
       <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
@@ -1056,129 +1054,27 @@ const JobCardForm = ({
     </div>
   );
 
-  const boardOptions = boardList
-    ? multiSelectOption(boardList, "name", "id").map((item) => ({
-        ...item,
-        disabled: isBoardQualityLocked(item.value),
-      }))
-    : [];
-
-  const selectedBoardOptions = boardOptions.filter((item) =>
-    boardItems.includes(item.value),
-  );
-
-  const { data: boardQtyData } = useGetBoardQtyQuery(
-    {
-      params: {
-        boardId: boardItems?.[0],
-        storeId: storeId,
-      },
-    },
-    {
-      skip: !boardItems?.[0] || !storeId || id,
-    },
-  );
-
-  const stockQty = boardQtyData?.stockQty || singleData?.data?.stockQty;
-
+  // ── GRID ──────────────────────────────────────────────────────────────────
   const gridItemsContent = (
     <div className="h-full overflow-auto">
       {itemType !== "LABEL" && (
-        <div className="grid grid-cols-4 gap-x-2 items-start min-w-max">
-          {/* COL 1 — Board */}
-          <div className="flex flex-col gap-2">
-            {/* <div className="grid grid-cols-2 gap-x-3 gap-y-3">
-                {boardList?.map((item) => (
-                  <CheckBox
-                    key={item.id}
-                    name={item.name}
-                    value={boardItems.includes(item.id)}
-                    setValue={() => toggleArr(setBoardItems, item.id)}
-                    readOnly={readOnly}
-                    // Task 3: disable if this board quality is completed in route
-                    disabled={
-                      isDisabledPermission || isBoardQualityLocked(item.id)
-                    }
-                  />
-                ))}
-              </div> */}
-            <SectionCard
-              title="Board Quality"
-              overflow={false}
-              className="overflow-visible"
-            >
-              <div className="w-full">
-                <MultiSelectDropdown
-                  name="Board Quality"
-                  selected={selectedBoardOptions}
-                  setSelected={(selected) => {
-                    setBoardItems(selected?.map((x) => x.value) || []);
-                  }}
-                  options={boardOptions}
-                  readOnly={readOnly || isDisabledPermission}
-                  className="size-multiselect"
-                  labelSize="11px"
-                />
-              </div>
-            </SectionCard>
-            <SectionCard title="Cutting Details">
-              <div className="grid grid-cols-2 gap-x-3 min-h-[150px]">
-                <Field label="GSM">
-                  <DropdownWithModal
-                    name=""
-                    options={dropDownListObject(
-                      id
-                        ? gsmList?.data
-                        : gsmList?.data?.filter((i) => i?.active),
-                      "name",
-                      "id",
-                    )}
-                    value={gsmId}
-                    setValue={setGsmId}
-                    readOnly={readOnly}
-                    addNewLabel="+ Add GSM"
-                    childComponent={Gsm}
-                    addNewModalWidth="w-[30%] h-[45%]"
-                    // Task 3: lock if cutting stage is completed
-                    disabled={isDisabledPermission || isCuttingLocked}
-                  />
-                </Field>
-                {/* <Field label="Others / Board">
-                  <DropdownWithModal
-                    name=""
-                    options={dropDownListObject(
-                      id ? boardList : boardList?.filter((i) => i?.active),
-                      "name",
-                      "id",
-                    )}
-                    value={otherBoardId}
-                    setValue={setOtherBoardId}
-                    readOnly={readOnly}
-                    addNewLabel="+ Add Board"
-                    childComponent={BoardMaster}
-                    addNewModalWidth="w-[30%] h-[45%]"
-                    disabled={isDisabledPermission || isBoardLocked}
-                  />
-                </Field> */}
-                <Field label="Full Board">
-                  <DropdownWithModal
-                    name=""
-                    options={dropDownListObject(
-                      id
-                        ? sizeList?.data
-                        : sizeList?.data?.filter((i) => i?.active),
-                      "name",
-                      "id",
-                    )}
-                    value={fullBoardId}
-                    setValue={setFullBoardId}
-                    readOnly={readOnly}
-                    addNewLabel="+ Add Size"
-                    childComponent={Size}
-                    addNewModalWidth="w-[30%] h-[45%]"
-                    disabled={isDisabledPermission || isCuttingLocked}
-                  />
-                </Field>
+        <div className="grid grid-cols-4 gap-x-2 items-start w-full">
+          {/* COL span-2: Board + Printing + Plate */}
+          <div className="flex flex-col gap-2 col-span-2">
+            <SectionCard title="Board & Cutting Details" overflow={false}>
+              <BoardDetails
+                boardItems={boardItems}
+                setBoardItems={setBoardItems}
+                boardList={boardList}
+                gsmList={gsmList}
+                sizeList={sizeList}
+                readOnly={readOnly}
+                id={id}
+                isDisabledPermission={isDisabledPermission}
+                isCuttingLocked={isCuttingLocked}
+                childRecord={childRecord}
+              />
+              <div className="grid grid-cols-4 gap-x-4 mt-5">
                 <Field label="Cutting Size">
                   <DropdownWithModal
                     name=""
@@ -1198,51 +1094,14 @@ const JobCardForm = ({
                     disabled={isDisabledPermission || isCuttingLocked}
                   />
                 </Field>
-                <Field label="Location">
-                  <DropdownWithModal
-                    name=""
-                    options={dropDownListObject(
-                      id
-                        ? locationData?.data
-                        : locationData?.data?.filter((item) => item?.active),
-                      "storeName",
-                      "id",
-                    )}
-                    value={storeId}
-                    setValue={setStoreId}
-                    required={true}
-                    readOnly={readOnly}
-                    className={`w-[150px]`}
-                    // disabled={childRecord.current > 0}
-                    addNewLabel="+ Add New Location"
-                    childComponent={LocationMaster}
-                    addNewModalWidth="w-[40%] h-[48%]"
-                    disabled={isDisabledPermission || isCuttingLocked}
-                  />
-                </Field>
-              </div>
-              <div className="grid grid-cols-3 gap-x-3 min-h-[70px] w-80">
-                <Field label="Stock Qty">
+                <Field label="Split Type">
                   <TextInput
                     name=""
-                    value={stockQty}
-                    // setValue={setStockQty}
-                    readOnly={true}
-                    type="number"
-                    className="w-full text-right"
-                    disabled={true}
-                  />
-                </Field>
-                <Field label="No. of Sheets">
-                  <TextInput
-                    name=""
-                    value={noOfPockets}
-                    setValue={setNoOfPockets}
+                    value={splitType}
+                    setValue={setSplitType}
                     readOnly={readOnly}
-                    type="number"
                     className="w-full text-right"
                     disabled={isDisabledPermission || isCuttingLocked}
-                    max={stockQty}
                   />
                 </Field>
                 <Field label="Running Qty">
@@ -1258,11 +1117,9 @@ const JobCardForm = ({
                 </Field>
               </div>
             </SectionCard>
-          </div>
 
-          <div className="flex flex-col gap-2">
             <SectionCard title="Printing Details">
-              <div className="grid grid-cols-2 gap-y-4">
+              <div className="grid grid-cols-4">
                 {printingList?.map((item) => (
                   <CheckBox
                     key={item.id}
@@ -1270,7 +1127,6 @@ const JobCardForm = ({
                     value={selectedPrinting.includes(item.id)}
                     setValue={() => toggleArr(setSelectedPrinting, item.id)}
                     readOnly={readOnly}
-                    // Task 3: lock if this printing step is completed
                     disabled={
                       isDisabledPermission || isPrintingItemLocked(item.id)
                     }
@@ -1278,8 +1134,9 @@ const JobCardForm = ({
                 ))}
               </div>
             </SectionCard>
+
             <SectionCard title="Plate & Die Details">
-              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+              <div className="grid grid-cols-5 gap-x-3 items-center">
                 <Field label="Plate Details">
                   <DropdownWithModal
                     name=""
@@ -1318,29 +1175,23 @@ const JobCardForm = ({
                     disabled={isDisabledPermission}
                   />
                 </Field>
-                <div className="col-span-1">
-                  <Field label="Total Plate Sets">
-                    <TextInput
-                      name=""
-                      value={totalPlatesets}
-                      setValue={setTotalPlatesets}
-                      type={"number"}
-                      readOnly={readOnly}
-                      className=" w-full text-right"
-                      disabled={isDisabledPermission}
-                    />
-                  </Field>
-                </div>
-              </div>
-            </SectionCard>
-            <SectionCard title="Plate Set & Size Details">
-              <div className="min-h-[72px] space-y-3">
-                <div className="justify-center items-center">
+                <Field label="Total Plate Sets">
+                  <TextInput
+                    name=""
+                    value={totalPlatesets}
+                    setValue={setTotalPlatesets}
+                    type="number"
+                    readOnly={readOnly}
+                    className="w-full text-right"
+                    disabled={isDisabledPermission}
+                  />
+                </Field>
+                <div className="justify-center items-center ml-4">
                   <button
                     onClick={() => setPlateModalOpen(true)}
                     className="border flex justify-center gap-1 items-center w-auto rounded-md text-[10px] bg-green-700 font-semibold uppercase tracking-wider text-white p-1"
                   >
-                    Add Plate Set <Plus className="size-3" />
+                    View Plate Details
                   </button>
                 </div>
                 <div className="justify-center items-center">
@@ -1355,6 +1206,7 @@ const JobCardForm = ({
             </SectionCard>
           </div>
 
+          {/* COL 3: Process + Lamination */}
           <div className="flex flex-col gap-2">
             <SectionCard title="Process Details">
               <div className="grid grid-cols-2 gap-y-4 min-h-[165px]">
@@ -1365,7 +1217,6 @@ const JobCardForm = ({
                     value={selectedProcesses.includes(item.id)}
                     setValue={() => toggleArr(setSelectedProcesses, item.id)}
                     readOnly={readOnly}
-                    // Task 3: lock if this process step is completed
                     disabled={
                       isDisabledPermission || isProcessItemLocked(item.id)
                     }
@@ -1381,8 +1232,6 @@ const JobCardForm = ({
                     const sel = laminations.find(
                       (l) => l.processId === item.id,
                     );
-                    // Task 3: lock if this lamination step is completed
-                    const laminLocked = isLaminationItemLocked(item.id);
                     return (
                       <LVRow
                         key={item.id}
@@ -1400,7 +1249,9 @@ const JobCardForm = ({
                           )
                         }
                         readOnly={
-                          readOnly || isDisabledPermission || laminLocked
+                          readOnly ||
+                          isDisabledPermission ||
+                          isLaminationItemLocked(item.id)
                         }
                       />
                     );
@@ -1414,6 +1265,7 @@ const JobCardForm = ({
             </SectionCard>
           </div>
 
+          {/* COL 4: Varnish + Machines */}
           <div className="flex flex-col gap-2">
             <SectionCard title="Varnish Details">
               {varnishList?.length > 0 ? (
@@ -1421,8 +1273,6 @@ const JobCardForm = ({
                   <LVHeader />
                   {varnishList.map((item) => {
                     const sel = varnishes.find((v) => v.processId === item.id);
-                    // Task 3: lock if this varnish step is completed
-                    const varnishLocked = isVarnishItemLocked(item.id);
                     return (
                       <LVRow
                         key={item.id}
@@ -1436,7 +1286,9 @@ const JobCardForm = ({
                           toggleLVProp(setVarnishes, item.id, "isFrontAndBack")
                         }
                         readOnly={
-                          readOnly || isDisabledPermission || varnishLocked
+                          readOnly ||
+                          isDisabledPermission ||
+                          isVarnishItemLocked(item.id)
                         }
                       />
                     );
@@ -1459,7 +1311,6 @@ const JobCardForm = ({
                       value={selectedMachines.includes(item.id)}
                       setValue={() => toggleArr(setSelectedMachines, item.id)}
                       readOnly={readOnly}
-                      // Machines have no route type, never locked by completion
                       disabled={isDisabledPermission}
                     />
                   ))}
@@ -1468,13 +1319,14 @@ const JobCardForm = ({
           </div>
         </div>
       )}
+
       {itemType === "LABEL" && (
         <div className="flex items-start min-w-max mx-2 h-full">
           <div className="w-full h-full flex gap-2">
             <SectionCard title="Label Details" className="max-w-full h-full">
               <div className="flex gap-16">
                 <div className="grid grid-cols-3 gap-y-2 gap-x-2 h-full">
-                  <div className="">
+                  <div>
                     <TextInput
                       name="Label Quality"
                       value={findFromList(
@@ -1488,7 +1340,7 @@ const JobCardForm = ({
                       disabled={isDisabledPermission}
                     />
                   </div>
-                  <div className="">
+                  <div>
                     <DropdownWithModal
                       name="Label Size"
                       options={dropDownListObject(
@@ -1507,7 +1359,7 @@ const JobCardForm = ({
                       disabled={isDisabledPermission}
                     />
                   </div>
-                  <div className="">
+                  <div>
                     <TextInput
                       name="Total Meter"
                       value={totalMeter}
@@ -1518,7 +1370,7 @@ const JobCardForm = ({
                       disabled={isDisabledPermission}
                     />
                   </div>
-                  <div className="">
+                  <div>
                     <DropdownInput
                       name="Block"
                       options={blockTypes}
@@ -1531,9 +1383,7 @@ const JobCardForm = ({
                         readOnly ||
                         isDisabledPermission
                       }
-                      beforeChange={() => {
-                        setBlockDate(null);
-                      }}
+                      beforeChange={() => setBlockDate(null)}
                     />
                   </div>
                   {block === "OLD" && (
@@ -1548,7 +1398,7 @@ const JobCardForm = ({
                       />
                     </div>
                   )}
-                  <div className="">
+                  <div>
                     <TextInput
                       name="Label Qty"
                       value={orderQty}
@@ -1559,7 +1409,7 @@ const JobCardForm = ({
                       disabled={isDisabledPermission}
                     />
                   </div>
-                  <div className="">
+                  <div>
                     <TextInput
                       name="Roll Qty"
                       value={rollQty}
@@ -1582,7 +1432,6 @@ const JobCardForm = ({
                     value={selectedFinishing.includes(item.id)}
                     setValue={() => toggleArr(setSelectedFinishing, item.id)}
                     readOnly={readOnly}
-                    // Task 3: lock if this finishing step is completed
                     disabled={
                       isDisabledPermission || isFinishingItemLocked(item.id)
                     }
@@ -1591,56 +1440,51 @@ const JobCardForm = ({
               </div>
             </SectionCard>
             <SectionCard title="Size Wise Qty Details" className="w-1/3">
-              <div>
-                <div className="bg-white px-4 py-1 shadow-sm">
-                  <div className="overflow-y-auto">
-                    <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
-                      <thead>
-                        <tr>
-                          <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-6">
-                            S.No
-                          </th>
-                          <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-20 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
-                            Size
-                          </th>
-                          <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
-                            Qty
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {jobCardSizeDetails?.map((item, idx) => (
-                          <tr
-                            key={idx}
-                            className="h-8 hover:bg-slate-50 transition-colors"
-                          >
-                            <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">
-                              {idx + 1}
-                            </td>
-                            <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
-                              {sizeList?.data?.find((s) => s.id === item.sizeId)
-                                ?.name || "All Items"}
-                            </td>
-                            <td className="border-b border-r border-slate-200 px-1 py-0">
-                              <input
-                                type="number"
-                                className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
-                                value={item.qty}
-                                disabled={true}
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {(!jobCardSizeDetails ||
-                      jobCardSizeDetails.length === 0) && (
-                      <div className="text-center p-8 text-slate-400 text-sm font-medium italic">
-                        No items found for this tracking mode.
-                      </div>
-                    )}
+              <div className="bg-white px-4 py-1 shadow-sm overflow-y-auto">
+                <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
+                  <thead>
+                    <tr>
+                      <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-6">
+                        S.No
+                      </th>
+                      <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-20 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
+                        Size
+                      </th>
+                      <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
+                        Qty
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jobCardSizeDetails?.map((item, idx) => (
+                      <tr
+                        key={idx}
+                        className="h-8 hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="border-b border-r border-slate-200 px-1 py-0 text-center text-[11px] text-black">
+                          {idx + 1}
+                        </td>
+                        <td className="border-b border-r border-slate-200 px-3 py-0 text-[11px] text-black">
+                          {sizeList?.data?.find((s) => s.id === item.sizeId)
+                            ?.name || "All Items"}
+                        </td>
+                        <td className="border-b border-r border-slate-200 px-1 py-0">
+                          <input
+                            type="number"
+                            className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
+                            value={item.qty}
+                            disabled
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {(!jobCardSizeDetails || jobCardSizeDetails.length === 0) && (
+                  <div className="text-center p-8 text-slate-400 text-sm font-medium italic">
+                    No items found for this tracking mode.
                   </div>
-                </div>
+                )}
               </div>
             </SectionCard>
           </div>
@@ -1649,6 +1493,7 @@ const JobCardForm = ({
     </div>
   );
 
+  // ── FOOTER ────────────────────────────────────────────────────────────────
   const footerContent = (
     <>
       <div className="flex gap-2">
@@ -1663,7 +1508,7 @@ const JobCardForm = ({
             processRoute={processRoute}
             setProcessRoute={setProcessRoute}
             readOnly={readOnly}
-            boardItems={boardItems}
+            boardItems={boardProcessIds}
             otherBoardId={otherBoardId}
             printingList={printingList}
             boardList={boardList}
@@ -1672,7 +1517,6 @@ const JobCardForm = ({
             finishingList={finishingList}
             isAmendment={isAmendment}
             setIsAmendment={setIsAmendment}
-            // Task 1 & 2: pass raw DB route so panel can look up step statuses
             dbProcessRoute={dbProcessRoute}
           />
         </div>
@@ -1681,9 +1525,7 @@ const JobCardForm = ({
           <textarea
             readOnly={readOnly}
             value={remarks}
-            onChange={(e) => {
-              setRemarks(e.target.value);
-            }}
+            onChange={(e) => setRemarks(e.target.value)}
             disabled={isDisabledPermission}
             className="w-full h-11 overflow-auto px-2.5 py-2 text-xs border border-slate-300 rounded-md outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-500"
             placeholder="Additional Remarks..."
@@ -1804,11 +1646,10 @@ const JobCardForm = ({
 
   return (
     <>
+      {/* Plate Set Modal */}
       <Modal
         isOpen={plateModalOpen}
-        onClose={() => {
-          setPlateModalOpen(false);
-        }}
+        onClose={() => setPlateModalOpen(false)}
         widthClass="w-[500px]"
       >
         <div className="bg-slate-100 p-3 rounded-lg">
@@ -1816,14 +1657,12 @@ const JobCardForm = ({
             <h3 className="text-[16px] font-bold text-slate-800">
               Plate Set Details
             </h3>
-            <div className="flex gap-2">
-              <button
-                className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold transition-colors flex items-center gap-1 shadow-sm"
-                onClick={() => setPlateModalOpen(false)}
-              >
-                Done
-              </button>
-            </div>
+            <button
+              className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold"
+              onClick={() => setPlateModalOpen(false)}
+            >
+              Done
+            </button>
           </div>
           <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
             <div className="h-[220px] overflow-y-auto">
@@ -1841,20 +1680,7 @@ const JobCardForm = ({
                     </th>
                     {!readOnly && (
                       <th className="border border-gray-300 px-1 py-1 text-center w-10">
-                        <button
-                          onClick={() =>
-                            setPlateDetails((prev) => [
-                              ...prev,
-                              { plateName: "", qty: "" },
-                            ])
-                          }
-                          className="flex items-center justify-center mx-auto p-0.5 bg-indigo-100 hover:bg-indigo-200 rounded"
-                          title="Add plate row"
-                          tabIndex={-1}
-                          disabled={isDisabledPermission}
-                        >
-                          Actions
-                        </button>
+                        Actions
                       </th>
                     )}
                   </tr>
@@ -1922,7 +1748,6 @@ const JobCardForm = ({
                                 ])
                               }
                               className="p-0.5 bg-blue-50 hover:bg-blue-100 rounded"
-                              title="Add row"
                               tabIndex={-1}
                               disabled={isDisabledPermission}
                             >
@@ -1938,7 +1763,6 @@ const JobCardForm = ({
                                 })
                               }
                               className="p-0.5 bg-red-50 hover:bg-red-100 rounded"
-                              title="Delete row"
                               tabIndex={-1}
                               disabled={isDisabledPermission}
                             >
@@ -1967,11 +1791,10 @@ const JobCardForm = ({
         </div>
       </Modal>
 
+      {/* Size Modal */}
       <Modal
         isOpen={sizeModalOpen}
-        onClose={() => {
-          setSizeModalOpen(false);
-        }}
+        onClose={() => setSizeModalOpen(false)}
         widthClass="w-[550px]"
       >
         <div className="bg-slate-100 p-3 rounded-lg">
@@ -1979,14 +1802,12 @@ const JobCardForm = ({
             <h3 className="text-[16px] font-bold text-slate-800">
               Size Wise Details
             </h3>
-            <div className="flex gap-2">
-              <button
-                className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold transition-colors flex items-center gap-1 shadow-sm"
-                onClick={() => setSizeModalOpen(false)}
-              >
-                Done
-              </button>
-            </div>
+            <button
+              className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold"
+              onClick={() => setSizeModalOpen(false)}
+            >
+              Done
+            </button>
           </div>
           <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
             <div className="h-[220px] overflow-y-auto">
@@ -2022,7 +1843,7 @@ const JobCardForm = ({
                           type="number"
                           className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
                           value={item.qty}
-                          disabled={true}
+                          disabled
                         />
                       </td>
                     </tr>
@@ -2031,7 +1852,7 @@ const JobCardForm = ({
               </table>
               {!jobCardSizeDetails && (
                 <div className="text-center p-8 text-slate-400 text-sm font-medium italic">
-                  No size Details found for this Item.
+                  No size Details found.
                 </div>
               )}
             </div>
@@ -2039,6 +1860,7 @@ const JobCardForm = ({
         </div>
       </Modal>
 
+      {/* Approval Modal */}
       <Modal
         isOpen={approvalModal}
         onClose={() => setApprovalModal(false)}
@@ -2141,6 +1963,7 @@ const JobCardForm = ({
         </div>
       </Modal>
 
+      {/* Print Modal */}
       <Modal
         isOpen={printModalOpen}
         onClose={() => {

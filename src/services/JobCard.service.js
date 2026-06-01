@@ -13,7 +13,6 @@ import {
   getApprovalStatus,
   getModuleApprovalSetup,
 } from "../utils/approvalHelper.js";
-import { orderEntry } from "../routes/index.js";
 const REFERENCE_PAGE = "JOB CARD";
 
 async function getNextDocId(branchId, shortCode, startTime, endTime) {
@@ -679,7 +678,7 @@ async function get_mob_joblist(req) {
       },
     },
     include: {
-      productionAllocations:true,
+      productionAllocations: true,
       processRoute: {
         include: {
           productionAllocationDtls: true,
@@ -778,9 +777,8 @@ async function get_mob_joblist(req) {
     };
   });
 
+  console.log("log", resolvedData);
 
-  console.log("log",resolvedData);
-  
   var filtered_ = resolvedData
     ?.filter((resolved_) => {
       const status = resolved_?.approvalStatus?.status;
@@ -804,7 +802,7 @@ async function get_mob_joblist(req) {
         docId: routes?.docId,
         approvalStatus: routes?.status,
         process: routes?.processRoute?.Process,
-        priority : routes?.productionAllocations?.[0]?.priority ?? "LOW"
+        priority: routes?.productionAllocations?.[0]?.priority ?? "LOW",
       };
     });
 
@@ -1225,6 +1223,7 @@ async function create(body) {
       blockDate,
       isRepeatedJobCard,
       refJobCardId,
+      splitType,
     } = body;
 
     // ─────────────────────────────
@@ -1323,11 +1322,15 @@ async function create(body) {
           blockDate: blockDate ? new Date(blockDate) : null,
           isRepeatedJobCard: !!isRepeatedJobCard,
           refJobCardId: refJobCardId ? Number(refJobCardId) : null,
+          splitType: splitType || null,
           boardQualities: safeBoardItems.length
             ? {
                 createMany: {
-                  data: safeBoardItems.map((id) => ({
-                    processId: Number(id),
+                  data: safeBoardItems.map((item) => ({
+                    processId: Number(item.processId),
+                    gsmId: Number(item.gsmId),
+                    fullBoardId: Number(item.fullBoardId),
+                    noOfSheets: Number(item.noOfSheets),
                   })),
                 },
               }
@@ -1528,6 +1531,7 @@ async function update(id, body) {
       isRepeatedJobCard,
       refJobCardId,
       isAmendment,
+      splitType,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -1779,6 +1783,7 @@ async function update(id, body) {
           blockDate: blockDate ? new Date(blockDate) : null,
           isRepeatedJobCard: !!isRepeatedJobCard,
           refJobCardId: refJobCardId ? Number(refJobCardId) : null,
+          splitType: splitType || null,
           boardQualities:
             boardItems.length > 0
               ? {

@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-const REFERENCE_PAGE = "JOB CARD";
+const REFERENCE_PAGE = "ORDER ENTRY";
 
 async function checkPendingJobCards(userId) {
   const today = new Date();

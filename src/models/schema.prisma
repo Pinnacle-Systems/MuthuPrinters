@@ -1640,6 +1640,7 @@ model Size {
   jobCardSizeDetails     JobCardSizeBreakup[]
   Machine                Machine[]
   jobCardLabelSize       JobCard[]                @relation("labelSize")
+  boardQualities         BoardQuality[]
 }
 
 model Gsm {
@@ -1658,6 +1659,7 @@ model Gsm {
   stocks                 Stock[]
   orderItems             OrderItems[]
   proformaInvoiceItems   ProformaInvoiceItem[]
+  boardQualities         BoardQuality[]
 
   jobCards JobCard[]
 }
@@ -2021,6 +2023,7 @@ model JobCard {
   RefJobCard         JobCard?    @relation("RepeatedJobCard", fields: [refJobCardId], references: [id])
   Store              Location?   @relation(fields: [storeId], references: [id])
   storeId            Int?
+  splitType          String?
 
   boardQualities        BoardQuality[]
   processDetails        ProcessDetails[]
@@ -2043,13 +2046,18 @@ model JobCard {
 }
 
 model BoardQuality {
-  id        Int      @id @default(autoincrement())
-  jobCardId Int?
-  JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
-  boardId   Int?
-  Board     Board?   @relation(fields: [boardId], references: [id])
-  processId Int?
-  Process   Process? @relation(fields: [processId], references: [id])
+  id            Int      @id @default(autoincrement())
+  jobCardId     Int?
+  JobCard       JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  boardId       Int?
+  Board         Board?   @relation(fields: [boardId], references: [id])
+  processId     Int?
+  Process       Process? @relation(fields: [processId], references: [id])
+  gsmId         Int?
+  gsm           Gsm?     @relation(fields: [gsmId], references: [id])
+  fullBoardId   Int?
+  FullBoardSize Size?    @relation(fields: [fullBoardId], references: [id])
+  noOfSheets    Int?
 }
 
 model FinishingProcess {

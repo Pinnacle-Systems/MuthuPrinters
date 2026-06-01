@@ -474,7 +474,7 @@ async function geOrderItemsList(req) {
     childRecord: item._count.jobCards,
     name: item.StyleItem?.name || "",
     itemGroupId: item.itemGroupId,
-    itemGroupName: item.ItemGroup?.name
+    itemGroupName: item.ItemGroup?.name,
   }));
 
   return { statusCode: 0, data: result };
@@ -796,6 +796,9 @@ async function update(id, body, files) {
     },
   });
   if (!dataFound) return NoRecordFound("Purchase Inward");
+  const removedItemIds = dataFound.orderItems
+    .filter((item) => !incomingItemIds.includes(item.id))
+    .map((item) => item.id);
   const removedAttachments = dataFound.attachments.filter(
     (existing) => !incomingIds.includes(existing.id),
   );
@@ -840,6 +843,14 @@ async function update(id, body, files) {
   }
   const validTo = moment(docDate).add(validDays, "days").endOf("day").toDate();
   await prisma.$transaction(async (tx) => {
+    await tx.notification.deleteMany({
+      where: {
+        referencePage: REFERENCE_PAGE,
+        referenceId: {
+          in: removedItemIds,
+        },
+      },
+    });
     data = await tx.orderEntry.update({
       where: {
         id: parseInt(id),
@@ -1004,10 +1015,24 @@ async function remove(id) {
   await prisma.approvalLog.deleteMany({
     where: { referencePage: REFERENCE_PAGE, referenceId: orderEntryId },
   });
+
   const dataFound = await prisma.orderEntry.findUnique({
-    where: { id: parseInt(id) },
-    include: { attachments: { select: { filePath: true } } },
+    where: { id: orderEntryId },
+    include: {
+      attachments: { select: { filePath: true } },
+      orderItems: { select: { id: true } },
+    },
   });
+  await Promise.all(
+    dataFound.orderItems.map((item) =>
+      prisma.notification.deleteMany({
+        where: {
+          referenceId: item.id,
+          referencePage: REFERENCE_PAGE,
+        },
+      }),
+    ),
+  );
 
   dataFound?.attachments?.forEach((att) => {
     if (!att.filePath) return;
@@ -1018,7 +1043,7 @@ async function remove(id) {
   });
   const data = await prisma.orderEntry.delete({
     where: {
-      id: parseInt(id),
+      id: orderEntryId,
     },
   });
 
