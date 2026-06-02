@@ -983,9 +983,10 @@ model StyleItem {
   purchaseBillEntryItems PurchaseBillEntryItems[]
   orderItems             OrderItems[]
   proformaInvoiceItems   ProformaInvoiceItem[]
-  JobCards               JobCard[]
+  JobCardsOrderItem      JobCard[]                @relation("OrderItem")
   productionAllocations  ProductionAllocation[]
   salesDeliveryItems     SalesDeliveryItems[]
+  JobCardsLabel          JobCard[]                @relation("label")
 }
 
 model DeliveryChallan {
@@ -1899,6 +1900,7 @@ model Process {
   billingProcesses                 BillingProcess[]
   jobCards                         JobCard[]
   boardQualitys                    BoardQuality[]
+  labelPrintingDetails             LabelPrintingDetails[]
 }
 
 model ProcessGroup {
@@ -2007,12 +2009,14 @@ model JobCard {
   ItemGroup          ItemGroup?  @relation(fields: [itemGroupId], references: [id])
   itemType           String?
   styleItemId        Int?
-  StyleItem          StyleItem?  @relation(fields: [styleItemId], references: [id])
+  StyleItem          StyleItem?  @relation("OrderItem", fields: [styleItemId], references: [id])
   trackingType       String?
   labelQty           Int?
   rollQty            Int?
   cutAndSeal         String?
   labelQuality       String?
+  LabelItem          StyleItem?  @relation("label", fields: [labelItemId], references: [id])
+  labelItemId        Int?
   block              String?
   orderItemId        Int?
   totalMeter         Int?
@@ -2043,6 +2047,7 @@ model JobCard {
   processBillDtls       ProcessBillDtl[]
   productionempPunch    productionempPunch[]
   stocks                Stock[]
+  labelPrintingDetails  LabelPrintingDetails[]
 }
 
 model BoardQuality {
@@ -2061,6 +2066,14 @@ model BoardQuality {
 }
 
 model FinishingProcess {
+  id        Int      @id @default(autoincrement())
+  jobCardId Int?
+  JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processId Int?
+  Process   Process? @relation(fields: [processId], references: [id])
+}
+
+model LabelPrintingDetails {
   id        Int      @id @default(autoincrement())
   jobCardId Int?
   JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)

@@ -13,6 +13,7 @@ import {
   getApprovalStatus,
   getModuleApprovalSetup,
 } from "../utils/approvalHelper.js";
+
 const REFERENCE_PAGE = "JOB CARD";
 
 async function getNextDocId(branchId, shortCode, startTime, endTime) {
@@ -1025,6 +1026,7 @@ async function getOne(id) {
       jobCardSizeDetails: true,
       printingDetails: true,
       finishingProcesses: true,
+      labelPrintingDetails: true,
       plateDetails: true,
       _count: {
         select: {
@@ -1036,19 +1038,18 @@ async function getOne(id) {
 
   if (!data) return NoRecordFound("Job Card");
 
-  let stockQty = 0;
+  for (const boardQuality of data.boardQualities) {
+    let stockQty = 0;
 
-  const boardId = data?.boardQualities?.[0]?.processId;
-  console.log(data?.noOfPockets, "noOfPockets");
-  if (boardId && data?.storeId) {
     const boardData = await prisma.process.findFirst({
       where: {
-        id: boardId,
+        id: boardQuality.processId,
       },
       select: {
         name: true,
       },
     });
+
     if (boardData) {
       const itemData = await prisma.styleItem.findFirst({
         where: {
@@ -1056,24 +1057,28 @@ async function getOne(id) {
         },
         select: {
           id: true,
+          uomId: true,
         },
       });
-
       if (itemData) {
         const stockData = await prisma.stock.aggregate({
           where: {
             styleItemId: itemData.id,
+            branchId: data.branchId,
             storeId: data.storeId,
+            gsmId: boardQuality.gsmId,
+            sizeId: boardQuality.fullBoardId,
+            uomId: itemData.uomId,
           },
           _sum: {
             qty: true,
           },
         });
-
-        stockQty = (stockData?._sum?.qty || 0) + (data?.noOfPockets || 0);
-        console.log(stockQty, "stockQty");
+        stockQty = stockData?._sum?.qty || 0;
       }
     }
+
+    boardQuality.stockQty = stockQty + boardQuality.noOfSheets;
   }
 
   const { module, hasApproval } = await getModuleApprovalSetup(
@@ -1128,7 +1133,6 @@ async function getOne(id) {
     statusCode: 0,
     data: {
       ...data,
-      stockQty: stockQty,
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
       approvalLog: log,
       childRecord: data._count.productionAllocations,
@@ -1206,7 +1210,7 @@ async function create(body) {
       rollQty,
       cutAndSeal,
       // Arrays
-      boardItems,
+      boardQualities,
       selectedProcesses,
       laminations,
       varnishes,
@@ -1224,12 +1228,15 @@ async function create(body) {
       isRepeatedJobCard,
       refJobCardId,
       splitType,
+      storeId,
+      selectedLabelPrinting,
+      labelItemId,
     } = body;
 
     // ─────────────────────────────
     // ✅ SAFE ARRAYS
     // ─────────────────────────────
-    const safeBoardItems = safeArray(boardItems);
+    const safeBoardItems = safeArray(boardQualities);
     const safeProcesses = safeArray(selectedProcesses);
     const safeLaminations = safeArray(laminations);
     const safeVarnishes = safeArray(varnishes);
@@ -1238,6 +1245,7 @@ async function create(body) {
     const safeJobCardSizeDetails = safeArray(jobCardSizeDetails);
     const safeSelectedPrinting = safeArray(selectedPrinting);
     const safePlateDetails = safeArray(plateDetails);
+    const safeLabelPrintingDetails = safeArray(selectedLabelPrinting);
     const safeFinishingDetails = safeArray(selectedFinishing);
 
     // ─────────────────────────────
@@ -1323,6 +1331,8 @@ async function create(body) {
           isRepeatedJobCard: !!isRepeatedJobCard,
           refJobCardId: refJobCardId ? Number(refJobCardId) : null,
           splitType: splitType || null,
+          storeId: storeId ? Number(storeId) : null,
+          labelItemId: labelItemId ? Number(labelItemId) : null,
           boardQualities: safeBoardItems.length
             ? {
                 createMany: {
@@ -1438,8 +1448,65 @@ async function create(body) {
                 },
               }
             : undefined,
+
+          labelPrintingDetails: safeLabelPrintingDetails.length
+            ? {
+                createMany: {
+                  data: safeLabelPrintingDetails.map((id) => ({
+                    processId: Number(id),
+                  })),
+                },
+              }
+            : undefined,
         },
       });
+      for (const boardQuality of boardQualities) {
+        const process = await tx.process.findUnique({
+          where: {
+            id: Number(boardQuality.processId),
+          },
+          select: {
+            name: true,
+          },
+        });
+
+        if (!process) {
+          throw new Error("Board process not found");
+        }
+        const styleItem = await tx.styleItem.findFirst({
+          where: {
+            name: process.name,
+          },
+          select: {
+            id: true,
+            uomId: true,
+          },
+        });
+
+        if (!styleItem) {
+          throw new Error(`Style Item not found for process ${process.name}`);
+        }
+        await tx.stock.create({
+          data: {
+            branchId: parseInt(branchId),
+            storeId: parseInt(storeId),
+            styleItemId: parseInt(styleItem.id),
+            gsmId: parseInt(boardQuality.gsmId),
+            sizeId: parseInt(boardQuality.fullBoardId),
+            inOrOut: "Out",
+            qty:
+              boardQuality?.noOfSheets &&
+              !isNaN(parseFloat(boardQuality.noOfSheets))
+                ? -Math.abs(parseInt(boardQuality.noOfSheets))
+                : null,
+            uomId: parseInt(styleItem.uomId),
+            createdById: parseInt(userId),
+            itemGroupId: parseInt(itemGroupId),
+            jobCardId: parseInt(data.id),
+            processName: "Job Card",
+          },
+        });
+      }
       if (hasApproval && module) {
         // ✅ Dynamic include — pulls every relation any Field master references
         const includeClause = await buildIncludeForModule(module.id);
@@ -1502,7 +1569,7 @@ async function update(id, body) {
       designerId,
       tagCardUps,
       jobRunTime,
-      boardItems,
+      boardQualities,
       selectedProcesses,
       laminations,
       varnishes,
@@ -1532,6 +1599,9 @@ async function update(id, body) {
       refJobCardId,
       isAmendment,
       splitType,
+      storeId,
+      selectedLabelPrinting,
+      labelItemId,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -1573,7 +1643,14 @@ async function update(id, body) {
       await tx.finishingProcess.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
-
+      await tx.stock.deleteMany({
+        where: {
+          jobCardId: parseInt(id),
+        },
+      });
+      await tx.labelPrintingDetails.deleteMany({
+        where: { jobCardId: parseInt(id) },
+      });
       if (processRoute.length > 0) {
         // Fetch current DB rows for this job card
         const existingRouteRows = await tx.processRoute.findMany({
@@ -1784,12 +1861,17 @@ async function update(id, body) {
           isRepeatedJobCard: !!isRepeatedJobCard,
           refJobCardId: refJobCardId ? Number(refJobCardId) : null,
           splitType: splitType || null,
+          storeId: storeId ? Number(storeId) : null,
+          labelItemId: labelItemId ? Number(labelItemId) : null,
           boardQualities:
-            boardItems.length > 0
+            boardQualities.length > 0
               ? {
                   createMany: {
-                    data: boardItems.map((bId) => ({
-                      processId: parseInt(bId),
+                    data: boardQualities.map((item) => ({
+                      processId: Number(item.processId),
+                      gsmId: Number(item.gsmId),
+                      fullBoardId: Number(item.fullBoardId),
+                      noOfSheets: Number(item.noOfSheets),
                     })),
                   },
                 }
@@ -1885,8 +1967,64 @@ async function update(id, body) {
                 },
               }
             : undefined,
+          labelPrintingDetails: selectedLabelPrinting.length
+            ? {
+                createMany: {
+                  data: selectedLabelPrinting.map((id) => ({
+                    processId: Number(id),
+                  })),
+                },
+              }
+            : undefined,
         },
       });
+      for (const boardQuality of boardQualities) {
+        const process = await tx.process.findUnique({
+          where: {
+            id: Number(boardQuality.processId),
+          },
+          select: {
+            name: true,
+          },
+        });
+
+        if (!process) {
+          throw new Error("Board process not found");
+        }
+        const styleItem = await tx.styleItem.findFirst({
+          where: {
+            name: process.name,
+          },
+          select: {
+            id: true,
+            uomId: true,
+          },
+        });
+
+        if (!styleItem) {
+          throw new Error(`Style Item not found for process ${process.name}`);
+        }
+        await tx.stock.create({
+          data: {
+            branchId: Number(branchId),
+            storeId: Number(storeId),
+            styleItemId: parseInt(styleItem.id),
+            gsmId: parseInt(boardQuality.gsmId),
+            sizeId: parseInt(boardQuality.fullBoardId),
+            inOrOut: "Out",
+            qty:
+              boardQuality?.noOfSheets &&
+              !isNaN(parseFloat(boardQuality.noOfSheets))
+                ? -Math.abs(parseInt(boardQuality.noOfSheets))
+                : null,
+            uomId: parseInt(styleItem.uomId),
+            createdById: parseInt(userId),
+            itemGroupId: parseInt(itemGroupId),
+            jobCardId: Number(id),
+            processName: "Job Card",
+          },
+        });
+      }
       if (submitApproval && hasApproval && module) {
         await tx.approvalLog.deleteMany({
           where: {
@@ -1937,6 +2075,10 @@ async function remove(id) {
     // Cascade delete handles child records (onDelete: Cascade in schema)
     const data = await prisma.jobCard.delete({
       where: { id: parseInt(id) },
+    });
+
+    await prisma.stock.deleteMany({
+      where: { jobCardId: jobCardId },
     });
 
     return { statusCode: 0, data };

@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Gsm, ProcessMaster, Size } from "..";
 import { FxSelectWithAdd } from "../../../Inputs";
+import Swal from "sweetalert2";
+import { useLazyGetBoardQtyQuery } from "../../../redux/services/StockService";
+import { params } from "../../../Utils/helper";
 const DEFAULT_ROW_COUNT = 2;
 
 export const emptyRow = () => ({
@@ -23,29 +26,52 @@ const BoardDetails = ({
   isDisabledPermission,
   isCuttingLocked,
   childRecord,
+  storeId,
 }) => {
   const [contextMenu, setContextMenu] = useState(null);
+  const [triggerGetBoardQty] = useLazyGetBoardQtyQuery();
 
-  const handleInputChange = (value, index, field) => {
-    setBoardItems((prev) => {
-      const rows = [...prev];
-      let row = { ...rows[index], [field]: value };
-      //   if (field === "styleItemId" && value) {
-      //     const found = styleItemList?.data?.find((i) => i.id === value);
-      //     if (found) {
-      //       row = {
-      //         ...row,
-      //         // itemGroupId: found.itemGroupId || "",
-      //         uomId: found.uomId || "",
-      //         hsnId: found.hsnId || "",
-      //         sizeBreakup: id ? [...(row.sizeBreakup || [])] : [EMPTY_SIZE_ROW()],
-      //         orderQty: row.orderQty,
-      //       };
-      //     }
-      //   }
-      rows[index] = row;
-      return rows;
-    });
+  const handleInputChange = async (value, index, field) => {
+    const updatedRow = {
+      ...boardItems[index],
+      [field]: value,
+    };
+
+    const rows = [...boardItems];
+    rows[index] = updatedRow;
+    setBoardItems(rows);
+
+    if (field === "fullBoardId" && value) {
+      try {
+        const response = await triggerGetBoardQty({
+          params: {
+            processId: updatedRow.processId,
+            storeId: storeId,
+            gsmId: updatedRow.gsmId,
+            fullBoardId: value,
+          },
+        }).unwrap();
+        console.log(response, "response");
+        if (response.statusCode === 404) {
+          Swal.fire({
+            icon: "error",
+            title: "Not found",
+            text: response.message,
+          });
+          return;
+        }
+        setBoardItems((prev) => {
+          const newRows = [...prev];
+          newRows[index] = {
+            ...newRows[index],
+            stockQty: response?.stockQty || 0,
+          };
+          return newRows;
+        });
+      } catch (error) {
+        console.error("Board Qty fetch failed", error);
+      }
+    }
   };
 
   useEffect(() => {
@@ -217,9 +243,23 @@ const BoardDetails = ({
                     onChange={(e) =>
                       handleInputChange(e.target.value, idx, "noOfSheets")
                     }
-                    onBlur={() =>
-                      handleInputChange(item.noOfSheets, idx, "noOfSheets")
-                    }
+                    onBlur={() => {
+                      const maxQty = Number(item?.stockQty || 0);
+                      const sheets = Number(item?.noOfSheets || 0);
+
+                      if (sheets > maxQty) {
+                        Swal.fire({
+                          icon: "error",
+                          title: "Error",
+                          text: "No. of sheets cannot be greater than stock quantity",
+                        });
+
+                        handleInputChange("", idx, "noOfSheets");
+                        return;
+                      }
+
+                      handleInputChange(item.noOfSheets, idx, "noOfSheets");
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Delete")
                         handleInputChange("", idx, "noOfSheets");

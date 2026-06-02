@@ -238,10 +238,10 @@ async function get(req) {
 }
 
 async function getBoardQty(req) {
-  const { boardId, storeId } = req.query;
+  const { processId, storeId, gsmId, fullBoardId } = req.query;
   const boardData = await prisma.process.findFirst({
     where: {
-      id: parseInt(boardId),
+      id: parseInt(processId),
     },
     select: {
       name: true,
@@ -250,7 +250,6 @@ async function getBoardQty(req) {
   if (!boardData) {
     return { statusCode: 404, message: "Board not found" };
   }
-
   const itemData = await prisma.styleItem.findFirst({
     where: {
       name: boardData.name,
@@ -265,8 +264,10 @@ async function getBoardQty(req) {
   }
   const stockQty = await prisma.stock.aggregate({
     where: {
-      styleItemId: itemData.id,
       storeId: parseInt(storeId),
+      styleItemId: itemData.id,
+      gsmId: parseInt(gsmId),
+      sizeId: parseInt(fullBoardId),
     },
     _sum: {
       qty: true,

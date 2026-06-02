@@ -126,6 +126,7 @@ export const {
   useGetPcsStockQuery,
   useGetStockReportQuery,
   useGetBoardQtyQuery,
+  useLazyGetBoardQtyQuery,
 } = stockApi;
 
 export default stockApi;

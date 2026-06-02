@@ -108,3 +108,31 @@ export const LVRow = ({
     </div>
   </div>
 );
+
+// ─── helper: map DB boardQualities rows → BoardDetails row objects ───────────
+export const mapBoardQualitiesToRows = (boardQualities) => {
+  if (!boardQualities?.length) return [];
+  return boardQualities.map((b) => ({
+    processId: b.processId || "", // support both shapes
+    gsmId: b.gsmId || "",
+    fullBoardId: b.fullBoardId || "",
+    stockQty: b.stockQty || "",
+    noOfSheets: b.noOfSheets || b.noOfPockets || "",
+  }));
+};
+
+export const toggleArr = (setter, val) =>
+  setter((prev) =>
+    prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val],
+  );
+export const toggleLV = (setter, pid) =>
+  setter((prev) => {
+    const exists = prev.find((l) => l.processId === pid);
+    return exists
+      ? prev.filter((l) => l.processId !== pid)
+      : [...prev, { processId: pid, isFront: false, isFrontAndBack: false }];
+  });
+export const toggleLVProp = (setter, pid, prop) =>
+  setter((prev) =>
+    prev.map((l) => (l.processId === pid ? { ...l, [prop]: !l[prop] } : l)),
+  );

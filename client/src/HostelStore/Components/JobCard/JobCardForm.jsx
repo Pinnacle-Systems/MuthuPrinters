@@ -16,7 +16,7 @@ import { FiCheck, FiEdit2, FiPrinter, FiSave, FiSend } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { dropDownListObject } from "../../../Utils/contructObject";
-import { DieMaster, PlateMaster, Size } from "../index.js";
+import { DieMaster, PlateMaster, Size, StyleItemMaster } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import {
   useAddJobCardMutation,
@@ -47,7 +47,17 @@ import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoSer
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import TransactionLayout from "../../../Basic/components/Reuseable/TransactionLayout.jsx";
 import { QRCodeCanvas } from "qrcode.react";
-import { CheckBox, Field, LVHeader, LVRow, SectionCard } from "./Utils.jsx";
+import {
+  CheckBox,
+  Field,
+  LVHeader,
+  LVRow,
+  mapBoardQualitiesToRows,
+  SectionCard,
+  toggleArr,
+  toggleLV,
+  toggleLVProp,
+} from "./Utils.jsx";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import { Plus } from "lucide-react";
 import { useGetMachineMasterQuery } from "../../../redux/services/MachineMasterService.js";
@@ -56,18 +66,7 @@ import QRCode from "qrcode";
 import { LocationMaster } from "../../../Basic/components/index.js";
 import { useGetLocationMasterQuery } from "../../../redux/services/LocationMasterService.js";
 import BoardDetails, { emptyRow } from "./BoardDetails.jsx";
-
-// ─── helper: map DB boardQualities rows → BoardDetails row objects ───────────
-const mapBoardQualitiesToRows = (boardQualities) => {
-  if (!boardQualities?.length) return [];
-  return boardQualities.map((b) => ({
-    processId: b.processId || "", // support both shapes
-    gsmId: b.gsmId || "",
-    fullBoardId: b.fullBoardId || "",
-    stockQty: b.stockQty || "",
-    noOfSheets: b.noOfSheets || b.noOfPockets || "",
-  }));
-};
+import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 
 const DEFAULT_BOARD_ROWS = 2;
 
@@ -115,6 +114,7 @@ const JobCardForm = ({
   const [selectedProcesses, setSelectedProcesses] = useState([]);
   const [selectedMachines, setSelectedMachines] = useState([]);
   const [selectedFinishing, setSelectedFinishing] = useState([]);
+  const [selectedLabelPrinting, setSelectedLabelPrinting] = useState([]);
   const [laminations, setLaminations] = useState([]);
   const [varnishes, setVarnishes] = useState([]);
   const [orderEntryId, setOrderEntryId] = useState("");
@@ -134,7 +134,7 @@ const JobCardForm = ({
   const [itemType, setItemType] = useState("");
   const [followUpId, setFollowUpId] = useState("");
   const [designerId, setDesignerId] = useState("");
-  const [labelQuality, setLabelQuality] = useState("");
+  const [labelItemId, setLabelItemId] = useState("");
   const [block, setBlock] = useState("NEW");
   const [labelQty, setLabelQty] = useState("");
   const [rollQty, setRollQty] = useState("");
@@ -160,6 +160,7 @@ const JobCardForm = ({
   const [storeId, setStoreId] = useState("");
   const qrRef = useRef(null);
   const [runningQty, setRunningQty] = useState("");
+  const [stockQty, setStockQty] = useState("");
   const params = {
     companyId: secureLocalStorage.getItem(
       sessionStorage.getItem("sessionId") + "userCompanyId",
@@ -172,6 +173,9 @@ const JobCardForm = ({
     params: { companyId, branchId },
   });
   const { data: sizeList } = useGetSizeMasterQuery({
+    params: { companyId, branchId },
+  });
+  const { data: styleList } = useGetStyleItemMasterQuery({
     params: { companyId, branchId },
   });
   const { data: machineList } = useGetMachineMasterQuery({
@@ -201,6 +205,7 @@ const JobCardForm = ({
   const laminationList = filterByGroup("LAMINATION");
   const varnishList = filterByGroup("VARNISH");
   const finishingList = filterByGroup("FINISHING");
+  const labelPrintingList = filterByGroup("LABEL PRINTING");
 
   const {
     data: singleData,
@@ -236,7 +241,7 @@ const JobCardForm = ({
 
   // ── Derive a plain array of boardIds for ProcessRoutePanel & lock helpers ──
   const boardProcessIds = useMemo(
-    () => boardItems.filter((r) => r.processId).map((r) => r.processId),
+    () => boardItems?.filter((r) => r.processId).map((r) => r.processId),
     [boardItems],
   );
 
@@ -276,16 +281,21 @@ const JobCardForm = ({
     setSplitType(data?.splitType || "");
     // Map DB boardQualities → row objects; default to 2 empty rows
     const mappedRows = mapBoardQualitiesToRows(data?.boardQualities);
-    setBoardItems(
-      mappedRows.length > 0
-        ? mappedRows
-        : Array.from({ length: DEFAULT_BOARD_ROWS }, emptyRow),
-    );
+    setBoardItems([
+      ...mappedRows,
+      ...Array.from(
+        { length: Math.max(0, DEFAULT_BOARD_ROWS - mappedRows.length) },
+        emptyRow,
+      ),
+    ]);
 
     setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
     setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
     setSelectedFinishing(
       data?.finishingProcesses?.map((f) => f.processId) || [],
+    );
+    setSelectedLabelPrinting(
+      data?.labelPrintingDetails?.map((p) => p.processId) || [],
     );
     setLaminations(
       data?.laminationDetails?.map((l) => ({
@@ -325,7 +335,7 @@ const JobCardForm = ({
     setItemType(data?.itemType || "");
     setFollowUpId(data?.followUpId || "");
     setDesignerId(data?.designerId || "");
-    setLabelQuality(data?.labelQuality || "");
+    setLabelItemId(data?.labelItemId || "");
     setBlock(data?.block || "NEW");
     setLabelQty(data?.labelQty || "");
     setRollQty(data?.rollQty || "");
@@ -359,22 +369,6 @@ const JobCardForm = ({
     }
   }, [pendingPrint, singleData, isSingleFetching]);
 
-  const toggleArr = (setter, val) =>
-    setter((prev) =>
-      prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val],
-    );
-  const toggleLV = (setter, pid) =>
-    setter((prev) => {
-      const exists = prev.find((l) => l.processId === pid);
-      return exists
-        ? prev.filter((l) => l.processId !== pid)
-        : [...prev, { processId: pid, isFront: false, isFrontAndBack: false }];
-    });
-  const toggleLVProp = (setter, pid, prop) =>
-    setter((prev) =>
-      prev.map((l) => (l.processId === pid ? { ...l, [prop]: !l[prop] } : l)),
-    );
-
   // ── formData — boardItems sent as boardDetails (row objects) ─────────────
   const formData = {
     id,
@@ -385,9 +379,7 @@ const JobCardForm = ({
     orderType,
     orderQty,
     customerId,
-    // Legacy boardQualities field: array of {processId} for route/approval logic
     boardQualities: boardItems.filter((r) => r.processId),
-    // New full board details
     otherBoardId,
     remarks,
     plateId,
@@ -407,7 +399,7 @@ const JobCardForm = ({
     itemType,
     followUpId,
     designerId,
-    labelQuality,
+    labelItemId,
     block,
     labelQty,
     rollQty,
@@ -430,6 +422,7 @@ const JobCardForm = ({
     cuttingSizeId,
     splitType,
     runningQty,
+    selectedLabelPrinting,
   };
 
   const openPrintModal = async (overrideId, overrideDocId) => {
@@ -509,6 +502,8 @@ const JobCardForm = ({
     }
   };
 
+  const isLabel = itemType === "LABEL";
+
   const validateData = (d) => {
     const checks = [
       { condition: !d.docDate, title: "Document Date is required!" },
@@ -519,21 +514,71 @@ const JobCardForm = ({
       { condition: !d.orderQty, title: "Order Quantity is required!" },
       { condition: !d.followUpId, title: "Follow-Up is required!" },
       { condition: !d.designerId, title: "Designer is required!" },
-      {
-        condition: d.processRoute?.length === 0,
-        title: "Select at Least One Process",
-      },
+      { condition: !d.storeId, title: "Store is required!" },
       {
         condition: d.isRepeatedJobCard && !d.refJobCardId,
         title: "Reference Job Card is required!",
       },
-      { condition: !d.storeId, title: "Store is required!" },
+      {
+        condition: !isLabel && d.boardQualities?.length === 0,
+        title: "Select Board Quality!",
+      },
+      {
+        condition:
+          !isLabel &&
+          d.boardQualities?.filter((r) => r.processId)?.some((r) => !r.gsmId),
+        title: "Select GSM!",
+      },
+      {
+        condition:
+          !isLabel &&
+          d.boardQualities
+            ?.filter((r) => r.processId)
+            ?.some((r) => !r.fullBoardId),
+        title: "Select Full Board!",
+      },
+      {
+        condition:
+          !isLabel &&
+          d.boardQualities
+            ?.filter((r) => r.processId)
+            ?.some((r) => !r.noOfSheets),
+        title: "Enter No of Sheets!",
+      },
+      {
+        condition: !isLabel && !d.cuttingSizeId,
+        title: "Enter Cutting Size!",
+      },
+      {
+        condition: !isLabel && !d.runningQty,
+        title: "Enter Running Quantity!",
+      },
     ];
     const failed = checks.find((c) => c.condition);
     if (failed) {
       Swal.fire({
         icon: "warning",
         title: failed.title,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      return false;
+    }
+    const duplicateBoard = d.boardQualities?.some((item, index, arr) => {
+      const key = `${item.processId || 0}-${item.gsmd || 0}-${item.fullBoardId || 0}`;
+
+      return (
+        arr.findIndex(
+          (r) =>
+            `${r.processId || 0}-${r.GSMId || 0}-${r.fullBoardId || 0}` === key,
+        ) !== index
+      );
+    });
+
+    if (duplicateBoard) {
+      Swal.fire({
+        icon: "warning",
+        title: "Duplicate Board Quality is not allowed!",
         timer: 1500,
         showConfirmButton: false,
       });
@@ -628,7 +673,6 @@ const JobCardForm = ({
       setPlateId(data?.plateId || "");
       setDieId(data?.dieId || "");
       setTotalPlatesets(data?.totalPlatesets || "");
-
       const mappedRows = mapBoardQualitiesToRows(data?.boardQualities);
       setBoardItems(
         mappedRows.length > 0
@@ -640,6 +684,9 @@ const JobCardForm = ({
       setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
       setSelectedFinishing(
         data?.finishingProcesses?.map((f) => f.processId) || [],
+      );
+      setSelectedLabelPrinting(
+        data?.labelPrintingDetails?.map((p) => p.processId) || [],
       );
       setLaminations(
         data?.laminationDetails?.map((l) => ({
@@ -672,7 +719,7 @@ const JobCardForm = ({
               })
           : [],
       );
-      setLabelQuality(data?.labelQuality || "");
+      setLabelItemId(data?.labelItemId || "");
       setBlock(data?.block || "NEW");
       setBlockDate(
         data?.blockDate ? moment.utc(data.blockDate).format("YYYY-MM-DD") : "",
@@ -903,6 +950,7 @@ const JobCardForm = ({
                 setPlateDetails([]);
                 setOtherBoardId("");
                 setSelectedFinishing([]);
+                setSelectedLabelPrinting([]);
               }}
             />
           </div>
@@ -1073,6 +1121,7 @@ const JobCardForm = ({
                 isDisabledPermission={isDisabledPermission}
                 isCuttingLocked={isCuttingLocked}
                 childRecord={childRecord}
+                storeId={storeId}
               />
               <div className="grid grid-cols-4 gap-x-4 mt-5">
                 <Field label="Cutting Size">
@@ -1092,6 +1141,7 @@ const JobCardForm = ({
                     childComponent={Size}
                     addNewModalWidth="w-[30%] h-[45%]"
                     disabled={isDisabledPermission || isCuttingLocked}
+                    required={true}
                   />
                 </Field>
                 <Field label="Split Type">
@@ -1113,6 +1163,7 @@ const JobCardForm = ({
                     type="number"
                     className="w-full text-right"
                     disabled={isDisabledPermission || isCuttingLocked}
+                    required={true}
                   />
                 </Field>
               </div>
@@ -1321,22 +1372,42 @@ const JobCardForm = ({
       )}
 
       {itemType === "LABEL" && (
-        <div className="flex items-start min-w-max mx-2 h-full">
-          <div className="w-full h-full flex gap-2">
-            <SectionCard title="Label Details" className="max-w-full h-full">
+        <div className="grid grid-cols-3 items-start gap-x-2 w-full h-full">
+          <div className="h-full">
+            <SectionCard title="Label Details" className=" h-full">
               <div className="flex gap-16">
                 <div className="grid grid-cols-3 gap-y-2 gap-x-2 h-full">
                   <div>
                     <TextInput
-                      name="Label Quality"
-                      value={findFromList(
-                        styleItemId,
-                        styleItemList?.data,
-                        "name",
-                      )}
-                      setValue={setLabelQuality}
+                      name="Order Qty"
+                      value={orderQty}
+                      setValue={setOrderQty}
                       readOnly={true}
-                      className="w-full"
+                      type="number"
+                      className="w-full text-right"
+                      disabled={isDisabledPermission}
+                    />
+                  </div>
+
+                  <div>
+                    <DropdownWithModal
+                      name="Label Quality"
+                      options={dropDownListObject(
+                        id
+                          ? styleList?.data
+                          : styleList?.data?.filter(
+                              (item) =>
+                                item.active && item.ItemGroup.name === "LABEL",
+                            ),
+                        "name",
+                        "id",
+                      )}
+                      value={labelItemId}
+                      setValue={setLabelItemId}
+                      readOnly={readOnly}
+                      addNewLabel="+ Add Label"
+                      childComponent={StyleItemMaster}
+                      addNewModalWidth="w-[50%] h-[60%]"
                       disabled={isDisabledPermission}
                     />
                   </div>
@@ -1356,6 +1427,28 @@ const JobCardForm = ({
                       addNewLabel="+ Add Size"
                       childComponent={Size}
                       addNewModalWidth="w-[30%] h-[45%]"
+                      disabled={isDisabledPermission}
+                    />
+                  </div>
+                  <div>
+                    <TextInput
+                      name="Stock Qty(Roll)"
+                      value={stockQty}
+                      setValue={setStockQty}
+                      readOnly={true}
+                      type="number"
+                      className="w-full text-right"
+                      disabled={isDisabledPermission}
+                    />
+                  </div>
+                  <div>
+                    <TextInput
+                      name="Roll Qty"
+                      value={rollQty}
+                      setValue={setRollQty}
+                      readOnly={readOnly}
+                      type="number"
+                      className="w-full text-right"
                       disabled={isDisabledPermission}
                     />
                   </div>
@@ -1398,33 +1491,31 @@ const JobCardForm = ({
                       />
                     </div>
                   )}
-                  <div>
-                    <TextInput
-                      name="Label Qty"
-                      value={orderQty}
-                      setValue={setOrderQty}
-                      readOnly={true}
-                      type="number"
-                      className="w-full text-right"
-                      disabled={isDisabledPermission}
-                    />
-                  </div>
-                  <div>
-                    <TextInput
-                      name="Roll Qty"
-                      value={rollQty}
-                      setValue={setRollQty}
-                      readOnly={readOnly}
-                      type="number"
-                      className="w-full text-right"
-                      disabled={isDisabledPermission}
-                    />
-                  </div>
                 </div>
               </div>
             </SectionCard>
-            <SectionCard title="Finishing Processes" className="w-1/3">
-              <div className="grid grid-cols-2 gap-y-4">
+          </div>
+          <div className="flex flex-col gap-y-2 h-full">
+            <SectionCard title="Printing Details" className="h-full">
+              <div className="grid grid-cols-2 gap-y-4 h-auto">
+                {labelPrintingList?.map((item) => (
+                  <CheckBox
+                    key={item.id}
+                    name={item.name}
+                    value={selectedLabelPrinting.includes(item.id)}
+                    setValue={() =>
+                      toggleArr(setSelectedLabelPrinting, item.id)
+                    }
+                    readOnly={readOnly}
+                    disabled={
+                      isDisabledPermission || isFinishingItemLocked(item.id)
+                    }
+                  />
+                ))}
+              </div>
+            </SectionCard>
+            <SectionCard title="Finishing Details" className="h-full">
+              <div className="grid grid-cols-3 h-full">
                 {finishingList?.map((item) => (
                   <CheckBox
                     key={item.id}
@@ -1439,18 +1530,20 @@ const JobCardForm = ({
                 ))}
               </div>
             </SectionCard>
-            <SectionCard title="Size Wise Qty Details" className="w-1/3">
-              <div className="bg-white px-4 py-1 shadow-sm overflow-y-auto">
-                <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
+          </div>
+          <div className="flex h-full w-full">
+            <SectionCard title="Size Wise Qty Details" className="w-full">
+              <div className="bg-white px-4 py-1 shadow-sm overflow-y-auto w-full">
+                <table className=" border-separate border-spacing-0 border-t border-l border-slate-200">
                   <thead>
                     <tr>
                       <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-6">
                         S.No
                       </th>
-                      <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-20 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
+                      <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-48 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
                         Size
                       </th>
-                      <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
+                      <th className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 w-20 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
                         Qty
                       </th>
                     </tr>
@@ -1514,6 +1607,8 @@ const JobCardForm = ({
             boardList={boardList}
             selectedPrinting={selectedPrinting}
             selectedFinishing={selectedFinishing}
+            selectedLabelPrinting={selectedLabelPrinting}
+            labelPrintingList={labelPrintingList}
             finishingList={finishingList}
             isAmendment={isAmendment}
             setIsAmendment={setIsAmendment}
