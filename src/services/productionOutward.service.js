@@ -347,7 +347,8 @@ async function create(body) {
 
           data: {
             status: "IN_PROGRESS",
-            completedQty: item.sentQty ? parseInt(item.sentQty) : 0,
+            pendingQty: item.sentQty ? parseInt(item.sentQty) : 0,
+            actualQty: item.sentQty ? parseInt(item.sentQty) : 0,
           },
         }),
       ),
@@ -468,7 +469,9 @@ async function update(id, body) {
           data: {
             status: "IN_PROGRESS",
 
-            completedQty: item.sentQty ? parseInt(item.sentQty) : 0,
+            pendingQty: item.sentQty ? parseInt(item.sentQty) : 0,
+
+            actualQty: item.sentQty ? parseInt(item.sentQty) : 0,
           },
         }),
       ),
@@ -491,7 +494,8 @@ async function update(id, body) {
 
           data: {
             status: "NOT_STARTED",
-            completedQty: 0,
+            pendingQty: null,
+            actualQty: null,
           },
         }),
       ),
@@ -528,7 +532,8 @@ async function remove(id) {
           },
           data: {
             status: "NOT_STARTED",
-            completedQty: null,
+            pendingQty: null,
+            actualQty: null,
           },
         }),
       ),

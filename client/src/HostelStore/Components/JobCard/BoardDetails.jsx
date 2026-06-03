@@ -48,10 +48,9 @@ const BoardDetails = ({
             processId: updatedRow.processId,
             storeId: storeId,
             gsmId: updatedRow.gsmId,
-            fullBoardId: value,
+            sizeId: value,
           },
         }).unwrap();
-        console.log(response, "response");
         if (response.statusCode === 404) {
           Swal.fire({
             icon: "error",

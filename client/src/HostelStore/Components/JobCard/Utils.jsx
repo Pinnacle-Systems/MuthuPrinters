@@ -49,10 +49,16 @@ export const SectionCard = ({
 );
 
 // ── Field label + input wrapper ───────────────────────────────
-export const Field = ({ label, children, className = "" }) => (
+export const Field = ({
+  label,
+  children,
+  className = "",
+  required = false,
+}) => (
   <div className={`flex flex-col gap-0.5 ${className}`}>
     <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-700">
       {label}
+      {required && <span className="text-red-500 ml-1">*</span>}
     </span>
     {children}
   </div>

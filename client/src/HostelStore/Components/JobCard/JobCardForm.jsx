@@ -16,7 +16,13 @@ import { FiCheck, FiEdit2, FiPrinter, FiSave, FiSend } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { dropDownListObject } from "../../../Utils/contructObject";
-import { DieMaster, PlateMaster, Size, StyleItemMaster } from "../index.js";
+import {
+  ColorMaster,
+  DieMaster,
+  PlateMaster,
+  Size,
+  StyleItemMaster,
+} from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import {
   useAddJobCardMutation,
@@ -67,6 +73,8 @@ import { LocationMaster } from "../../../Basic/components/index.js";
 import { useGetLocationMasterQuery } from "../../../redux/services/LocationMasterService.js";
 import BoardDetails, { emptyRow } from "./BoardDetails.jsx";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
+import { useLazyGetBoardQtyQuery } from "../../../redux/services/StockService.js";
+import { useGetColorMasterQuery } from "../../../redux/services/ColorMasterService.js";
 
 const DEFAULT_BOARD_ROWS = 2;
 
@@ -166,6 +174,8 @@ const JobCardForm = ({
       sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
+  const [colorId, setColorId] = useState("");
+  const [triggerGetBoardQty] = useLazyGetBoardQtyQuery();
 
   const { data: processList } = useGetProcessMasterQuery({ params });
   const { data: processGroupList } = useGetProcessGroupMasterQuery({ params });
@@ -188,6 +198,9 @@ const JobCardForm = ({
     params: { orderEntryId },
   });
   const { data: locationData } = useGetLocationMasterQuery({
+    params: { branchId },
+  });
+  const { data: colorData } = useGetColorMasterQuery({
     params: { branchId },
   });
 
@@ -349,6 +362,7 @@ const JobCardForm = ({
     setStoreId(data?.storeId || "");
     setRefJobCardId(data?.refJobCardId || "");
     setRunningQty(data?.runningQty || "");
+    setColorId(data?.colorId || "");
     const rawPlates = data?.plateDetails || [];
     const paddedPlates = [...rawPlates];
     while (paddedPlates.length < 6)
@@ -368,6 +382,31 @@ const JobCardForm = ({
       setPendingPrint(false);
     }
   }, [pendingPrint, singleData, isSingleFetching]);
+
+  useEffect(() => {
+    const getBoardQty = async () => {
+      try {
+        if (storeId && colorId && labelItemId && labelSizeId) {
+          const response = await triggerGetBoardQty({
+            params: {
+              storeId: storeId,
+              colorId: colorId,
+              styleItemId: labelItemId,
+              sizeId: labelSizeId,
+              isLabel: true,
+            },
+          }).unwrap();
+
+          setStockQty(response?.stockQty ?? 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch board quantity:", error);
+        setStockQty(0);
+      }
+    };
+
+    getBoardQty();
+  }, [storeId, colorId, labelItemId, labelSizeId]);
 
   // ── formData — boardItems sent as boardDetails (row objects) ─────────────
   const formData = {
@@ -423,6 +462,7 @@ const JobCardForm = ({
     splitType,
     runningQty,
     selectedLabelPrinting,
+    colorId,
   };
 
   const openPrintModal = async (overrideId, overrideDocId) => {
@@ -514,7 +554,7 @@ const JobCardForm = ({
       { condition: !d.orderQty, title: "Order Quantity is required!" },
       { condition: !d.followUpId, title: "Follow-Up is required!" },
       { condition: !d.designerId, title: "Designer is required!" },
-      { condition: !d.storeId, title: "Store is required!" },
+      { condition: !d.storeId, title: "Location is required!" },
       {
         condition: d.isRepeatedJobCard && !d.refJobCardId,
         title: "Reference Job Card is required!",
@@ -552,6 +592,34 @@ const JobCardForm = ({
       {
         condition: !isLabel && !d.runningQty,
         title: "Enter Running Quantity!",
+      },
+      {
+        condition: isLabel && !d.labelItemId,
+        title: "Select Label Item!",
+      },
+      {
+        condition: isLabel && !d.labelSizeId,
+        title: "Select Label Size!",
+      },
+      {
+        condition: isLabel && !d.colorId,
+        title: "Select Label Color!",
+      },
+      {
+        condition: isLabel && !d.rollQty,
+        title: "Enter Roll Quantity!",
+      },
+      {
+        condition: isLabel && !d.block,
+        title: "Enter Block!",
+      },
+      {
+        condition: isLabel && d.selectedLabelPrinting?.length === 0,
+        title: "Select Printing Process!",
+      },
+      {
+        condition: isLabel && d.selectedFinishing?.length === 0,
+        title: "Select Finishing Process!",
       },
     ];
     const failed = checks.find((c) => c.condition);
@@ -745,6 +813,7 @@ const JobCardForm = ({
         paddedPlates.push({ plateName: "", qty: "" });
       setPlateDetails(paddedPlates);
       setIsAmendment(data?.isAmendment || false);
+      setColorId(data?.colorId || "");
     } catch (err) {
       console.error("Failed to load ref job card", err);
     }
@@ -1154,7 +1223,7 @@ const JobCardForm = ({
                     disabled={isDisabledPermission || isCuttingLocked}
                   />
                 </Field>
-                <Field label="Running Qty">
+                <Field label="Running Qty" required={true}>
                   <TextInput
                     name=""
                     value={runningQty}
@@ -1409,6 +1478,7 @@ const JobCardForm = ({
                       childComponent={StyleItemMaster}
                       addNewModalWidth="w-[50%] h-[60%]"
                       disabled={isDisabledPermission}
+                      required={true}
                     />
                   </div>
                   <div>
@@ -1428,6 +1498,27 @@ const JobCardForm = ({
                       childComponent={Size}
                       addNewModalWidth="w-[30%] h-[45%]"
                       disabled={isDisabledPermission}
+                      required={true}
+                    />
+                  </div>
+                  <div>
+                    <DropdownWithModal
+                      name="Label Color"
+                      options={dropDownListObject(
+                        id
+                          ? colorData?.data
+                          : colorData?.data?.filter((i) => i?.active),
+                        "name",
+                        "id",
+                      )}
+                      value={colorId}
+                      setValue={setColorId}
+                      readOnly={readOnly}
+                      addNewLabel="+ Add Color"
+                      childComponent={ColorMaster}
+                      addNewModalWidth="w-[30%] h-[45%]"
+                      disabled={isDisabledPermission}
+                      required={true}
                     />
                   </div>
                   <div>
@@ -1447,9 +1538,11 @@ const JobCardForm = ({
                       value={rollQty}
                       setValue={setRollQty}
                       readOnly={readOnly}
+                      max={stockQty}
                       type="number"
                       className="w-full text-right"
                       disabled={isDisabledPermission}
+                      required={true}
                     />
                   </div>
                   <div>
@@ -2092,6 +2185,8 @@ const JobCardForm = ({
             styleItemList={styleItemList}
             qrCodeDataUrl={qrCodeDataUrl}
             employeeList={employeeList}
+            colorList={colorData}
+            styleList={styleList}
           />
         </PDFViewer>
       </Modal>

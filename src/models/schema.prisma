@@ -1051,6 +1051,7 @@ model Color {
   purchaseReturnItems    PurchaseReturnItems[]
   inwardItems            InwardItems[]
   stocks                 Stock[]
+  JobCards               JobCard[]
 }
 
 model DeliveryInvoice {
@@ -2028,6 +2029,8 @@ model JobCard {
   Store              Location?   @relation(fields: [storeId], references: [id])
   storeId            Int?
   splitType          String?
+  colorId            Int?
+  Color              Color?      @relation(fields: [colorId], references: [id])
 
   boardQualities        BoardQuality[]
   processDetails        ProcessDetails[]
@@ -2194,6 +2197,9 @@ model ProcessRoute {
   isFrontAndBack Boolean  @default(false)
   status         String?
   completedQty   Int?
+  actualQty      Int?
+  pendingQty     Int?
+  wastageQty     Int?
 
   productionAllocationDtls ProductionAllocationDtl[]
   productionempPunch       productionempPunch[]

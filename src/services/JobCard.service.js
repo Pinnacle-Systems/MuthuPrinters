@@ -1231,6 +1231,7 @@ async function create(body) {
       storeId,
       selectedLabelPrinting,
       labelItemId,
+      colorId,
     } = body;
 
     // ─────────────────────────────
@@ -1333,6 +1334,7 @@ async function create(body) {
           splitType: splitType || null,
           storeId: storeId ? Number(storeId) : null,
           labelItemId: labelItemId ? Number(labelItemId) : null,
+          colorId: colorId ? Number(colorId) : null,
           boardQualities: safeBoardItems.length
             ? {
                 createMany: {
@@ -1460,22 +1462,58 @@ async function create(body) {
             : undefined,
         },
       });
-      for (const boardQuality of boardQualities) {
-        const process = await tx.process.findUnique({
-          where: {
-            id: Number(boardQuality.processId),
-          },
-          select: {
-            name: true,
-          },
-        });
+      if (itemType !== "LABEL") {
+        for (const boardQuality of boardQualities) {
+          const process = await tx.process.findUnique({
+            where: {
+              id: Number(boardQuality.processId),
+            },
+            select: {
+              name: true,
+            },
+          });
 
-        if (!process) {
-          throw new Error("Board process not found");
+          if (!process) {
+            throw new Error("Board process not found");
+          }
+          const styleItem = await tx.styleItem.findFirst({
+            where: {
+              name: process.name,
+            },
+            select: {
+              id: true,
+              uomId: true,
+            },
+          });
+
+          if (!styleItem) {
+            throw new Error(`Style Item not found for process ${process.name}`);
+          }
+          await tx.stock.create({
+            data: {
+              branchId: parseInt(branchId),
+              storeId: parseInt(storeId),
+              styleItemId: parseInt(styleItem.id),
+              gsmId: parseInt(boardQuality.gsmId),
+              sizeId: parseInt(boardQuality.fullBoardId),
+              inOrOut: "Out",
+              qty:
+                boardQuality?.noOfSheets &&
+                !isNaN(parseFloat(boardQuality.noOfSheets))
+                  ? -Math.abs(parseInt(boardQuality.noOfSheets))
+                  : null,
+              uomId: parseInt(styleItem.uomId),
+              createdById: parseInt(userId),
+              itemGroupId: parseInt(itemGroupId),
+              jobCardId: parseInt(data.id),
+              processName: "Job Card",
+            },
+          });
         }
-        const styleItem = await tx.styleItem.findFirst({
+      } else {
+        const styleItem = await tx.styleItem.findUnique({
           where: {
-            name: process.name,
+            id: parseInt(labelItemId),
           },
           select: {
             id: true,
@@ -1483,27 +1521,23 @@ async function create(body) {
           },
         });
 
-        if (!styleItem) {
-          throw new Error(`Style Item not found for process ${process.name}`);
-        }
         await tx.stock.create({
           data: {
             branchId: parseInt(branchId),
             storeId: parseInt(storeId),
-            styleItemId: parseInt(styleItem.id),
-            gsmId: parseInt(boardQuality.gsmId),
-            sizeId: parseInt(boardQuality.fullBoardId),
+            styleItemId: parseInt(labelItemId),
+            sizeId: parseInt(labelSizeId),
             inOrOut: "Out",
             qty:
-              boardQuality?.noOfSheets &&
-              !isNaN(parseFloat(boardQuality.noOfSheets))
-                ? -Math.abs(parseInt(boardQuality.noOfSheets))
+              rollQty && !isNaN(parseFloat(rollQty))
+                ? -Math.abs(parseInt(rollQty))
                 : null,
             uomId: parseInt(styleItem.uomId),
             createdById: parseInt(userId),
             itemGroupId: parseInt(itemGroupId),
             jobCardId: parseInt(data.id),
             processName: "Job Card",
+            colorId: parseInt(colorId),
           },
         });
       }
@@ -1602,6 +1636,7 @@ async function update(id, body) {
       storeId,
       selectedLabelPrinting,
       labelItemId,
+      colorId,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -1643,11 +1678,13 @@ async function update(id, body) {
       await tx.finishingProcess.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
-      await tx.stock.deleteMany({
-        where: {
-          jobCardId: parseInt(id),
-        },
-      });
+      if (itemType !== "LABEL") {
+        await tx.stock.deleteMany({
+          where: {
+            jobCardId: parseInt(id),
+          },
+        });
+      }
       await tx.labelPrintingDetails.deleteMany({
         where: { jobCardId: parseInt(id) },
       });
@@ -1863,6 +1900,7 @@ async function update(id, body) {
           splitType: splitType || null,
           storeId: storeId ? Number(storeId) : null,
           labelItemId: labelItemId ? Number(labelItemId) : null,
+          colorId: colorId ? Number(colorId) : null,
           boardQualities:
             boardQualities.length > 0
               ? {
@@ -1978,22 +2016,58 @@ async function update(id, body) {
             : undefined,
         },
       });
-      for (const boardQuality of boardQualities) {
-        const process = await tx.process.findUnique({
-          where: {
-            id: Number(boardQuality.processId),
-          },
-          select: {
-            name: true,
-          },
-        });
+      if (itemType !== "LABEL") {
+        for (const boardQuality of boardQualities) {
+          const process = await tx.process.findUnique({
+            where: {
+              id: Number(boardQuality.processId),
+            },
+            select: {
+              name: true,
+            },
+          });
 
-        if (!process) {
-          throw new Error("Board process not found");
+          if (!process) {
+            throw new Error("Board process not found");
+          }
+          const styleItem = await tx.styleItem.findFirst({
+            where: {
+              name: process.name,
+            },
+            select: {
+              id: true,
+              uomId: true,
+            },
+          });
+
+          if (!styleItem) {
+            throw new Error(`Style Item not found for process ${process.name}`);
+          }
+          await tx.stock.create({
+            data: {
+              branchId: Number(branchId),
+              storeId: Number(storeId),
+              styleItemId: parseInt(styleItem.id),
+              gsmId: parseInt(boardQuality.gsmId),
+              sizeId: parseInt(boardQuality.fullBoardId),
+              inOrOut: "Out",
+              qty:
+                boardQuality?.noOfSheets &&
+                !isNaN(parseFloat(boardQuality.noOfSheets))
+                  ? -Math.abs(parseInt(boardQuality.noOfSheets))
+                  : null,
+              uomId: parseInt(styleItem.uomId),
+              createdById: parseInt(userId),
+              itemGroupId: parseInt(itemGroupId),
+              jobCardId: Number(id),
+              processName: "Job Card",
+            },
+          });
         }
-        const styleItem = await tx.styleItem.findFirst({
+      } else {
+        const styleItem = await tx.styleItem.findUnique({
           where: {
-            name: process.name,
+            id: parseInt(labelItemId),
           },
           select: {
             id: true,
@@ -2001,27 +2075,25 @@ async function update(id, body) {
           },
         });
 
-        if (!styleItem) {
-          throw new Error(`Style Item not found for process ${process.name}`);
-        }
-        await tx.stock.create({
+        await tx.stock.updateMany({
+          where: {
+            jobCardId: parseInt(data.id),
+          },
           data: {
-            branchId: Number(branchId),
-            storeId: Number(storeId),
-            styleItemId: parseInt(styleItem.id),
-            gsmId: parseInt(boardQuality.gsmId),
-            sizeId: parseInt(boardQuality.fullBoardId),
+            branchId: parseInt(branchId),
+            storeId: parseInt(storeId),
+            styleItemId: parseInt(labelItemId),
+            sizeId: parseInt(labelSizeId),
             inOrOut: "Out",
             qty:
-              boardQuality?.noOfSheets &&
-              !isNaN(parseFloat(boardQuality.noOfSheets))
-                ? -Math.abs(parseInt(boardQuality.noOfSheets))
+              rollQty && !isNaN(parseFloat(rollQty))
+                ? -Math.abs(parseInt(rollQty))
                 : null,
             uomId: parseInt(styleItem.uomId),
-            createdById: parseInt(userId),
+            updatedById: parseInt(userId),
             itemGroupId: parseInt(itemGroupId),
-            jobCardId: Number(id),
             processName: "Job Card",
+            colorId: parseInt(colorId),
           },
         });
       }

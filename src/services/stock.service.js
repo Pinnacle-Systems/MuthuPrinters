@@ -238,41 +238,59 @@ async function get(req) {
 }
 
 async function getBoardQty(req) {
-  const { processId, storeId, gsmId, fullBoardId } = req.query;
-  const boardData = await prisma.process.findFirst({
-    where: {
-      id: parseInt(processId),
-    },
-    select: {
-      name: true,
-    },
-  });
-  if (!boardData) {
-    return { statusCode: 404, message: "Board not found" };
-  }
-  const itemData = await prisma.styleItem.findFirst({
-    where: {
-      name: boardData.name,
-    },
-    select: {
-      id: true,
-    },
-  });
+  const { processId, storeId, gsmId, sizeId, isLabel, styleItemId, colorId } =
+    req.query;
 
-  if (!itemData) {
-    return { statusCode: 404, message: "Board not found" };
+  let stockQty = 0;
+  if (isLabel) {
+    stockQty = await prisma.stock.aggregate({
+      where: {
+        storeId: parseInt(storeId),
+        styleItemId: parseInt(styleItemId),
+        sizeId: parseInt(sizeId),
+        colorId: parseInt(colorId),
+      },
+      _sum: {
+        qty: true,
+      },
+    });
+  } else {
+    const boardData = await prisma.process.findFirst({
+      where: {
+        id: parseInt(processId),
+      },
+      select: {
+        name: true,
+      },
+    });
+    if (!boardData) {
+      return { statusCode: 404, message: "Board not found" };
+    }
+    const itemData = await prisma.styleItem.findFirst({
+      where: {
+        name: boardData.name,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!itemData) {
+      return { statusCode: 404, message: "Board not found" };
+    }
+
+    stockQty = await prisma.stock.aggregate({
+      where: {
+        storeId: parseInt(storeId),
+        styleItemId: itemData.id,
+        gsmId: parseInt(gsmId),
+        sizeId: parseInt(sizeId),
+      },
+      _sum: {
+        qty: true,
+      },
+    });
   }
-  const stockQty = await prisma.stock.aggregate({
-    where: {
-      storeId: parseInt(storeId),
-      styleItemId: itemData.id,
-      gsmId: parseInt(gsmId),
-      sizeId: parseInt(fullBoardId),
-    },
-    _sum: {
-      qty: true,
-    },
-  });
 
   return { statusCode: 0, stockQty: stockQty._sum.qty };
 }
