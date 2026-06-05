@@ -22,7 +22,9 @@ function buildInwardRow(outwardDtl) {
     productionOutwardId: outwardDtl.productionOutwardId,
     jobCardId: outwardDtl?.ProductionOutward?.JobCard?.id ?? "",
     processes: outwardDtl.processes ?? "",
-    receivedQty: outwardDtl?.sentQty ?? "",
+    sentQty: outwardDtl?.sentQty ?? "",
+    alreadyReceivedQty: outwardDtl?.alreadyReceivedQty ?? "",
+    pendingQty: outwardDtl?.pendingQty ?? "",
     acceptedQty: outwardDtl?.sentQty ?? "",
     // carry display info so the grid can show process name without refetch
     _processName: outwardDtl.Process?.name ?? "",

@@ -699,10 +699,58 @@ const SalesDeliveryForm = ({
             : []),
         ]}
       />
-      <TransactionActions
-        leftActions={leftActions}
-        rightActions={rightActions}
-      />
+      <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
+        {/* Left Buttons */}
+        <div className="flex gap-2 flex-wrap">
+          {!readOnly && (
+            <button
+              onClick={() => saveData("close")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  saveData("close");
+                  e.stopPropagation();
+                }
+              }}
+              disabled={readOnly}
+              className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs font-medium"
+            >
+              <HiOutlineRefresh className="w-3.5 h-3.5 mr-2" />
+              Save & Close
+            </button>
+          )}
+          {!readOnly && (
+            <button
+              onClick={() => saveData("new")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  saveData("new");
+                }
+              }}
+              disabled={readOnly}
+              className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs font-medium"
+            >
+              <FiSave className="w-3.5 h-3.5 mr-2" />
+              Save & New
+            </button>
+          )}
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          {!id ||
+            (readOnly && (
+              <button
+                className="bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700 flex items-center text-xs font-medium"
+                onClick={() => setReadOnly(false)}
+              >
+                <FiEdit2 className="w-3.5 h-3.5 mr-2" />
+                Edit
+              </button>
+            ))}
+        </div>
+      </div>
     </>
   );
 

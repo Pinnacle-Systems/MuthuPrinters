@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  sectionContent: { padding: 8 },
+  sectionContent: { padding: 5 },
 
   // ── GRID / CHECKBOX ──
   gridRow: { flexDirection: "row", flexWrap: "wrap" },
@@ -388,31 +388,47 @@ const ProcessRouteVertical = ({
   title = "PROCESS ROUTE",
 }) => {
   if (!processRoute || processRoute.length === 0) return null;
+
+  const colSize = Math.ceil(processRoute.length / 3);
+  const columns = [
+    processRoute.slice(0, colSize),
+    processRoute.slice(colSize, colSize * 2),
+    processRoute.slice(colSize * 2),
+  ];
+
   return (
     <View style={styles.routeWrap}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionContent}>
-        {processRoute.map((step, idx) => {
-          const isLast = idx === processRoute.length - 1;
-          return (
-            <View key={idx}>
-              <View
-                style={[
-                  styles.routeRow,
-                  idx % 2 === 0 ? styles.routeRowOdd : styles.routeRowEven,
-                  { borderBottom: isLast ? "none" : "1 solid #f0f0f0" },
-                ]}
-              >
-                <View style={styles.routeSeqBadge}>
-                  <Text style={styles.routeSeqText}>{idx + 1}</Text>
-                </View>
-                <Text style={styles.routeNameText}>
-                  {step.name || `Step ${idx + 1}`}
-                </Text>
+      <View
+        style={[
+          styles.sectionContent,
+          { flexDirection: "row", flexWrap: "wrap" },
+        ]}
+      >
+        {processRoute.map((step, idx) => (
+          <View
+            key={idx}
+            style={{
+              width: "25%",
+              borderRight: (idx + 1) % 4 === 0 ? "none" : "1 solid #eee",
+              borderBottom: "1 solid #f0f0f0",
+            }}
+          >
+            <View
+              style={[
+                styles.routeRow,
+                idx % 2 === 0 ? styles.routeRowOdd : styles.routeRowEven,
+              ]}
+            >
+              <View style={styles.routeSeqBadge}>
+                <Text style={styles.routeSeqText}>{idx + 1}</Text>
               </View>
+              <Text style={styles.routeNameText}>
+                {step.name || `Step ${idx + 1}`}
+              </Text>
             </View>
-          );
-        })}
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -591,6 +607,10 @@ const JobCardPrintFormat = ({
   qrCodeDataUrl,
   employeeList,
   styleItemList,
+  labelPrintingList,
+  finishingList,
+  printingList,
+  styleList,
 }) => {
   if (!singleData) return null;
 
@@ -623,8 +643,7 @@ const JobCardPrintFormat = ({
     plateDetails,
     labelSizeId,
     colorId,
-    labelQualityId,
-    styleList,
+    labelItemId,
   } = singleData;
 
   const isLabel = itemType === "LABEL";
@@ -645,11 +664,11 @@ const JobCardPrintFormat = ({
   const labelSizeName = findFromList(labelSizeId, sizeList?.data, "name");
   const labelColorName =
     findFromList(colorId, colorList?.data || [], "name") || "";
-  const labelQuality =
-    findFromList(labelQualityId, styleList?.data || [], "name") || "";
+  const labelItem =
+    findFromList(labelItemId, styleList?.data || [], "name") || "";
 
   // Selected machines (only those in machineDetails)
-  const selectedMachineIds = machineDetails?.map((m) => m) || [];
+  const selectedMachineIds = machineDetails?.map((m) => m.macId) || [];
   const selectedMachines = (machineList?.data || machineList || []).filter(
     (m) => selectedMachineIds.includes(m.id),
   );
@@ -661,15 +680,80 @@ const JobCardPrintFormat = ({
     laminationList || [],
     varnishList || [],
     boardList || [],
-    [], // printingList — pass if available
-    [], // labelPrintingList
-    [], // finishingList
+    printingList || [], // printingList — pass if available
+    labelPrintingList || [],
+    finishingList || [],
   );
 
   // Plate set details filtered
   const filteredPlateDetails = (plateDetails || []).filter(
     (p) => p.plateName || p.qty,
   );
+
+  const BoardDetailsGrid = ({
+    boardQualities = [],
+    boardList,
+    gsmList,
+    sizeList,
+  }) => {
+    const filtered = boardQualities.filter((r) => r.processId);
+    if (filtered.length === 0) return null;
+    return (
+      <View>
+        <Text style={{ paddingLeft: 5, marginTop: 2 }}>BOARD DETAILS</Text>
+        <View style={styles.sectionContent}>
+          <View style={styles.breakupTable}>
+            <View style={styles.breakupTh}>
+              <Text style={[styles.breakupThCell, { flex: 0.4 }]}>S.No</Text>
+              <Text style={[styles.breakupThCell, { flex: 2 }]}>
+                Board Quality
+              </Text>
+              <Text style={[styles.breakupThCell, { flex: 1 }]}>GSM</Text>
+              <Text style={[styles.breakupThCell, { flex: 1.5 }]}>
+                Full Board
+              </Text>
+              <Text
+                style={[styles.breakupThCell, { flex: 1, borderRight: "none" }]}
+              >
+                No. of Sheets
+              </Text>
+            </View>
+            {filtered.map((row, idx) => (
+              <View
+                key={idx}
+                style={
+                  idx % 2 === 0 ? styles.breakupTrOdd : styles.breakupTrEven
+                }
+              >
+                <Text
+                  style={[styles.breakupTd, { flex: 0.4, textAlign: "center" }]}
+                >
+                  {idx + 1}
+                </Text>
+                <Text style={[styles.breakupTd, { flex: 2 }]}>
+                  {findFromList(row.processId, boardList, "name") || "—"}
+                </Text>
+                <Text style={[styles.breakupTd, { flex: 1 }]}>
+                  {findFromList(row.gsmId, gsmList?.data, "name") || "—"}
+                </Text>
+                <Text style={[styles.breakupTd, { flex: 1.5 }]}>
+                  {findFromList(row.fullBoardId, sizeList?.data, "name") || "—"}
+                </Text>
+                <Text
+                  style={[
+                    styles.breakupTd,
+                    { flex: 1, textAlign: "right", borderRight: "none" },
+                  ]}
+                >
+                  {row.noOfSheets || "—"}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <Document>
@@ -824,6 +908,12 @@ const JobCardPrintFormat = ({
           <>
             {/* ── SPECIFICATIONS ── */}
             <View style={styles.sectionWrap}>
+              <BoardDetailsGrid
+                boardQualities={singleData?.boardQualities || []}
+                boardList={boardList}
+                gsmList={gsmList}
+                sizeList={sizeList}
+              />
               <Text style={styles.sectionTitle}>SPECIFICATIONS</Text>
               <View style={styles.sectionContent}>
                 <View style={styles.specTable}>
@@ -864,7 +954,9 @@ const JobCardPrintFormat = ({
                   overflow: "hidden",
                 }}
               >
-                <Text style={styles.sectionTitle}>{"SIZE WISE DETAILS"}</Text>
+                <Text style={{ paddingLeft: 5, marginTop: 2 }}>
+                  {"SIZE WISE DETAILS"}
+                </Text>
                 <View style={styles.sectionContent}>
                   {jobCardSizeDetails && jobCardSizeDetails.length > 0 ? (
                     <SizeBreakupTable
@@ -895,7 +987,9 @@ const JobCardPrintFormat = ({
                   overflow: "hidden",
                 }}
               >
-                <Text style={styles.sectionTitle}>PLATE SET DETAILS</Text>
+                <Text style={{ paddingLeft: 5, marginTop: 2 }}>
+                  PLATE SET DETAILS
+                </Text>
                 <View style={styles.sectionContent}>
                   <PlateSetTable plateDetails={plateDetails || []} />
                 </View>
@@ -941,17 +1035,17 @@ const JobCardPrintFormat = ({
                   {[
                     {
                       label: "Label Quality",
-                      value: labelQuality,
+                      value: labelItem,
                     },
                     { label: "Label Size", value: labelSizeName },
                     { label: "Label Color", value: labelColorName },
-                    { label: "Block", value: block },
-                    {
-                      label: "Label Qty",
-                      value: orderQty ? Number(orderQty) : "",
-                    },
+                    // {
+                    //   label: "Label Qty",
+                    //   value: orderQty ? Number(orderQty) : "",
+                    // },
                     { label: "Roll Qty", value: rollQty },
                     { label: "Total Meter", value: totalMeter },
+                    { label: "Block", value: block },
                   ].map(({ label, value }) => (
                     <View key={label} style={styles.labelFieldRow}>
                       <Text style={styles.labelFieldLabel}>{label}</Text>
