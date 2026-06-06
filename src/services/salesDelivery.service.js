@@ -8,6 +8,7 @@ import {
 } from "../utils/helper.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
+import { conversionTypes } from "../../client/src/Utils/DropdownData.js";
 
 const REFERENCE_PAGE = "SALES DELIVERY";
 
@@ -212,6 +213,11 @@ async function getOne(id) {
           StyleItem: true,
           Uom: true,
           Hsn: true,
+          sizeBreakup: {
+            include: {
+              Size: true,
+            },
+          },
         },
       },
     },
@@ -252,6 +258,11 @@ async function create(body) {
     payTermId,
     salesDeliveryItems,
     draftSave,
+    conversionType,
+    weightInKg,
+    carriageCharge,
+    currencyId,
+    bankId,
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -307,6 +318,16 @@ async function create(body) {
 
       payTermId: payTermId ? parseInt(payTermId) : null,
 
+      conversionType,
+
+      weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+
+      carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+
+      currencyId: currencyId ? parseInt(currencyId) : null,
+
+      bankId: bankId ? parseInt(bankId) : null,
+
       salesDeliveryItems: {
         create: (salesDeliveryItems || []).map((item) => ({
           styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
@@ -328,12 +349,31 @@ async function create(body) {
           uomId: item.uomId ? parseInt(item.uomId) : null,
 
           hsnId: item.hsnId ? parseInt(item.hsnId) : null,
+
+          trackingType: item.trackingType,
+
+          sizeBreakup: {
+            create: (item.sizeBreakup || [])
+              .filter((size) => size.sizeId)
+              .map((size) => ({
+                sizeId: size.sizeId ? parseInt(size.sizeId) : null,
+
+                qty: size.qty ? parseInt(size.qty) : 0,
+              })),
+          },
         })),
       },
     },
-
     include: {
-      salesDeliveryItems: true,
+      salesDeliveryItems: {
+        include: {
+          sizeBreakup: {
+            include: {
+              Size: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -366,6 +406,11 @@ async function update(id, body) {
     termsId,
     payTermId,
     salesDeliveryItems,
+    conversionType,
+    weightInKg,
+    carriageCharge,
+    currencyId,
+    bankId,
   } = body;
 
   const dataFound = await prisma.salesDelivery.findUnique({
@@ -374,7 +419,11 @@ async function update(id, body) {
     },
 
     include: {
-      salesDeliveryItems: true,
+      salesDeliveryItems: {
+        include: {
+          sizeBreakup: true,
+        },
+      },
     },
   });
 
@@ -441,6 +490,16 @@ async function update(id, body) {
         termsId: termsId ? parseInt(termsId) : null,
 
         payTermId: payTermId ? parseInt(payTermId) : null,
+
+        conversionType,
+
+        weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+
+        carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+
+        currencyId: currencyId ? parseInt(currencyId) : null,
+
+        bankId: bankId ? parseInt(bankId) : null,
       },
     });
 
@@ -448,6 +507,27 @@ async function update(id, body) {
 
     for (const item of salesDeliveryItems) {
       if (item.id) {
+        const existingItem = dataFound.salesDeliveryItems.find(
+          (x) => x.id === parseInt(item.id),
+        );
+        const existingSizeBreakups = existingItem?.sizeBreakup || [];
+        const removedSizeIds = existingSizeBreakups
+          .filter(
+            (oldSize) =>
+              !(item.sizeBreakup || []).find(
+                (newSize) => parseInt(newSize.id) === parseInt(oldSize.id),
+              ),
+          )
+          .map((x) => x.id);
+        if (removedSizeIds.length > 0) {
+          await tx.salesSizeBreakup.deleteMany({
+            where: {
+              id: {
+                in: removedSizeIds,
+              },
+            },
+          });
+        }
         await tx.salesDeliveryItems.update({
           where: {
             id: parseInt(item.id),
@@ -473,10 +553,33 @@ async function update(id, body) {
             uomId: item.uomId ? parseInt(item.uomId) : null,
 
             hsnId: item.hsnId ? parseInt(item.hsnId) : null,
+
+            trackingType: item.trackingType,
           },
         });
+        for (const size of item.sizeBreakup || []) {
+          if (size.id) {
+            await tx.salesSizeBreakup.update({
+              where: {
+                id: parseInt(size.id),
+              },
+              data: {
+                sizeId: size.sizeId ? parseInt(size.sizeId) : null,
+                qty: size.qty ? parseInt(size.qty) : 0,
+              },
+            });
+          } else {
+            await tx.salesSizeBreakup.create({
+              data: {
+                salesDeliveryItemId: parseInt(item.id),
+                sizeId: size.sizeId ? parseInt(size.sizeId) : null,
+                qty: size.qty ? parseInt(size.qty) : 0,
+              },
+            });
+          }
+        }
       } else {
-        await tx.salesDeliveryItems.create({
+        const createItem = await tx.salesDeliveryItems.create({
           data: {
             salesDeliveryId: parseInt(id),
 
@@ -499,8 +602,19 @@ async function update(id, body) {
             uomId: item.uomId ? parseInt(item.uomId) : null,
 
             hsnId: item.hsnId ? parseInt(item.hsnId) : null,
+
+            trackingType: item.trackingType,
           },
         });
+        for (const size of item.sizeBreakup || []) {
+          await tx.salesSizeBreakup.create({
+            data: {
+              salesDeliveryItemId: createItem.id,
+              sizeId: size.sizeId ? parseInt(size.sizeId) : null,
+              qty: size.qty ? parseInt(size.qty) : 0,
+            },
+          });
+        }
       }
     }
   });
