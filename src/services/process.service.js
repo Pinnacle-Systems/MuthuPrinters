@@ -88,7 +88,7 @@ async function UpdateCurrentProcess(req) {
 
 
 async function UpdateProcess(req) {
-  const { status, jobcardId, processId,flag, type, departmentId, machineId, userId, id , completedQty} = req?.body;
+  const { status, jobcardId, processId,flag, type, departmentId, machineId, userId, id , completedQty , wastageQty , remarks , splitSizes } = req?.body;
 
   // Get current time in IST (UTC+5:30)
    const now = new Date();
@@ -171,7 +171,9 @@ async function UpdateProcess(req) {
 
 
 async function UpdatePushProcess(req) {
-  const {  flag, productionlogid, userId, id } = req?.body;
+  const {  flag, productionlogid, userId, id ,completedQty , wastageQty , remarks ,pauseReason , splitSizes , pauseQty , sizeswise } = req?.body;
+
+  var splitSizes__ = splitSizes?.length > 0  ? splitSizes : []
 
    const now = new Date();
   const istOffset = 5.5 * 60 * 60 * 1000;
@@ -183,31 +185,54 @@ async function UpdatePushProcess(req) {
 
   let data;
 
- console.log("Flog",{
-         
-          pushtime: istISOString,
-          productionlog : productionlogid,
-          Userid : userId,
-        });
+
  
-  
+  // console.log("pause----------------------------------------",req?.body)
 
   await prisma.$transaction(async (tx) => {
 
     let addMain_punch_log;
     
-   if (flag === "PAUSE") {
+    if (flag === "PAUSE") {
 
       
       addMain_punch_log = await tx.pushLogs.create({
 
         data: {
-         
-          pushtime: istISOString,
-          productionlog : productionlogid,
-          Userid : userId,
+           pushtime: istISOString,
+           productionlog : productionlogid,
+           Userid : userId,
+           pauseReason:pauseReason ,
+          ...(!sizeswise && {pauseQty:pauseQty})
         },
       });
+
+
+
+      
+      
+await Promise.all(
+   splitSizes__?.map(async (element_size)=>{
+
+   
+      return   await  tx.splitSizes?.create({
+
+           data: {
+         
+          pushLogId : addMain_punch_log?.id,
+          jobCardSizeId : element_size?.id,
+          qty:element_size?.qty
+        },
+
+
+      })
+    }
+
+      )
+      )
+
+      
+ 
 
     } else if (flag === "RESUME") {
 
@@ -240,7 +265,7 @@ async function UpdatePushProcess(req) {
   });
 
 
-   console.log("process PUSH",{statusCode:1,data});
+  //  console.log("process PUSH",{statusCode:1,data});
   return {statusCode:1,data};  
 }
 

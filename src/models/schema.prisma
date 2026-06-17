@@ -2183,6 +2183,7 @@ model JobCardSizeBreakup {
   qty         Int?
   barcodeFrom String?
   barcodeTo   String?
+   splitSizes  splitSizes[]
 }
 
 model ProcessRoute {
@@ -2223,16 +2224,37 @@ model productionempPunch {
   Machineid      Int
   Machine        Machine       @relation(fields: [Machineid], references: [id])
   pushLogs       pushLogs[]
+} 
+
+model splitSizes {
+  id             Int                 @id @default(autoincrement())
+  
+  // Mapped to pushLogs
+  pushLogId      Int
+  pushLog        pushLogs            @relation(fields: [pushLogId], references: [id], onDelete: Cascade)
+  
+  // Mapped to the JobCard size
+  jobCardSizeId  Int?
+  JobCardSize    JobCardSizeBreakup? @relation(fields: [jobCardSizeId], references: [id])
+  
+  qty            Int?
 }
 
 model pushLogs {
   id                 Int                @id @default(autoincrement())
   Userid             Int
   User               User               @relation(fields: [Userid], references: [id])
+  pauseReason         String?   
   pushtime           DateTime?
   resumetime         DateTime?
   productionlog      Int
   productionempPunch productionempPunch @relation(fields: [productionlog], references: [id])
+  completedQty       Int? @default(0)
+  wastageQty          Int? @default(0)
+  remarks             String?
+  pauseQty            Int? @default(0)
+  splitSizes         splitSizes[] 
+  
 }
 
 model ProformaInvoice {
