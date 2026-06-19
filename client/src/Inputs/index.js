@@ -149,14 +149,14 @@ export const MultiSelectDropdown = ({
             padding: "0px",
             fontSize: "9px",
           }),
-          control: (base) => ({
-            ...base,
-            padding: "2px",
-            borderRadius: "10px",
-            boxShadow: "none",
-            border: "1px solid #ccc",
-            minHeight: "22px",
-          }),
+          // control: (base) => ({
+          //   ...base,
+          //   padding: "2px",
+          //   borderRadius: "10px",
+          //   boxShadow: "none",
+          //   border: "1px solid #ccc",
+          //   minHeight: "22px",
+          // }),
           option: (base, state) => ({
             ...base,
             fontSize: "10px",
@@ -3738,6 +3738,15 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
     advanceOnEnter,
     advanceOnSelect,
     disabled,
+    // ─── NEW PROPS ────────────────────────────────────────────────────────────
+    // Pass menuPortalTarget={null} when this select is rendered inside a Modal
+    // so the dropdown menu stays in the normal DOM flow and isn't hidden behind
+    // the modal backdrop.  Default keeps the original document.body behaviour.
+    menuPortalTarget = typeof document !== "undefined" ? document.body : null,
+    // menuPosition: "fixed" works well with document.body portal (default);
+    // "absolute" works well when menuPortalTarget={null} (inline rendering).
+    menuPosition = "fixed",
+    // ─────────────────────────────────────────────────────────────────────────
   },
   ref,
 ) {
@@ -3751,7 +3760,6 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
 
   useImperativeHandle(ref, () => ({
     focus() {
-      // react-select exposes focus() on the instance
       selectRef.current?.focus?.();
     },
   }));
@@ -3764,11 +3772,9 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
     }
   };
 
-  // ✅ Helper function to focus next field
   const focusNextField = () => {
     const current = selectRef.current?.controlRef || document.activeElement;
     if (!current) return;
-
     focusNextGridField({
       currentElement: current,
       onReachGridEnd: () => {
@@ -3780,29 +3786,19 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
   const focusPreviousField = () => {
     const current = selectRef.current?.controlRef || document.activeElement;
     if (!current) return;
-
-    focusPreviousGridField({
-      currentElement: current,
-    });
+    focusPreviousGridField({ currentElement: current });
   };
 
   const handleAddNewSuccess = (newValue) => {
-    if (onChange) {
-      onChange(newValue);
-    }
-
+    if (onChange) onChange(newValue);
     setShowAddNewModal(false);
     setSearchValue("");
-
     if (onBlur) onBlur();
-
-    // ✅ Focus next field after creating new item
     focusNextField();
   };
 
   const CustomOption = (props) => {
     const isCreateNew = props.data.value === CREATE_NEW_VALUE;
-
     if (isCreateNew) {
       return (
         <div
@@ -3815,7 +3811,6 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
         </div>
       );
     }
-
     return <components.Option {...props} />;
   };
 
@@ -3834,7 +3829,6 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
         },
       ];
     }
-
     return filteredOptions;
   };
 
@@ -3842,7 +3836,7 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
     <>
       <Select
         ref={selectRef}
-        styles={customStyles}
+        // styles={customStyles}
         tabSelectsValue={!!value}
         onInputChange={(value, { action }) => {
           if (action === "input-change") {
@@ -3855,7 +3849,8 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
           IndicatorSeparator: () => null,
         }}
         isClearable
-        isDisabled={readOnly}
+        // honour both readOnly and disabled props
+        isDisabled={readOnly || disabled}
         options={getOptionsWithCreateNew()}
         value={options.find((opt) => opt.value === value) || null}
         onChange={(selected) => {
@@ -3863,10 +3858,8 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
             setShowAddNewModal(true);
           } else {
             const val = selected?.value || "";
-
             onChange(val);
             setSearchValue("");
-
             if (advanceOnSelect && menuIsOpen) {
               pendingAdvanceRef.current = true;
             }
@@ -3875,50 +3868,50 @@ export const FxSelectWithAdd = forwardRef(function FxSelectWithAdd(
         onBlur={onBlur}
         filterOption={() => true}
         onKeyDown={(e) => {
-          // ✅ Handle Enter key - focus next field
           if (e.key === "Enter" && advanceOnEnter && !menuIsOpen) {
-            // If a value is selected, focus next field
             if (value) {
               e.preventDefault();
               focusNextField();
               return;
             }
           }
-
           if (e.key === "Tab") {
             if (e.shiftKey) {
               e.preventDefault();
               focusPreviousField();
               return;
             }
-
             if (!value && nextRef) {
               e.preventDefault();
               focusNextSafe(nextRef);
             }
             return;
           }
-
           if (onKeyDown) onKeyDown(e);
         }}
         placeholder={placeholder}
-        menuPortalTarget={document.body}
+        // ─── FORWARDED PROPS ──────────────────────────────────────────────────
+        menuPortalTarget={menuPortalTarget}
+        menuPosition={menuPosition}
+        // When rendered inline (no portal), menus must sit above sibling rows.
+        // zIndex is only meaningful when menuPosition="fixed" with a portal, but
+        // setting it here doesn't hurt for the inline case.
+        styles={{
+          ...customStyles,
+          menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+        }}
+        // ─────────────────────────────────────────────────────────────────────
         inputId={inputId}
         noOptionsMessage={() => "No options"}
         onMenuOpen={() => setMenuIsOpen(true)}
         onMenuClose={() => {
           setMenuIsOpen(false);
-
           if (pendingAdvanceRef.current) {
             pendingAdvanceRef.current = false;
-            window.setTimeout(() => {
-              focusNextField();
-            }, 0);
+            window.setTimeout(() => focusNextField(), 0);
           }
         }}
-        onFocus={() => {
-          setSearchValue(""); // ✅ reset when user comes back
-        }}
+        onFocus={() => setSearchValue("")}
       />
       {showAddNewModal && childComponent && (
         <Modal

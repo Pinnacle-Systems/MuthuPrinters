@@ -141,24 +141,6 @@ async function getOutwardJobCardDtls(req) {
 
   let data = [];
 
-  const inwardedData = await prisma.productionInwardDtl.findMany({
-    where: {
-      productionOutwardId: {
-        not: null,
-      },
-    },
-
-    select: {
-      productionOutwardId: true,
-    },
-  });
-
-  const inwardedOutwardIds = [
-    ...new Set(
-      inwardedData.map((item) => item.productionOutwardId).filter(Boolean),
-    ),
-  ];
-
   const whereCondition = {
     ProductionOutward: {
       supplierId: supplierId ? parseInt(supplierId) : undefined,
@@ -179,9 +161,6 @@ async function getOutwardJobCardDtls(req) {
         docId: searchJobCard ? { contains: searchJobCard } : undefined,
       },
     },
-    productionOutwardId: {
-      notIn: inwardedOutwardIds,
-    },
 
     processId: processId ? parseInt(processId) : undefined,
   };
@@ -190,6 +169,13 @@ async function getOutwardJobCardDtls(req) {
     where: whereCondition,
 
     include: {
+      productionInwardDtls: {
+        select: {
+          receivedQty: true, // or acceptedQty based on your logic
+          acceptedQty: true,
+          wastageQty: true,
+        },
+      },
       ProductionOutward: {
         select: {
           id: true,
@@ -231,6 +217,20 @@ async function getOutwardJobCardDtls(req) {
     data.reduce((acc, item) => {
       const key = item.productionOutwardId;
 
+      const alreadyReceivedQty = (item.productionInwardDtls || []).reduce(
+        (sum, inward) =>
+          sum +
+          (inward.acceptedQty || inward.receivedQty || 0) +
+          (inward.wastageQty || 0),
+        0,
+      );
+
+      const wastageQty = (item.productionInwardDtls || []).reduce(
+        (sum, inward) => sum + (inward.wastageQty || 0),
+        0,
+      );
+
+      const pendingQty = (item.sentQty || 0) - alreadyReceivedQty;
       if (!acc[key]) {
         acc[key] = {
           id: item.id,
@@ -239,7 +239,12 @@ async function getOutwardJobCardDtls(req) {
           // combine process ids here
           processes: item.processId ? [item.processId] : [],
 
-          sentQty: item.sentQty,
+          sentQty: item.sentQty || 0,
+          alreadyReceivedQty,
+
+          wastageQty,
+
+          pendingQty,
           sequence: item.sequence,
           prevProcessId: item.prevProcessId,
           productionAllocationDtlId: item.productionAllocationDtlId,
@@ -251,16 +256,21 @@ async function getOutwardJobCardDtls(req) {
         if (item.processId && !acc[key].processes.includes(item.processId)) {
           acc[key].processes.push(item.processId);
         }
+        acc[key].alreadyReceivedQty += alreadyReceivedQty;
+        acc[key].wastageQty += wastageQty;
+        acc[key].pendingQty =
+          (acc[key].sentQty || 0) - acc[key].alreadyReceivedQty;
       }
 
       return acc;
     }, {}),
   );
+  const filterData = groupedData.filter((item) => item.pendingQty > 0);
 
   return {
     statusCode: 0,
-    data: groupedData,
-    totalCount: groupedData.length,
+    data: filterData,
+    totalCount: filterData.length,
   };
 }
 
@@ -534,6 +544,8 @@ async function remove(id) {
             status: "NOT_STARTED",
             pendingQty: null,
             actualQty: null,
+            completedQty: null,
+            wastageQty: null,
           },
         }),
       ),

@@ -255,6 +255,18 @@ async function getOne(id) {
           inwardProcessDtls: true,
 
           ProductionOutwardDtl: true,
+
+          ProductionOutwardDtl: {
+            include: {
+              productionInwardDtls: {
+                select: {
+                  id: true,
+                  acceptedQty: true,
+                  wastageQty: true,
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -264,12 +276,32 @@ async function getOne(id) {
     return NoRecordFound("Production Inward");
   }
 
+  const inwardDetails = data.inwardDetails.map((item) => {
+    const sentQty = item.ProductionOutwardDtl?.sentQty || 0;
+
+    const alreadyReceivedQty =
+      item.ProductionOutwardDtl?.productionInwardDtls.reduce(
+        (sum, inward) =>
+          sum + (inward.acceptedQty || 0) + (inward.wastageQty || 0),
+        0,
+      ) || 0;
+
+    const pendingQty = sentQty - alreadyReceivedQty;
+
+    return {
+      ...item,
+      sentQty,
+      alreadyReceivedQty: alreadyReceivedQty - item.receivedQty,
+      pendingQty: pendingQty + item.receivedQty,
+    };
+  });
+
   return {
     statusCode: 0,
 
     data: {
       ...data,
-
+      inwardDetails,
       status: getProductionInwardStatus(data),
     },
   };
@@ -542,21 +574,52 @@ async function create(body) {
     });
     await Promise.all(
       inwardDetails.flatMap((item) =>
-        (item.processes || []).map((processId) =>
-          tx.processRoute.updateMany({
+        (item.processes || []).map(async (processId) => {
+          const route = await tx.processRoute.findFirst({
             where: {
               jobCardId: item.jobCardId ? parseInt(item.jobCardId) : null,
-
               processId: processId ? parseInt(processId) : null,
+            },
+          });
+
+          if (!route) return;
+
+          const receivedQty = parseFloat(item.receivedQty || 0);
+          const wastageQty = parseFloat(item.wastageQty || 0);
+          const acceptedQty = parseFloat(item.acceptedQty || 0);
+          // Total processed quantity
+          const processedQty = receivedQty + wastageQty;
+
+          const totalCompletedQty = (route.completedQty || 0) + acceptedQty;
+
+          const totalWastageQty = (route.wastageQty || 0) + wastageQty;
+
+          const actualQty = route.actualQty || 0;
+
+          const pendingQty = Math.max(
+            actualQty - (totalCompletedQty + totalWastageQty),
+            0,
+          );
+
+          let status = "PARTIALLY_COMPLETED";
+
+          if (pendingQty === 0) {
+            status = "COMPLETED";
+          }
+
+          await tx.processRoute.update({
+            where: {
+              id: route.id,
             },
 
             data: {
-              status: "COMPLETED",
-
-              completedQty: item.acceptedQty ? parseFloat(item.acceptedQty) : 0,
+              status,
+              completedQty: totalCompletedQty,
+              wastageQty: totalWastageQty,
+              pendingQty,
             },
-          }),
-        ),
+          });
+        }),
       ),
     );
 
@@ -793,26 +856,74 @@ async function update(id, body) {
         });
       }
     }
+    const affectedProcesses = new Set();
 
-    await Promise.all(
-      inwardDetails.flatMap((item) =>
-        (item.processes || []).map((processId) =>
-          tx.processRoute.updateMany({
-            where: {
-              jobCardId: item.jobCardId ? parseInt(item.jobCardId) : null,
+    for (const item of inwardDetails) {
+      for (const processId of item.processes || []) {
+        affectedProcesses.add(`${item.jobCardId}_${processId}`);
+      }
+    }
 
-              processId: processId ? parseInt(processId) : null,
+    for (const key of affectedProcesses) {
+      const [jobCardId, processId] = key.split("_");
+
+      const route = await tx.processRoute.findFirst({
+        where: {
+          jobCardId: parseInt(jobCardId),
+          processId: parseInt(processId),
+        },
+      });
+
+      if (!route) continue;
+
+      const inwards = await tx.productionInwardDtl.findMany({
+        where: {
+          jobCardId: parseInt(jobCardId),
+
+          inwardProcessDtls: {
+            some: {
+              processId: parseInt(processId),
             },
+          },
+        },
+        select: {
+          acceptedQty: true,
+          wastageQty: true,
+        },
+      });
 
-            data: {
-              status: "COMPLETED",
+      const completedQty = inwards.reduce(
+        (sum, row) => sum + (row.acceptedQty || 0),
+        0,
+      );
 
-              completedQty: parseFloat(item.acceptedQty || 0),
-            },
-          }),
-        ),
-      ),
-    );
+      const wastageQty = inwards.reduce(
+        (sum, row) => sum + (row.wastageQty || 0),
+        0,
+      );
+
+      const actualQty = route.actualQty || 0;
+
+      const pendingQty = Math.max(actualQty - (completedQty + wastageQty), 0);
+
+      let status = "NOT_STARTED";
+
+      if (completedQty > 0 || wastageQty > 0) {
+        status = pendingQty === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
+      }
+
+      await tx.processRoute.update({
+        where: {
+          id: route.id,
+        },
+        data: {
+          completedQty,
+          wastageQty,
+          pendingQty,
+          status,
+        },
+      });
+    }
   });
 
   return {
@@ -843,30 +954,81 @@ async function remove(id) {
   if (!dataFound) {
     return NoRecordFound("Production Inward");
   }
+  const affectedProcesses = new Set();
 
+  for (const item of dataFound.inwardDetails) {
+    for (const proc of item.inwardProcessDtls || []) {
+      affectedProcesses.add(`${item.jobCardId}_${proc.processId}`);
+    }
+  }
   const data = await prisma.$transaction(async (tx) => {
-    // Reset process route status
-    await Promise.all(
-      dataFound.inwardDetails.flatMap((item) =>
-        (item.inwardProcessDtls || []).map((proc) =>
-          tx.processRoute.updateMany({
-            where: {
-              jobCardId: dataFound.jobCardId,
-              processId: proc.processId,
-            },
-            data: {
-              status: "PENDING",
-            },
-          }),
-        ),
-      ),
-    );
-    const deleted = await tx.productionInward.delete({
+    await tx.productionInward.delete({
       where: {
         id: parseInt(id),
       },
     });
-    return deleted;
+    for (const key of affectedProcesses) {
+      const [jobCardId, processId] = key.split("_");
+
+      const route = await tx.processRoute.findFirst({
+        where: {
+          jobCardId: parseInt(jobCardId),
+          processId: parseInt(processId),
+        },
+      });
+
+      if (!route) continue;
+
+      const inwards = await tx.productionInwardDtl.findMany({
+        where: {
+          jobCardId: parseInt(jobCardId),
+
+          inwardProcessDtls: {
+            some: {
+              processId: parseInt(processId),
+            },
+          },
+        },
+
+        select: {
+          acceptedQty: true,
+          wastageQty: true,
+        },
+      });
+
+      const completedQty = inwards.reduce(
+        (sum, row) => sum + (row.acceptedQty || 0),
+        0,
+      );
+
+      const wastageQty = inwards.reduce(
+        (sum, row) => sum + (row.wastageQty || 0),
+        0,
+      );
+
+      const actualQty = route.actualQty || 0;
+
+      const pendingQty = Math.max(actualQty - (completedQty + wastageQty), 0);
+
+      let status = "NOT_STARTED";
+
+      if (completedQty > 0 || wastageQty > 0) {
+        status = pendingQty === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
+      }
+
+      await tx.processRoute.update({
+        where: {
+          id: route.id,
+        },
+
+        data: {
+          completedQty,
+          wastageQty,
+          pendingQty,
+          status,
+        },
+      });
+    }
   });
 
   return {

@@ -66,30 +66,50 @@ const InwardDetails = ({
       const rows = [...prev];
       let row = { ...rows[index], [field]: value };
 
-      // Auto-calculate acceptedQty = receivedQty - wastageQty
-      if (field === "receivedQty" || field === "wastageQty") {
-        const received =
-          field === "receivedQty"
-            ? Number(value) || 0
-            : Number(row.receivedQty) || 0;
-        const wastage =
-          field === "wastageQty"
-            ? Number(value) || 0
-            : Number(row.wastageQty) || 0;
-        if (wastage > received) {
-          Swal.fire({
-            icon: "warning",
-            title: "Invalid Wastage Qty",
-            text: "Wastage Qty cannot exceed Received Qty",
-            confirmButtonColor: "#3085d6",
-          });
+      const received =
+        field === "receivedQty"
+          ? Number(value) || 0
+          : Number(row.receivedQty) || 0;
 
-          row.wastageQty = "";
-          row.acceptedQty = received;
-        } else {
-          row.acceptedQty = received - wastage;
-        }
+      const wastage =
+        field === "wastageQty"
+          ? Number(value) || 0
+          : Number(row.wastageQty) || 0;
+
+      const pending = Number(row.pendingQty) || 0;
+
+      // Received Qty validation
+      if (field === "receivedQty" && received > pending) {
+        Swal.fire({
+          icon: "warning",
+          title: "Invalid Received Qty",
+          text: "Received Qty cannot be more than Pending Qty",
+          confirmButtonColor: "#3085d6",
+        });
+
+        row.receivedQty = "";
+        row.acceptedQty = "";
+        rows[index] = row;
+        return rows;
       }
+
+      // Wastage validation
+      if (field === "wastageQty" && wastage > received) {
+        Swal.fire({
+          icon: "warning",
+          title: "Invalid Wastage Qty",
+          text: "Wastage Qty cannot be more than Received Qty",
+          confirmButtonColor: "#3085d6",
+        });
+
+        row.wastageQty = "";
+        row.acceptedQty = received;
+        rows[index] = row;
+        return rows;
+      }
+
+      // Accepted Qty = Received Qty - Wastage Qty
+      row.acceptedQty = Math.max(received - wastage, 0);
 
       rows[index] = row;
       return rows;
@@ -119,7 +139,7 @@ const InwardDetails = ({
           setFillGrid(false);
 
           setTimeout(() => {
-            const firstInput = document.querySelector("#wastageQty-input-0");
+            const firstInput = document.querySelector("#receivedQty-input-0");
             if (firstInput) {
               firstInput.focus();
               firstInput.select(); // optional UX 🔥
@@ -140,7 +160,7 @@ const InwardDetails = ({
           onClose={() => {
             setFillGrid(false);
             setTimeout(() => {
-              const firstInput = document.querySelector("#wastageQty-input-0");
+              const firstInput = document.querySelector("#receivedQty-input-0");
               if (firstInput) {
                 firstInput.focus();
                 firstInput.select(); // optional UX 🔥
@@ -212,13 +232,13 @@ const InwardDetails = ({
                 <th className="w-44 px-2 py-2 text-center font-medium border border-gray-300">
                   Process <span className="text-red-500">*</span>
                 </th>
-                <th className="w-44 px-2 py-2 text-center font-medium border border-gray-300">
+                <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
                   Send Qty
                 </th>
-                <th className="w-44 px-2 py-2 text-center font-medium border border-gray-300">
+                <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
                   Already Received Qty
                 </th>
-                <th className="w-44 px-2 py-2 text-center font-medium border border-gray-300">
+                <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
                   Pending Qty
                 </th>
                 <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
@@ -302,10 +322,20 @@ const InwardDetails = ({
                         .filter(Boolean)
                         .join(" + ")}
                     </td>
+                    <td className="border border-gray-300 text-[11px] px-1 text-right font-medium text-gray-800">
+                      {row.sentQty}
+                    </td>
+                    <td className="border border-gray-300 text-[11px] px-1 text-right font-medium text-gray-800">
+                      {row.alreadyReceivedQty}
+                    </td>
+                    <td className="border border-gray-300 text-[11px] px-1 text-right font-medium text-gray-800">
+                      {row.pendingQty}
+                    </td>
 
                     {/* Received Qty */}
                     <td className="border border-gray-300 text-[11px]">
                       <input
+                        id={`receivedQty-input-${index}`}
                         type="number"
                         min="0"
                         className={`w-full text-right px-1 text-[11px] outline-none ${
@@ -330,13 +360,12 @@ const InwardDetails = ({
                         }
                         onFocus={(e) => e.target.select()}
                         // disabled={isDisabled}
-                        disabled={true}
+                        disabled={readOnly}
                         placeholder={isEmpty ? "" : "0"}
                       />
                     </td>
                     <td className="border border-gray-300 text-[11px]">
                       <input
-                        id={`wastageQty-input-${index}`}
                         type="number"
                         min="0"
                         className={`w-full text-right px-1 text-[11px] outline-none ${
@@ -469,6 +498,24 @@ const InwardDetails = ({
                   colSpan={4}
                 >
                   Total
+                </td>
+                <td className="text-right border border-gray-300 px-1">
+                  {inwardDetails?.reduce(
+                    (s, r) => s + (Number(r.sentQty) || 0),
+                    0,
+                  ) || ""}
+                </td>
+                <td className="text-right border border-gray-300 px-1">
+                  {inwardDetails?.reduce(
+                    (s, r) => s + (Number(r.alreadyReceivedQty) || 0),
+                    0,
+                  ) || ""}
+                </td>
+                <td className="text-right border border-gray-300 px-1">
+                  {inwardDetails?.reduce(
+                    (s, r) => s + (Number(r.pendingQty) || 0),
+                    0,
+                  ) || ""}
                 </td>
                 <td className="text-right border border-gray-300 px-1">
                   {inwardDetails?.reduce(
