@@ -35,6 +35,7 @@ export const DELIVERY_CHALLAN_API = "deliveryChallan";
 export const STYLE_API = "style";
 export const STYLE_ITEM_API = "styleItem";
 export const ITEM_GROUP_API = "itemGroup";
+export const ITEM_SUB_GROUP_API = "itemSubGroup";
 export const GSM_API = "gsm";
 export const SIZE_API = "size";
 export const DELIVERY_INVOICE_API = "deliveryInvoice";

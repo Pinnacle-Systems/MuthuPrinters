@@ -71,6 +71,7 @@ model Company {
   currencies          Currency[]
   bank                Bank[]
   machines            Machine[]
+  ItemSubGroup        ItemSubGroup[]
 }
 
 model Subscription {
@@ -230,6 +231,8 @@ model User {
   productionemplog         productionempPunch[]
   salesDeliveriesCreatedBy SalesDelivery[]      @relation(name: "createdBy")
   salesDeliveriesUpdatedBy SalesDelivery[]      @relation(name: "updatedBy")
+  ItemSubGroupCreatedBy     ItemSubGroup[]      @relation(name: "createdBy")
+  ItemSubGroupUpdatedBy     ItemSubGroup[]      @relation(name: "updatedBy")
 }
 
 model Employee {
@@ -967,6 +970,8 @@ model StyleItem {
   sizeTemplateId         Int?
   ItemGroup              ItemGroup?               @relation(fields: [itemGroupId], references: [id])
   itemGroupId            Int?
+  ItemSubGroup           ItemSubGroup?               @relation(fields: [itemSubGroupId], references: [id])
+  itemSubGroupId         Int?
   Uom                    Uom?                     @relation(fields: [uomId], references: [id])
   uomId                  Int?
   Gsm                    Gsm?                     @relation(fields: [gsmId], references: [id])
@@ -1684,6 +1689,7 @@ model ItemGroup {
   stocks                 Stock[]
   orderItems             OrderItems[]
   jobCards               JobCard[]
+  ItemSubGroup          ItemSubGroup[]
 }
 
 model SizeTemplate {
@@ -2159,10 +2165,13 @@ model OrderItems {
   Hsn            Hsn?               @relation(fields: [hsnId], references: [id])
   sizeTemplateId Int?
   SizeTemplate   SizeTemplate?      @relation(fields: [sizeTemplateId], references: [id])
+  
   trackingType   String?
   sizeBreakup    OrderSizeBreakup[]
-
   jobCards JobCard[]
+  itemSubGroupId            Int?
+  ItemSubGroup              ItemSubGroup?               @relation(fields: [itemSubGroupId], references: [id])
+  labelWidth    String?
 }
 
 model OrderSizeBreakup {
@@ -2657,4 +2666,23 @@ model SalesSizeBreakup {
   sizeId              Int?
   Size                Size?               @relation(fields: [sizeId], references: [id])
   qty                 Int?
+}
+
+
+model ItemSubGroup {
+  id                     Int                      @id @default(autoincrement())
+  name                   String
+  active                 Boolean                  @default(true)
+  Company                Company?                 @relation(fields: [companyId], references: [id])
+  companyId              Int?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  createdById            Int?
+  createdBy              User?                    @relation("createdBy", fields: [createdById], references: [id])
+  updatedById            Int?
+  updatedBy              User?                    @relation("updatedBy", fields: [updatedById], references: [id])
+  itemGroupId            Int
+  ItemGroup              ItemGroup                @relation(fields: [itemGroupId], references: [id], onDelete: Cascade)
+  StyleItem               StyleItem[]
+  OrderItems              OrderItems[]
 }
