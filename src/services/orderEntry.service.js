@@ -643,6 +643,10 @@ async function create(body) {
       ? parsedOrderItems.map((item) => ({
           styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
           itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+          itemSubGroupId: item?.itemSubGroupId
+            ? parseInt(item?.itemSubGroupId)
+            : null,
+          labelWidth: item?.labelWidth ?? "",
           trackingType: item?.trackingType,
           orderQty:
             item?.orderQty && !isNaN(Number(item.orderQty))
@@ -888,6 +892,10 @@ async function update(id, body, files) {
                 itemGroupId: item.itemGroupId
                   ? parseInt(item.itemGroupId)
                   : null,
+                itemSubGroupId: item?.itemSubGroupId
+                  ? parseInt(item?.itemSubGroupId)
+                  : null,
+                labelWidth: item?.labelWidth ?? "",
                 trackingType: item.trackingType,
                 sizeTemplateId: item.sizeTemplateId
                   ? parseInt(item.sizeTemplateId)
@@ -918,6 +926,10 @@ async function update(id, body, files) {
             .map((item) => ({
               styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
               itemGroupId: item.itemGroupId ? parseInt(item.itemGroupId) : null,
+              itemSubGroupId: item?.itemSubGroupId
+                ? parseInt(item?.itemSubGroupId)
+                : null,
+              labelWidth: item?.labelWidth ?? "",
               trackingType: item.trackingType,
               sizeTemplateId: item.sizeTemplateId
                 ? parseInt(item.sizeTemplateId)

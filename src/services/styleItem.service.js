@@ -30,6 +30,7 @@ async function get(req) {
           name: true,
         },
       },
+      ItemSubGroup: true,
     },
   });
   return {
@@ -101,6 +102,7 @@ async function create(body) {
     uomId,
     sizeTemplateId,
     itemGroupId,
+    itemSubGroupId,
     gsmId,
   } = await body;
   const data = await prisma.styleItem.create({
@@ -112,6 +114,7 @@ async function create(body) {
       hsnId: parseInt(hsnId) || null,
       uomId: parseInt(uomId) || null,
       itemGroupId: parseInt(itemGroupId) || null,
+      itemSubGroupId: parseInt(itemSubGroupId) || null,
       sizeTemplateId: parseInt(sizeTemplateId) || null,
       gsmId: parseInt(gsmId) || null,
     },
@@ -129,6 +132,7 @@ async function update(id, body) {
     uomId,
     sizeTemplateId,
     itemGroupId,
+    itemSubGroupId,
     gsmId,
   } = await body;
 
@@ -150,6 +154,7 @@ async function update(id, body) {
       hsnId: parseInt(hsnId) || null,
       uomId: parseInt(uomId) || null,
       itemGroupId: parseInt(itemGroupId) || null,
+      itemSubGroupId: parseInt(itemSubGroupId) || null,
       sizeTemplateId: parseInt(sizeTemplateId) || null,
       gsmId: parseInt(gsmId) || null,
     },
