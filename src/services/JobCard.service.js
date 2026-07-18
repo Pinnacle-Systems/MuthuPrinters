@@ -1283,8 +1283,8 @@ async function create(body) {
           docId: newDocId,
           docDate: docDate ? new Date(docDate) : null,
 
-          createdById: Number(userId),
-          branchId: Number(branchId),
+          createdById: Number(userId) ?? null,
+          branchId: Number(branchId) ?? null,
 
           orderEntryId: orderEntryId ? Number(orderEntryId) : null,
           orderType: orderType || null,
