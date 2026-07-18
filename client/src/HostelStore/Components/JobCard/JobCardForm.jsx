@@ -4,6 +4,7 @@ import {
   DateInputNew,
   DropdownInput,
   DropdownNew,
+  FxSelectWithAdd,
   ReusableInput,
   TextInput,
 } from "../../../Inputs";
@@ -103,6 +104,7 @@ const JobCardForm = ({
     moment.utc(today).format("YYYY-MM-DD"),
   );
   const [customerId, setCustomerId] = useState("");
+  const [plateSupplierId, setPlateSupplierId] = useState("");
   const [remarks, setRemarks] = useState("");
   const [orderType, setOrderType] = useState("ORDER");
   const [docId, setDocId] = useState("");
@@ -151,12 +153,18 @@ const JobCardForm = ({
   const [selectedOrderData, setSelectedOrderData] = useState(null);
   const [trackingType, setTrackingType] = useState("Barcode");
   const [sizeModalOpen, setSizeModalOpen] = useState(false);
-  const [plateModalOpen, setPlateModalOpen] = useState(false);
+
   const childRecord = useRef(0);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const [orderItemId, setOrderItemId] = useState("");
   const [plateDetails, setPlateDetails] = useState(
-    Array.from({ length: 6 }, () => ({ plateName: "", qty: "" })),
+    Array.from({ length: 6 }, () => ({
+      plateId: "",
+      machineId: "",
+      plateName: "",
+      description: "",
+      qty: "",
+    })),
   );
   const [labelSizeId, setLabelSizeId] = useState("");
   const [totalMeter, setTotalMeter] = useState("");
@@ -169,6 +177,8 @@ const JobCardForm = ({
   const qrRef = useRef(null);
   const [runningQty, setRunningQty] = useState("");
   const [stockQty, setStockQty] = useState("");
+  const [dieDescription, setDieDescription] = useState("");
+  const [dieMethod, setDieMethod] = useState("");
   const params = {
     companyId: secureLocalStorage.getItem(
       sessionStorage.getItem("sessionId") + "userCompanyId",
@@ -285,6 +295,7 @@ const JobCardForm = ({
     );
     setProductionType(data?.productionType || "SAMPLE");
     setCustomerId(data?.customerId || "");
+    setPlateSupplierId(data?.plateSupplierId || "");
     setRemarks(data?.remarks || "");
     setOrderQty(data?.orderQty || "");
     setPlateId(data?.plateId || "");
@@ -363,6 +374,8 @@ const JobCardForm = ({
     setRefJobCardId(data?.refJobCardId || "");
     setRunningQty(data?.runningQty || "");
     setColorId(data?.colorId || "");
+    setDieMethod(data?.dieMethod || "");
+    setDieDescription(data?.dieDescription || "");
     const rawPlates = data?.plateDetails || [];
     const paddedPlates = [...rawPlates];
     while (paddedPlates.length < 6)
@@ -418,6 +431,7 @@ const JobCardForm = ({
     orderType,
     orderQty,
     customerId,
+    plateSupplierId,
     boardQualities: boardItems.filter((r) => r.processId),
     otherBoardId,
     remarks,
@@ -448,7 +462,7 @@ const JobCardForm = ({
     orderItemId,
     selectedPrinting,
     plateDetails: plateDetails?.filter(
-      (plate) => plate?.plateName && plate?.qty,
+      (plate) => plate?.machineId && plate?.plateId,
     ),
     labelSizeId,
     totalMeter,
@@ -463,6 +477,8 @@ const JobCardForm = ({
     runningQty,
     selectedLabelPrinting,
     colorId,
+    dieDescription,
+    dieMethod,
   };
 
   const openPrintModal = async (overrideId, overrideDocId) => {
@@ -810,7 +826,13 @@ const JobCardForm = ({
       const rawPlates = data?.plateDetails || [];
       const paddedPlates = [...rawPlates];
       while (paddedPlates.length < 6)
-        paddedPlates.push({ plateName: "", qty: "" });
+        paddedPlates.push({
+          plateId: "",
+          machineId: "",
+          plateName: "",
+          description: "",
+          qty: "",
+        });
       setPlateDetails(paddedPlates);
       setIsAmendment(data?.isAmendment || false);
       setColorId(data?.colorId || "");
@@ -1255,8 +1277,27 @@ const JobCardForm = ({
               </div>
             </SectionCard>
 
-            <SectionCard title="Plate & Die Details">
+            <SectionCard title="Plate Details">
               <div className="grid grid-cols-5 gap-x-3 items-center">
+                <div className="w-72 px-1">
+                  <DropdownNew
+                    name="Supplier"
+                    dataList={
+                      id
+                        ? customerList?.data?.filter((i) => i?.isSupplier)
+                        : customerList?.data?.filter(
+                            (i) => i?.active && i?.isSupplier,
+                          )
+                    }
+                    value={plateSupplierId}
+                    setValue={setPlateSupplierId}
+                    required
+                    readOnly={readOnly}
+                    disabled={readOnly || childRecord.current > 0}
+                    ref={customerRef}
+                  />
+                </div>
+                <Field></Field>
                 <Field label="Plate Details">
                   <DropdownWithModal
                     name=""
@@ -1276,6 +1317,228 @@ const JobCardForm = ({
                     disabled={isDisabledPermission}
                   />
                 </Field>
+
+                <Field label="Total Plate Sets">
+                  <TextInput
+                    name=""
+                    value={totalPlatesets}
+                    setValue={setTotalPlatesets}
+                    type="number"
+                    readOnly={readOnly}
+                    className="w-full text-right"
+                    disabled={isDisabledPermission}
+                  />
+                </Field>
+
+                <div className="justify-center items-center">
+                  <button
+                    onClick={() => setSizeModalOpen(true)}
+                    className="border w-auto rounded-md text-[10px] bg-blue-700 font-semibold uppercase tracking-wider text-white p-1"
+                  >
+                    View Size Details
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 border border-slate-200 rounded-lg p-3 bg-white">
+                <h4 className="text-[13px] font-semibold text-slate-800 mb-2">
+                  Plate Set Details
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-[11px]">
+                    <thead>
+                      <tr className="bg-gray-100 text-gray-700 h-7">
+                        <th className="border border-gray-300 px-1 py-1 text-center w-8">
+                          S.No
+                        </th>
+                        <th className="border border-gray-300 px-1 py-1 text-center">
+                          Machine Name
+                        </th>
+                        <th className="border border-gray-300 px-1 py-1 text-center">
+                          Plate Name
+                        </th>
+                        <th className="border border-gray-300 px-1 py-1 text-center">
+                          Description
+                        </th>
+                        <th className="border border-gray-300 px-1 py-1 text-center w-16">
+                          Qty
+                        </th>
+                        {!readOnly && (
+                          <th className="border border-gray-300 px-1 py-1 text-center w-10">
+                            Actions
+                          </th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {plateDetails.map((row, idx) => (
+                        <tr
+                          key={idx}
+                          className={
+                            idx % 2 === 0 ? "bg-white h-7" : "bg-gray-50 h-7"
+                          }
+                        >
+                          <td className="border border-gray-300 text-center text-[10px] text-gray-500">
+                            {idx + 1}
+                          </td>
+
+                          <td className=" text-[11px] border border-gray-300 text-left">
+                            <FxSelectWithAdd
+                              inputId={`machineId-input-${idx}`}
+                              value={row.machineId}
+                              onChange={(val) => {
+                                const next = [...plateDetails];
+                                next[idx] = {
+                                  ...next[idx],
+                                  machineId: val,
+                                };
+                                setPlateDetails(next);
+                              }}
+                              options={(machineList?.data || [])
+                                .filter((item) => (id ? true : item.active))
+                                .map((item) => ({
+                                  label: item.name,
+                                  value: item.id,
+                                }))}
+                              readOnly={readOnly}
+                              placeholder=""
+                              addNew={true}
+                              // childComponent={StyleItemMaster}
+                              addNewModalWidth="w-[50%] h-[55%]"
+                              // nextRef={vehicleRef}
+                            />
+                          </td>
+                          <td className=" text-[11px] border border-gray-300 text-left">
+                            <FxSelectWithAdd
+                              inputId={`plateId-input-${idx}`}
+                              value={row.plateId}
+                              onChange={(val) => {
+                                const next = [...plateDetails];
+                                next[idx] = {
+                                  ...next[idx],
+                                  plateId: val,
+                                };
+                                console.log(next, "next");
+
+                                setPlateDetails(next);
+                              }}
+                              options={(plateList?.data || [])
+                                .filter((item) => (id ? true : item.active))
+                                .map((item) => ({
+                                  label: item.name,
+                                  value: item.id,
+                                }))}
+                              readOnly={readOnly}
+                              placeholder=""
+                              addNew={true}
+                              // childComponent={StyleItemMaster}
+                              addNewModalWidth="w-[50%] h-[55%]"
+                              // nextRef={vehicleRef}
+                            />
+                          </td>
+                          {console.log(plateDetails, "plateDetails")}
+                          <td className="border border-gray-300 p-0">
+                            <input
+                              type="text"
+                              className="w-full px-1 py-0.5 bg-transparent text-[11px] outline-none focus:bg-white"
+                              value={row.plateName}
+                              onChange={(e) => {
+                                const next = [...plateDetails];
+                                next[idx] = {
+                                  ...next[idx],
+                                  plateName: e.target.value,
+                                };
+                                setPlateDetails(next);
+                              }}
+                              disabled={readOnly || isDisabledPermission}
+                              placeholder="Plate name"
+                            />
+                          </td>
+                          <td className="border border-gray-300 p-0">
+                            <input
+                              type="number"
+                              min="0"
+                              className="w-full px-1 py-0.5 text-right bg-transparent text-[11px] outline-none focus:bg-white"
+                              value={row.qty}
+                              onChange={(e) => {
+                                const next = [...plateDetails];
+                                next[idx] = {
+                                  ...next[idx],
+                                  qty: e.target.value,
+                                };
+                                setPlateDetails(next);
+                              }}
+                              onBlur={(e) => {
+                                const next = [...plateDetails];
+                                next[idx] = {
+                                  ...next[idx],
+                                  qty: e.target.value
+                                    ? Number(e.target.value)
+                                    : "",
+                                };
+                                setPlateDetails(next);
+                              }}
+                              onFocus={(e) => e.target.select()}
+                              disabled={readOnly || isDisabledPermission}
+                              placeholder="0"
+                            />
+                          </td>
+                          {!readOnly && (
+                            <td className="border border-gray-300 text-center">
+                              <div className="flex items-center justify-center gap-0.5">
+                                <button
+                                  onClick={() =>
+                                    setPlateDetails((prev) => [
+                                      ...prev,
+                                      { plateName: "", qty: "" },
+                                    ])
+                                  }
+                                  className="p-0.5 bg-blue-50 hover:bg-blue-100 rounded"
+                                  tabIndex={-1}
+                                  disabled={isDisabledPermission}
+                                >
+                                  <Plus size={11} className="text-blue-700" />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setPlateDetails((prev) => {
+                                      const next = prev.filter(
+                                        (_, i) => i !== idx,
+                                      );
+                                      return next.length > 0
+                                        ? next
+                                        : [{ plateName: "", qty: "" }];
+                                    })
+                                  }
+                                  className="p-0.5 bg-red-50 hover:bg-red-100 rounded"
+                                  tabIndex={-1}
+                                  disabled={isDisabledPermission}
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-3 w-3 text-red-700"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </SectionCard>
+            <SectionCard title="Die Details">
+              <div className="grid grid-cols-5 gap-x-3 items-center">
                 <Field label="Die Details">
                   <DropdownWithModal
                     name=""
@@ -1295,33 +1558,30 @@ const JobCardForm = ({
                     disabled={isDisabledPermission}
                   />
                 </Field>
-                <Field label="Total Plate Sets">
+                <Field label="Die Method" required={true}>
                   <TextInput
                     name=""
-                    value={totalPlatesets}
-                    setValue={setTotalPlatesets}
-                    type="number"
+                    value={dieMethod}
+                    setValue={setDieMethod}
                     readOnly={readOnly}
+                    type="number"
                     className="w-full text-right"
-                    disabled={isDisabledPermission}
+                    disabled={isDisabledPermission || isCuttingLocked}
+                    required={true}
                   />
                 </Field>
-                <div className="justify-center items-center ml-4">
-                  <button
-                    onClick={() => setPlateModalOpen(true)}
-                    className="border flex justify-center gap-1 items-center w-auto rounded-md text-[10px] bg-green-700 font-semibold uppercase tracking-wider text-white p-1"
-                  >
-                    View Plate Details
-                  </button>
-                </div>
-                <div className="justify-center items-center">
-                  <button
-                    onClick={() => setSizeModalOpen(true)}
-                    className="border w-auto rounded-md text-[10px] bg-blue-700 font-semibold uppercase tracking-wider text-white p-1"
-                  >
-                    View Size Details
-                  </button>
-                </div>
+                <Field label="Description" required={true}>
+                  <TextInput
+                    name=""
+                    value={dieDescription}
+                    setValue={setDieDescription}
+                    readOnly={readOnly}
+                    type="number"
+                    className="w-full text-right"
+                    disabled={isDisabledPermission || isCuttingLocked}
+                    required={true}
+                  />
+                </Field>
               </div>
             </SectionCard>
           </div>
@@ -1834,151 +2094,6 @@ const JobCardForm = ({
 
   return (
     <>
-      {/* Plate Set Modal */}
-      <Modal
-        isOpen={plateModalOpen}
-        onClose={() => setPlateModalOpen(false)}
-        widthClass="w-[500px]"
-      >
-        <div className="bg-slate-100 p-3 rounded-lg">
-          <div className="bg-white p-3 rounded-lg flex justify-between items-center mb-3 shadow-sm">
-            <h3 className="text-[16px] font-bold text-slate-800">
-              Plate Set Details
-            </h3>
-            <button
-              className="bg-white text-indigo-600 border border-indigo-600 px-4 py-0.5 rounded text-[12px] hover:bg-indigo-50 font-semibold"
-              onClick={() => setPlateModalOpen(false)}
-            >
-              Done
-            </button>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-            <div className="h-[220px] overflow-y-auto">
-              <table className="w-full border-collapse text-[11px]">
-                <thead>
-                  <tr className="bg-gray-100 text-gray-700 h-7">
-                    <th className="border border-gray-300 px-1 py-1 text-center w-8">
-                      S.No
-                    </th>
-                    <th className="border border-gray-300 px-1 py-1 text-left">
-                      Plate Name
-                    </th>
-                    <th className="border border-gray-300 px-1 py-1 text-center w-16">
-                      Qty
-                    </th>
-                    {!readOnly && (
-                      <th className="border border-gray-300 px-1 py-1 text-center w-10">
-                        Actions
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {plateDetails.map((row, idx) => (
-                    <tr
-                      key={idx}
-                      className={
-                        idx % 2 === 0 ? "bg-white h-7" : "bg-gray-50 h-7"
-                      }
-                    >
-                      <td className="border border-gray-300 text-center text-[10px] text-gray-500">
-                        {idx + 1}
-                      </td>
-                      <td className="border border-gray-300 p-0">
-                        <input
-                          type="text"
-                          className="w-full px-1 py-0.5 bg-transparent text-[11px] outline-none focus:bg-white"
-                          value={row.plateName}
-                          onChange={(e) => {
-                            const next = [...plateDetails];
-                            next[idx] = {
-                              ...next[idx],
-                              plateName: e.target.value,
-                            };
-                            setPlateDetails(next);
-                          }}
-                          disabled={readOnly || isDisabledPermission}
-                          placeholder="Plate name"
-                        />
-                      </td>
-                      <td className="border border-gray-300 p-0">
-                        <input
-                          type="number"
-                          min="0"
-                          className="w-full px-1 py-0.5 text-right bg-transparent text-[11px] outline-none focus:bg-white"
-                          value={row.qty}
-                          onChange={(e) => {
-                            const next = [...plateDetails];
-                            next[idx] = { ...next[idx], qty: e.target.value };
-                            setPlateDetails(next);
-                          }}
-                          onBlur={(e) => {
-                            const next = [...plateDetails];
-                            next[idx] = {
-                              ...next[idx],
-                              qty: e.target.value ? Number(e.target.value) : "",
-                            };
-                            setPlateDetails(next);
-                          }}
-                          onFocus={(e) => e.target.select()}
-                          disabled={readOnly || isDisabledPermission}
-                          placeholder="0"
-                        />
-                      </td>
-                      {!readOnly && (
-                        <td className="border border-gray-300 text-center">
-                          <div className="flex items-center justify-center gap-0.5">
-                            <button
-                              onClick={() =>
-                                setPlateDetails((prev) => [
-                                  ...prev,
-                                  { plateName: "", qty: "" },
-                                ])
-                              }
-                              className="p-0.5 bg-blue-50 hover:bg-blue-100 rounded"
-                              tabIndex={-1}
-                              disabled={isDisabledPermission}
-                            >
-                              <Plus size={11} className="text-blue-700" />
-                            </button>
-                            <button
-                              onClick={() =>
-                                setPlateDetails((prev) => {
-                                  const next = prev.filter((_, i) => i !== idx);
-                                  return next.length > 0
-                                    ? next
-                                    : [{ plateName: "", qty: "" }];
-                                })
-                              }
-                              className="p-0.5 bg-red-50 hover:bg-red-100 rounded"
-                              tabIndex={-1}
-                              disabled={isDisabledPermission}
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-3 w-3 text-red-700"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
       {/* Size Modal */}
       <Modal
         isOpen={sizeModalOpen}

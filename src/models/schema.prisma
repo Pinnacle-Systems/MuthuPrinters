@@ -494,6 +494,7 @@ model Party {
   purchaseLedgers       PurchaseLedger[]
   orderEntries          OrderEntry[]
   JobCard               JobCard[]
+  PlateSupplier         JobCard[]   @relation(name: "PlateSupplier")
   proformaInvoices      ProformaInvoice[]
   productionOutwards    ProductionOutward[]
 
@@ -1947,6 +1948,7 @@ model Plate {
   Company   Company?  @relation(fields: [companyId], references: [id])
   companyId Int?
   JobCard   JobCard[]
+  PlateDetails  PlateDetails[]
 }
 
 model Die {
@@ -1999,6 +2001,8 @@ model JobCard {
   dieId              Int?
   Die                Die?        @relation(fields: [dieId], references: [id])
   totalPlateSet      Int?
+  dieMethod           String?
+  dieDescription      String?
   remarks            String?
   designerId         Int?
   Designer           Employee?   @relation("design", fields: [designerId], references: [id])
@@ -2039,7 +2043,8 @@ model JobCard {
   splitType          String?
   colorId            Int?
   Color              Color?      @relation(fields: [colorId], references: [id])
-
+  plateSupplierId    Int?
+  PlateSupplier      Party?      @relation("PlateSupplier",fields: [plateSupplierId], references: [id])
   boardQualities        BoardQuality[]
   processDetails        ProcessDetails[]
   laminationDetails     LaminationDetails[]
@@ -2104,7 +2109,12 @@ model PlateDetails {
   id        Int      @id @default(autoincrement())
   jobCardId Int?
   JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  plateId   Int?
+  Plate     Plate?   @relation(fields: [plateId], references: [id])
+  machineId Int?
+  Machine   Machine? @relation(fields: [machineId], references: [id])
   plateName String?
+  description String?
   qty       Int?
 }
 
@@ -2418,6 +2428,7 @@ model Machine {
 
   machineDetails     MachineDetails[]
   productionempPunch productionempPunch[]
+  PlateDetails    PlateDetails[]
 }
 
 model Notification {

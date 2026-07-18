@@ -1178,6 +1178,7 @@ async function create(body) {
       orderType,
       orderQty,
       customerId,
+      plateSupplierid,
       gsmId,
       otherBoardId,
       fullBoardId,
@@ -1209,6 +1210,8 @@ async function create(body) {
       labelQty,
       rollQty,
       cutAndSeal,
+      dieDescription,
+      dieMethod,
       // Arrays
       boardQualities,
       selectedProcesses,
@@ -1288,6 +1291,7 @@ async function create(body) {
           orderQty: orderQty ? parseInt(orderQty) : null,
           orderItemId: orderItemId ? Number(orderItemId) : null,
           customerId: customerId ? Number(customerId) : null,
+          plateSupplierid: plateSupplierid ? Number(plateSupplierid) : null,
 
           gsmId: gsmId ? Number(gsmId) : null,
           otherBoardId: otherBoardId ? Number(otherBoardId) : null,
@@ -1335,6 +1339,8 @@ async function create(body) {
           storeId: storeId ? Number(storeId) : null,
           labelItemId: labelItemId ? Number(labelItemId) : null,
           colorId: colorId ? Number(colorId) : null,
+          dieDescription: dieDescription ?? null,
+          dieMethod: dieMethod ?? null,
           boardQualities: safeBoardItems.length
             ? {
                 createMany: {
@@ -1362,7 +1368,10 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safePlateDetails.map((p) => ({
-                    plateName: p.plateName,
+                    plateId: p.plateId ? parseInt(p.plateId) : null,
+                    machineId: p.machineId ? parseInt(p.machineId) : null,
+                    plateName: p.plateName ?? "",
+                    description: p.description ?? "",
                     qty: p.qty ? Number(p.qty) : null,
                   })),
                 },
