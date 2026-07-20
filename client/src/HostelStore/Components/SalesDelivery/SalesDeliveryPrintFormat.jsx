@@ -288,6 +288,7 @@ const SalesDeliveryPrintFormat = ({
   taxDetails,
   isCumInvoice,
   payTermList,
+  isCustomerExport,
 }) => {
   if (!data) return null;
 

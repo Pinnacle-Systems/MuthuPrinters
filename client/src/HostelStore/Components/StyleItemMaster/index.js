@@ -8,6 +8,7 @@ import {
   useLazyGetStyleItemMasterByIdQuery,
   useUpdateStyleItemMasterMutation,
 } from "../../../redux/services/StyleItemMasterService";
+import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
 import Swal from "sweetalert2";
 import { Check, Power } from "lucide-react";
 import {
@@ -30,6 +31,7 @@ import useInvalidateTags from "../../../CustomHooks/useInvalidateTags";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService";
 import { UserPermissions } from "../../../Utils/UserPermissions";
+import { ItemSubGroupMaster } from "../../../Basic/components";
 
 const MODEL = "Item Master";
 export default function Form({ onSuccess, defaultName = "" }) {
@@ -45,6 +47,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
   const [itemGroupId, setItemGroupId] = useState("");
+  const [itemSubGroupId, setItemSubGroupId] = useState("");
   const [sizeTemplateId, setSizeTemplateId] = useState("");
   const [uomId, setUomId] = useState("");
   const [gsmId, setGsmId] = useState("");
@@ -62,6 +65,11 @@ export default function Form({ onSuccess, defaultName = "" }) {
   const { data: sizeTemplateList } = useGetSizeTemplateQuery({ params });
   const { data: itemGroupList } = useGetItemGroupMasterQuery({ params });
   const { data: gsmList } = useGetGsmMasterQuery({ params });
+  const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({
+    params,
+    searchParams: searchValue,
+  });
+  console.log(itemSubGroupList, "itemSubGroupList");
 
   const {
     data: allData,
@@ -95,6 +103,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
       setAliasName(data?.aliasName || defaultName || "");
       setHsnId(data?.hsnId ? data?.hsnId : "");
       setItemGroupId(data?.itemGroupId ? data?.itemGroupId : "");
+      setItemSubGroupId(data?.itemSubGroupId ? data?.itemSubGroupId : "");
       setUomId(data?.uomId ? data?.uomId : "");
       setSizeTemplateId(data?.sizeTemplateId ? data?.sizeTemplateId : "");
       setGsmId(data?.gsmId ? data?.gsmId : "");
@@ -117,6 +126,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
     aliasName,
     hsnId,
     itemGroupId,
+    itemSubGroupId,
     sizeTemplateId,
     uomId,
     gsmId,
@@ -383,25 +393,56 @@ export default function Form({ onSuccess, defaultName = "" }) {
                             required={true}
                           /> */}
                   <DropdownWithModal
-                    name="Item Group"
+                    name="Item Sub Group"
                     options={dropDownListObject(
                       id
-                        ? itemGroupList?.data
-                        : itemGroupList?.data?.filter((item) => item?.active),
+                        ? itemSubGroupList?.data
+                        : itemSubGroupList?.data?.filter(
+                            (item) => item?.active,
+                          ),
                       "name",
                       "id",
                     )}
-                    value={itemGroupId}
-                    setValue={setItemGroupId}
-                    required={true}
+                    value={itemSubGroupId}
+                    setValue={(val) => {
+                      setItemSubGroupId(val);
+                      const selectedSubGroup = itemSubGroupList?.data?.find(
+                        (item) => item.id === val,
+                      );
+                      if (selectedSubGroup && selectedSubGroup.itemGroupId) {
+                        setItemGroupId(selectedSubGroup.itemGroupId);
+                      }
+                    }}
                     readOnly={readOnly}
                     className={`w-[150px]`}
                     // disabled={childRecord.current > 0}
-                    addNewLabel="+ Add New Item Group"
-                    childComponent={ItemGroup}
+                    addNewLabel="+ Add New Item Sub Group"
+                    childComponent={ItemSubGroupMaster}
                     addNewModalWidth="w-[40%] h-[45%]"
                   />
                 </div>
+                <DropdownWithModal
+                  name="Item Group"
+                  options={dropDownListObject(
+                    id
+                      ? itemGroupList?.data
+                      : itemGroupList?.data?.filter((item) => item?.active),
+                    "name",
+                    "id",
+                  )}
+                  value={itemGroupId}
+                  setValue={(val) => {
+                    setItemGroupId(val);
+                    setItemSubGroupId("");
+                  }}
+                  required={true}
+                  readOnly={readOnly}
+                  className={`w-[150px]`}
+                  // disabled={childRecord.current > 0}
+                  addNewLabel="+ Add New Item Group"
+                  childComponent={ItemGroup}
+                  addNewModalWidth="w-[40%] h-[45%]"
+                />
                 <div className="mb-3">
                   <DropdownWithModal
                     name="Hsn"

@@ -55,58 +55,98 @@ const SalesDeliveryReport = ({
     if (allData?.totalCount) setTotalCount(allData?.totalCount);
   }, [allData, isLoading, isFetching]);
 
+  const [currentPage, setCurrentPage] = useState(1);
   const isLoadingIndicator = isLoading || isFetching;
-  const totalPages = Math.ceil(totalCount / parseInt(dataPerPage));
+  const totalPages = Math?.ceil(allData?.data?.length / itemsPerPage);
+  const indexOfLastItem = currentPage * parseInt(10);
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
 
   const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) setCurrentPageNumber(newPage);
+    if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage);
   };
 
-  const Pagination = () => (
-    <div className="h-10 w-full flex flex-col sm:flex-row justify-between items-center p-2 bg-white border-t border-gray-200">
-      <div className="text-[11px] text-gray-600 mb-2 sm:mb-0">
-        Showing {(currentPageNumber - 1) * parseInt(dataPerPage) + 1} to{" "}
-        {Math.min(currentPageNumber * parseInt(dataPerPage), totalCount)} of{" "}
-        {totalCount} entries
-      </div>
-      <div className="flex gap-1">
-        <button
-          onClick={() => handlePageChange(currentPageNumber - 1)}
-          disabled={currentPageNumber === 1}
-          className={`px-2 py-0.5 rounded text-[11px] ${currentPageNumber === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-300"}`}
-        >
-          <FaChevronLeft className="inline w-2.5 h-2.5" />
-        </button>
+  const Pagination = () => {
+    // if (totalPages <= 1) return null;
 
-        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-          let pageNum;
-          if (totalPages <= 5) pageNum = i + 1;
-          else if (currentPageNumber <= 3) pageNum = i + 1;
-          else if (currentPageNumber >= totalPages - 2)
-            pageNum = totalPages - 4 + i;
-          else pageNum = currentPageNumber - 2 + i;
+    return (
+      <div className="h-10 w-full flex flex-col sm:flex-row justify-between items-center p-2 bg-white border-t border-gray-200 ">
+        <div className="text-sm text-gray-600 mb-2 sm:mb-0">
+          Showing {indexOfFirstItem + 1} to{" "}
+          {Math.min(indexOfLastItem, allData?.data?.length)} of{" "}
+          {allData?.length} entries
+        </div>
+        <div className="flex gap-1">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`px-3 py-1 rounded-md ${
+              currentPage === 1
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            <FaChevronLeft className="inline" />
+          </button>
 
-          return (
+          {Array?.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNum;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
+
+            return (
+              <button
+                key={pageNum}
+                onClick={() => handlePageChange(pageNum)}
+                className={`px-3 py-1 rounded-md ${
+                  currentPage === pageNum
+                    ? "bg-indigo-800 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+
+          {totalPages > 5 && currentPage < totalPages - 2 && (
+            <span className="px-3 py-1">...</span>
+          )}
+
+          {totalPages > 5 && currentPage < totalPages - 2 && (
             <button
-              key={pageNum}
-              onClick={() => handlePageChange(pageNum)}
-              className={`px-2.5 py-0.5 rounded text-[11px] ${currentPageNumber === pageNum ? "bg-indigo-800 text-white" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-300"}`}
+              onClick={() => handlePageChange(totalPages)}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === totalPages
+                  ? "bg-indigo-800 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
+              }`}
             >
-              {pageNum}
+              {totalPages}
             </button>
-          );
-        })}
+          )}
 
-        <button
-          onClick={() => handlePageChange(currentPageNumber + 1)}
-          disabled={currentPageNumber === totalPages}
-          className={`px-2 py-0.5 rounded text-[11px] ${currentPageNumber === totalPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-300"}`}
-        >
-          <FaChevronRight className="inline w-2.5 h-2.5" />
-        </button>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`px-3 py-1 rounded-md ${
+              currentPage === totalPages
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            <FaChevronRight className="inline" />
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex flex-col w-full h-[78Vh] overflow-auto">

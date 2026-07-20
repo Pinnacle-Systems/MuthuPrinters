@@ -2187,6 +2187,9 @@ const JobCardForm = ({
             employeeList={employeeList}
             colorList={colorData}
             styleList={styleList}
+            labelPrintingList={labelPrintingList}
+            finishingList={finishingList}
+            printingList={printingList}
           />
         </PDFViewer>
       </Modal>

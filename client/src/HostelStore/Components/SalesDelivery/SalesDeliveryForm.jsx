@@ -9,7 +9,10 @@ import {
   useGetSalesDeliveryQuery,
 } from "../../../redux/uniformService/SalesDeliveryService";
 import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
-import { dropDownListObject } from "../../../Utils/contructObject";
+import {
+  dropDownListObject,
+  dropDownListObjectMultiple,
+} from "../../../Utils/contructObject";
 import SalesDeliveryItems from "./SalesDeliveryItems.jsx";
 import moment from "moment";
 import { PDFViewer } from "@react-pdf/renderer";
@@ -30,14 +33,17 @@ import PoSummary from "../PurchaseOrder/PoSummary";
 import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import { PartyMaster } from "../index.js";
-import { PayTermMaster } from "../../../Basic/components/index.js";
+import {
+  BankMaster,
+  CurrencyMaster,
+  PayTermMaster,
+} from "../../../Basic/components/index.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { useDispatch } from "react-redux";
-
-export const receiptTypes = [
-  { show: "Delivery cum Invoice", value: "AGAINST_INVOICE" },
-  { show: "Delivery only", value: "WITHOUT_INVOICE" },
-];
+import { conversionTypes, receiptTypes } from "../../../Utils/DropdownData.js";
+import { useGetCurrenciesQuery } from "../../../redux/services/CurrencyMasterService.js";
+import { useGetbankQuery } from "../../../redux/services/BankMasterService.js";
+import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 
 const EMPTY_ROW = {
   styleItemId: "",
@@ -92,8 +98,12 @@ const SalesDeliveryForm = ({
   const [discountValue, setDiscountValue] = useState(0);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [payTermId, setPayTermId] = useState("");
+  const [weightInKg, setWeightInKg] = useState("");
+  const [carriageCharge, setCarriageCharge] = useState("");
   const childRecord = useRef(0);
-
+  const [conversionType, setConversionType] = useState("PCS");
+  const [currencyId, setCurrencyId] = useState("");
+  const [bankId, setBankId] = useState("");
   const customerRef = useRef(null);
   const termsRef = useRef(null);
 
@@ -110,16 +120,21 @@ const SalesDeliveryForm = ({
   const { data: supplierData } = useGetPartyByIdQuery(customerId, {
     skip: !customerId,
   });
+  const { data: currencyList } = useGetCurrenciesQuery({
+    params: { companyId },
+  });
+  const isCustomerExport = supplierData?.data?.isCustomerExport;
+  const isCurrencySymbol = currencyList?.data?.find(
+    (item) => item?.id === currencyId,
+  )?.symbol;
+
+  const { data: bankList } = useGetbankQuery({ params: { companyId } });
+  const { data: sizeList } = useGetSizeMasterQuery({ params: { companyId } });
+
   const [dispatchInvalidate] = useInvalidateTags();
 
   const [addData] = useAddSalesDeliveryMutation();
   const [updateData] = useUpdateSalesDeliveryMutation();
-
-  useEffect(() => {
-    if (!id && allData?.nextDocId) {
-      setDocId(allData.nextDocId);
-    }
-  }, [id, allData]);
 
   useEffect(() => {
     if (id && singleData?.data) {
@@ -144,6 +159,11 @@ const SalesDeliveryForm = ({
       setDiscountValue(data.discountValue || 0);
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
       setItems(padItems(data.salesDeliveryItems || []));
+      setConversionType(data.conversionType || "PCS");
+      setCurrencyId(data.currencyId || "");
+      setWeightInKg(data.weightInKg || "");
+      setCarriageCharge(data.carriageCharge || "");
+      setBankId(data.bankId || "");
     }
   }, [id, singleData]);
 
@@ -195,15 +215,6 @@ const SalesDeliveryForm = ({
       });
       return;
     }
-    if (isCumInvoice && !taxTemplateId) {
-      Swal.fire({
-        title: "Warning",
-        text: "Please select a Tax Template.",
-        icon: "warning",
-        confirmButtonColor: "#3085d6",
-      });
-      return;
-    }
     if (isCumInvoice && !payTermId) {
       Swal.fire({
         title: "Warning",
@@ -213,10 +224,40 @@ const SalesDeliveryForm = ({
       });
       return;
     }
+    if (isCumInvoice && !taxTemplateId) {
+      Swal.fire({
+        title: "Warning",
+        text: "Please select a Tax Template.",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
+
     if (!deliveryDate) {
       Swal.fire({
         title: "Warning",
         text: "Delivery Date is required",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
+
+    if (isCustomerExport && !currencyId) {
+      Swal.fire({
+        title: "Warning",
+        text: "Currency is required",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
+
+    if (isCustomerExport && !bankId) {
+      Swal.fire({
+        title: "Warning",
+        text: "Bank is required",
         icon: "warning",
         confirmButtonColor: "#3085d6",
       });
@@ -277,6 +318,11 @@ const SalesDeliveryForm = ({
       discountType,
       discountValue,
       id,
+      conversionType,
+      currencyId,
+      weightInKg,
+      carriageCharge,
+      bankId,
     };
 
     try {
@@ -351,7 +397,37 @@ const SalesDeliveryForm = ({
     setItems(padItems([]));
     setDiscountType("Percentage");
     setDiscountValue(0);
+    setConversionType("PCS");
+    setCurrencyId("");
+    setWeightInKg("");
+    setCarriageCharge("");
+    setBankId("");
   };
+
+  useEffect(() => {
+    if (!conversionType) return;
+
+    setItems((prev) =>
+      prev.map((item) => {
+        const qty = parseFloat(item.qty) || 0;
+        const price = parseFloat(item.price) || 0;
+        const dozen = qty / 12;
+
+        return {
+          ...item,
+          dozen: dozen ? dozen.toFixed(2) : "",
+          amount:
+            conversionType === "DOZEN"
+              ? dozen && price
+                ? (dozen * price).toFixed(2)
+                : ""
+              : qty && price
+                ? (qty * price).toFixed(2)
+                : "",
+        };
+      }),
+    );
+  }, [conversionType]);
 
   const actionButtonClass =
     "px-3 py-2 rounded-md flex items-center justify-center text-sm text-white transition";
@@ -457,7 +533,7 @@ const SalesDeliveryForm = ({
 
   const enrichedData = useMemo(() => {
     const filteredItems = items.filter((i) => i.styleItemId);
-    if (!filteredItems.length || !isCumInvoice)
+    if (!filteredItems.length)
       return {
         items: [],
         gross: 0,
@@ -471,11 +547,11 @@ const SalesDeliveryForm = ({
       isSupplierOutside,
       discountType,
       discountValue,
-      false,
+      conversionType === "DOZEN" ? true : false,
     );
-  }, [items, isSupplierOutside, discountType, discountValue, isCumInvoice]);
+  }, [items, isSupplierOutside, discountType, discountValue, conversionType]);
 
-  const totalQty = items.reduce(
+  const totalQty = items?.reduce(
     (sum, item) => sum + (parseFloat(item.qty) || 0),
     0,
   );
@@ -491,13 +567,13 @@ const SalesDeliveryForm = ({
         <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
           Basic Details
         </h2>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div className="w-36">
-            <TextInput name="DC No" value={docId} disabled={true} />
+            <TextInput name="Sales Delivery No" value={docId} disabled={true} />
           </div>
           <div className="w-28">
             <DateInputNew
-              name="Doc Date"
+              name="Sales Delivery Date"
               value={docDate}
               setValue={setDocDate}
               disabled={true}
@@ -511,6 +587,18 @@ const SalesDeliveryForm = ({
               options={receiptTypes}
               value={deliveryType}
               setValue={(value) => setDeliveryType(value)}
+              required={true}
+              readOnly={readOnly}
+              disabled={childRecord.current > 0 || readOnly}
+              ref={customerRef}
+            />
+          </div>
+          <div className="w-28">
+            <DropdownInput
+              name="Conversion"
+              options={conversionTypes}
+              value={conversionType}
+              setValue={(value) => setConversionType(value)}
               required={true}
               readOnly={readOnly}
               disabled={childRecord.current > 0 || readOnly}
@@ -547,7 +635,6 @@ const SalesDeliveryForm = ({
               addNewModalWidth="w-[90%] h-[95%]"
               disabled={readOnly || childRecord.current > 0}
               openOnFocus={true}
-              ref={customerRef}
             />
           </div>
           <div className="md:col-span-1">
@@ -596,6 +683,43 @@ const SalesDeliveryForm = ({
                   addNewModalWidth="w-[40%] h-[66%]"
                 />
               </div>
+              <div className="md:col-span-1">
+                <DropdownInput
+                  name="Tax Type"
+                  options={dropDownListObject(
+                    taxTypeList ? taxTypeList?.data : [],
+                    "name",
+                    "id",
+                  )}
+                  value={taxTemplateId}
+                  setValue={setTaxTemplateId}
+                  required={!isCustomerExport}
+                  readOnly={effectiveReadOnly}
+                />
+              </div>
+              {isCustomerExport && (
+                <div className="md:col-span-1">
+                  <DropdownWithModal
+                    name="Currency"
+                    options={dropDownListObject(
+                      id
+                        ? currencyList?.data
+                        : currencyList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={currencyId}
+                    setValue={setCurrencyId}
+                    required={true}
+                    readOnly={readOnly}
+                    className={`w-full max-w-none`}
+                    dropdownMinWidth={240}
+                    addNewLabel="+ Add New Currency"
+                    childComponent={CurrencyMaster}
+                    addNewModalWidth="w-[40%] h-[66%]"
+                  />
+                </div>
+              )}
             </>
           )}
         </div>
@@ -604,8 +728,8 @@ const SalesDeliveryForm = ({
         <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
           Delivery Details
         </h2>
-        <div className="flex  gap-2">
-          <div className="w-28">
+        <div className="grid grid-cols-4  gap-2">
+          <div className="">
             <DateInputNew
               name="Delivery Date"
               value={deliveryDate}
@@ -615,7 +739,7 @@ const SalesDeliveryForm = ({
               type="date"
             />
           </div>
-          <div className="w-28">
+          <div className="">
             <TextInput
               name="DC No"
               value={dcNo}
@@ -623,7 +747,7 @@ const SalesDeliveryForm = ({
               disabled={effectiveReadOnly}
             />
           </div>
-          <div className="w-32">
+          <div className="">
             <TextInput
               name="Vehicle No"
               value={vehicleNo}
@@ -631,19 +755,66 @@ const SalesDeliveryForm = ({
               disabled={effectiveReadOnly}
             />
           </div>
+          <div>
+            <TextInput
+              name="WeightInKg (KG)"
+              value={weightInKg}
+              setValue={setWeightInKg}
+              disabled={readOnly}
+              type="number"
+              min="0"
+              className="text-right"
+              onBlur={(e) =>
+                setWeightInKg(
+                  e.target.value ? Number(e.target.value).toFixed(3) : "",
+                )
+              }
+              onFocus={(e) => {
+                e.target.select();
+              }}
+            />
+          </div>
+          {isCustomerExport && (
+            <div>
+              <TextInput
+                name={`Carriage Charge ${currencyId ? `(${isCurrencySymbol})` : ""}`}
+                value={carriageCharge}
+                setValue={setCarriageCharge}
+                disabled={readOnly}
+                type="number"
+                min="0"
+                className="text-right"
+                onBlur={(e) =>
+                  setCarriageCharge(
+                    e.target.value ? Number(e.target.value).toFixed(2) : "",
+                  )
+                }
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
+          )}
           {isCumInvoice && (
-            <div className="md:col-span-1 w-28">
-              <DropdownInput
-                name="Tax Type"
-                options={dropDownListObject(
-                  taxTypeList ? taxTypeList?.data : [],
-                  "name",
+            <div className="col-span-2">
+              <DropdownWithModal
+                name="Advising Bank"
+                options={dropDownListObjectMultiple(
+                  id
+                    ? bankList?.data
+                    : bankList?.data?.filter((item) => item?.active),
+                  ["name", "Branch.name"],
                   "id",
                 )}
-                value={taxTemplateId}
-                setValue={setTaxTemplateId}
-                required={true}
-                readOnly={effectiveReadOnly}
+                value={bankId}
+                setValue={setBankId}
+                required={isCustomerExport}
+                readOnly={readOnly}
+                className={`w-[150px]`}
+                addNewLabel="+ Add New Bank"
+                childComponent={BankMaster}
+                addNewModalWidth="w-[45%] h-[64%]"
+                disabled={readOnly}
               />
             </div>
           )}
@@ -679,13 +850,6 @@ const SalesDeliveryForm = ({
             summaryColumn: "right",
             emphasized: true,
           },
-          {
-            key: "grossAmount",
-            label: "Gross Amount",
-            value: `${isCumInvoice ? enrichedData.gross?.toFixed(2) : totalAmount.toFixed(2)}`,
-            summaryColumn: "right",
-            emphasized: true,
-          },
           ...(isCumInvoice
             ? [
                 {
@@ -697,12 +861,90 @@ const SalesDeliveryForm = ({
                 },
               ]
             : []),
+          ...(isCustomerExport
+            ? [
+                {
+                  key: "carriageCharge",
+                  label: "Carraige Charges",
+                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${carriageCharge}`,
+                  summaryColumn: "right",
+                  emphasized: true,
+                },
+              ]
+            : []),
         ]}
       />
-      <TransactionActions
-        leftActions={leftActions}
-        rightActions={rightActions}
-      />
+      <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
+        {/* Left Buttons */}
+        <div className="flex gap-2 flex-wrap">
+          {!readOnly && (
+            <button
+              onClick={() => handleSave("close")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSave("close");
+                  e.stopPropagation();
+                }
+              }}
+              disabled={readOnly}
+              className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs font-medium"
+            >
+              <HiOutlineRefresh className="w-3.5 h-3.5 mr-2" />
+              Save & Close
+            </button>
+          )}
+          {!readOnly && (
+            <button
+              onClick={() => handleSave("new")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSave("new");
+                }
+              }}
+              disabled={readOnly}
+              className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs font-medium"
+            >
+              <FiSave className="w-3.5 h-3.5 mr-2" />
+              Save & New
+            </button>
+          )}
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          {!id ||
+            (readOnly && (
+              <button
+                className="bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700 flex items-center text-xs font-medium"
+                onClick={() => setReadOnly(false)}
+              >
+                <FiEdit2 className="w-3.5 h-3.5 mr-2" />
+                Edit
+              </button>
+            ))}
+          {isCumInvoice && (
+            <button
+              className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center text-xs font-medium"
+              onClick={() => setSummary(true)}
+            >
+              <FiEye className="h-4 w-4 mr-2" />
+              View Summary
+            </button>
+          )}
+
+          {id && (
+            <button
+              className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs font-medium"
+              onClick={() => setPrintModalOpen(true)}
+            >
+              <FiPrinter className="h-4 w-4 mr-2" />
+              Print
+            </button>
+          )}
+        </div>
+      </div>
     </>
   );
 
@@ -719,7 +961,7 @@ const SalesDeliveryForm = ({
             discountValue={discountValue}
             setDiscountValue={setDiscountValue}
             setSummary={setSummary}
-            isCustomerExport={false}
+            isCustomerExport={isCustomerExport}
           />
         </Modal>
       )}
@@ -738,6 +980,7 @@ const SalesDeliveryForm = ({
             taxDetails={enrichedData}
             isCumInvoice={isCumInvoice}
             payTermList={payTermList}
+            isCustomerExport={isCustomerExport}
           />
         </PDFViewer>
       </Modal>
@@ -762,6 +1005,9 @@ const SalesDeliveryForm = ({
             termsRef={termsRef}
             isCumInvoice={isCumInvoice}
             isSupplierOutside={isSupplierOutside}
+            sizeList={sizeList}
+            conversionType={conversionType}
+            isCustomerExport={isCustomerExport}
           />
         }
         footer={footerContent}

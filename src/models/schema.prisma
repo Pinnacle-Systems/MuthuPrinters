@@ -71,6 +71,7 @@ model Company {
   currencies          Currency[]
   bank                Bank[]
   machines            Machine[]
+  ItemSubGroup        ItemSubGroup[]
 }
 
 model Subscription {
@@ -179,6 +180,7 @@ model User {
   otp                            String?
   active                         Boolean                @default(true)
   UserOnBranch                   UserOnBranch[]
+  takenMachines                  takenmachines[]
   employeeId                     Int?
   partyCreatedBy                 Party[]                @relation(name: "createdBy")
   partyUpdatedBy                 Party[]                @relation(name: "updatedBy")
@@ -230,6 +232,8 @@ model User {
   productionemplog         productionempPunch[]
   salesDeliveriesCreatedBy SalesDelivery[]      @relation(name: "createdBy")
   salesDeliveriesUpdatedBy SalesDelivery[]      @relation(name: "updatedBy")
+  ItemSubGroupCreatedBy     ItemSubGroup[]      @relation(name: "createdBy")
+  ItemSubGroupUpdatedBy     ItemSubGroup[]      @relation(name: "updatedBy")
 }
 
 model Employee {
@@ -358,6 +362,7 @@ model Department {
   productionempPunch productionempPunch[]
   machines           Machine[]
   processes          Process[]
+  takenMachines       takenmachines[]
 }
 
 enum PageType {
@@ -967,6 +972,8 @@ model StyleItem {
   sizeTemplateId         Int?
   ItemGroup              ItemGroup?               @relation(fields: [itemGroupId], references: [id])
   itemGroupId            Int?
+  ItemSubGroup           ItemSubGroup?               @relation(fields: [itemSubGroupId], references: [id])
+  itemSubGroupId         Int?
   Uom                    Uom?                     @relation(fields: [uomId], references: [id])
   uomId                  Int?
   Gsm                    Gsm?                     @relation(fields: [gsmId], references: [id])
@@ -1643,6 +1650,8 @@ model Size {
   Machine                Machine[]
   jobCardLabelSize       JobCard[]                @relation("labelSize")
   boardQualities         BoardQuality[]
+
+  salesSizeBreakups SalesSizeBreakup[]
 }
 
 model Gsm {
@@ -1682,6 +1691,7 @@ model ItemGroup {
   stocks                 Stock[]
   orderItems             OrderItems[]
   jobCards               JobCard[]
+  ItemSubGroup          ItemSubGroup[]
 }
 
 model SizeTemplate {
@@ -2051,6 +2061,7 @@ model JobCard {
   productionempPunch    productionempPunch[]
   stocks                Stock[]
   labelPrintingDetails  LabelPrintingDetails[]
+  takenMachines       takenmachines[]
 }
 
 model BoardQuality {
@@ -2157,10 +2168,13 @@ model OrderItems {
   Hsn            Hsn?               @relation(fields: [hsnId], references: [id])
   sizeTemplateId Int?
   SizeTemplate   SizeTemplate?      @relation(fields: [sizeTemplateId], references: [id])
+  
   trackingType   String?
   sizeBreakup    OrderSizeBreakup[]
-
   jobCards JobCard[]
+  itemSubGroupId            Int?
+  ItemSubGroup              ItemSubGroup?               @relation(fields: [itemSubGroupId], references: [id])
+  labelWidth    String?
 }
 
 model OrderSizeBreakup {
@@ -2201,7 +2215,7 @@ model ProcessRoute {
   actualQty      Int?
   pendingQty     Int?
   wastageQty     Int?
-
+  takenMachines       takenmachines[]
   productionAllocationDtls ProductionAllocationDtl[]
   productionempPunch       productionempPunch[]
 }
@@ -2240,11 +2254,30 @@ model splitSizes {
   qty            Int?
 }
 
+model      takenmachines{
+  id Int @id @default(autoincrement())
+  Userid             Int
+  User               User               @relation(fields: [Userid], references: [id])
+  jobCardId      Int?
+  JobCard        JobCard?      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processRouteId Int?
+  ProcessRoute   ProcessRoute? @relation(fields: [processRouteId], references: [id])
+  stDate     DateTime @default(now()) @db.Date
+  stDatetime DateTime @default(now()) @db.Time(0)
+  edDate     DateTime @default(now()) @db.Date
+  edDatetime DateTime @default(now()) @db.Time(0)
+  departmentid   Int
+  deparment      Department    @relation(fields: [departmentid], references: [id])
+  Machineid      Int
+  Machine        Machine       @relation(fields: [Machineid], references: [id])
+  isAvailable    Boolean?
+}
+
 model pushLogs {
   id                 Int                @id @default(autoincrement())
   Userid             Int
   User               User               @relation(fields: [Userid], references: [id])
-  pauseReason         String?   
+  pauseReason         String?
   pushtime           DateTime?
   resumetime         DateTime?
   productionlog      Int
@@ -2353,6 +2386,7 @@ model Currency {
   active         Boolean  @default(true)
 
   proformaInvoices ProformaInvoice[]
+  salesDeliveries  SalesDelivery[]
 }
 
 model Bank {
@@ -2428,6 +2462,7 @@ model Machine {
 
   machineDetails     MachineDetails[]
   productionempPunch productionempPunch[]
+  takenMachines       takenmachines[]
 }
 
 model Notification {
@@ -2608,37 +2643,43 @@ model BillingProcess {
 }
 
 model SalesDelivery {
-  id                 Int                  @id @default(autoincrement())
-  docId              String
-  docDate            DateTime?
-  deliveryDate       DateTime?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  createdById        Int?
-  createdBy          User?                @relation("createdBy", fields: [createdById], references: [id])
-  updatedById        Int?
-  updatedBy          User?                @relation("updatedBy", fields: [updatedById], references: [id])
-  branchId           Int?
-  Branch             Branch?              @relation(fields: [branchId], references: [id])
-  customerId         Int?
-  Customer           Party?               @relation(fields: [customerId], references: [id])
-  orderEntryId       Int?
-  OrderEntry         OrderEntry?          @relation(fields: [orderEntryId], references: [id])
-  dcNo               String?
-  vehicleNo          String?
-  deliveryType       String?
-  remarks            String?
-  discountType       String?
-  discountValue      Float?
-  TaxTemplate        TaxTemplate?         @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
-  taxTemplateId      Int?
-  termsAndCondition  String?
-  Terms              TermsAndConditions?  @relation(fields: [termsId], references: [id])
-  termsId            Int?
-  PayTerm            PayTerm?             @relation(fields: [payTermId], references: [id])
-  payTermId          Int?
-  Bank               Bank?                @relation(fields: [bankId], references: [id])
-  bankId             Int?
+  id                Int                 @id @default(autoincrement())
+  docId             String
+  docDate           DateTime?
+  deliveryDate      DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  createdById       Int?
+  createdBy         User?               @relation("createdBy", fields: [createdById], references: [id])
+  updatedById       Int?
+  updatedBy         User?               @relation("updatedBy", fields: [updatedById], references: [id])
+  branchId          Int?
+  Branch            Branch?             @relation(fields: [branchId], references: [id])
+  customerId        Int?
+  Customer          Party?              @relation(fields: [customerId], references: [id])
+  orderEntryId      Int?
+  OrderEntry        OrderEntry?         @relation(fields: [orderEntryId], references: [id])
+  dcNo              String?
+  vehicleNo         String?
+  deliveryType      String?
+  remarks           String?
+  discountType      String?
+  discountValue     Float?
+  TaxTemplate       TaxTemplate?        @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
+  taxTemplateId     Int?
+  termsAndCondition String?
+  Terms             TermsAndConditions? @relation(fields: [termsId], references: [id])
+  termsId           Int?
+  PayTerm           PayTerm?            @relation(fields: [payTermId], references: [id])
+  payTermId         Int?
+  Bank              Bank?               @relation(fields: [bankId], references: [id])
+  bankId            Int?
+  conversionType    String?
+  weightInKg        Float?
+  carriageCharge    Float?
+  currencyId        Int?
+  Currency          Currency?           @relation(fields: [currencyId], references: [id])
+
   salesDeliveryItems SalesDeliveryItems[]
 }
 
@@ -2658,4 +2699,35 @@ model SalesDeliveryItems {
   Uom             Uom?          @relation(fields: [uomId], references: [id])
   hsnId           Int?
   Hsn             Hsn?          @relation(fields: [hsnId], references: [id])
+  trackingType    String?
+
+  sizeBreakup SalesSizeBreakup[]
+}
+
+model SalesSizeBreakup {
+  id                  Int                 @id @default(autoincrement())
+  salesDeliveryItemId Int
+  SalesDeliveryItem   SalesDeliveryItems? @relation(fields: [salesDeliveryItemId], references: [id], onDelete: Cascade)
+  sizeId              Int?
+  Size                Size?               @relation(fields: [sizeId], references: [id])
+  qty                 Int?
+}
+
+
+model ItemSubGroup {
+  id                     Int                      @id @default(autoincrement())
+  name                   String
+  active                 Boolean                  @default(true)
+  Company                Company?                 @relation(fields: [companyId], references: [id])
+  companyId              Int?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  createdById            Int?
+  createdBy              User?                    @relation("createdBy", fields: [createdById], references: [id])
+  updatedById            Int?
+  updatedBy              User?                    @relation("updatedBy", fields: [updatedById], references: [id])
+  itemGroupId            Int
+  ItemGroup              ItemGroup                @relation(fields: [itemGroupId], references: [id], onDelete: Cascade)
+  StyleItem               StyleItem[]
+  OrderItems              OrderItems[]
 }

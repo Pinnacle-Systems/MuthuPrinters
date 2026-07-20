@@ -22,6 +22,7 @@ import {
   ApprovalRuleModule,
   CurrencyMaster,
   BankMaster,
+  ItemSubGroupMaster,
 } from "..";
 
 import { CLOSE_ICON, DOUBLE_NEXT_ICON } from "../../../icons";
@@ -178,6 +179,7 @@ const ActiveTabList = () => {
     "PROCESS RECEIPT": <ProductionInward />,
     "PROCESS BILL": <ProcessBill />,
     "SALES DELIVERY": <SalesDelivery />,
+    "ITEM SUB GROUP MASTER": <ItemSubGroupMaster />,
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;
