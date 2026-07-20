@@ -179,6 +179,8 @@ const JobCardForm = ({
   const [stockQty, setStockQty] = useState("");
   const [dieDescription, setDieDescription] = useState("");
   const [dieMethod, setDieMethod] = useState("");
+  const [isHold, setIsHold] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
   const params = {
     companyId: secureLocalStorage.getItem(
       sessionStorage.getItem("sessionId") + "userCompanyId",
@@ -375,7 +377,10 @@ const JobCardForm = ({
     setRunningQty(data?.runningQty || "");
     setColorId(data?.colorId || "");
     setDieMethod(data?.dieMethod || "");
+
     setDieDescription(data?.dieDescription || "");
+    setIsHold(data?.isHold || false);
+    setIsCancelled(data?.isCancelled || false);
     const rawPlates = data?.plateDetails || [];
     const paddedPlates = [...rawPlates];
     while (paddedPlates.length < 6)
@@ -425,9 +430,9 @@ const JobCardForm = ({
   const formData = {
     id,
     docDate,
-    branchId,
-    userId,
-    finYearId,
+    branchId: parseInt(branchId),
+    userId: parseInt(userId),
+    finYearId: parseInt(finYearId),
     orderType,
     orderQty,
     customerId,
@@ -479,6 +484,8 @@ const JobCardForm = ({
     colorId,
     dieDescription,
     dieMethod,
+    isHold,
+    isCancelled,
   };
 
   const openPrintModal = async (overrideId, overrideDocId) => {
@@ -990,7 +997,15 @@ const JobCardForm = ({
                 setSelectedProcesses([]);
                 setSelectedMachines([]);
                 setLaminations([]);
-                setPlateDetails([]);
+                setPlateDetails(
+                  Array.from({ length: 6 }, () => ({
+                    plateId: "",
+                    machineId: "",
+                    plateName: "",
+                    description: "",
+                    qty: "",
+                  })),
+                );
                 setVarnishes([]);
                 setProductionType(res?.data?.productionType);
               }}
@@ -1038,32 +1053,38 @@ const JobCardForm = ({
                 setLaminations([]);
                 setVarnishes([]);
                 setSelectedPrinting([]);
-                setPlateDetails([]);
+                setPlateDetails(
+                  Array.from({ length: 6 }, () => ({
+                    plateId: "",
+                    machineId: "",
+                    plateName: "",
+                    description: "",
+                    qty: "",
+                  })),
+                );
                 setOtherBoardId("");
                 setSelectedFinishing([]);
                 setSelectedLabelPrinting([]);
               }}
             />
           </div>
-          {itemType !== "LABEL" && (
-            <div className="w-20">
-              <TextInput
-                name="Order Qty"
-                value={orderQty}
-                setValue={setOrderQty}
-                readOnly={true}
-                required
-                type="number"
-                className="text-right w-full"
-                onFocus={(e) => e.target.select()}
-                onBlur={(e) =>
-                  setOrderQty(
-                    e.target.value ? Number(e.target.value).toFixed(3) : "",
-                  )
-                }
-              />
-            </div>
-          )}
+          <div className="w-20">
+            <TextInput
+              name="Order Qty"
+              value={orderQty}
+              setValue={setOrderQty}
+              readOnly={true}
+              required
+              type="number"
+              className="text-right w-full"
+              onFocus={(e) => e.target.select()}
+              onBlur={(e) =>
+                setOrderQty(
+                  e.target.value ? Number(e.target.value).toFixed(3) : "",
+                )
+              }
+            />
+          </div>
         </div>
         <div className="flex gap-2 mt-1">
           <div className="w-28">
@@ -1128,7 +1149,7 @@ const JobCardForm = ({
           </div>
           <div className="w-28">
             <TextInput
-              name="Job Run Time (Hours)"
+              name="Job Run Time (Hrs)"
               value={jobRunTime}
               setValue={setJobRunTime}
               readOnly={readOnly}
@@ -1260,28 +1281,11 @@ const JobCardForm = ({
               </div>
             </SectionCard>
 
-            <SectionCard title="Printing Details">
-              <div className="grid grid-cols-4">
-                {printingList?.map((item) => (
-                  <CheckBox
-                    key={item.id}
-                    name={item.name}
-                    value={selectedPrinting.includes(item.id)}
-                    setValue={() => toggleArr(setSelectedPrinting, item.id)}
-                    readOnly={readOnly}
-                    disabled={
-                      isDisabledPermission || isPrintingItemLocked(item.id)
-                    }
-                  />
-                ))}
-              </div>
-            </SectionCard>
-
             <SectionCard title="Plate Details">
               <div className="grid grid-cols-5 gap-x-3 items-center">
                 <div className="w-72 px-1">
                   <DropdownNew
-                    name="Supplier"
+                    name="Plate Supplier"
                     dataList={
                       id
                         ? customerList?.data?.filter((i) => i?.isSupplier)
@@ -1294,11 +1298,11 @@ const JobCardForm = ({
                     required
                     readOnly={readOnly}
                     disabled={readOnly || childRecord.current > 0}
-                    ref={customerRef}
+                    // ref={customerRef}
                   />
                 </div>
                 <Field></Field>
-                <Field label="Plate Details">
+                {/* <Field label="Plate Details">
                   <DropdownWithModal
                     name=""
                     options={dropDownListObject(
@@ -1328,43 +1332,43 @@ const JobCardForm = ({
                     className="w-full text-right"
                     disabled={isDisabledPermission}
                   />
-                </Field>
+                </Field> */}
 
-                <div className="justify-center items-center">
+                {/* <div className="justify-center items-center">
                   <button
                     onClick={() => setSizeModalOpen(true)}
                     className="border w-auto rounded-md text-[10px] bg-blue-700 font-semibold uppercase tracking-wider text-white p-1"
                   >
                     View Size Details
                   </button>
-                </div>
+                </div> */}
               </div>
 
-              <div className="mt-4 border border-slate-200 rounded-lg p-3 bg-white">
+              <div className="mt-1 border border-slate-200 rounded-lg p-3 bg-white h-[250px] overflow-y-auto">
                 <h4 className="text-[13px] font-semibold text-slate-800 mb-2">
                   Plate Set Details
                 </h4>
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-[11px]">
+                  <table className="w-full table-fixed border-collapse text-[11px]">
                     <thead>
-                      <tr className="bg-gray-100 text-gray-700 h-7">
-                        <th className="border border-gray-300 px-1 py-1 text-center w-8">
+                      <tr className="bg-gray-200 text-gray-700 h-7">
+                        <th className="sticky top-0 z-20 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-6">
                           S.No
                         </th>
-                        <th className="border border-gray-300 px-1 py-1 text-center">
+                        <th className="sticky top-0 z-20 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-32">
                           Machine Name
                         </th>
-                        <th className="border border-gray-300 px-1 py-1 text-center">
+                        <th className="sticky top-0 z-20 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-32">
                           Plate Name
                         </th>
-                        <th className="border border-gray-300 px-1 py-1 text-center">
+                        <th className="sticky top-0 z-20 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-40">
                           Description
                         </th>
-                        <th className="border border-gray-300 px-1 py-1 text-center w-16">
+                        <th className="sticky top-0 z-20 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-12">
                           Qty
                         </th>
                         {!readOnly && (
-                          <th className="border border-gray-300 px-1 py-1 text-center w-10">
+                          <th className="sticky top-0 z-20 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-12">
                             Actions
                           </th>
                         )}
@@ -1451,7 +1455,7 @@ const JobCardForm = ({
                                 setPlateDetails(next);
                               }}
                               disabled={readOnly || isDisabledPermission}
-                              placeholder="Plate name"
+                              placeholder="Description"
                             />
                           </td>
                           <td className="border border-gray-300 p-0">
@@ -1537,53 +1541,6 @@ const JobCardForm = ({
                 </div>
               </div>
             </SectionCard>
-            <SectionCard title="Die Details">
-              <div className="grid grid-cols-5 gap-x-3 items-center">
-                <Field label="Die Details">
-                  <DropdownWithModal
-                    name=""
-                    options={dropDownListObject(
-                      id
-                        ? dieList?.data
-                        : dieList?.data?.filter((i) => i?.active),
-                      "name",
-                      "id",
-                    )}
-                    value={dieId}
-                    setValue={setDieId}
-                    readOnly={readOnly}
-                    addNewLabel="+ Add Die"
-                    childComponent={DieMaster}
-                    addNewModalWidth="w-[30%] h-[45%]"
-                    disabled={isDisabledPermission}
-                  />
-                </Field>
-                <Field label="Die Method" required={true}>
-                  <TextInput
-                    name=""
-                    value={dieMethod}
-                    setValue={setDieMethod}
-                    readOnly={readOnly}
-                    type="number"
-                    className="w-full text-right"
-                    disabled={isDisabledPermission || isCuttingLocked}
-                    required={true}
-                  />
-                </Field>
-                <Field label="Description" required={true}>
-                  <TextInput
-                    name=""
-                    value={dieDescription}
-                    setValue={setDieDescription}
-                    readOnly={readOnly}
-                    type="number"
-                    className="w-full text-right"
-                    disabled={isDisabledPermission || isCuttingLocked}
-                    required={true}
-                  />
-                </Field>
-              </div>
-            </SectionCard>
           </div>
 
           {/* COL 3: Process + Lamination */}
@@ -1604,7 +1561,7 @@ const JobCardForm = ({
                 ))}
               </div>
             </SectionCard>
-            <SectionCard title="Lamination Details">
+            <SectionCard title="Lamination Details " className="h-[347px]">
               {laminationList?.length > 0 ? (
                 <>
                   <LVHeader />
@@ -1680,7 +1637,79 @@ const JobCardForm = ({
                 </p>
               )}
             </SectionCard>
-            <SectionCard title="Machines">
+
+            <SectionCard title="Printing Details">
+              <div className="grid grid-cols-2 gap-y-4">
+                {printingList?.map((item) => (
+                  <CheckBox
+                    key={item.id}
+                    name={item.name}
+                    value={selectedPrinting.includes(item.id)}
+                    setValue={() => toggleArr(setSelectedPrinting, item.id)}
+                    readOnly={readOnly}
+                    disabled={
+                      isDisabledPermission || isPrintingItemLocked(item.id)
+                    }
+                  />
+                ))}
+              </div>
+            </SectionCard>
+            <SectionCard title="Die Details" className="h-[220px]">
+              <div className="grid grid-cols-3 gap-x-1 items-center">
+                <div className="col-span-2">
+                  <Field label="Die Details">
+                    <DropdownWithModal
+                      name=""
+                      options={dropDownListObject(
+                        id
+                          ? dieList?.data
+                          : dieList?.data?.filter((i) => i?.active),
+                        "name",
+                        "id",
+                      )}
+                      value={dieId}
+                      setValue={setDieId}
+                      readOnly={readOnly}
+                      addNewLabel="+ Add Die"
+                      childComponent={DieMaster}
+                      addNewModalWidth="w-[30%] h-[45%]"
+                      disabled={isDisabledPermission}
+                    />
+                  </Field>
+                </div>
+                <div className="col-span-1">
+                  <Field label="Die Method" required={true}>
+                    <DropdownInput
+                      name=""
+                      options={[
+                        { show: "Old Die", value: "Old Die" },
+                        { show: "New Die", value: "New Die" },
+                      ]}
+                      value={dieMethod}
+                      setValue={setDieMethod}
+                      readOnly={readOnly}
+                      disabled={isDisabledPermission || isCuttingLocked}
+                      required={true}
+                    />
+                  </Field>
+                </div>
+                <div className="col-span-3">
+                  <Field label="Description" required={true}>
+                    <TextInput
+                      name=""
+                      value={dieDescription}
+                      setValue={setDieDescription}
+                      readOnly={readOnly}
+                      type="text"
+                      className="w-full text-left"
+                      disabled={isDisabledPermission || isCuttingLocked}
+                      required={true}
+                    />
+                  </Field>
+                </div>
+              </div>
+            </SectionCard>
+            {/* <SectionCard title="Machines">
               <div className="grid grid-cols-2 gap-x-3 gap-y-4 min-h-[132px]">
                 {machineList?.data
                   ?.filter((item) => (id ? true : item.active))
@@ -1695,7 +1724,7 @@ const JobCardForm = ({
                     />
                   ))}
               </div>
-            </SectionCard>
+            </SectionCard> */}
           </div>
         </div>
       )}
@@ -1706,19 +1735,8 @@ const JobCardForm = ({
             <SectionCard title="Label Details" className=" h-full">
               <div className="flex gap-16">
                 <div className="grid grid-cols-3 gap-y-2 gap-x-2 h-full">
-                  <div>
-                    <TextInput
-                      name="Order Qty"
-                      value={orderQty}
-                      setValue={setOrderQty}
-                      readOnly={true}
-                      type="number"
-                      className="w-full text-right"
-                      disabled={isDisabledPermission}
-                    />
-                  </div>
-
-                  <div>
+                  {" "}
+                  <div className="col-span-2">
                     <DropdownWithModal
                       name="Label Quality"
                       options={dropDownListObject(
@@ -1807,11 +1825,72 @@ const JobCardForm = ({
                   </div>
                   <div>
                     <TextInput
-                      name="Total Meter"
+                      name="Roll Meter (per roll)"
                       value={totalMeter}
                       setValue={setTotalMeter}
                       readOnly={readOnly}
                       type="number"
+                      className="w-full text-right"
+                      disabled={isDisabledPermission}
+                    />
+                  </div>
+                  <div>
+                    <TextInput
+                      name="Calculated Meter"
+                      value={(() => {
+                        const selectedLabelSize =
+                          sizeList?.data?.find((s) => s.id === labelSizeId)
+                            ?.name || "";
+                        if (selectedLabelSize && orderQty) {
+                          const parts = selectedLabelSize.split(/[*xX]/);
+                          if (parts.length >= 2) {
+                            const length = parseFloat(parts[1].trim());
+                            const qty = parseFloat(orderQty);
+                            if (!isNaN(length) && !isNaN(qty)) {
+                              return ((length * qty) / 1000).toFixed(3);
+                            }
+                          }
+                        }
+                        return "";
+                      })()}
+                      setValue={() => {}}
+                      readOnly={true}
+                      type="text"
+                      className="w-full text-right"
+                      disabled={isDisabledPermission}
+                    />
+                  </div>
+                  <div>
+                    <TextInput
+                      name="Required Rolls"
+                      value={(() => {
+                        const selectedLabelSize =
+                          sizeList?.data?.find((s) => s.id === labelSizeId)
+                            ?.name || "";
+                        if (selectedLabelSize && orderQty && totalMeter) {
+                          const parts = selectedLabelSize.split(/[*xX]/);
+                          if (parts.length >= 2) {
+                            const length = parseFloat(parts[1].trim());
+                            const qty = parseFloat(orderQty);
+                            const rMeter = parseFloat(totalMeter);
+                            if (
+                              !isNaN(length) &&
+                              !isNaN(qty) &&
+                              !isNaN(rMeter) &&
+                              rMeter > 0
+                            ) {
+                              const calcMeter = (length * qty) / 1000;
+                              if (calcMeter > 0) {
+                                return rMeter / calcMeter;
+                              }
+                            }
+                          }
+                        }
+                        return "";
+                      })()}
+                      setValue={() => {}}
+                      readOnly={true}
+                      type="text"
                       className="w-full text-right"
                       disabled={isDisabledPermission}
                     />
@@ -2010,7 +2089,8 @@ const JobCardForm = ({
               disabled={readOnly || isDisabledPermission}
               className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium"
             >
-              <HiOutlineRefresh className="w-3.5 h-3.5" /> Save & Close
+              <HiOutlineRefresh className="w-3.5 h-3.5" />{" "}
+              {id ? "Update & Close" : "Save & Close"}
             </button>
           )}
           {!readOnly && (
@@ -2025,7 +2105,8 @@ const JobCardForm = ({
               disabled={readOnly || isDisabledPermission}
               className="bg-indigo-500 disabled:opacity-50 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center gap-1.5 text-xs font-medium"
             >
-              <FiSave className="w-3.5 h-3.5" /> Save & New
+              <FiSave className="w-3.5 h-3.5" />{" "}
+              {id ? "Update & New" : "Save & New"}
             </button>
           )}
           {status === "REJECTED" && (
@@ -2060,6 +2141,46 @@ const JobCardForm = ({
           )}
         </div>
         <div className="flex gap-2">
+          {id && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  const newIsHold = !isHold;
+                  if (
+                    !window.confirm(
+                      `Are you sure you want to ${newIsHold ? "Hold" : "Unhold"} this Job Card?`,
+                    )
+                  )
+                    return;
+                  setIsHold(newIsHold);
+                  const payload = { ...formData, isHold: newIsHold };
+                  handleSubmitCustom(updateData, payload, "Updated", "");
+                }}
+                className="bg-orange-600 text-white px-2 py-1 rounded hover:bg-orange-700 flex items-center text-xs"
+              >
+                {isHold ? "Unhold" : "Hold"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const newIsCancelled = !isCancelled;
+                  if (
+                    !window.confirm(
+                      `Are you sure you want to ${newIsCancelled ? "Cancel" : "Uncancel"} this Job Card?`,
+                    )
+                  )
+                    return;
+                  setIsCancelled(newIsCancelled);
+                  const payload = { ...formData, isCancelled: newIsCancelled };
+                  handleSubmitCustom(updateData, payload, "Updated", "");
+                }}
+                className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 flex items-center text-xs"
+              >
+                {isCancelled ? "Uncancel" : "Cancel"}
+              </button>
+            </>
+          )}
           {id && readOnly && (
             <button
               disabled={status === "PENDING" && !canApprove}
@@ -2070,7 +2191,7 @@ const JobCardForm = ({
                   hasPermission(() => setReadOnly(false), "edit");
                 }
               }}
-              className="bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 flex items-center gap-1.5 text-xs font-medium"
+              className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs"
             >
               <FiEdit2 className="w-3.5 h-3.5" /> Edit
             </button>

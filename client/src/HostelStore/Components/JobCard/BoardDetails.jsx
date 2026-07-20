@@ -59,6 +59,7 @@ const BoardDetails = ({
           });
           return;
         }
+        console.log(response, "response");
         setBoardItems((prev) => {
           const newRows = [...prev];
           newRows[index] = {
@@ -111,7 +112,7 @@ const BoardDetails = ({
   return (
     <>
       <div className="overflow-y-auto">
-        <table className="w-full border-separate border-spacing-0 border-t border-l border-slate-200">
+        <table className="w-full table-fixed border-separate border-spacing-0 border-t border-l border-slate-200">
           <thead>
             <tr className="bg-gray-200">
               <th className="sticky top-0 z-20 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-4">
@@ -138,16 +139,16 @@ const BoardDetails = ({
             {boardItems?.map((item, idx) => (
               <tr
                 key={idx}
-                className="h-8 hover:bg-slate-50 transition-colors"
+                className=" hover:bg-slate-50 transition-colors"
                 onContextMenu={(e) => {
                   if (!readOnly) handleRightClick(e, idx);
                 }}
               >
-                <td className="border border-slate-200 px-1 py-0 text-center text-[11px] text-black">
+                <td className="text-[11px] border border-gray-300 text-center py-1">
                   {idx + 1}
                 </td>
                 <td
-                  className="border  text-[11px] align-top pt-1"
+                  className="text-[11px] border border-gray-300 text-left"
                   //   rowSpan={rowSpan}
                 >
                   <FxSelectWithAdd
@@ -171,7 +172,7 @@ const BoardDetails = ({
                   />
                 </td>
                 <td
-                  className="border text-[11px] align-top pt-1"
+                  className="text-[11px] border border-gray-300 text-left"
                   //   rowSpan={rowSpan}
                 >
                   <FxSelectWithAdd
@@ -195,7 +196,7 @@ const BoardDetails = ({
                   />
                 </td>
                 <td
-                  className="border  text-[11px] align-top pt-1"
+                  className="text-[11px] border border-gray-300 text-left"
                   //   rowSpan={rowSpan}
                 >
                   <FxSelectWithAdd
@@ -225,18 +226,18 @@ const BoardDetails = ({
                     addNewModalWidth="w-[38%] h-[50%]"
                   />
                 </td>
-                <td className="border border-slate-200 px-1 py-0">
+                <td className="text-[11px] border border-gray-300 text-left">
                   <input
                     type="number"
-                    className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
+                    className="w-full  border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
                     value={item.stockQty}
                     disabled={true}
                   />
                 </td>
-                <td className="border border-slate-200 px-1 py-0">
+                <td className="text-[11px] border border-gray-300 text-left">
                   <input
                     type="number"
-                    className="w-full h-7 border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
+                    className="w-full  border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
                     value={item.noOfSheets}
                     readOnly={readOnly}
                     onChange={(e) =>
