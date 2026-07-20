@@ -1219,6 +1219,7 @@ async function create(body) {
       orderType,
       orderQty,
       customerId,
+      plateSupplierId,
       gsmId,
       otherBoardId,
       fullBoardId,
@@ -1250,6 +1251,8 @@ async function create(body) {
       labelQty,
       rollQty,
       cutAndSeal,
+      dieDescription,
+      dieMethod,
       // Arrays
       boardQualities,
       selectedProcesses,
@@ -1273,6 +1276,8 @@ async function create(body) {
       selectedLabelPrinting,
       labelItemId,
       colorId,
+      isHold,
+      isCancelled,
     } = body;
 
     // ─────────────────────────────
@@ -1321,14 +1326,15 @@ async function create(body) {
           docId: newDocId,
           docDate: docDate ? new Date(docDate) : null,
 
-          createdById: Number(userId),
-          branchId: Number(branchId),
+          createdById: Number(userId) ?? null,
+          branchId: Number(branchId) ?? null,
 
           orderEntryId: orderEntryId ? Number(orderEntryId) : null,
           orderType: orderType || null,
           orderQty: orderQty ? parseInt(orderQty) : null,
           orderItemId: orderItemId ? Number(orderItemId) : null,
           customerId: customerId ? Number(customerId) : null,
+          plateSupplierId: plateSupplierId ? Number(plateSupplierId) : null,
 
           gsmId: gsmId ? Number(gsmId) : null,
           otherBoardId: otherBoardId ? Number(otherBoardId) : null,
@@ -1376,6 +1382,11 @@ async function create(body) {
           storeId: storeId ? Number(storeId) : null,
           labelItemId: labelItemId ? Number(labelItemId) : null,
           colorId: colorId ? Number(colorId) : null,
+          dieDescription: dieDescription ?? null,
+          dieMethod: dieMethod ?? null,
+          isHold: isHold ?? false,
+          isCancelled: isCancelled ?? false,
+
           boardQualities: safeBoardItems.length
             ? {
                 createMany: {
@@ -1403,7 +1414,10 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safePlateDetails.map((p) => ({
-                    plateName: p.plateName,
+                    plateId: p.plateId ? parseInt(p.plateId) : null,
+                    machineId: p.machineId ? parseInt(p.machineId) : null,
+                    plateName: p.plateName ?? "",
+                    description: p.description ?? "",
                     qty: p.qty ? Number(p.qty) : null,
                   })),
                 },
@@ -1625,6 +1639,7 @@ async function update(id, body) {
       customerId,
       gsmId,
       otherBoardId,
+      plateSupplierId,
       fullBoardId,
       noOfPockets,
       cuttingSizeId,
@@ -1661,6 +1676,8 @@ async function update(id, body) {
       labelQty,
       rollQty,
       cutAndSeal,
+      dieDescription,
+      dieMethod,
       trackingType,
       jobCardSizeDetails,
       orderItemId,
@@ -1678,6 +1695,8 @@ async function update(id, body) {
       selectedLabelPrinting,
       labelItemId,
       colorId,
+      isHold,
+      isCancelled,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -1900,6 +1919,7 @@ async function update(id, body) {
           orderType: orderType || null,
           orderQty: orderQty ? parseInt(orderQty) : null,
           customerId: customerId ? parseInt(customerId) : null,
+          plateSupplierId: plateSupplierId ? Number(plateSupplierId) : null,
           gsmId: gsmId ? parseInt(gsmId) : null,
           otherBoardId: otherBoardId ? parseInt(otherBoardId) : null,
           fullBoardId: fullBoardId ? parseInt(fullBoardId) : null,
@@ -1942,6 +1962,10 @@ async function update(id, body) {
           storeId: storeId ? Number(storeId) : null,
           labelItemId: labelItemId ? Number(labelItemId) : null,
           colorId: colorId ? Number(colorId) : null,
+          dieDescription: dieDescription ?? null,
+          dieMethod: dieMethod ?? null,
+          isHold: isHold ?? false,
+          isCancelled: isCancelled ?? false,
           boardQualities:
             boardQualities.length > 0
               ? {
@@ -1970,7 +1994,10 @@ async function update(id, body) {
             ? {
                 createMany: {
                   data: plateDetails.map((p) => ({
+                    plateId: p.plateId ? parseInt(p.plateId) : null,
+                    machineId: p.machineId ? parseInt(p.machineId) : null,
                     plateName: p.plateName,
+                    description: p.description ?? "",
                     qty: p.qty ? Number(p.qty) : null,
                   })),
                 },
