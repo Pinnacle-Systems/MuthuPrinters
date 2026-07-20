@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "takenmachines" ADD COLUMN     "Date" DATE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "isAvailable" BOOLEAN,
+ALTER COLUMN "Datetime" SET DATA TYPE TIME(0);
