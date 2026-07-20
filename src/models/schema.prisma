@@ -2474,11 +2474,8 @@ model Machine {
 
   machineDetails     MachineDetails[]
   productionempPunch productionempPunch[]
-<<<<<<< HEAD
   takenMachines       takenmachines[]
-=======
   PlateDetails       PlateDetails[]
->>>>>>> 3bb77e4cc1e7800532c71e8b981569cbcae2982e
 }
 
 model Notification {
