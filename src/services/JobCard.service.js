@@ -88,6 +88,9 @@ async function get(req) {
       _count: {
         select: {
           productionAllocations: true,
+
+          productionempPunch: true,
+          takenMachines: true,
         },
       },
     },
@@ -174,7 +177,10 @@ async function get(req) {
     return {
       ...jobCard,
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
-      childRecord: jobCard._count.productionAllocations,
+      childRecord:
+        (jobCard._count?.productionAllocations || 0) +
+        (jobCard._count?.productionempPunch || 0) +
+        (jobCard._count?.takenMachines || 0),
     };
   });
 
@@ -240,13 +246,13 @@ async function get_mob_jobcard(req) {
         runningQty: true,
         productionType: true,
         branchId: true,
-        itemType:true,
-        rollQty : true,
-        totalMeter:true,
-        LabelSize : true,
-        Color:true,
+        itemType: true,
+        rollQty: true,
+        totalMeter: true,
+        LabelSize: true,
+        Color: true,
         customer: { select: { id: true, name: true } },
-        StyleItem : {select:{name:true}},
+        StyleItem: { select: { name: true } },
         gsm: { select: { id: true, name: true } },
         Branch: { select: { branchName: true } },
         Plate: { select: { id: true, name: true } },
@@ -255,12 +261,12 @@ async function get_mob_jobcard(req) {
         boardQualities: {
           select: {
             id: true,
-            gsm:true,
-            noOfSheets:true,
-            processId:true,
-            Process:true,
-            FullBoardSize:true,
-            Board:true,
+            gsm: true,
+            noOfSheets: true,
+            processId: true,
+            Process: true,
+            FullBoardSize: true,
+            Board: true,
             Board: { select: { id: true, name: true } },
           },
         },
@@ -286,7 +292,7 @@ async function get_mob_jobcard(req) {
           select: {
             id: true,
             Machine: { select: { id: true, name: true } },
-            Mac:true
+            Mac: true,
           },
         },
 
@@ -298,21 +304,21 @@ async function get_mob_jobcard(req) {
             sequence: true,
             completedQty: true,
             Process: { select: { id: true, name: true } },
-             productionAllocationDtls: {
+            productionAllocationDtls: {
               select: {
                 id: true,
                 isInHouse: true,
               },
-             },
+            },
           },
           orderBy: { sequence: "asc" },
         },
 
         // ─── Other Details ─────────────────
         jobCardSizeDetails: {
-          include:{
-            Size:true
-          }
+          include: {
+            Size: true,
+          },
         },
         printingDetails: true,
         finishingProcesses: true,
@@ -331,14 +337,14 @@ async function get_mob_jobcard(req) {
         processRouteId: Number(processRouteId || 0),
       },
       include: {
-        pushLogs:{
-           include : {
-             splitSizes : {
-               include :{
-               JobCardSize : true
-               }
-             }
-           }
+        pushLogs: {
+          include: {
+            splitSizes: {
+              include: {
+                JobCardSize: true,
+              },
+            },
+          },
         },
         ProcessRoute: true,
       },
@@ -441,14 +447,14 @@ async function get_mob_jobcard(req) {
         quantity: resolvedData?.quantity,
         runningQty: resolvedData?.runningQty,
         childRecord: resolvedData?.childRecord,
-        machineDetails : resolvedData?.machineDetails,
-        boardQualities : resolvedData?.boardQualities,
-        StyleItem : resolvedData?.StyleItem,
-        itemType:resolvedData?.itemType,
-        LabelSize : resolvedData?.LabelSize,
-        rollQty : resolvedData?.rollQty,
-        totalMeter:resolvedData?.totalMeter,
-         Color:resolvedData?.Color,
+        machineDetails: resolvedData?.machineDetails,
+        boardQualities: resolvedData?.boardQualities,
+        StyleItem: resolvedData?.StyleItem,
+        itemType: resolvedData?.itemType,
+        LabelSize: resolvedData?.LabelSize,
+        rollQty: resolvedData?.rollQty,
+        totalMeter: resolvedData?.totalMeter,
+        Color: resolvedData?.Color,
         punch_data: punch_result,
         // ─── Approval ──────────────────────
         approvalStatus: resolvedData?.approvalStatus, // ✅ full object not .status
@@ -713,13 +719,13 @@ async function get_mob_joblist(req) {
     },
     include: {
       productionAllocations: true,
-       machineDetails: {
-          select: {
-            id: true,
-            Machine: { select: { id: true, name: true } },
-            Mac:true
-          },
+      machineDetails: {
+        select: {
+          id: true,
+          Machine: { select: { id: true, name: true } },
+          Mac: true,
         },
+      },
       processRoute: {
         include: {
           productionAllocationDtls: true,
@@ -840,7 +846,7 @@ async function get_mob_joblist(req) {
       return {
         id: routes?.id,
         processRoute: lastNotStarted,
-        machineDetails : routes?.machineDetails,
+        machineDetails: routes?.machineDetails,
         docId: routes?.docId,
         approvalStatus: routes?.status,
         process: routes?.processRoute?.Process,
@@ -1072,6 +1078,9 @@ async function getOne(id) {
       _count: {
         select: {
           productionAllocations: true,
+
+          productionempPunch: true,
+          takenMachines: true,
         },
       },
     },
@@ -1176,7 +1185,10 @@ async function getOne(id) {
       ...data,
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
       approvalLog: log,
-      childRecord: data._count.productionAllocations,
+      childRecord:
+        (data._count?.productionAllocations || 0) +
+        (data._count?.productionempPunch || 0) +
+        (data._count?.takenMachines || 0),
     },
   };
 }
