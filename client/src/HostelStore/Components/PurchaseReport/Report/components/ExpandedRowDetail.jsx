@@ -295,7 +295,7 @@ function POItemsTab({ row }) {
 
 // ─── tab: Inward ──────────────────────────────────────────────────────────────
 function InwardTab({ row }) {
-  // Against Invoice inwards show discount + tax (they act as a bill)
+  // AGAINST_INVOICE inwards show discount + tax (they act as a bill)
   // Delivery inwards show basic item info only
   const headers = [
     "Item",
@@ -324,11 +324,11 @@ function InwardTab({ row }) {
         <span>
           Type: <strong className="text-gray-700">{doc.inwardType}</strong>
         </span>
-        {/* Show receipt type badge — important for Against Invoice */}
+        {/* Show receipt type badge — important for AGAINST_INVOICE */}
         {doc.receiptType && (
           <span
             className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-              doc.receiptType?.toLowerCase() === "against invoice"
+              doc.receiptType === "AGAINST_INVOICE"
                 ? "bg-purple-50 text-purple-700 border-purple-200"
                 : "bg-gray-100 text-gray-500 border-gray-200"
             }`}
@@ -351,7 +351,7 @@ function InwardTab({ row }) {
             Inv No: <strong className="text-gray-700">{doc.invNo}</strong>
           </span>
         )}
-        {/* Header-level discount on PurchaseInward (Against Invoice) */}
+        {/* Header-level discount on PurchaseInward (AGAINST_INVOICE) */}
         {doc.discountValue > 0 && (
           <span>
             Bill Discount:{" "}
@@ -360,7 +360,7 @@ function InwardTab({ row }) {
             </strong>
           </span>
         )}
-        {/* Net bill value for Against Invoice */}
+        {/* Net bill value for AGAINST_INVOICE */}
         {doc.netBillValue > 0 && (
           <span>
             Net Bill:{" "}

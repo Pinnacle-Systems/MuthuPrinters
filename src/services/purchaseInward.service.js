@@ -61,7 +61,7 @@ async function getNextDocId(branchId, shortCode, startTime, endTime, saveType) {
 
 // ── Status ────────────────────────────────────────────────────────────────────
 function getPurchaseInwardStatus(inward) {
-  if (inward.receiptType === "Against Invoice") {
+  if (inward.receiptType === "AGAINST_INVOICE") {
     if (inward.inwardType !== "Direct Inward") {
       let isFullyReceived = true;
       let isPartiallyReceived = false;
@@ -610,7 +610,7 @@ async function create(body) {
       dcNo,
     );
 
-    if (receiptType === "Against Invoice") {
+    if (receiptType === "AGAINST_INVOICE") {
       await tx.purchaseLedger.create({
         data: {
           docId: newDocId ?? "",
@@ -1000,7 +1000,7 @@ async function update(id, body, files) {
       dcNo,
     );
 
-    if (receiptType === "Against Invoice") {
+    if (receiptType === "AGAINST_INVOICE") {
       const ledger = await tx.purchaseLedger.findFirst({
         where: { purchaseInwardId: parseInt(data.id) },
       });
@@ -1688,7 +1688,7 @@ async function getPurchaseInwardBillEntryItems(req) {
           AND: [
             {
               OR: [
-                { receiptType: { not: "Against Invoice" } },
+                { receiptType: { not: "AGAINST_INVOICE" } },
                 { receiptType: null },
                 { receiptType: "" },
               ],
