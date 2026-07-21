@@ -370,17 +370,17 @@ const InwardItems = ({
                   Inward Qty<span className="text-red-500">*</span>
                 </th>
                 {(inwardType === "Direct Inward" ||
-                  receiptType === "Against Invoice") && (
+                  receiptType === "AGAINST_INVOICE") && (
                   <th className={`w-16 px-4 py-2 text-center font-medium `}>
                     Price<span className="text-red-500">*</span>
                   </th>
                 )}
-                {receiptType === "Against Invoice" && (
+                {receiptType === "AGAINST_INVOICE" && (
                   <th className={`w-16 px-1 py-2 text-center font-medium `}>
                     Gross
                   </th>
                 )}
-                {receiptType === "Against Invoice" && (
+                {receiptType === "AGAINST_INVOICE" && (
                   <th className={`w-10 px-1 py-2 text-center font-medium `}>
                     Tax
                   </th>
@@ -734,7 +734,7 @@ const InwardItems = ({
                         }
                         if (
                           inwardType !== "Direct Inward" ||
-                          receiptType !== "Against Invoice"
+                          receiptType !== "AGAINST_INVOICE"
                         ) {
                           // if (e.key === "Enter") {
                           //   e.preventDefault();
@@ -846,7 +846,7 @@ const InwardItems = ({
                     />
                   </td>
                   {(inwardType === "Direct Inward" ||
-                    receiptType === "Against Invoice") && (
+                    receiptType === "AGAINST_INVOICE") && (
                     <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
                       <input
                         onKeyDown={(e) => {
@@ -890,7 +890,7 @@ const InwardItems = ({
                       />
                     </td>
                   )}
-                  {receiptType === "Against Invoice" && (
+                  {receiptType === "AGAINST_INVOICE" && (
                     <td className=" border border-gray-300 text-[11px]">
                       <input
                         type="number"
@@ -908,7 +908,7 @@ const InwardItems = ({
                       />
                     </td>
                   )}
-                  {receiptType === "Against Invoice" && (
+                  {receiptType === "AGAINST_INVOICE" && (
                     <td className="  border border-gray-300 text-[11px] text-right ">
                       <button
                         disabled={!row?.styleItemId}
@@ -953,8 +953,8 @@ const InwardItems = ({
                               addRow();
                             }
                           } else if (
-                            receiptType === "Against Invoice" ||
-                            receiptType === "Without Invoice"
+                            receiptType === "AGAINST_INVOICE" ||
+                            receiptType === "WITHOUT_INVOICE"
                           ) {
                             if (index === inwardItems.length - 1) {
                               addRow();
@@ -1038,14 +1038,14 @@ const InwardItems = ({
                     .toFixed(2)}
                 </td>
                 {(inwardType === "Direct Inward" ||
-                  receiptType === "Against Invoice") && (
+                  receiptType === "AGAINST_INVOICE") && (
                   <td className="text-right border border-gray-300 px-1 font-medium ">
                     {inwardItems
                       ?.reduce((sum, row) => sum + (Number(row.price) || 0), 0)
                       .toFixed(2)}
                   </td>
                 )}
-                {receiptType === "Against Invoice" && (
+                {receiptType === "AGAINST_INVOICE" && (
                   <td className="text-right border border-gray-300 px-1 font-medium ">
                     {inwardItems
                       ?.reduce((sum, row) => {
@@ -1056,7 +1056,7 @@ const InwardItems = ({
                       .toFixed(2)}
                   </td>
                 )}
-                {receiptType === "Against Invoice" && (
+                {receiptType === "AGAINST_INVOICE" && (
                   <td
                     className="text-right border border-gray-300"
                     colSpan={1}

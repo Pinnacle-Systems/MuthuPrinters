@@ -344,7 +344,7 @@ const PurchaseInwardForm = ({
   const validateData = (data) => {
     const items = data?.inwardItems || [];
     const filledItems = items.filter((item) => item.styleItemId);
-    const isAgainstInvoice = data.receiptType === "Against Invoice";
+    const isAgainstInvoice = data.receiptType === "AGAINST_INVOICE";
     const isAmountMatched =
       Number(data?.netBillValue).toFixed(2) ===
       parseFloat(totals?.net || 0).toFixed(2);
@@ -368,7 +368,7 @@ const PurchaseInwardForm = ({
         title: "Tax Template is required!",
       },
 
-      // ✅ Conditional: NOT Against Invoice
+      // ✅ Conditional: NOT AGAINST_INVOICE
       {
         condition: !isAgainstInvoice && !data.dcNo,
         title: "DC No is required!",
@@ -910,8 +910,8 @@ const PurchaseInwardForm = ({
                 value={invNo}
                 setValue={setInvNo}
                 readOnly={id}
-                required={receiptType === "Against Invoice"}
-                disabled={receiptType !== "Against Invoice"}
+                required={receiptType === "AGAINST_INVOICE"}
+                disabled={receiptType !== "AGAINST_INVOICE"}
               />
               <div className="w-28">
                 <TextInput
@@ -919,7 +919,7 @@ const PurchaseInwardForm = ({
                   value={netBillValue}
                   setValue={setNetBillValue}
                   readOnly={readOnly}
-                  required={receiptType === "Against Invoice"}
+                  required={receiptType === "AGAINST_INVOICE"}
                   type={"number"}
                   onFocus={(e) => {
                     e.target.select();
@@ -929,7 +929,7 @@ const PurchaseInwardForm = ({
                       e.target.value ? Number(e.target.value).toFixed(2) : "",
                     )
                   }
-                  disabled={receiptType !== "Against Invoice"}
+                  disabled={receiptType !== "AGAINST_INVOICE"}
                   className={"text-right"}
                 />
               </div>
@@ -972,9 +972,9 @@ const PurchaseInwardForm = ({
                 )}
                 value={taxTemplateId}
                 setValue={setTaxTemplateId}
-                required={receiptType === "Against Invoice"}
+                required={receiptType === "AGAINST_INVOICE"}
                 readOnly={readOnly}
-                disabled={receiptType !== "Against Invoice"}
+                disabled={receiptType !== "AGAINST_INVOICE"}
               />
               {/* <DropdownWithModal
                 name="Tax Type"
@@ -987,28 +987,28 @@ const PurchaseInwardForm = ({
                 )}
                 value={taxTemplateId}
                 setValue={setTaxTemplateId}
-                required={receiptType === "Against Invoice"}
+                required={receiptType === "AGAINST_INVOICE"}
                 readOnly={readOnly}
                 className={`w-[150px]`}
                 // disabled={childRecord.current > 0}
                 addNewLabel="+ Add New Tax Template"
                 childComponent={TaxTemplate}
                 addNewModalWidth="w-[82%] h-[85%]"
-                disabled={receiptType !== "Against Invoice"}
+                disabled={receiptType !== "AGAINST_INVOICE"}
               /> */}
               <TextInput
                 name={"Dc No."}
                 value={dcNo}
                 setValue={setDcNo}
                 readOnly={readOnly}
-                required={receiptType !== "Against Invoice"}
+                required={receiptType !== "AGAINST_INVOICE"}
               />
               <div className="w-44">
                 <DateInputNew
                   name="Dc Date"
                   value={dcDate}
                   setValue={setDcDate}
-                  required={receiptType !== "Against Invoice"}
+                  required={receiptType !== "AGAINST_INVOICE"}
                   readOnly={readOnly}
                   type={"date"}
                 />
@@ -1119,7 +1119,7 @@ const PurchaseInwardForm = ({
               }}
             />
           </div>
-          {receiptType === "Against Invoice" ? (
+          {receiptType === "AGAINST_INVOICE" ? (
             <div className="border border-slate-200 p-2 bg-white rounded-md shadow-sm ">
               <div className="flex justify-between py-1 text-sm">
                 <span className="text-slate-600">Total Qty</span>
@@ -1239,7 +1239,7 @@ const PurchaseInwardForm = ({
                 📎 Upload
               </button>
             }
-            {receiptType === "Against Invoice" && (
+            {receiptType === "AGAINST_INVOICE" && (
               <button
                 className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-800 flex items-center text-xs font-medium"
                 onClick={() => {

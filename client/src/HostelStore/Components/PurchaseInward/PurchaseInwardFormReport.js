@@ -427,9 +427,8 @@ const PurchaseInwardFormReport = ({
                                 <Tooltip title="Create Bill Entry" arrow>
                                   <button
                                     disabled={
-                                      dataObj.receiptType
-                                        ?.trim()
-                                        .toLowerCase() === "against invoice" ||
+                                      dataObj.receiptType ===
+                                        "AGAINST_INVOICE" ||
                                       [
                                         "Fully Billed",
                                         "Fully Returned",
@@ -450,9 +449,8 @@ const PurchaseInwardFormReport = ({
                                       );
                                     }}
                                     className={`p-1.5 rounded-md transition ${
-                                      dataObj.receiptType
-                                        ?.trim()
-                                        .toLowerCase() === "against invoice" ||
+                                      dataObj.receiptType ===
+                                        "AGAINST_INVOICE" ||
                                       [
                                         "Fully Billed",
                                         "Fully Returned",

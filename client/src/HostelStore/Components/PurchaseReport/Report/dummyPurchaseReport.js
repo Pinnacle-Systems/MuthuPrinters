@@ -143,7 +143,7 @@ export const dummyData = Array.from({ length: 320 }, (_, idx) => {
   const supplier = pick(SUPPLIERS);
   const poType = pick(PO_TYPES);
   const inwardType = pick(INWARD_TYPES);
-  const receiptType = Math.random() > 0.7 ? "Against Invoice" : "Delivery";
+  const receiptType = Math.random() > 0.7 ? "AGAINST_INVOICE" : "Delivery";
   const dueDaysOffset = rand(-5, 30);
   const hasInward = Math.random() > 0.2;
   const hasCancel = Math.random() > 0.6;
@@ -174,21 +174,21 @@ export const dummyData = Array.from({ length: 320 }, (_, idx) => {
           receiptType,
           dcNo: `DC-${Math.floor(Math.random() * 9000 + 1000)}`,
           invNo:
-            receiptType === "Against Invoice"
+            receiptType === "AGAINST_INVOICE"
               ? `INV/${Math.floor(Math.random() * 9000 + 1000)}`
               : null,
           vehicleNo: `TN39-${Math.floor(Math.random() * 9000 + 1000)}`,
           store: "WAREHOUSE",
           supplier,
           netBillValue:
-            receiptType === "Against Invoice" ? rand(500, 50000) : null,
+            receiptType === "AGAINST_INVOICE" ? rand(500, 50000) : null,
           discountType:
-            receiptType === "Against Invoice"
+            receiptType === "AGAINST_INVOICE"
               ? Math.random() > 0.5
                 ? "Percentage"
                 : "Flat"
               : null,
-          discountValue: receiptType === "Against Invoice" ? rand(0, 5) : null,
+          discountValue: receiptType === "AGAINST_INVOICE" ? rand(0, 5) : null,
           items: inwardItems,
         },
       ]
@@ -221,7 +221,7 @@ export const dummyData = Array.from({ length: 320 }, (_, idx) => {
     ? inwardItems.map((ii, i) => makeBillItem(id * 300 + i, id, piId, ii))
     : [];
   const billedQty =
-    receiptType === "Against Invoice"
+    receiptType === "AGAINST_INVOICE"
       ? inwardQty
       : billItems.reduce((s, i) => s + i.inwardQty, 0);
 

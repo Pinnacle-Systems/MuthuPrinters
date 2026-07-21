@@ -1265,6 +1265,9 @@ async function create(body) {
       cutAndSeal,
       dieDescription,
       dieMethod,
+      lenght,
+      width,
+      meter,
       // Arrays
       boardQualities,
       selectedProcesses,
@@ -1382,7 +1385,7 @@ async function create(body) {
           labelQuality: labelQuality || null,
           block: block || null,
           labelQty: labelQty ? parseInt(labelQty) : null,
-          rollQty: rollQty ? parseInt(rollQty) : null,
+          rollQty: rollQty ? parseFloat(rollQty) : null,
           cutAndSeal: cutAndSeal || null,
           trackingType: trackingType || null,
           labelSizeId: labelSizeId ? Number(labelSizeId) : null,
@@ -1398,6 +1401,9 @@ async function create(body) {
           dieMethod: dieMethod ?? null,
           isHold: isHold ?? false,
           isCancelled: isCancelled ?? false,
+          lenght: lenght ? parseInt(lenght) : 0,
+          width: width ? parseInt(width) : 0,
+          meter: meter ? parseInt(meter) : 0,
 
           boardQualities: safeBoardItems.length
             ? {
@@ -1597,7 +1603,7 @@ async function create(body) {
             inOrOut: "Out",
             qty:
               rollQty && !isNaN(parseFloat(rollQty))
-                ? -Math.abs(parseInt(rollQty))
+                ? -Math.abs(parseFloat(rollQty))
                 : null,
             uomId: parseInt(styleItem.uomId),
             createdById: parseInt(userId),
@@ -1709,6 +1715,9 @@ async function update(id, body) {
       colorId,
       isHold,
       isCancelled,
+      lenght,
+      width,
+      meter,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -1978,6 +1987,9 @@ async function update(id, body) {
           dieMethod: dieMethod ?? null,
           isHold: isHold ?? false,
           isCancelled: isCancelled ?? false,
+          lenght: lenght ? parseInt(lenght) : 0,
+          width: width ? parseInt(width) : 0,
+          meter: meter ? parseInt(meter) : 0,
           boardQualities:
             boardQualities.length > 0
               ? {
@@ -2167,7 +2179,7 @@ async function update(id, body) {
             inOrOut: "Out",
             qty:
               rollQty && !isNaN(parseFloat(rollQty))
-                ? -Math.abs(parseInt(rollQty))
+                ? -Math.abs(parseFloat(rollQty))
                 : null,
             uomId: parseInt(styleItem.uomId),
             updatedById: parseInt(userId),

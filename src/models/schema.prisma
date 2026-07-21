@@ -2027,7 +2027,7 @@ model JobCard {
   StyleItem             StyleItem?             @relation("OrderItem", fields: [styleItemId], references: [id])
   trackingType          String?
   labelQty              Int?
-  rollQty               Int?
+  rollQty               Float?
   cutAndSeal            String?
   labelQuality          String?
   LabelItem             StyleItem?             @relation("label", fields: [labelItemId], references: [id])
@@ -2049,6 +2049,9 @@ model JobCard {
   PlateSupplier         Party?                 @relation("PlateSupplier", fields: [plateSupplierId], references: [id])
   isHold                Boolean?               @default(false)
   isCancelled           Boolean?               @default(false)
+  lenght                Int?
+  width                 Int?
+  meter                 Int?
   boardQualities        BoardQuality[]
   processDetails        ProcessDetails[]
   laminationDetails     LaminationDetails[]

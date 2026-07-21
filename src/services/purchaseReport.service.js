@@ -7,14 +7,14 @@ import { prisma } from "../lib/prisma.js";
 
 function isAgainstInvoice(receiptType) {
   if (!receiptType) return false;
-  return receiptType.trim().toLowerCase() === "against invoice";
+  return receiptType.trim().toLowerCase() === "AGAINST_INVOICE";
 }
 
 function getPOStatus(po) {
   const poItems = po.poItems || [];
   const inwardItems = po.inwardItems || [];
   const purchaseCancelItems = po.purchaseCancelItems || [];
-  
+
   // Find the latest quote version to only sum active items
   let latestQuoteVersion = 1;
   if (poItems.length > 0) {
@@ -28,7 +28,7 @@ function getPOStatus(po) {
   }
 
   const activePoItems = poItems.filter(
-    (i) => (Number(i.quoteVersion) || 1) === latestQuoteVersion
+    (i) => (Number(i.quoteVersion) || 1) === latestQuoteVersion,
   );
 
   const totalPoQty = activePoItems.reduce((s, i) => s + (i.qty || 0), 0);
@@ -306,7 +306,7 @@ async function getPurchaseReport({
         vehicleNo: true,
         dcNo: true,
         invNo: true,
-        netBillValue: true, // for Against Invoice billing summary
+        netBillValue: true, // for AGAINST_INVOICE billing summary
         discountType: true, // header-level discount on PurchaseInward
         discountValue: true,
         Store: { select: { id: true, storeName: true } },
@@ -343,7 +343,7 @@ async function getPurchaseReport({
     }
 
     const activePoItems = po.poItems.filter(
-      (i) => (Number(i.quoteVersion) || 1) === latestQuoteVersion
+      (i) => (Number(i.quoteVersion) || 1) === latestQuoteVersion,
     );
 
     // ✅ inwardQty sums ALL inward items via poId — null purchaseInwardId included
@@ -363,9 +363,9 @@ async function getPurchaseReport({
 
     // ── billedQty ──────────────────────────────────────────────────────────
     //
-    // Against Invoice inward items:
+    // AGAINST_INVOICE inward items:
     //   - If purchaseInwardId is null → no receiptType → treated as Delivery → NOT counted here
-    //   - If purchaseInwardId exists and receiptType = "Against Invoice" → counted
+    //   - If purchaseInwardId exists and receiptType = "AGAINST_INVOICE" → counted
     //
     const againstInvoiceQty = po.inwardItems.reduce((s, i) => {
       if (!i.purchaseInwardId) return s; // null purchaseInwardId = treat as Delivery
@@ -376,8 +376,8 @@ async function getPurchaseReport({
     }, 0);
 
     // Delivery bill entry items:
-    //   - If purchaseInwardId is null → no receiptType → NOT Against Invoice → counted
-    //   - If purchaseInwardId exists and receiptType != "Against Invoice" → counted
+    //   - If purchaseInwardId is null → no receiptType → NOT AGAINST_INVOICE → counted
+    //   - If purchaseInwardId exists and receiptType != "AGAINST_INVOICE" → counted
     //
     const billEntryQty = po.purchaseBillEntryItems.reduce((s, i) => {
       if (!i.purchaseInwardId) {
@@ -433,7 +433,7 @@ async function getPurchaseReport({
           dcNo: pi?.dcNo ?? i.dcNo ?? null,
           invNo: pi?.invNo ?? i.invNo ?? null,
           vehicleNo: pi?.vehicleNo ?? null,
-          netBillValue: pi?.netBillValue ?? null, // Against Invoice net bill
+          netBillValue: pi?.netBillValue ?? null, // AGAINST_INVOICE net bill
           discountType: pi?.discountType ?? null, // header-level discount
           discountValue: pi?.discountValue ?? null,
           store: pi?.Store?.storeName ?? "—",

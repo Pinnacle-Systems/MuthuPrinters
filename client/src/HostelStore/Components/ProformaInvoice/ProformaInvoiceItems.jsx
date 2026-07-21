@@ -215,6 +215,9 @@ const ProformaInvoiceItems = ({
                             <th className="w-32 px-1 py-2 text-center font-medium border border-gray-300">
                                 Gross
                             </th>
+                            <th className="w-32 px-1 py-2 text-center font-medium border border-gray-300">
+                                Net Amount
+                            </th>
                             {
                                 !isCustomerExport && (
                                     <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
@@ -449,6 +452,10 @@ const ProformaInvoiceItems = ({
                                     <span className="pr-1">{isCurrencySymbol && item.styleItemId ? ` ${isCurrencySymbol}` : ""}</span>
                                     {item.styleItemId ? (parseFloat(item.amount || 0).toFixed(2)) : ""}
                                 </td>
+                                <td className="text-[11px] text-right  px-1 border border-gray-300 bg-gray-50 bg-transparent gap-x-2">
+                                    <span className="pr-1">{isCurrencySymbol && item.styleItemId ? ` ${isCurrencySymbol}` : ""}</span>
+                                    {item.styleItemId ? (parseFloat(enrichedItems?.items?.[index]?.totals?.net || 0).toFixed(2)) : ""}
+                                </td>
                                 {
                                     !isCustomerExport && (
                                         <td className="border border-gray-300 text-center text-[11px]">
@@ -520,6 +527,12 @@ const ProformaInvoiceItems = ({
                                 {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
                                 {items
                                     ?.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0)
+                                    .toFixed(2)}
+                            </td>
+                            <td className="text-right px-1 border border-gray-300  text-black">
+                                {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
+                                {enrichedItems?.items
+                                    ?.reduce((sum, i) => sum + (parseFloat(i.totals?.net) || 0), 0)
                                     .toFixed(2)}
                             </td>
                             {

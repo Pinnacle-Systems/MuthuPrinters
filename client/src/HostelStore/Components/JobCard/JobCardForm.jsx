@@ -186,6 +186,9 @@ const JobCardForm = ({
       sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
   };
+  const [lenght, setLenght] = useState("");
+  const [width, setWidth] = useState("");
+  const [meter, setMeter] = useState("");
   const [colorId, setColorId] = useState("");
   const [triggerGetBoardQty] = useLazyGetBoardQtyQuery();
 
@@ -370,7 +373,7 @@ const JobCardForm = ({
     setTrackingType(data?.trackingType || "");
     setOrderItemId(data?.orderItemId || "");
     setLabelSizeId(data?.labelSizeId || "");
-    setTotalMeter(data?.totalMeter || "");
+    setTotalMeter(data?.totalMeter?.toFixed(3) || "");
     setIsRepeatedJobCard(data?.isRepeatedJobCard || false);
     setStoreId(data?.storeId || "");
     setRefJobCardId(data?.refJobCardId || "");
@@ -381,6 +384,9 @@ const JobCardForm = ({
     setDieDescription(data?.dieDescription || "");
     setIsHold(data?.isHold || false);
     setIsCancelled(data?.isCancelled || false);
+    setWidth(data?.width || "");
+    setLenght(data?.lenght || "");
+    setMeter(data?.meter || "");
     const rawPlates = data?.plateDetails || [];
     const paddedPlates = [...rawPlates];
     while (paddedPlates.length < 6)
@@ -486,6 +492,9 @@ const JobCardForm = ({
     dieMethod,
     isHold,
     isCancelled,
+    lenght,
+    width,
+    meter,
   };
 
   const openPrintModal = async (overrideId, overrideDocId) => {
@@ -819,7 +828,7 @@ const JobCardForm = ({
       setRollQty(data?.rollQty || "");
       setCutAndSeal(data?.cutAndSeal || "");
       setLabelSizeId(data?.labelSizeId || "");
-      setTotalMeter(data?.totalMeter || "");
+      setTotalMeter(data?.totalMeter?.toFixed(3) || "");
       setItemGroupId(data?.itemGroupId || "");
       setItemType(data?.itemType || "");
       setJobCardSizeDetails(
@@ -1812,22 +1821,50 @@ const JobCardForm = ({
                   </div>
                   <div>
                     <TextInput
-                      name="Roll Qty"
-                      value={rollQty}
-                      setValue={setRollQty}
+                      name="Roll Meter (Per Roll)"
+                      value={totalMeter}
+                      setValue={setTotalMeter}
+                      onBlur={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val)) {
+                          setTotalMeter(val.toFixed(3));
+                        }
+                      }}
                       readOnly={readOnly}
-                      max={stockQty}
                       type="number"
                       className="w-full text-right"
                       disabled={isDisabledPermission}
-                      required={true}
+                    />
+                  </div>
+                  {/* 
+                  <div>
+                    <TextInput
+                      name="Meter"
+                      value={meter}
+                      setValue={setMeter}
+                      readOnly={readOnly}
+                      type="number"
+                      className="w-full text-right"
+                      disabled={isDisabledPermission}
+                    />
+                  </div>
+                  */}
+                  <div>
+                    <TextInput
+                      name="Length (MM)"
+                      value={lenght}
+                      setValue={setLenght}
+                      readOnly={readOnly}
+                      type="number"
+                      className="w-full text-right"
+                      disabled={isDisabledPermission}
                     />
                   </div>
                   <div>
                     <TextInput
-                      name="Roll Meter (per roll)"
-                      value={totalMeter}
-                      setValue={setTotalMeter}
+                      name="Width (MM)"
+                      value={width}
+                      setValue={setWidth}
                       readOnly={readOnly}
                       type="number"
                       className="w-full text-right"
@@ -1838,17 +1875,11 @@ const JobCardForm = ({
                     <TextInput
                       name="Calculated Meter"
                       value={(() => {
-                        const selectedLabelSize =
-                          sizeList?.data?.find((s) => s.id === labelSizeId)
-                            ?.name || "";
-                        if (selectedLabelSize && orderQty) {
-                          const parts = selectedLabelSize.split(/[*xX]/);
-                          if (parts.length >= 2) {
-                            const length = parseFloat(parts[1].trim());
-                            const qty = parseFloat(orderQty);
-                            if (!isNaN(length) && !isNaN(qty)) {
-                              return ((length * qty) / 1000).toFixed(3);
-                            }
+                        if (lenght && orderQty) {
+                          const lengthVal = parseFloat(lenght);
+                          const qty = parseFloat(orderQty);
+                          if (!isNaN(lengthVal) && !isNaN(qty)) {
+                            return ((lengthVal * qty) / 1000).toFixed(3);
                           }
                         }
                         return "";
@@ -1864,25 +1895,19 @@ const JobCardForm = ({
                     <TextInput
                       name="Required Rolls"
                       value={(() => {
-                        const selectedLabelSize =
-                          sizeList?.data?.find((s) => s.id === labelSizeId)
-                            ?.name || "";
-                        if (selectedLabelSize && orderQty && totalMeter) {
-                          const parts = selectedLabelSize.split(/[*xX]/);
-                          if (parts.length >= 2) {
-                            const length = parseFloat(parts[1].trim());
-                            const qty = parseFloat(orderQty);
-                            const rMeter = parseFloat(totalMeter);
-                            if (
-                              !isNaN(length) &&
-                              !isNaN(qty) &&
-                              !isNaN(rMeter) &&
-                              rMeter > 0
-                            ) {
-                              const calcMeter = (length * qty) / 1000;
-                              if (calcMeter > 0) {
-                                return rMeter / calcMeter;
-                              }
+                        if (lenght && orderQty && totalMeter) {
+                          const lengthVal = parseFloat(lenght);
+                          const qty = parseFloat(orderQty);
+                          const rMeter = parseFloat(totalMeter);
+                          if (
+                            !isNaN(lengthVal) &&
+                            !isNaN(qty) &&
+                            !isNaN(rMeter) &&
+                            rMeter > 0
+                          ) {
+                            const calcMeter = (lengthVal * qty) / 1000;
+                            if (calcMeter > 0) {
+                              return Math.ceil(calcMeter / rMeter);
                             }
                           }
                         }
@@ -1893,6 +1918,19 @@ const JobCardForm = ({
                       type="text"
                       className="w-full text-right"
                       disabled={isDisabledPermission}
+                    />
+                  </div>
+                  <div>
+                    <TextInput
+                      name="Roll Qty"
+                      value={rollQty}
+                      setValue={setRollQty}
+                      readOnly={readOnly}
+                      max={stockQty}
+                      type="number"
+                      className="w-full text-right"
+                      disabled={isDisabledPermission}
+                      required={true}
                     />
                   </div>
                   <div>
