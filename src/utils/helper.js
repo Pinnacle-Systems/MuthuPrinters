@@ -468,3 +468,26 @@ export function getDateTimeRange(date) {
   endTime.setHours(23, 59, 59, 99);
   return { startTime, endTime };
 }
+
+
+  const cdate = new Date();
+  export const current_dateOnly = new Date(
+    cdate.getFullYear(),
+    cdate.getMonth(),
+    cdate.getDate(),
+  );
+
+
+ export const startDate = new Date(
+  cdate.getFullYear(),
+  cdate.getMonth(),
+  cdate.getDate(),
+  0, 0, 0, 0 // midnight, start of day
+);
+
+export const endDate = new Date(
+  cdate.getFullYear(),
+  cdate.getMonth(),
+  cdate.getDate(),
+  23, 59, 59, 999 // last millisecond of the day
+);

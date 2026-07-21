@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "takenmachines" ALTER COLUMN "edDate" DROP NOT NULL,
+ALTER COLUMN "edDate" DROP DEFAULT,
+ALTER COLUMN "edDatetime" DROP NOT NULL,
+ALTER COLUMN "edDatetime" DROP DEFAULT;

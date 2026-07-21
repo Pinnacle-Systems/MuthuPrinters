@@ -2274,10 +2274,8 @@ model      takenmachines{
   JobCard        JobCard?      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
   processRouteId Int?
   ProcessRoute   ProcessRoute? @relation(fields: [processRouteId], references: [id])
-  stDate     DateTime @default(now()) @db.Date
-  stDatetime DateTime @default(now()) @db.Time(0)
-  edDate     DateTime @default(now()) @db.Date
-  edDatetime DateTime @default(now()) @db.Time(0)
+  stDatetime DateTime @default(now())
+  edDatetime DateTime? 
   departmentid   Int
   deparment      Department    @relation(fields: [departmentid], references: [id])
   Machineid      Int
@@ -2299,7 +2297,6 @@ model pushLogs {
   remarks             String?
   pauseQty            Int? @default(0)
   splitSizes         splitSizes[] 
-  
 }
 
 model ProformaInvoice {
