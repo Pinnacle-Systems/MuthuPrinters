@@ -113,7 +113,9 @@ export default function Form({ onSuccess, defaultName = "" }) {
   );
 
   useEffect(() => {
-    syncFormWithDb(singleData?.data);
+    if (id && singleData?.data) {
+      syncFormWithDb(singleData.data);
+    }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
   const data = {
@@ -153,10 +155,12 @@ export default function Form({ onSuccess, defaultName = "" }) {
       }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
+        setId("");
         onNew();
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
+        setId("");
       }
       Swal.fire({
         title: text + "  " + "Successfully",

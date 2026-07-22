@@ -241,7 +241,9 @@ export default function Form({
   );
 
   useEffect(() => {
-    syncFormWithDb(singleData?.data);
+    if (id && singleData?.data) {
+      syncFormWithDb(singleData?.data);
+    }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
   const {
@@ -451,6 +453,7 @@ export default function Form({
 
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
+        setId("");
         onNew();
         countryNameRef?.current?.focus();
       } else {
@@ -459,6 +462,7 @@ export default function Form({
         }
         setForm(false);
         syncFormWithDb(undefined);
+        setId("");
       }
 
       Swal.fire({

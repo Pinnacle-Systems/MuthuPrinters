@@ -48,6 +48,7 @@ import {
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { conversionTypes } from "../../../Utils/DropdownData.js";
 import { useDispatch } from "react-redux";
+//need to work
 
 const EMPTY_ROW = {
   styleItemId: "",
@@ -105,7 +106,7 @@ const ProformaInvoiceForm = ({
   const [payTermId, setPayTermId] = useState("");
   const [validityTo, setValidityTo] = useState("");
   const [currencyId, setCurrencyId] = useState("");
-  const [accordionOpen, setAccordionOpen] = useState(false);
+  const [accordionOpen, setAccordionOpen] = useState(true);
   const [loadingId, setLoadingId] = useState("");
   const [deliveryId, setDeliveryId] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
@@ -826,7 +827,7 @@ const ProformaInvoiceForm = ({
               <div className="w-36">
                 <TextInput name="PI No" value={docId} disabled={true} />
               </div>
-              <div className="w-32">
+              <div className="w-24">
                 <DateInputNew
                   name="PI Date"
                   value={docDate}
@@ -836,7 +837,7 @@ const ProformaInvoiceForm = ({
                   type="date"
                 />
               </div>
-              <div className="w-32">
+              <div className="w-[105px]">
                 <DateInputNew
                   name="User Date"
                   value={userDate}

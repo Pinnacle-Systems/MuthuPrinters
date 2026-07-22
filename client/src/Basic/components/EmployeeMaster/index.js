@@ -509,7 +509,7 @@ export default function Form() {
       header: "Employee Id",
       accessor: (item) => item?.regNo,
       //   cellClass: () => "font-medium  text-gray-900",
-      className: "font-medium text-gray-900 text-center uppercase w-40",
+      className: "font-medium text-gray-900 text-left uppercase w-40",
     },
 
     {

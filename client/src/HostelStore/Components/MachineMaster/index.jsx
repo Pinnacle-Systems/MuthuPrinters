@@ -95,7 +95,9 @@ export default function Form({
   );
 
   useEffect(() => {
-    syncFormWithDb(singleData?.data);
+    if (id && singleData?.data) {
+      syncFormWithDb(singleData.data);
+    }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
   const data = {
@@ -132,10 +134,12 @@ export default function Form({
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
         onNew();
+        setId("");
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
         syncFormWithDb(undefined);
+        setId("");
       }
       Swal.fire({
         title: text + "  " + "Successfully",
@@ -268,13 +272,11 @@ export default function Form({
     setId(id);
     setForm(true);
     setReadOnly(true);
-    console.log("view");
   };
   const handleEdit = (id) => {
     setId(id);
     setForm(true);
     setReadOnly(false);
-    console.log("Edit");
   };
 
   const {
@@ -318,7 +320,7 @@ export default function Form({
                         setSizeId(val);
                       }}
                       readOnly={readOnly}
-                      // disabled={childRecord.current > 0}
+                      disabled={childRecord.current > 0}
                       addNewLabel="+ Add New Size"
                       childComponent={Size}
                       addNewModalWidth="w-[40%] h-[45%]"
@@ -342,7 +344,7 @@ export default function Form({
                       }}
                       required={true}
                       readOnly={readOnly}
-                      // disabled={childRecord.current > 0}
+                      disabled={childRecord.current > 0}
                       addNewLabel="+ Add New Department"
                       childComponent={DepartmentMaster}
                       addNewModalWidth="w-[40%] h-[45%]"
