@@ -82,7 +82,9 @@ export default function Form({
   );
 
   useEffect(() => {
-    syncFormWithDb(singleData?.data);
+    if (id && singleData?.data) {
+      syncFormWithDb(singleData?.data);
+    }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
   const data = {
@@ -118,11 +120,13 @@ export default function Form({
 
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
+        setId("");
         onNew();
         termsNameRef?.current?.focus();
       } else {
         setForm(false);
         syncFormWithDb(undefined);
+        setId("");
       }
       await Swal.fire({
         title: text + "  " + "Successfully",
