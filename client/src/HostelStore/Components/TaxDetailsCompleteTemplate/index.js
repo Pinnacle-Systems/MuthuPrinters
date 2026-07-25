@@ -2,7 +2,7 @@ import React, { useCallback, useRef } from "react";
 import { discountTypes } from "../../../Utils/DropdownData";
 
 import { Loader } from "../../../Basic/components";
-import { findFromList, substract as s } from "../../../Utils/helper";
+import { findFromList, substract as s, formatCurrencyAmount } from "../../../Utils/helper";
 import { useGetTaxTemplateByIdQuery } from "../../../redux/services/TaxTemplateServices";
 import { useGetTaxTermMasterQuery } from "../../../redux/services/TaxTermMasterServices";
 
@@ -16,6 +16,7 @@ const TaxDetailsFullTemplate = ({
   id,
   onCloseFocus,
   isSupplierOutside,
+  currencyCode,
 }) => {
   const row = poItems[index];
   const discountTypeRef = useRef(null);
@@ -110,15 +111,15 @@ const TaxDetailsFullTemplate = ({
         <thead className="border border-gray-500">
           <tr>
             <th className="w-52 border border-gray-500">Tax Name</th>
-            <th className="w-28 border border-gray-500">Value</th>
-            <th className="w-28 border border-gray-500">Amount</th>
+            {/* <th className="w-28 border border-gray-500">Value</th> */}
+            <th className="w-52 border border-gray-500">Amount</th>
           </tr>
         </thead>
         <tbody>
           <tr className="h-7">
             <td className="border border-gray-500">Gross Amount</td>
             <td className="border border-gray-500  text-right" colSpan={2}>
-              {parseFloat(row?.totals?.gross)?.toFixed(2)}
+              {formatCurrencyAmount(row?.totals?.gross || 0, currencyCode)}
             </td>
           </tr>
           <tr>
@@ -168,7 +169,7 @@ const TaxDetailsFullTemplate = ({
           <tr>
             <td className="border border-gray-500 py-1.5">Taxable Amount</td>
             <td className="border border-gray-500 text-right" colSpan={2}>
-              {parseFloat(row?.totals?.taxable)?.toFixed(2)}
+              {formatCurrencyAmount(row?.totals?.taxable || 0, currencyCode)}
             </td>
           </tr>
           <tr className="h-7">
@@ -193,7 +194,7 @@ const TaxDetailsFullTemplate = ({
             <tr className="h-7">
               <td className="border border-gray-500">IGST</td>
               <td className="border border-gray-500 text-right" colSpan={2}>
-                {row?.totals?.igst?.toFixed(2)}
+                {formatCurrencyAmount(row?.totals?.igst || 0, currencyCode)}
               </td>
             </tr>
           ) : (
@@ -201,14 +202,14 @@ const TaxDetailsFullTemplate = ({
               <tr className="h-7">
                 <td className="border border-gray-500">CGST</td>
                 <td className="border border-gray-500 text-right" colSpan={2}>
-                  {row?.totals?.cgst?.toFixed(2)}
+                  {formatCurrencyAmount(row?.totals?.cgst || 0, currencyCode)}
                 </td>
               </tr>
 
               <tr className="h-7">
                 <td className="border border-gray-500">SGST</td>
                 <td className="border border-gray-500 text-right" colSpan={2}>
-                  {row?.totals?.sgst?.toFixed(2)}
+                  {formatCurrencyAmount(row?.totals?.sgst || 0, currencyCode)}
                 </td>
               </tr>
             </>
@@ -217,7 +218,7 @@ const TaxDetailsFullTemplate = ({
           <tr className="h-7">
             <td className="border border-gray-500">Net Amount</td>
             <td className="border border-gray-500  text-right" colSpan={2}>
-              {row?.totals?.net?.toFixed(2)}
+              {formatCurrencyAmount(row?.totals?.net || 0, currencyCode)}
             </td>
           </tr>
           {/* {formulas.filter(item => !item.isPowise).map((f, i) =>

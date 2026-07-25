@@ -414,6 +414,34 @@ export function formatAmountIN(value = 0) {
   });
 }
 
+export function formatCurrencyAmount(value = 0, currencyCode = "INR") {
+  if (value === "" || value === null || value === undefined) return "";
+  const cleanValue = typeof value === "string" ? value.replace(/,/g, "") : value;
+  const amount = Number(cleanValue);
+  if (isNaN(amount)) return "";
+
+  let locale = "en-IN";
+  if (currencyCode && typeof currencyCode === "string") {
+    const code = currencyCode.trim().toUpperCase();
+    if (
+      code &&
+      code !== "INR" &&
+      code !== "₹" &&
+      code !== "IN" &&
+      code !== "₹ (INR)" &&
+      code !== "RS" &&
+      code !== "RUPEES"
+    ) {
+      locale = "en-US";
+    }
+  }
+
+  return amount.toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function getUniqueArrayBySize(rowData, allData, key, itemId) {
   const item = rowData?.find((i) => i.id === itemId);
   const uniqueIds = item?.SizeTemplate?.SizeTemplateList?.map(

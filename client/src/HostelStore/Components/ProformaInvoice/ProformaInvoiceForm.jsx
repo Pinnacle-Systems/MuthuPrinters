@@ -8,7 +8,7 @@ import {
   useGetProformaInvoiceByIdQuery,
   useGetProformaInvoiceQuery,
 } from "../../../redux/uniformService/ProformaInvoiceService";
-import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
+import { findFromList, getCommonParams, ModeChip, formatCurrencyAmount } from "../../../Utils/helper";
 import {
   dropDownListObject,
   dropDownListObjectMultiple,
@@ -155,6 +155,9 @@ const ProformaInvoiceForm = ({
   const isCurrencySymbol = currencyList?.data?.find(
     (item) => item?.id === currencyId,
   )?.symbol;
+  const currencyCode = currencyList?.data?.find(
+    (item) => item?.id === currencyId,
+  )?.code;
   useEffect(() => {
     if (!id && allData?.nextDocId) {
       setDocId(allData.nextDocId);
@@ -1101,14 +1104,14 @@ const ProformaInvoiceForm = ({
           {
             key: "grossAmount",
             label: "Gross Amount",
-            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${isCustomerExport ? enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0).toFixed(2) : enrichedData.gross.toFixed(2)}`,
+            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(isCustomerExport ? enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0) : enrichedData.gross, currencyCode || isCurrencySymbol)}`,
             summaryColumn: "right",
             emphasized: true,
           },
           {
             key: "totalDiscount",
             label: "Total Discount",
-            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${enrichedData.itemDiscount + enrichedData.overallDiscount > 0 ? (enrichedData.itemDiscount + enrichedData.overallDiscount).toFixed(2) : "0"}`,
+            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(enrichedData.itemDiscount + enrichedData.overallDiscount > 0 ? (enrichedData.itemDiscount + enrichedData.overallDiscount) : 0, currencyCode || isCurrencySymbol)}`,
             summaryColumn: "right",
             emphasized: false,
           },
@@ -1124,7 +1127,7 @@ const ProformaInvoiceForm = ({
             return Object.keys(taxTotals).map((type) => ({
               key: type,
               label: type,
-              value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${taxTotals[type].toFixed(2)}`,
+              value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(taxTotals[type], currencyCode || isCurrencySymbol)}`,
               summaryColumn: "right",
               emphasized: false,
             }));
@@ -1135,7 +1138,7 @@ const ProformaInvoiceForm = ({
                 {
                   key: "netAmount",
                   label: "Net Amount",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${enrichedData.net.toFixed(2)}`,
+                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(enrichedData.net, currencyCode || isCurrencySymbol)}`,
                   summaryColumn: "right",
                   emphasized: true,
                 },
@@ -1144,7 +1147,7 @@ const ProformaInvoiceForm = ({
                 {
                   key: "carriageCharge",
                   label: "Carraige Charges",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${carriageCharge}`,
+                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(carriageCharge || 0, currencyCode || isCurrencySymbol)}`,
                   summaryColumn: "right",
                   emphasized: true,
                 },
@@ -1212,6 +1215,7 @@ const ProformaInvoiceForm = ({
             taxTemplateId={taxTemplateId}
             id={id}
             isCurrencySymbol={isCurrencySymbol}
+            currencyCode={currencyCode}
             termsRef={termsRef}
             isCustomerExport={isCustomerExport}
             conversionType={conversionType}

@@ -5,7 +5,7 @@ import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService
 import { useGetGsmMasterQuery } from "../../../redux/services/GsmMasterService";
 import { useGetUomQuery } from "../../../redux/services/UomMasterService";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices";
-import { findFromList, getCommonParams } from "../../../Utils/helper";
+import { findFromList, getCommonParams, formatCurrencyAmount } from "../../../Utils/helper";
 import { VIEW } from "../../../icons";
 import Modal from "../../../UiComponents/Modal";
 import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
@@ -20,6 +20,7 @@ const ProformaInvoiceItems = ({
     taxTemplateId,
     id,
     isCurrencySymbol,
+    currencyCode,
     isCustomerExport,
     termsRef,
     conversionType,
@@ -177,6 +178,7 @@ const ProformaInvoiceItems = ({
                     isNewVersion={false}
                     onCloseFocus={handleFocusNextRow}
                     isSupplierOutside={isSupplierOutside}
+                    currencyCode={currencyCode || isCurrencySymbol}
                 />
             </Modal>
 
@@ -399,14 +401,14 @@ const ProformaInvoiceItems = ({
                                             </span>
                                         )} */}
                                         <input
-                                            type="number"
+                                            type={focusedField === `${index}` ? "number" : "text"}
                                             step="0.01"
                                             className="text-right  px-3 w-full table-data-input"
                                             value={
                                                 focusedField === `${index}`
                                                     ? item.price ?? ""
                                                     : item.price
-                                                        ? Number(item.price).toFixed(2)
+                                                        ? formatCurrencyAmount(item.price, currencyCode || isCurrencySymbol)
                                                         : ""
                                             }
                                             onChange={(e) => {
@@ -450,11 +452,11 @@ const ProformaInvoiceItems = ({
                                 </td>
                                 <td className="text-[11px] text-right  px-1 border border-gray-300 bg-gray-50 bg-transparent gap-x-2">
                                     <span className="pr-1">{isCurrencySymbol && item.styleItemId ? ` ${isCurrencySymbol}` : ""}</span>
-                                    {item.styleItemId ? (parseFloat(item.amount || 0).toFixed(2)) : ""}
+                                    {item.styleItemId ? formatCurrencyAmount(item.amount || 0, currencyCode || isCurrencySymbol) : ""}
                                 </td>
                                 <td className="text-[11px] text-right  px-1 border border-gray-300 bg-gray-50 bg-transparent gap-x-2">
                                     <span className="pr-1">{isCurrencySymbol && item.styleItemId ? ` ${isCurrencySymbol}` : ""}</span>
-                                    {item.styleItemId ? (parseFloat(enrichedItems?.items?.[index]?.totals?.net || 0).toFixed(2)) : ""}
+                                    {item.styleItemId ? formatCurrencyAmount(enrichedItems?.items?.[index]?.totals?.net || 0, currencyCode || isCurrencySymbol) : ""}
                                 </td>
                                 {
                                     !isCustomerExport && (
@@ -525,15 +527,13 @@ const ProformaInvoiceItems = ({
                             </td>
                             <td className="text-right px-1 border border-gray-300  text-black">
                                 {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
-                                {items
-                                    ?.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0)
-                                    .toFixed(2)}
+                                {formatCurrencyAmount(items
+                                    ?.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0), currencyCode || isCurrencySymbol)}
                             </td>
                             <td className="text-right px-1 border border-gray-300  text-black">
                                 {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
-                                {enrichedItems?.items
-                                    ?.reduce((sum, i) => sum + (parseFloat(i.totals?.net) || 0), 0)
-                                    .toFixed(2)}
+                                {formatCurrencyAmount(enrichedItems?.items
+                                    ?.reduce((sum, i) => sum + (parseFloat(i.totals?.net) || 0), 0), currencyCode || isCurrencySymbol)}
                             </td>
                             {
                                 !isCustomerExport && (
