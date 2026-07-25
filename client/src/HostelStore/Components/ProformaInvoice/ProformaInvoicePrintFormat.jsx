@@ -8,7 +8,7 @@ import {
 } from "@react-pdf/renderer";
 import Logo from "../../../assets/mplogo.png";
 import moment from "moment";
-import { findFromList } from "../../../Utils/helper";
+import { findFromList, formatCurrencyAmount } from "../../../Utils/helper";
 
 // ─── COLOR PALETTE ────────────────────────────────────────────────────────────
 const DARK = "#1a1a2e";
@@ -347,6 +347,7 @@ const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExpo
 
     const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
     const currencySymbol = findFromList(data?.currencyId, currencyList?.data, "symbol") || "";
+    const currencyCode = findFromList(data?.currencyId, currencyList?.data, "code") || "";
 
     const ROWS_PAGE_1 = isExport ? 11 : 13;
     const ROWS_PAGE_CONT = isExport ? 11 : 13;
@@ -561,14 +562,14 @@ const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExpo
                                             <Text style={[styles.td, { flex: 0.8 }]}>{row?.Uom?.name || ""}</Text>
                                             <Text style={[styles.td, { flex: 0.8, textAlign: "right" }]}>{row.qty ? parseFloat(row.qty).toFixed(3) : ""}</Text>
                                             <Text style={[styles.td, { flex: 0.8, textAlign: "right" }]}>{row.dozen ? parseFloat(row.dozen).toFixed(2) : ""}</Text>
-                                            <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>{row.price ? `${currencySymbol} ${parseFloat(row.price).toFixed(2)}` : ""}</Text>
+                                            <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>{row.price ? `${currencySymbol} ${formatCurrencyAmount(row.price, currencyCode || currencySymbol)}` : ""}</Text>
                                             {!isExport && (
                                                 <>
                                                     <Text style={[styles.td, { flex: 0.7, textAlign: "right" }]}>{taxPct ? `${taxPct}%` : ""}</Text>
                                                 </>
                                             )}
                                             <Text style={[styles.td, { flex: 1.2, textAlign: "right" }, isExport && { borderRight: "none" }]}>
-                                                {gross ? `${currencySymbol} ${gross.toFixed(2)}` : ""}
+                                                {gross ? `${currencySymbol} ${formatCurrencyAmount(gross, currencyCode || currencySymbol)}` : ""}
                                             </Text>
                                             {/* Tax % and Net Amount — domestic only */}
 
@@ -607,7 +608,7 @@ const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExpo
                                             </>
                                         )}
                                         <Text style={{ flex: 1.2, fontSize: 8, fontFamily: "Helvetica-Bold", color: DARK, textAlign: "right", paddingVertical: 4, paddingRight: 2, borderRight: !isExport ? `1 solid #bbbbc8` : "none" }}>
-                                            {currencySymbol} {totalGross.toFixed(2)}
+                                            {currencySymbol} {formatCurrencyAmount(totalGross, currencyCode || currencySymbol)}
                                         </Text>
 
                                     </View>
@@ -617,19 +618,19 @@ const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExpo
                                             <Text style={styles.taxHeader}>TAX DETAILS</Text>
                                             <View style={styles.taxRow}>
                                                 <Text style={styles.taxLabel}>Taxable Amt</Text>
-                                                <Text style={styles.taxValue}>{taxableTotal.toFixed(2)}</Text>
+                                                <Text style={styles.taxValue}>{formatCurrencyAmount(taxableTotal, currencyCode || currencySymbol)}</Text>
                                             </View>
                                             {taxSlabBreakup.map((slab) => (
                                                 <View key={slab.tax} style={styles.taxRow}>
                                                     <Text style={styles.taxLabel}>{slab.tax}</Text>
                                                     <Text style={styles.taxValue}>
-                                                        {parseFloat(slab.amount || 0).toFixed(2)}
+                                                        {formatCurrencyAmount(slab.amount || 0, currencyCode || currencySymbol)}
                                                     </Text>
                                                 </View>
                                             ))}
                                             <View style={styles.taxRowNet}>
                                                 <Text style={styles.taxLabelNet}>Net Amount</Text>
-                                                <Text style={styles.taxValueNet}>{netAmount.toFixed(2)}</Text>
+                                                <Text style={styles.taxValueNet}>{formatCurrencyAmount(netAmount, currencyCode || currencySymbol)}</Text>
                                             </View>
                                         </View>
                                     )}
@@ -669,12 +670,12 @@ const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExpo
 
                                                     <View style={styles.summaryRow}>
                                                         <Text style={styles.summaryLabel}>Gross Amount</Text>
-                                                        <Text style={styles.summaryValue}>{currencySymbol} {totalGross.toFixed(2)}</Text>
+                                                        <Text style={styles.summaryValue}>{currencySymbol} {formatCurrencyAmount(totalGross, currencyCode || currencySymbol)}</Text>
                                                     </View>
                                                     {isExport && carriageCharge > 0 && (
                                                         <View style={styles.summaryRow}>
                                                             <Text style={styles.summaryLabel}>Carriage & Air Freight</Text>
-                                                            <Text style={styles.summaryValue}>{currencySymbol} {carriageCharge.toFixed(2)}</Text>
+                                                            <Text style={styles.summaryValue}>{currencySymbol} {formatCurrencyAmount(carriageCharge, currencyCode || currencySymbol)}</Text>
                                                         </View>
                                                     )}
                                                     <View style={[styles.summaryRow, { backgroundColor: DARK, borderBottom: "none", borderRadius: 2 }]}>
@@ -682,7 +683,7 @@ const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExpo
                                                             {isExport ? "Grand Total" : "Net Amount"}
                                                         </Text>
                                                         <Text style={[styles.summaryValue, { color: "#fff" }]}>
-                                                            {currencySymbol} {isExport ? grandTotal.toFixed(2) : netAmount.toFixed(2)}
+                                                            {currencySymbol} {formatCurrencyAmount(isExport ? grandTotal : netAmount, currencyCode || currencySymbol)}
                                                         </Text>
                                                     </View>
                                                 </View>
@@ -732,7 +733,7 @@ const ProformaInvoicePrintFormat = ({ data, taxDetails, isCustomerExport: isExpo
                                         Sub Total (Continued on next page...)
                                     </Text>
                                     <Text style={{ flex: 1.2, fontSize: 8, fontFamily: "Helvetica-Bold", color: DARK, textAlign: "right", paddingVertical: 4, paddingRight: 3 }}>
-                                        {currencySymbol} {chunkRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0).toFixed(2)}
+                                        {currencySymbol} {formatCurrencyAmount(chunkRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0), currencyCode || currencySymbol)}
                                     </Text>
                                 </View>
                             )}
