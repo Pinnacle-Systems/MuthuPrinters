@@ -1582,7 +1582,10 @@ const JobCardForm = ({
                 ))}
               </div>
             </SectionCard>
-            <SectionCard title="Lamination Details " className="flex-1 flex flex-col">
+            <SectionCard
+              title="Lamination Details "
+              className="flex-1 flex flex-col"
+            >
               {laminationList?.length > 0 ? (
                 <>
                   <LVHeader />
@@ -1667,8 +1670,6 @@ const JobCardForm = ({
                     const sel = selectedPrinting.find(
                       (p) => p.processId === item.id,
                     );
-                    console.log(selectedPrinting, "selectedPrinting");
-
                     return (
                       <LVRow
                         key={item.id}

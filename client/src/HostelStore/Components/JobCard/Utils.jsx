@@ -140,5 +140,15 @@ export const toggleLV = (setter, pid) =>
   });
 export const toggleLVProp = (setter, pid, prop) =>
   setter((prev) =>
-    prev.map((l) => (l.processId === pid ? { ...l, [prop]: !l[prop] } : l)),
+    prev.map((l) => {
+      if (l.processId !== pid) return l;
+      const nextVal = !l[prop];
+      if (prop === "isFront" && nextVal) {
+        return { ...l, isFront: true, isFrontAndBack: false };
+      }
+      if (prop === "isFrontAndBack" && nextVal) {
+        return { ...l, isFrontAndBack: true, isFront: false };
+      }
+      return { ...l, [prop]: nextVal };
+    }),
   );

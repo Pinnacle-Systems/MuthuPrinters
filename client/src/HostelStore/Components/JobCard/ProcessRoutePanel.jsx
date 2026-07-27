@@ -43,7 +43,10 @@ const buildDesiredKeys = (
   }
 
   printingList.forEach((p) => {
-    if (selectedPrinting.includes(p.id)) keys.push(makeKey("printing", p.id));
+    const e = selectedPrinting.find((v) => v.processId === p.id);
+    if (!e) return;
+    const sub = e.isFrontAndBack ? "frontback" : e.isFront ? "front" : "";
+    keys.push(makeKey("printing", p.id, sub));
   });
 
   defaultList.forEach((p) => {
