@@ -319,7 +319,13 @@ const JobCardForm = ({
     ]);
 
     setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
-    setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
+    setSelectedPrinting(
+      data?.printingDetails?.map((p) => ({
+        processId: p.processId,
+        isFront: p.isFront,
+        isFrontAndBack: p.isFrontAndBack,
+      })) || [],
+    );
     setSelectedFinishing(
       data?.finishingProcesses?.map((f) => f.processId) || [],
     );
@@ -781,7 +787,13 @@ const JobCardForm = ({
       );
 
       setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
-      setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
+      setSelectedPrinting(
+        data?.printingDetails?.map((p) => ({
+          processId: p.processId,
+          isFront: p.isFront,
+          isFrontAndBack: p.isFrontAndBack,
+        })) || [],
+      );
       setSelectedFinishing(
         data?.finishingProcesses?.map((f) => f.processId) || [],
       );
@@ -1368,7 +1380,7 @@ const JobCardForm = ({
                           Machine Name
                         </th>
                         <th className="sticky top-0 z-20 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-32">
-                          Plate Name
+                          Plate Size
                         </th>
                         <th className="sticky top-0 z-20 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-40">
                           Description
@@ -1648,20 +1660,45 @@ const JobCardForm = ({
             </SectionCard>
 
             <SectionCard title="Printing Details">
-              <div className="grid grid-cols-2 gap-y-4">
-                {printingList?.map((item) => (
-                  <CheckBox
-                    key={item.id}
-                    name={item.name}
-                    value={selectedPrinting.includes(item.id)}
-                    setValue={() => toggleArr(setSelectedPrinting, item.id)}
-                    readOnly={readOnly}
-                    disabled={
-                      isDisabledPermission || isPrintingItemLocked(item.id)
-                    }
-                  />
-                ))}
-              </div>
+              {printingList?.length > 0 ? (
+                <>
+                  <LVHeader />
+                  {printingList.map((item) => {
+                    const sel = selectedPrinting.find(
+                      (p) => p.processId === item.id,
+                    );
+                    console.log(selectedPrinting, "selectedPrinting");
+
+                    return (
+                      <LVRow
+                        key={item.id}
+                        item={item}
+                        selected={sel}
+                        onMain={() => toggleLV(setSelectedPrinting, item.id)}
+                        onFront={() =>
+                          toggleLVProp(setSelectedPrinting, item.id, "isFront")
+                        }
+                        onFrontBack={() =>
+                          toggleLVProp(
+                            setSelectedPrinting,
+                            item.id,
+                            "isFrontAndBack",
+                          )
+                        }
+                        readOnly={
+                          readOnly ||
+                          isDisabledPermission ||
+                          isPrintingItemLocked(item.id)
+                        }
+                      />
+                    );
+                  })}
+                </>
+              ) : (
+                <p className="text-xs text-slate-400 italic">
+                  No printing options configured.
+                </p>
+              )}
             </SectionCard>
             <SectionCard title="Die Details" className="h-[220px]">
               <div className="grid grid-cols-3 gap-x-1 items-center">

@@ -1421,8 +1421,10 @@ async function create(body) {
           printingDetails: safeSelectedPrinting.length
             ? {
                 createMany: {
-                  data: safeSelectedPrinting.map((id) => ({
-                    processId: Number(id),
+                  data: safeSelectedPrinting.map((p) => ({
+                    processId: Number(p.processId),
+                    isFront: !!p.isFront,
+                    isFrontAndBack: !!p.isFrontAndBack,
                   })),
                 },
               }
@@ -2007,8 +2009,10 @@ async function update(id, body) {
           printingDetails: selectedPrinting.length
             ? {
                 createMany: {
-                  data: selectedPrinting.map((id) => ({
-                    processId: Number(id),
+                  data: selectedPrinting.map((p) => ({
+                    processId: Number(p.processId),
+                    isFront: !!p.isFront,
+                    isFrontAndBack: !!p.isFrontAndBack,
                   })),
                 },
               }
