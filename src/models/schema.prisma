@@ -2111,6 +2111,8 @@ model PrintingDetails {
   JobCard   JobCard? @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
   processId Int?
   Process   Process? @relation(fields: [processId], references: [id])
+  isFrontAndBack Boolean? @default(false)
+  isFront        Boolean? @default(false)
 }
 
 model PlateDetails {
