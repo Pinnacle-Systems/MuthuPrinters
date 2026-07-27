@@ -1239,7 +1239,7 @@ const JobCardForm = ({
   const gridItemsContent = (
     <div className="h-full overflow-auto">
       {itemType !== "LABEL" && (
-        <div className="grid grid-cols-4 gap-x-2 items-start w-full">
+        <div className="grid grid-cols-4 gap-x-2 items-stretch w-full">
           {/* COL span-2: Board + Printing + Plate */}
           <div className="flex flex-col gap-2 col-span-2">
             <SectionCard title="Board & Cutting Details" overflow={false}>
@@ -1302,7 +1302,7 @@ const JobCardForm = ({
               </div>
             </SectionCard>
 
-            <SectionCard title="Plate Details">
+            <SectionCard title="Plate Details" className="flex-1 flex flex-col">
               <div className="grid grid-cols-5 gap-x-3 items-center">
                 <div className="w-72 px-1">
                   <DropdownNew
@@ -1365,7 +1365,7 @@ const JobCardForm = ({
                 </div> */}
               </div>
 
-              <div className="mt-1 border border-slate-200 rounded-lg p-3 bg-white h-[250px] overflow-y-auto">
+              <div className="mt-1 border border-slate-200 rounded-lg p-3 bg-white flex-1 overflow-y-auto">
                 <h4 className="text-[13px] font-semibold text-slate-800 mb-2">
                   Plate Set Details
                 </h4>
@@ -1582,7 +1582,7 @@ const JobCardForm = ({
                 ))}
               </div>
             </SectionCard>
-            <SectionCard title="Lamination Details " className="h-[347px]">
+            <SectionCard title="Lamination Details " className="flex-1 flex flex-col">
               {laminationList?.length > 0 ? (
                 <>
                   <LVHeader />
@@ -1700,7 +1700,7 @@ const JobCardForm = ({
                 </p>
               )}
             </SectionCard>
-            <SectionCard title="Die Details" className="h-[220px]">
+            <SectionCard title="Die Details" className="flex-1 flex flex-col">
               <div className="grid grid-cols-3 gap-x-1 items-center">
                 <div className="col-span-2">
                   <Field label="Die Details">

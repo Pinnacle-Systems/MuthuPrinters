@@ -44,7 +44,7 @@ export const SectionCard = ({
         </h3>
       </div>
     )}
-    <div className="p-3">{children}</div>
+    <div className="p-3 flex-1 flex flex-col">{children}</div>
   </div>
 );
 
