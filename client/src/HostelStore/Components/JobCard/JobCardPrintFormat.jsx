@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   // ── META PILLS ──
   metaRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "flex-start",
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 4,
@@ -233,7 +233,6 @@ const styles = StyleSheet.create({
     border: "1 solid #ddd",
     borderRadius: 2,
     overflow: "hidden",
-    marginTop: 6,
   },
   breakupTh: {
     backgroundColor: "#1a1a2e",
@@ -436,8 +435,14 @@ const ProcessRouteVertical = ({
 
 // ── PLATE SET TABLE ───────────────────────────────────────────────────────────
 
-const PlateSetTable = ({ plateDetails = [] }) => {
-  const filtered = plateDetails.filter((p) => p.plateName || p.qty);
+const PlateSetTable = ({ plateDetails = [], plateList, machineList }) => {
+  const filtered = plateDetails.filter(
+    (p) =>
+      p.plateId ||
+      p.machineId ||
+      p.plateName ||
+      (p.qty !== "" && p.qty !== null && p.qty !== undefined),
+  );
   if (filtered.length === 0)
     return (
       <Text style={{ fontSize: 7.5, color: "#aaa", fontStyle: "italic" }}>
@@ -448,8 +453,10 @@ const PlateSetTable = ({ plateDetails = [] }) => {
     <View style={styles.plateTable}>
       <View style={styles.plateTh}>
         <Text style={[styles.plateThCell, { flex: 0.4 }]}>S.No</Text>
-        <Text style={[styles.plateThCell, { flex: 3 }]}>Plate Name</Text>
-        <Text style={[styles.plateThCell, { flex: 1, borderRight: "none" }]}>
+        <Text style={[styles.plateThCell, { flex: 1.5 }]}>Machine Name</Text>
+        <Text style={[styles.plateThCell, { flex: 1.5 }]}>Plate Size</Text>
+        <Text style={[styles.plateThCell, { flex: 2 }]}>Description</Text>
+        <Text style={[styles.plateThCell, { flex: 0.6, borderRight: "none" }]}>
           Qty
         </Text>
       </View>
@@ -461,16 +468,24 @@ const PlateSetTable = ({ plateDetails = [] }) => {
           <Text style={[styles.plateTd, { flex: 0.4, textAlign: "center" }]}>
             {idx + 1}
           </Text>
-          <Text style={[styles.plateTd, { flex: 3 }]}>
+          <Text style={[styles.plateTd, { flex: 1.5 }]}>
+            {findFromList(row.machineId, machineList?.data, "name") || "—"}
+          </Text>
+          <Text style={[styles.plateTd, { flex: 1.5 }]}>
+            {findFromList(row.plateId, plateList?.data, "name") || "—"}
+          </Text>
+          <Text style={[styles.plateTd, { flex: 2 }]}>
             {row.plateName || "—"}
           </Text>
           <Text
             style={[
               styles.plateTd,
-              { flex: 1, textAlign: "right", borderRight: "none" },
+              { flex: 0.6, textAlign: "right", borderRight: "none" },
             ]}
           >
-            {row.qty || ""}
+            {row.qty !== null && row.qty !== "" && row.qty !== undefined
+              ? row.qty
+              : "—"}
           </Text>
         </View>
       ))}
@@ -567,20 +582,27 @@ const resolveRouteSteps = (
   printingList = [],
   labelPrintingList = [],
   finishingList = [],
+  dieList = [],
+  dieId = null,
 ) => {
   const sorted = [...dbProcessRoute].sort((a, b) => a.sequence - b.sequence);
   return sorted.map((r) => {
-    const allLists = [
-      ...defaultList,
-      ...laminationList,
-      ...varnishList,
-      ...boardList,
-      ...printingList,
-      ...labelPrintingList,
-      ...finishingList,
-    ];
-    const found = allLists.find((p) => p.id === r.processId);
-    let name = found?.name || `#${r.processId}`;
+    let name = "";
+    if (r.type === "die") {
+      name = findFromList(dieId, dieList?.data, "name") || "Die Details";
+    } else {
+      const allLists = [
+        ...defaultList,
+        ...laminationList,
+        ...varnishList,
+        ...boardList,
+        ...printingList,
+        ...labelPrintingList,
+        ...finishingList,
+      ];
+      const found = allLists.find((p) => p.id === r.processId);
+      name = found?.name || `#${r.processId}`;
+    }
     if (r.isFront) name += " (Front)";
     else if (r.isFrontAndBack) name += " (F & B)";
     return { name, sequence: r.sequence };
@@ -644,6 +666,8 @@ const JobCardPrintFormat = ({
     labelSizeId,
     colorId,
     labelItemId,
+    lenght,
+    width,
   } = singleData;
 
   const isLabel = itemType === "LABEL";
@@ -656,6 +680,34 @@ const JobCardPrintFormat = ({
     singleData?.StyleItem?.name ||
     findFromList(styleItemId, styleItemList?.data, "name") ||
     "";
+
+  // Label calculations
+  const calculatedMeter = (() => {
+    if (lenght && orderQty) {
+      const lengthVal = parseFloat(lenght);
+      const qty = parseFloat(orderQty);
+      if (!isNaN(lengthVal) && !isNaN(qty)) {
+        return ((lengthVal * qty) / 1000).toFixed(3);
+      }
+    }
+    return "";
+  })();
+
+  const requiredRolls = (() => {
+    if (lenght && orderQty && totalMeter) {
+      const lengthVal = parseFloat(lenght);
+      const qty = parseFloat(orderQty);
+      const rMeter = parseFloat(totalMeter);
+      if (!isNaN(lengthVal) && !isNaN(qty) && !isNaN(rMeter) && rMeter > 0) {
+        const calcMeter = (lengthVal * qty) / 1000;
+        if (calcMeter > 0) {
+          return Math.ceil(calcMeter / rMeter);
+        }
+      }
+    }
+    return "";
+  })();
+
   const followUpName =
     employeeList?.data?.find((e) => e.id === followUpId)?.name || "";
   const designerName =
@@ -683,11 +735,8 @@ const JobCardPrintFormat = ({
     printingList || [], // printingList — pass if available
     labelPrintingList || [],
     finishingList || [],
-  );
-
-  // Plate set details filtered
-  const filteredPlateDetails = (plateDetails || []).filter(
-    (p) => p.plateName || p.qty,
+    dieList || [],
+    dieId,
   );
 
   const BoardDetailsGrid = ({
@@ -710,7 +759,7 @@ const JobCardPrintFormat = ({
               </Text>
               <Text style={[styles.breakupThCell, { flex: 1 }]}>GSM</Text>
               <Text style={[styles.breakupThCell, { flex: 1.5 }]}>
-                Full Board
+                Board Size
               </Text>
               <Text
                 style={[styles.breakupThCell, { flex: 1, borderRight: "none" }]}
@@ -730,13 +779,19 @@ const JobCardPrintFormat = ({
                 >
                   {idx + 1}
                 </Text>
-                <Text style={[styles.breakupTd, { flex: 2 }]}>
+                <Text
+                  style={[styles.breakupTd, { flex: 2, textAlign: "left" }]}
+                >
                   {findFromList(row.processId, boardList, "name") || "—"}
                 </Text>
-                <Text style={[styles.breakupTd, { flex: 1 }]}>
+                <Text
+                  style={[styles.breakupTd, { flex: 1, textAlign: "right" }]}
+                >
                   {findFromList(row.gsmId, gsmList?.data, "name") || "—"}
                 </Text>
-                <Text style={[styles.breakupTd, { flex: 1.5 }]}>
+                <Text
+                  style={[styles.breakupTd, { flex: 1.5, textAlign: "left" }]}
+                >
                   {findFromList(row.fullBoardId, sizeList?.data, "name") || "—"}
                 </Text>
                 <Text
@@ -920,7 +975,7 @@ const JobCardPrintFormat = ({
                   <SpecField label="Cutting Size" value={cuttingSizeName} />
                   <SpecField label="Split Type" value={splitType || "—"} />
                   <SpecField label="Running Qty" value={runningQty || "—"} />
-                  <SpecField
+                  {/* <SpecField
                     label="Plate Details"
                     value={findFromList(plateId, plateList?.data, "name")}
                   />
@@ -931,7 +986,7 @@ const JobCardPrintFormat = ({
                   <SpecField
                     label="Total Plate Sets"
                     value={totalPlatesets || "—"}
-                  />
+                  /> */}
                 </View>
               </View>
             </View>
@@ -948,7 +1003,7 @@ const JobCardPrintFormat = ({
               {/* Size Details */}
               <View
                 style={{
-                  flex: 1,
+                  flex: 0.7,
                   border: "1 solid #ddd",
                   borderRadius: 3,
                   overflow: "hidden",
@@ -981,7 +1036,7 @@ const JobCardPrintFormat = ({
               {/* Plate Set Details */}
               <View
                 style={{
-                  flex: 1,
+                  flex: 1.3,
                   border: "1 solid #ddd",
                   borderRadius: 3,
                   overflow: "hidden",
@@ -991,7 +1046,11 @@ const JobCardPrintFormat = ({
                   PLATE SET DETAILS
                 </Text>
                 <View style={styles.sectionContent}>
-                  <PlateSetTable plateDetails={plateDetails || []} />
+                  <PlateSetTable
+                    plateDetails={plateDetails || []}
+                    plateList={plateList}
+                    machineList={machineList}
+                  />
                 </View>
               </View>
             </View>
@@ -1033,18 +1092,15 @@ const JobCardPrintFormat = ({
                 <Text style={styles.sectionHeader}>LABEL DETAILS</Text>
                 <View style={styles.sectionBody}>
                   {[
-                    {
-                      label: "Label Quality",
-                      value: labelItem,
-                    },
+                    { label: "Label Quality", value: labelItem },
                     { label: "Label Size", value: labelSizeName },
                     { label: "Label Color", value: labelColorName },
-                    // {
-                    //   label: "Label Qty",
-                    //   value: orderQty ? Number(orderQty) : "",
-                    // },
+                    { label: "Roll Meter (Per Roll)", value: totalMeter ? Number(totalMeter).toFixed(3) : "" },
+                    { label: "Length (MM)", value: lenght },
+                    { label: "Width (MM)", value: width },
+                    { label: "Calculated Meter", value: calculatedMeter },
+                    { label: "Required Rolls", value: requiredRolls },
                     { label: "Roll Qty", value: rollQty },
-                    { label: "Total Meter", value: totalMeter },
                     { label: "Block", value: block },
                   ].map(({ label, value }) => (
                     <View key={label} style={styles.labelFieldRow}>
