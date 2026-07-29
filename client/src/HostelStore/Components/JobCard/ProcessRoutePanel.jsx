@@ -29,8 +29,13 @@ const buildDesiredKeys = (
   labelPrintingList,
   finishingList,
   selectedLabelPrinting,
+  dieId,
 ) => {
   const keys = [];
+
+  if (dieId) {
+    keys.push(makeKey("die", dieId));
+  }
 
   boardList.forEach((p) => {
     if (boardItems.includes(p.id)) {
@@ -91,6 +96,7 @@ const resolveLabel = (
   printingList = [],
   labelPrintingList = [],
   finishingList = [],
+  dieList = [],
 ) => {
   const { type, id, sub } = parseKey(key);
   const find = (list) => list.find((p) => p.id === id)?.name || `#${id}`;
@@ -104,6 +110,7 @@ const resolveLabel = (
   else if (type === "varnish") name = find(varnishList);
   else if (type === "labelPrinting") name = find(labelPrintingList);
   else if (type === "finishing") name = find(finishingList);
+  else if (type === "die") name = find(dieList);
   if (sub === "front") return `${name} (Front)`;
   if (sub === "frontback") return `${name} (F & B)`;
   return name;
@@ -158,6 +165,8 @@ export const ProcessRoutePanel = ({
   selectedLabelPrinting = [],
   labelPrintingList = [],
   finishingList = [],
+  dieId,
+  dieList = [],
   setProcessRoute,
   readOnly = false,
   isAmendment,
@@ -189,6 +198,7 @@ export const ProcessRoutePanel = ({
       labelPrintingList,
       finishingList,
       selectedLabelPrinting,
+      dieId,
     );
     setProcessRoute((prev) => {
       const kept = prev.filter((k) => desired.includes(k));
@@ -205,6 +215,7 @@ export const ProcessRoutePanel = ({
     selectedPrinting,
     selectedFinishing,
     selectedLabelPrinting,
+    dieId,
   ]);
 
   return (
@@ -260,6 +271,7 @@ export const ProcessRoutePanel = ({
                   printingList,
                   labelPrintingList,
                   finishingList,
+                  dieList,
                 );
                 const isLast = idx === processRoute.length - 1;
 
@@ -335,7 +347,7 @@ export const routeKeysToDb = (processRoute) =>
     const { type, id, sub } = parseKey(key);
     return {
       type,
-      processId: id,
+      processId: type === "die" ? null : id,
       sequence: idx + 1,
       isFront: sub === "front",
       isFrontAndBack: sub === "frontback",

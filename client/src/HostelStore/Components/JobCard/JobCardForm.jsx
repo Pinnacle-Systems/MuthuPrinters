@@ -360,7 +360,8 @@ const JobCardForm = ({
                 : r.isFrontAndBack
                   ? "frontback"
                   : "";
-              return `${r.type}:${r.processId}${sub ? `:${sub}` : ""}`;
+              const pid = r.type === "die" ? data?.dieId : r.processId;
+              return `${r.type}:${pid}${sub ? `:${sub}` : ""}`;
             })
         : [],
     );
@@ -613,7 +614,7 @@ const JobCardForm = ({
           d.boardQualities
             ?.filter((r) => r.processId)
             ?.some((r) => !r.fullBoardId),
-        title: "Select Full Board!",
+        title: "Select Board Size!",
       },
       {
         condition:
@@ -827,7 +828,8 @@ const JobCardForm = ({
                   : r.isFrontAndBack
                     ? "frontback"
                     : "";
-                return `${r.type}:${r.processId}${sub ? `:${sub}` : ""}`;
+                const pid = r.type === "die" ? data?.dieId : r.processId;
+                return `${r.type}:${pid}${sub ? `:${sub}` : ""}`;
               })
           : [],
       );
@@ -1777,7 +1779,7 @@ const JobCardForm = ({
       )}
 
       {itemType === "LABEL" && (
-        <div className="grid grid-cols-3 items-start gap-x-2 w-full h-full">
+        <div className="grid grid-cols-3 gap-x-2 w-full h-full">
           <div className="h-full">
             <SectionCard title="Label Details" className=" h-full">
               <div className="flex gap-16">
@@ -1987,18 +1989,18 @@ const JobCardForm = ({
                       beforeChange={() => setBlockDate(null)}
                     />
                   </div>
-                  {block === "OLD" && (
-                    <div>
-                      <DateInputNew
-                        name="Block Date"
-                        value={blockDate}
-                        setValue={setBlockDate}
-                        disabled={readOnly || isDisabledPermission}
-                        required={false}
-                        type="date"
-                      />
-                    </div>
-                  )}
+                  {/* {block === "OLD" && ( */}
+                  <div>
+                    <DateInputNew
+                      name="Block Date"
+                      value={blockDate}
+                      setValue={setBlockDate}
+                      disabled={readOnly || isDisabledPermission}
+                      required={false}
+                      type="date"
+                    />
+                  </div>
+                  {/* )} */}
                 </div>
               </div>
             </SectionCard>
@@ -2121,6 +2123,8 @@ const JobCardForm = ({
             isAmendment={isAmendment}
             setIsAmendment={setIsAmendment}
             dbProcessRoute={dbProcessRoute}
+            dieId={dieId}
+            dieList={dieList?.data || []}
           />
         </div>
         <div className="border border-slate-200 p-1 bg-white rounded-md shadow-sm w-1/4">

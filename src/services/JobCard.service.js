@@ -1492,7 +1492,7 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safeProcessRoute.map((r, idx) => ({
-                    processId: Number(r.processId),
+                    processId: r.processId ? Number(r.processId) : null,
                     type: r.type,
                     sequence: idx + 1,
                     isFront: !!r.isFront,
@@ -1846,7 +1846,7 @@ async function update(id, body) {
               const r = incomingKeyToRoute[k];
               return {
                 jobCardId: parseInt(id),
-                processId: Number(r.processId),
+                processId: r.processId ? Number(r.processId) : null,
                 type: r.type,
                 sequence: r.sequence,
                 isFront: Boolean(r.isFront),
