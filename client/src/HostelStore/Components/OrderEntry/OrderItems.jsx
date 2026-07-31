@@ -4,6 +4,11 @@ import { ItemGroup, Size, StyleItemMaster } from "..";
 import { findFromList } from "../../../Utils/helper";
 import { Plus } from "lucide-react";
 import { ItemSubGroupMaster } from "../../../Basic/components";
+import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
+import Swal from "sweetalert2";
+import { formatCurrencyAmount } from "../../../Utils/helper";
+import Modal from "../../../UiComponents/Modal";
+import { VIEW } from "../../../icons";
 
 import { DEFAULT_ROW_COUNT, EMPTY_SIZE_ROW, makeEmptyRow, padRows } from "./OrderItemsUtils";
 
@@ -20,8 +25,15 @@ const OrderItems = ({
   hsnList,
   childRecord,
   itemSubGroupList,
+  enrichedItems,
+  taxTemplateId,
+  conversionType,
+  isSupplierOutside,
+  orderType,
 }) => {
   const [contextMenu, setContextMenu] = useState(null);
+  const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
+  const [focusedField, setFocusedField] = useState(null);
 
   /* ── Pad rows whenever orderItems arrives with fewer than DEFAULT_ROW_COUNT ── */
   useEffect(() => {
@@ -61,6 +73,21 @@ const OrderItems = ({
           };
         }
       }
+      
+      if (field === "price" || field === "orderQty" || field === "dozen") {
+          const qty = field === "orderQty" ? value : row.orderQty;
+          const price = field === "price" ? value : row.price;
+          const dozen = field === "dozen" ? value : (qty / 12);
+          if (field !== "dozen") {
+            row.dozen = dozen ? Number(dozen).toFixed(2) : "";
+          }
+          if (conversionType === "DOZEN") {
+              row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
+          } else {
+              row.amount = qty && price ? (qty * price).toFixed(2) : "";
+          }
+      }
+
       rows[index] = row;
       return rows;
     });
@@ -72,10 +99,34 @@ const OrderItems = ({
       const rows = [...prev];
       const row = { ...rows[rowIndex] };
       const breakup = [...(row.sizeBreakup || [])];
+      
+      if (field === "qty") {
+        const newValue = Number(value) || 0;
+        const currentSum = breakup.reduce((s, i, idx) => s + (idx === sizeIndex ? newValue : (Number(i.qty) || 0)), 0);
+        
+        if (orderType === "AGAINSTPI" && row.piQty !== undefined && currentSum > row.piQty) {
+           Swal.fire({
+              icon: "warning",
+              title: "Quantity Exceeded",
+              text: `Sum of size quantities (${currentSum}) cannot exceed PI quantity (${row.piQty}).`
+           });
+           return prev;
+        }
+      }
+      
       breakup[sizeIndex] = { ...breakup[sizeIndex], [field]: value };
       row.sizeBreakup = breakup;
       if (field === "qty") {
-        row.orderQty = breakup.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+        const orderQty = breakup.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+        row.orderQty = orderQty;
+        const price = row.price;
+        const dozen = orderQty / 12;
+        row.dozen = dozen ? dozen.toFixed(2) : "";
+        if (conversionType === "DOZEN") {
+            row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
+        } else {
+            row.amount = orderQty && price ? (orderQty * price).toFixed(2) : "";
+        }
       }
       rows[rowIndex] = row;
       return rows;
@@ -115,6 +166,25 @@ const OrderItems = ({
   /* ── render ── */
   return (
     <>
+            <Modal
+                isOpen={Number.isInteger(currentSelectedIndex)}
+                onClose={() => {
+                    setCurrentSelectedIndex("");
+                }}
+            >
+                <TaxDetailsFullTemplate
+                    readOnly={readOnly}
+                    taxTypeId={taxTemplateId}
+                    currentIndex={currentSelectedIndex}
+                    setCurrentSelectedIndex={setCurrentSelectedIndex}
+                    poItems={enrichedItems?.items || orderItems}
+                    handleInputChange={handleInputChange}
+                    id={id}
+                    isNewVersion={false}
+                    isSupplierOutside={isSupplierOutside}
+                    currencyCode={""}
+                />
+            </Modal>
       <div className="w-full h-full overflow-y-auto bg-white">
         <table className="table-fixed min-h-full bg-white border-collapse">
           <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10 text-[12px]">
@@ -142,6 +212,21 @@ const OrderItems = ({
               </th>
               <th className="w-32 px-2 py-2 text-center font-medium border border-gray-300 ">
                 Label Width
+              </th>
+              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                  Dozen
+              </th>
+              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                  Price<span className="text-red-500">*</span>
+              </th>
+              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                  Gross
+              </th>
+              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                  Net Amount
+              </th>
+              <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
+                  Tax
               </th>
               {/* Actions column — header label only, no button */}
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
@@ -178,7 +263,7 @@ const OrderItems = ({
                   key={`${index}-${sizeIndex}`}
                   className={`${rowBg} border-b border-gray-200 h-7 cursor-pointer`}
                   onContextMenu={(e) => {
-                    if (!readOnly && sizeIndex === 0)
+                    if (!readOnly && orderType !== "AGAINSTPI" && sizeIndex === 0)
                       handleRightClick(e, index);
                   }}
                 >
@@ -203,7 +288,7 @@ const OrderItems = ({
                           options={(itemGroupList?.data || [])
                             .filter((i) => (id ? true : i.active))
                             .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly || childRecord?.current > 0}
+                          readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
                           placeholder=""
                           onBlur={() =>
                             handleInputChange(
@@ -238,7 +323,7 @@ const OrderItems = ({
                                 i.itemGroupId === row.itemGroupId,
                             )
                             .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly || childRecord?.current > 0}
+                          readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
                           placeholder=""
                           onBlur={() =>
                             handleInputChange(
@@ -276,7 +361,7 @@ const OrderItems = ({
                                   : true),
                             )
                             .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly || childRecord?.current > 0}
+                          readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
                           placeholder=""
                           onBlur={() =>
                             handleInputChange(
@@ -333,14 +418,107 @@ const OrderItems = ({
                             )
                           }
                           className="w-full text-left px-1 bg-transparent text-[11px] outline-none focus:bg-white"
+                          readOnly={orderType === "AGAINSTPI"}
                         />
+                      </td>
+                      <td
+                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium"
+                        rowSpan={rowSpan}
+                      >
+                        <input
+                            type="number"
+                            className="text-right px-1 w-full table-data-input outline-none bg-transparent focus:bg-white"
+                            value={
+                                focusedField === `dozen-${index}`
+                                    ? (row?.dozen ?? "")
+                                    : row?.dozen
+                                        ? Number(row.dozen).toFixed(2)
+                                        : ""
+                            }
+                            onChange={(e) => handleInputChange(e.target.value, index, "dozen")}
+                            onFocus={(e) => {
+                                e.target.select();
+                                setFocusedField(`dozen-${index}`);
+                            }}
+                            onBlur={(e) => {
+                                const val = e.target.value;
+                                handleInputChange(val ? Number(val).toFixed(2) : "", index, "dozen");
+                                setFocusedField(null);
+                            }}
+                            disabled={true}
+                        />
+                      </td>
+                      <td
+                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium"
+                        rowSpan={rowSpan}
+                      >
+                        <input
+                            type={focusedField === `price-${index}` ? "number" : "text"}
+                            step="0.01"
+                            className="text-right px-1 w-full table-data-input outline-none bg-transparent focus:bg-white"
+                            value={
+                                focusedField === `price-${index}`
+                                    ? row.price ?? ""
+                                    : row.price
+                                        ? formatCurrencyAmount(row.price, "")
+                                        : ""
+                            }
+                            onChange={(e) => {
+                                handleInputChange(e.target.value === "" ? "" : e.target.value, index, "price");
+                            }}
+                            readOnly={readOnly || orderType === "AGAINSTPI"}
+                            onFocus={(e) => {
+                                e.target.select();
+                                setFocusedField(`price-${index}`);
+                            }}
+                            onBlur={(e) => {
+                                const num = parseFloat(e.target.value);
+                                handleInputChange(num ? Number(num).toFixed(2) : "", index, "price");
+                                setFocusedField(null);
+                            }}
+                        />
+                      </td>
+                      <td
+                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium"
+                        rowSpan={rowSpan}
+                      >
+                        {row.styleItemId ? formatCurrencyAmount(row.amount || 0, "") : ""}
+                      </td>
+                      <td
+                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium"
+                        rowSpan={rowSpan}
+                      >
+                        {row.styleItemId ? formatCurrencyAmount(enrichedItems?.items?.[index]?.totals?.net || 0, "") : ""}
+                      </td>
+                      <td
+                        className="text-[11px] border border-gray-300 text-center items-center pt-2 font-medium"
+                        rowSpan={rowSpan}
+                      >
+                        <button
+                            disabled={!row.styleItemId}
+                            className="text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
+                            onClick={() => {
+                                if (!taxTemplateId) {
+                                    return Swal.fire({
+                                        title: "Information",
+                                        text: "Please select Tax Type",
+                                        icon: "info",
+                                        confirmButtonColor: "#3085d6",
+                                    });
+                                }
+                                setCurrentSelectedIndex(index);
+                            }}
+                            type="button"
+                        >
+                            {VIEW}
+                        </button>
                       </td>
                       {/* Per-row: Add only (no delete in cell) */}
                       <td
                         className="w-12 border border-gray-300 align-top pt-1 bg-gray-50"
                         rowSpan={rowSpan}
                       >
-                        {!readOnly && (
+                        {!readOnly && orderType !== "AGAINSTPI" && (
                           <div className="flex items-center justify-center">
                             <button
                               onClick={addMainRow}
@@ -466,6 +644,17 @@ const OrderItems = ({
               </td>
               <td className="text-right border border-gray-300 px-1 font-medium">
                 {orderItems?.reduce((s, r) => s + (Number(r.orderQty) || 0), 0)}
+              </td>
+              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+              <td className="text-right border border-gray-300 px-1 font-medium">
+                {orderItems?.reduce((s, r) => s + (Number(r.dozen) || 0), 0).toFixed(2)}
+              </td>
+              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+              <td className="text-right border border-gray-300 px-1 font-medium">
+                {formatCurrencyAmount(orderItems?.reduce((s, r) => s + (Number(r.amount) || 0), 0), "")}
+              </td>
+              <td className="text-right border border-gray-300 px-1 font-medium">
+                {formatCurrencyAmount(enrichedItems?.items?.reduce((s, r) => s + (Number(r.totals?.net) || 0), 0), "")}
               </td>
               <td className="border border-gray-300 bg-gray-50" colSpan={2} />
               <td

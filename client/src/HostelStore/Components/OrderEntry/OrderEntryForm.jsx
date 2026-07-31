@@ -10,10 +10,11 @@ import {
   TextInput,
 } from "../../../Inputs";
 import { orderTypes, productionTypes } from "../../../Utils/DropdownData";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
 import {
   findFromList,
+  formatCurrencyAmount,
   getCommonParams,
   ModeChip,
   renameFile,
@@ -61,6 +62,10 @@ import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.
 import { useDispatch } from "react-redux";
 import JobCardApi from "../../../redux/uniformService/JobCardService.js";
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
+import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
+import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
+import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
+
 const OrderEntryForm = ({
   onClose,
   id,
@@ -107,6 +112,11 @@ const OrderEntryForm = ({
   const [refNo, setRefNo] = useState("");
   const [isRepeatedPI, setIsRepeatedPI] = useState(false);
   const [validDays, setValidDays] = useState("");
+  const [taxTemplateId, setTaxTemplateId] = useState("");
+  const [discountType, setDiscountType] = useState("Percentage");
+  const [discountValue, setDiscountValue] = useState(0);
+  const [conversionType, setConversionType] = useState("DOZEN");
+
   const dispatch = useDispatch();
   const qrRef = useRef(null);
   const customerRef = useRef(null);
@@ -140,6 +150,12 @@ const OrderEntryForm = ({
     params: { companyId },
   });
   const { data: hsnList } = useGetHsnMasterQuery({ params });
+  const { data: taxTypeList } = useGetTaxTemplateQuery({
+    params: { companyId },
+  });
+  const { data: supplierData } = useGetPartyByIdQuery(customerId, {
+    skip: !customerId,
+  });
   const { data: refList } = useGetRefListQuery({
     params: { branchId, isRefDistinct: "true" },
   });
@@ -183,6 +199,10 @@ const OrderEntryForm = ({
       setRefNo(data?.refNo || "");
       setIsRepeatedPI(data?.isRepeatedPI || false);
       setValidDays(data?.validDays ? data?.validDays : "");
+      setTaxTemplateId(data?.taxTemplateId || "");
+      setDiscountType(data?.discountType || "Percentage");
+      setDiscountValue(data?.discountValue || 0);
+      setConversionType(data?.conversionType || "DOZEN");
     },
     [id],
   );
@@ -218,6 +238,10 @@ const OrderEntryForm = ({
     refNo,
     isRepeatedPI,
     validDays,
+    taxTemplateId,
+    discountType,
+    discountValue,
+    conversionType,
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -599,8 +623,44 @@ const OrderEntryForm = ({
   //     if (!id) {
   //         setOrderItems(fillWithDefaultRows([]));
   //     }
-  // }, [id]);
   const fillWithDefaultRows = (items = []) => padRows(items);
+
+  const isSupplierOutside = useMemo(() => {
+    return supplierData?.data?.City?.state?.name !== "TAMILNADU";
+  }, [supplierData]);
+
+  const enrichedData = useMemo(() => {
+    const filteredItems = orderItems
+      .filter((i) => i.styleItemId)
+      .map((i) => ({
+        ...i,
+        qty: i.orderQty,
+      }));
+    if (!filteredItems.length)
+      return {
+        items: [],
+        gross: 0,
+        taxable: 0,
+        net: 0,
+        slabBreakup: [],
+        roundOff: 0,
+      };
+
+    return calculateTaxWithHSNBreakupAndInsertIntoPoItems(
+      filteredItems,
+      isSupplierOutside,
+      discountType,
+      discountValue,
+      conversionType === "DOZEN" ? true : false,
+    );
+  }, [
+    orderItems,
+    isSupplierOutside,
+    discountType,
+    discountValue,
+    conversionType,
+  ]);
+
   return (
     <>
       <Modal
@@ -1133,6 +1193,22 @@ const OrderEntryForm = ({
                       {
                         console.log("res", res);
                       }
+
+                      setTaxTemplateId(res?.data?.taxTemplateId || "");
+                      setDiscountType(res?.data?.discountType || "Percentage");
+                      setDiscountValue(res?.data?.discountValue || 0);
+                      setConversionType(res?.data?.conversionType || "DOZEN");
+                      if (res?.data?.termsId) setTermsId(res.data.termsId);
+                      if (res?.data?.termsAndCondition)
+                        setTermsAndCondition(res.data.termsAndCondition);
+                      if (res?.data?.deliveryDate)
+                        setDeliveryDate(
+                          moment
+                            .utc(res.data.deliveryDate)
+                            .format("YYYY-MM-DD"),
+                        );
+                      if (res?.data?.remarks) setRemarks(res.data.remarks);
+
                       const mappedItems =
                         Object.values(
                           (res?.data?.items || []).reduce((acc, item) => {
@@ -1152,10 +1228,14 @@ const OrderEntryForm = ({
                           .map((item) => ({
                             styleItemId: item.styleItemId,
                             orderQty: item.qty || "",
+                            piQty: Number(item.qty) || 0,
                             sizeId: item.sizeId || "",
                             uomId: item.uomId || "",
                             gsmId: item.gsmId || "",
                             hsnId: item.hsnId || "",
+                            price: item.price || "",
+                            amount: item.amount || "",
+                            dozen: item.dozen || "",
                             sizeBreakup: [],
                             itemGroupId: item.StyleItem?.itemGroupId,
                             itemSubGroupId: item.StyleItem?.itemSubGroupId,
@@ -1239,6 +1319,20 @@ const OrderEntryForm = ({
                     className="text-[11px] font-medium"
                   />
                 </div>
+                <div className="col-span-1">
+                  <DropdownInput
+                    name="Tax Type"
+                    options={dropDownListObject(
+                      taxTypeList ? taxTypeList?.data : [],
+                      "name",
+                      "id",
+                    )}
+                    value={taxTemplateId}
+                    setValue={setTaxTemplateId}
+                    required={false}
+                    readOnly={readOnly}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -1261,6 +1355,11 @@ const OrderEntryForm = ({
             requirementRef={requirementRef}
             childRecord={childRecord}
             itemSubGroupList={itemSubGroupList}
+            enrichedItems={enrichedData}
+            taxTemplateId={taxTemplateId}
+            conversionType={conversionType}
+            isSupplierOutside={isSupplierOutside}
+            orderType={orderType}
           />
         }
         footer={
@@ -1301,6 +1400,37 @@ const OrderEntryForm = ({
                     }, 0)
                     .toFixed(2),
                   summaryColumn: "left",
+                },
+                {
+                  key: "grossAmount",
+                  label: "Gross Amount",
+                  value: `${formatCurrencyAmount(enrichedData.gross, "")}`,
+                  summaryColumn: "right",
+                  emphasized: true,
+                },
+                ...(() => {
+                  const taxTotals = (enrichedData.slabBreakup || []).reduce(
+                    (acc, curr) => {
+                      const type = curr.tax.split(" ")[0];
+                      acc[type] = (acc[type] || 0) + curr.amount;
+                      return acc;
+                    },
+                    {},
+                  );
+                  return Object.keys(taxTotals).map((type) => ({
+                    key: type,
+                    label: type,
+                    value: `${formatCurrencyAmount(taxTotals[type], "")}`,
+                    summaryColumn: "right",
+                    emphasized: false,
+                  }));
+                })(),
+                {
+                  key: "netAmount",
+                  label: "Net Amount",
+                  value: `${formatCurrencyAmount(enrichedData.net, "")}`,
+                  summaryColumn: "right",
+                  emphasized: true,
                 },
               ]}
             />

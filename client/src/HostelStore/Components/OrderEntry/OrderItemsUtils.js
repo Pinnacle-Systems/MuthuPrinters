@@ -11,6 +11,9 @@ export const makeEmptyRow = () => ({
   type: "",
   sizeBreakup: [EMPTY_SIZE_ROW()], // 1 size row by default
   trackingType: "None",
+  price: "",
+  amount: "",
+  dozen: "",
 });
 
 // Call this in parent wherever you build orderItems before setOrderItems
