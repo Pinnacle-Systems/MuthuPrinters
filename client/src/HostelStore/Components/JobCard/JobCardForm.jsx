@@ -190,6 +190,8 @@ const JobCardForm = ({
   const [width, setWidth] = useState("");
   const [meter, setMeter] = useState("");
   const [colorId, setColorId] = useState("");
+  const [isOldPlate, setIsOldPlate] = useState(false);
+  const [isNewPlate, setIsNewPlate] = useState(false);
   const [triggerGetBoardQty] = useLazyGetBoardQtyQuery();
 
   const { data: processList } = useGetProcessMasterQuery({ params });
@@ -399,6 +401,8 @@ const JobCardForm = ({
     while (paddedPlates.length < 6)
       paddedPlates.push({ plateName: "", qty: "" });
     setPlateDetails(paddedPlates);
+    setIsNewPlate(data?.isNewPlate);
+    setIsOldPlate(data?.isOldPlate);
     childRecord.current = data?.childRecord ? data?.childRecord : 0;
   }, []);
 
@@ -502,6 +506,8 @@ const JobCardForm = ({
     lenght,
     width,
     meter,
+    isNewPlate,
+    isOldPlate,
   };
 
   const openPrintModal = async (overrideId, overrideDocId) => {
@@ -1365,6 +1371,26 @@ const JobCardForm = ({
                     View Size Details
                   </button>
                 </div> */}
+                <CheckBox
+                  name="Old Plate"
+                  value={isOldPlate}
+                  setValue={(val) => {
+                    setIsOldPlate(val);
+                    if (val) setIsNewPlate(false);
+                  }}
+                  readOnly={readOnly}
+                  disabled={isDisabledPermission}
+                />
+                <CheckBox
+                  name="New Plate"
+                  value={isNewPlate}
+                  setValue={(val) => {
+                    setIsNewPlate(val);
+                    if (val) setIsOldPlate(false);
+                  }}
+                  readOnly={readOnly}
+                  disabled={isDisabledPermission}
+                />
               </div>
 
               <div className="mt-1 border border-slate-200 rounded-lg p-3 bg-white flex-1 overflow-y-auto">

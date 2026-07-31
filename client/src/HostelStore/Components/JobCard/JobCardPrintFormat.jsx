@@ -17,6 +17,7 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica",
     fontSize: 8,
     padding: 0,
+    paddingBottom: 20,
     backgroundColor: "#fff",
   },
   topBar: { height: 4, backgroundColor: "#1a1a2e" },
@@ -220,10 +221,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#1a1a2e",
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    paddingVertical: 5,
     paddingHorizontal: 20,
-    paddingVertical: 4,
-    marginTop: 8,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   footerLeft: { fontSize: 7, color: "rgba(255,255,255,0.5)" },
   footerRight: { fontSize: 7, color: "rgba(255,255,255,0.5)" },
@@ -557,15 +560,6 @@ const FooterBlock = ({ remarks, branchName }) => (
       </View>
     </View>
 
-    <View style={styles.footerBar}>
-      <Text style={styles.footerLeft}></Text>
-      <Text
-        style={styles.footerRight}
-        render={({ pageNumber, totalPages }) =>
-          `Page ${pageNumber} / ${totalPages}`
-        }
-      />
-    </View>
   </>
 );
 
@@ -668,11 +662,20 @@ const JobCardPrintFormat = ({
     labelItemId,
     lenght,
     width,
+    plateSupplierId,
+    isOldPlate,
+    isNewPlate,
+    dieMethod,
+    dieDescription,
   } = singleData;
 
   const isLabel = itemType === "LABEL";
 
   const customer = customerList?.data?.find((c) => c.id === customerId);
+  const plateSupplier = customerList?.data?.find((c) => c.id === plateSupplierId);
+  const plateSupplierName = plateSupplier?.name || "N/A";
+  const die = dieList?.data?.find((d) => d.id === dieId);
+  const dieName = die?.name || "N/A";
   const orderEntry = orderList?.data?.find(
     (o) => o.id === singleData?.orderEntryId,
   );
@@ -1042,9 +1045,28 @@ const JobCardPrintFormat = ({
                   overflow: "hidden",
                 }}
               >
-                <Text style={{ paddingLeft: 5, marginTop: 2 }}>
-                  PLATE SET DETAILS
-                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    paddingLeft: 5,
+                    paddingRight: 5,
+                    marginTop: 2,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ fontSize: 9, fontWeight: "bold", flex: 1 }}>PLATE SET DETAILS</Text>
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <Text style={{ fontSize: 7.5 }}>
+                      <Text style={{ color: "#555" }}>Plate Supplier: </Text>
+                      {plateSupplierName}
+                    </Text>
+                    <Text style={{ fontSize: 7.5 }}>
+                      <Text style={{ color: "#555" }}>Plate Type: </Text>
+                      {isOldPlate ? "Old Plate" : isNewPlate ? "New Plate" : "N/A"}
+                    </Text>
+                  </View>
+                </View>
                 <View style={styles.sectionContent}>
                   <PlateSetTable
                     plateDetails={plateDetails || []}
@@ -1075,6 +1097,33 @@ const JobCardPrintFormat = ({
                       />
                     ))}
                   </View>
+                </View>
+              </View>
+            )}
+
+            {/* ── DIE DETAILS ── */}
+            {(dieId || dieMethod || dieDescription) && (
+              <View style={styles.sectionWrap}>
+                <Text style={styles.sectionTitle}>DIE DETAILS</Text>
+                <View style={[styles.sectionContent, { paddingVertical: 6, flexDirection: "row", gap: 15 }]}>
+                  {dieId && (
+                    <Text style={{ fontSize: 7.5, marginLeft: 5 }}>
+                      <Text style={{ color: "#555" }}>Die Name: </Text>
+                      <Text style={{ fontWeight: "bold" }}>{dieName}</Text>
+                    </Text>
+                  )}
+                  {dieMethod && (
+                    <Text style={{ fontSize: 7.5, marginLeft: !dieId ? 5 : 0 }}>
+                      <Text style={{ color: "#555" }}>Die Method: </Text>
+                      <Text style={{ fontWeight: "bold" }}>{dieMethod}</Text>
+                    </Text>
+                  )}
+                  {dieDescription && (
+                    <Text style={{ fontSize: 7.5, marginLeft: !dieId && !dieMethod ? 5 : 0 }}>
+                      <Text style={{ color: "#555" }}>Die Description: </Text>
+                      <Text style={{ fontWeight: "bold" }}>{dieDescription}</Text>
+                    </Text>
+                  )}
                 </View>
               </View>
             )}
@@ -1150,6 +1199,16 @@ const JobCardPrintFormat = ({
 
         {/* ── REMARKS + SIGNATURES + FOOTER ── */}
         <FooterBlock remarks={remarks} branchName={branchData?.branchName} />
+
+        <View style={styles.footerBar} fixed={true}>
+          <Text style={styles.footerLeft}></Text>
+          <Text
+            style={styles.footerRight}
+            render={({ pageNumber, totalPages }) =>
+              `Page ${pageNumber} / ${totalPages}`
+            }
+          />
+        </View>
       </Page>
     </Document>
   );

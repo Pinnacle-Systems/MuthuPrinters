@@ -1293,6 +1293,8 @@ async function create(body) {
       colorId,
       isHold,
       isCancelled,
+      isNewPlate,
+      isOldPlate,
     } = body;
 
     // ─────────────────────────────
@@ -1404,6 +1406,8 @@ async function create(body) {
           lenght: lenght ? parseInt(lenght) : 0,
           width: width ? parseInt(width) : 0,
           meter: meter ? parseInt(meter) : 0,
+          isNewPlate: !!isNewPlate,
+          isOldPlate: !!isOldPlate,
 
           boardQualities: safeBoardItems.length
             ? {
@@ -1720,6 +1724,8 @@ async function update(id, body) {
       lenght,
       width,
       meter,
+      isNewPlate,
+      isOldPlate,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -1992,6 +1998,9 @@ async function update(id, body) {
           lenght: lenght ? parseInt(lenght) : 0,
           width: width ? parseInt(width) : 0,
           meter: meter ? parseInt(meter) : 0,
+          isNewPlate: !!isNewPlate,
+          isOldPlate: !!isOldPlate,
+
           boardQualities:
             boardQualities.length > 0
               ? {
