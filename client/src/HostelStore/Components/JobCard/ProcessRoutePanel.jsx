@@ -347,7 +347,7 @@ export const routeKeysToDb = (processRoute) =>
     const { type, id, sub } = parseKey(key);
     return {
       type,
-      processId: type === "die" ? null : id,
+      processId: id,
       sequence: idx + 1,
       isFront: sub === "front",
       isFrontAndBack: sub === "frontback",
