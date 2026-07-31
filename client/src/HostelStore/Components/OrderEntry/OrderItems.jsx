@@ -5,33 +5,7 @@ import { findFromList } from "../../../Utils/helper";
 import { Plus } from "lucide-react";
 import { ItemSubGroupMaster } from "../../../Basic/components";
 
-export const DEFAULT_ROW_COUNT = 10;
-
-export const EMPTY_SIZE_ROW = () => ({ sizeId: null, qty: "" });
-
-export const makeEmptyRow = () => ({
-  styleItemId: "",
-  uomId: "",
-  hsnId: "",
-  orderQty: "",
-  itemGroupId: "",
-  type: "",
-  sizeBreakup: [EMPTY_SIZE_ROW()], // 1 size row by default
-  trackingType: "None",
-});
-
-// Call this in parent wherever you build orderItems before setOrderItems
-export const padRows = (items = [], total = DEFAULT_ROW_COUNT) => {
-  const result = items.map((row) => ({
-    ...row,
-    sizeBreakup:
-      Array.isArray(row.sizeBreakup) && row.sizeBreakup.length > 0
-        ? row.sizeBreakup
-        : [EMPTY_SIZE_ROW()],
-  }));
-  while (result.length < total) result.push(makeEmptyRow());
-  return result;
-};
+import { DEFAULT_ROW_COUNT, EMPTY_SIZE_ROW, makeEmptyRow, padRows } from "./OrderItemsUtils";
 
 const OrderItems = ({
   orderItems,
@@ -261,7 +235,7 @@ const OrderItems = ({
                             .filter(
                               (i) =>
                                 (id ? true : i.active) &&
-                                i.itemGroupId === row.itemGroupId
+                                i.itemGroupId === row.itemGroupId,
                             )
                             .map((i) => ({ label: i.name, value: i.id }))}
                           readOnly={readOnly || childRecord?.current > 0}
@@ -482,7 +456,7 @@ const OrderItems = ({
             })}
           </tbody>
 
-          <tfoot>
+          <tfoot className="sticky bottom-0 z-10 shadow-[0_-1px_2px_rgba(0,0,0,0.1)]">
             <tr className="bg-gray-100 h-7 font-medium text-gray-800 text-[12px]">
               <td
                 className="text-right px-2 border border-gray-300 font-medium"
@@ -493,7 +467,7 @@ const OrderItems = ({
               <td className="text-right border border-gray-300 px-1 font-medium">
                 {orderItems?.reduce((s, r) => s + (Number(r.orderQty) || 0), 0)}
               </td>
-              <td className="border border-gray-300 bg-gray-50" />
+              <td className="border border-gray-300 bg-gray-50" colSpan={2} />
               <td
                 colSpan={2}
                 className="border border-gray-300 bg-indigo-50/30 text-right px-2 text-[11px] text-indigo-600"
@@ -515,7 +489,7 @@ const OrderItems = ({
                 )}
               </td>
               <td
-                colSpan={1}
+                colSpan={2}
                 className="border border-gray-300 bg-indigo-50/30 text-right px-2 text-[11px] text-indigo-600"
               ></td>
             </tr>

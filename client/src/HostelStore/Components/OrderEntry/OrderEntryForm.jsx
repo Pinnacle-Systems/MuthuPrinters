@@ -42,7 +42,8 @@ import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFoot
 import { PDFViewer } from "@react-pdf/renderer";
 import OrderEntryPrintFormat from "./OrderEntryPrintFormat.jsx";
 import { FiFileText, FiPrinter } from "react-icons/fi";
-import OrderItems, { padRows } from "./OrderItems.jsx";
+import OrderItems from "./OrderItems.jsx";
+import { padRows } from "./OrderItemsUtils.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";

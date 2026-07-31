@@ -1,0 +1,27 @@
+export const DEFAULT_ROW_COUNT = 10;
+
+export const EMPTY_SIZE_ROW = () => ({ sizeId: null, qty: "" });
+
+export const makeEmptyRow = () => ({
+  styleItemId: "",
+  uomId: "",
+  hsnId: "",
+  orderQty: "",
+  itemGroupId: "",
+  type: "",
+  sizeBreakup: [EMPTY_SIZE_ROW()], // 1 size row by default
+  trackingType: "None",
+});
+
+// Call this in parent wherever you build orderItems before setOrderItems
+export const padRows = (items = [], total = DEFAULT_ROW_COUNT) => {
+  const result = items.map((row) => ({
+    ...row,
+    sizeBreakup:
+      Array.isArray(row.sizeBreakup) && row.sizeBreakup.length > 0
+        ? row.sizeBreakup
+        : [EMPTY_SIZE_ROW()],
+  }));
+  while (result.length < total) result.push(makeEmptyRow());
+  return result;
+};
