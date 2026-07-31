@@ -237,6 +237,10 @@ const JobCardForm = ({
   const finishingList = filterByGroup("FINISHING");
   const labelPrintingList = filterByGroup("LABEL PRINTING");
 
+  // Make sure "DYEING" matches the exact casing of your Process Group name
+  // if it doesn't match exactly, you might need to change it to "Dyeing" etc.
+  const dieProcessList = filterByGroup("DYEING");
+
   const {
     data: singleData,
     isFetching: isSingleFetching,
@@ -1730,28 +1734,38 @@ const JobCardForm = ({
               )}
             </SectionCard>
             <SectionCard title="Die Details" className="flex-1 flex flex-col">
+              <div className="grid grid-cols-2 gap-y-4 mb-4">
+                {dieProcessList?.map((item) => (
+                  <CheckBox
+                    key={item.id}
+                    name={item.name}
+                    value={selectedProcesses.includes(item.id)}
+                    setValue={() => {
+                      setSelectedProcesses((prev) => {
+                        const isAlreadySelected = prev.includes(item.id);
+                        // Remove any other die processes to ensure only one is ticked
+                        const filtered = prev.filter(
+                          (pId) => !dieProcessList.some((dp) => dp.id === pId)
+                        );
+                        
+                        if (isAlreadySelected) {
+                          // Toggle off
+                          return filtered;
+                        } else {
+                          // Toggle on (replacing any previously selected die process)
+                          return [...filtered, item.id];
+                        }
+                      });
+                    }}
+                    readOnly={readOnly}
+                    disabled={
+                      isDisabledPermission || isProcessItemLocked(item.id)
+                    }
+                  />
+                ))}
+              </div>
+
               <div className="grid grid-cols-3 gap-x-1 items-center">
-                <div className="col-span-2">
-                  <Field label="Die Details">
-                    <DropdownWithModal
-                      name=""
-                      options={dropDownListObject(
-                        id
-                          ? dieList?.data
-                          : dieList?.data?.filter((i) => i?.active),
-                        "name",
-                        "id",
-                      )}
-                      value={dieId}
-                      setValue={setDieId}
-                      readOnly={readOnly}
-                      addNewLabel="+ Add Die"
-                      childComponent={DieMaster}
-                      addNewModalWidth="w-[30%] h-[45%]"
-                      disabled={isDisabledPermission}
-                    />
-                  </Field>
-                </div>
                 <div className="col-span-1">
                   <Field label="Die Method" required={true}>
                     <DropdownInput
@@ -1768,7 +1782,7 @@ const JobCardForm = ({
                     />
                   </Field>
                 </div>
-                <div className="col-span-3">
+                <div className="col-span-2">
                   <Field label="Description" required={true}>
                     <TextInput
                       name=""
@@ -1777,7 +1791,7 @@ const JobCardForm = ({
                       readOnly={readOnly}
                       type="text"
                       className="w-full text-left"
-                      disabled={isDisabledPermission || isCuttingLocked}
+                      disabled={isDisabledPermission || routeFieldsLocked}
                       required={true}
                     />
                   </Field>
@@ -2131,7 +2145,7 @@ const JobCardForm = ({
             selectedProcesses={selectedProcesses}
             laminations={laminations}
             varnishes={varnishes}
-            defaultList={defaultList}
+            defaultList={[...(defaultList || []), ...(dieProcessList || [])]}
             laminationList={laminationList}
             varnishList={varnishList}
             processRoute={processRoute}
@@ -2518,7 +2532,7 @@ const JobCardForm = ({
             machineList={machineList}
             plateList={plateList}
             dieList={dieList}
-            defaultList={defaultList}
+            defaultList={[...(defaultList || []), ...(dieProcessList || [])]}
             laminationList={laminationList}
             varnishList={varnishList}
             branchData={branchData?.data}
