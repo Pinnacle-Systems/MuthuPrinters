@@ -30,6 +30,9 @@ const OrderItems = ({
   conversionType,
   isSupplierOutside,
   orderType,
+  isCustomerExport,
+  currencyCode,
+  isCurrencySymbol,
 }) => {
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
@@ -182,7 +185,7 @@ const OrderItems = ({
                     id={id}
                     isNewVersion={false}
                     isSupplierOutside={isSupplierOutside}
-                    currencyCode={""}
+                    currencyCode={currencyCode || isCurrencySymbol}
                 />
             </Modal>
       <div className="w-full h-full overflow-y-auto bg-white">
@@ -217,7 +220,7 @@ const OrderItems = ({
                   Dozen
               </th>
               <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
-                  Price<span className="text-red-500">*</span>
+                  Price {isCurrencySymbol && `(${isCurrencySymbol})`}<span className="text-red-500">*</span>
               </th>
               <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                   Gross
@@ -225,9 +228,11 @@ const OrderItems = ({
               <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                   Net Amount
               </th>
-              <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
-                  Tax
-              </th>
+              {!isCustomerExport && (
+                  <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
+                      Tax
+                  </th>
+              )}
               {/* Actions column — header label only, no button */}
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
                 Actions
@@ -460,7 +465,7 @@ const OrderItems = ({
                                 focusedField === `price-${index}`
                                     ? row.price ?? ""
                                     : row.price
-                                        ? formatCurrencyAmount(row.price, "")
+                                        ? formatCurrencyAmount(row.price, currencyCode || isCurrencySymbol)
                                         : ""
                             }
                             onChange={(e) => {
@@ -479,21 +484,24 @@ const OrderItems = ({
                         />
                       </td>
                       <td
-                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium"
+                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium text-black"
                         rowSpan={rowSpan}
                       >
-                        {row.styleItemId ? formatCurrencyAmount(row.amount || 0, "") : ""}
+                        <span className="pr-1">{isCurrencySymbol && row.styleItemId ? ` ${isCurrencySymbol}` : ""}</span>
+                        {row.styleItemId ? formatCurrencyAmount(row.amount || 0, currencyCode || isCurrencySymbol) : ""}
                       </td>
                       <td
-                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium"
+                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium text-black"
                         rowSpan={rowSpan}
                       >
-                        {row.styleItemId ? formatCurrencyAmount(enrichedItems?.items?.[index]?.totals?.net || 0, "") : ""}
+                        <span className="pr-1">{isCurrencySymbol && row.styleItemId ? ` ${isCurrencySymbol}` : ""}</span>
+                        {row.styleItemId ? formatCurrencyAmount(enrichedItems?.items?.[index]?.totals?.net || 0, currencyCode || isCurrencySymbol) : ""}
                       </td>
-                      <td
-                        className="text-[11px] border border-gray-300 text-center items-center pt-2 font-medium"
-                        rowSpan={rowSpan}
-                      >
+                      {!isCustomerExport && (
+                          <td
+                            className="text-[11px] border border-gray-300 text-center items-center pt-2 font-medium"
+                            rowSpan={rowSpan}
+                          >
                         <button
                             disabled={!row.styleItemId}
                             className="text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
@@ -513,6 +521,7 @@ const OrderItems = ({
                             {VIEW}
                         </button>
                       </td>
+                      )}
                       {/* Per-row: Add only (no delete in cell) */}
                       <td
                         className="w-12 border border-gray-300 align-top pt-1 bg-gray-50"
@@ -650,13 +659,18 @@ const OrderItems = ({
                 {orderItems?.reduce((s, r) => s + (Number(r.dozen) || 0), 0).toFixed(2)}
               </td>
               <td className="border border-gray-300 bg-gray-50" colSpan={1} />
-              <td className="text-right border border-gray-300 px-1 font-medium">
-                {formatCurrencyAmount(orderItems?.reduce((s, r) => s + (Number(r.amount) || 0), 0), "")}
+              <td className="text-right border border-gray-300 px-1 font-medium text-black">
+                {isCurrencySymbol ? `${isCurrencySymbol} ` : ""}
+                {formatCurrencyAmount(orderItems?.reduce((s, r) => s + (Number(r.amount) || 0), 0), currencyCode || isCurrencySymbol)}
               </td>
-              <td className="text-right border border-gray-300 px-1 font-medium">
-                {formatCurrencyAmount(enrichedItems?.items?.reduce((s, r) => s + (Number(r.totals?.net) || 0), 0), "")}
+              <td className="text-right border border-gray-300 px-1 font-medium text-black">
+                {isCurrencySymbol ? `${isCurrencySymbol} ` : ""}
+                {formatCurrencyAmount(enrichedItems?.items?.reduce((s, r) => s + (Number(r.totals?.net) || 0), 0), currencyCode || isCurrencySymbol)}
               </td>
-              <td className="border border-gray-300 bg-gray-50" colSpan={2} />
+              {!isCustomerExport && (
+                  <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+              )}
+              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
               <td
                 colSpan={2}
                 className="border border-gray-300 bg-indigo-50/30 text-right px-2 text-[11px] text-indigo-600"

@@ -1115,7 +1115,7 @@ const ProformaInvoiceForm = ({
             summaryColumn: "right",
             emphasized: false,
           },
-          ...(() => {
+          ...(!isCustomerExport ? (() => {
             const taxTotals = (enrichedData.slabBreakup || []).reduce(
               (acc, curr) => {
                 const type = curr.tax.split(" ")[0];
@@ -1131,7 +1131,7 @@ const ProformaInvoiceForm = ({
               summaryColumn: "right",
               emphasized: false,
             }));
-          })(),
+          })() : []),
 
           ...(!isCustomerExport
             ? [
@@ -1148,6 +1148,20 @@ const ProformaInvoiceForm = ({
                   key: "carriageCharge",
                   label: "Carraige Charges",
                   value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(carriageCharge || 0, currencyCode || isCurrencySymbol)}`,
+                  summaryColumn: "right",
+                  emphasized: false,
+                },
+                {
+                  key: "netAmount",
+                  label: "Net Amount",
+                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(
+                    (enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0) || 0) -
+                      (enrichedData.itemDiscount + enrichedData.overallDiscount > 0
+                        ? enrichedData.itemDiscount + enrichedData.overallDiscount
+                        : 0) +
+                      (parseFloat(carriageCharge) || 0),
+                    currencyCode || isCurrencySymbol
+                  )}`,
                   summaryColumn: "right",
                   emphasized: true,
                 },

@@ -9,7 +9,11 @@ import {
   ReusableInput,
   TextInput,
 } from "../../../Inputs";
-import { orderTypes, productionTypes } from "../../../Utils/DropdownData";
+import {
+  orderTypes,
+  productionTypes,
+  conversionTypes,
+} from "../../../Utils/DropdownData";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
 import {
@@ -24,7 +28,10 @@ import { FiCheck, FiEdit2, FiSave, FiSend } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { TransactionLayout } from "../../../Basic/components/Reuseable";
-import { dropDownListObject } from "../../../Utils/contructObject";
+import {
+  dropDownListObject,
+  dropDownListObjectMultiple,
+} from "../../../Utils/contructObject";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { PartyMaster } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
@@ -65,6 +72,14 @@ import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGr
 import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
 import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
 import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
+import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterService.js";
+import { useGetbankQuery } from "../../../redux/services/BankMasterService.js";
+import { useGetCurrenciesQuery } from "../../../redux/services/CurrencyMasterService.js";
+import {
+  PayTermMaster,
+  BankMaster,
+  CurrencyMaster,
+} from "../../../Basic/components";
 
 const OrderEntryForm = ({
   onClose,
@@ -116,6 +131,11 @@ const OrderEntryForm = ({
   const [discountType, setDiscountType] = useState("Percentage");
   const [discountValue, setDiscountValue] = useState(0);
   const [conversionType, setConversionType] = useState("DOZEN");
+  const [payTermId, setPayTermId] = useState("");
+  const [bankId, setBankId] = useState("");
+  const [currencyId, setCurrencyId] = useState("");
+  const [weightInKg, setWeightInKg] = useState("");
+  const [carriageCharge, setCarriageCharge] = useState("");
 
   const dispatch = useDispatch();
   const qrRef = useRef(null);
@@ -131,11 +151,19 @@ const OrderEntryForm = ({
     finYearId,
   };
 
+  const { data: payTermList } = useGetPaytermMasterQuery({ params });
+  const { data: bankList } = useGetbankQuery({ params });
+  const { data: currencyList } = useGetCurrenciesQuery({ params });
+
   const {
     data: singleData,
+    status: queryStatus,
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
-  } = useGetOrderEntryByIdQuery(id, { skip: !id });
+  } = useGetOrderEntryByIdQuery(id, {
+    params,
+    skip: !id,
+  });
   const { data: styleItemList } = useGetStyleItemMasterQuery({
     params: { ...params },
   });
@@ -156,6 +184,15 @@ const OrderEntryForm = ({
   const { data: supplierData } = useGetPartyByIdQuery(customerId, {
     skip: !customerId,
   });
+
+  const isCustomerExport = supplierData?.data?.isCustomerExport;
+  const isCurrencySymbol = currencyList?.data?.find(
+    (item) => item?.id === currencyId,
+  )?.symbol;
+  const currencyCode = currencyList?.data?.find(
+    (item) => item?.id === currencyId,
+  )?.code;
+
   const { data: refList } = useGetRefListQuery({
     params: { branchId, isRefDistinct: "true" },
   });
@@ -203,6 +240,11 @@ const OrderEntryForm = ({
       setDiscountType(data?.discountType || "Percentage");
       setDiscountValue(data?.discountValue || 0);
       setConversionType(data?.conversionType || "DOZEN");
+      setPayTermId(data?.payTermId || "");
+      setBankId(data?.bankId || "");
+      setCurrencyId(data?.currencyId || "");
+      setWeightInKg(data?.weightInKg || "");
+      setCarriageCharge(data?.carriageCharge || "");
     },
     [id],
   );
@@ -242,6 +284,11 @@ const OrderEntryForm = ({
     discountType,
     discountValue,
     conversionType,
+    payTermId,
+    bankId,
+    currencyId,
+    weightInKg,
+    carriageCharge,
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -1071,245 +1118,250 @@ const OrderEntryForm = ({
         onClose={onClose}
         onKeyDown={handleKeyDown}
         header={
-          <div className="flex flex-col xl:flex-row gap-1">
-            <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-              <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                Basic Details
-              </h2>
-              <div className="flex gap-2">
-                <div className="w-36">
-                  <TextInput name="ORD No" value={docId} disabled={true} />
-                </div>
-                <div className="w-32">
-                  <DateInputNew
-                    name="ORD Date"
-                    value={docDate}
-                    setValue={setDocDate}
-                    disabled={true}
-                    required={true}
-                    type="date"
-                  />
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col xl:flex-row gap-1">
+              <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                  Basic Details
+                </h2>
+                <div className="flex gap-2">
+                  <div className="w-36">
+                    <TextInput name="Order No" value={docId} disabled={true} />
+                  </div>
+                  <div className="w-24">
+                    <DateInputNew
+                      name="Order Date"
+                      value={docDate}
+                      setValue={setDocDate}
+                      disabled={true}
+                      required={true}
+                      type="date"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className=" w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-              <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                Customer Details
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-2 gap-2">
-                <div className="md:col-span-2">
-                  <DropdownWithModal
-                    name="Customer"
-                    options={dropDownListObject(
-                      id
-                        ? customerList?.data?.filter((item) => item?.isCustomer)
-                        : customerList?.data?.filter(
-                            (item) => item?.active && item?.isCustomer,
-                          ),
-                      "name",
-                      "id",
-                    )}
-                    value={customerId}
-                    setValue={setCustomerId}
+              <div className=" w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                  Customer Details
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="md:col-span-2">
+                    <DropdownWithModal
+                      name="Customer"
+                      options={dropDownListObject(
+                        id
+                          ? customerList?.data?.filter(
+                              (item) => item?.isCustomer,
+                            )
+                          : customerList?.data?.filter(
+                              (item) => item?.active && item?.isCustomer,
+                            ),
+                        "name",
+                        "id",
+                      )}
+                      value={customerId}
+                      setValue={setCustomerId}
+                      required={true}
+                      readOnly={readOnly}
+                      className={`w-full`}
+                      addNewLabel="+ Add New Customer"
+                      childComponent={PartyMaster}
+                      addNewModalWidth="w-[90%] h-[95%]"
+                      disabled={childRecord.current > 0 || readOnly}
+                      ref={customerRef}
+                      openOnFocus={true}
+                    />
+                  </div>
+                  <div className="">
+                    <TextInput
+                      name="Contact Person"
+                      placeholder="Contact name"
+                      value={findFromList(
+                        customerId,
+                        customerList?.data,
+                        "contactPersonName",
+                      )}
+                      disabled={true}
+                    />
+                  </div>
+                  <div className="">
+                    <TextInput
+                      name="Phone"
+                      placeholder="Contact number"
+                      value={findFromList(
+                        customerId,
+                        customerList?.data,
+                        "contactNumber",
+                      )}
+                      disabled={true}
+                      className="w-20"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                  Order Details
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+                  <DropdownInput
+                    name="Order Type"
+                    options={orderTypes}
+                    value={orderType}
+                    setValue={(value) => setOrderType(value)}
                     required={true}
                     readOnly={readOnly}
-                    className={`w-full`}
-                    addNewLabel="+ Add New Customer"
-                    childComponent={PartyMaster}
-                    addNewModalWidth="w-[90%] h-[95%]"
                     disabled={childRecord.current > 0 || readOnly}
-                    ref={customerRef}
-                    openOnFocus={true}
-                  />
-                </div>
-                <div className="">
-                  <TextInput
-                    name="Contact Person"
-                    placeholder="Contact name"
-                    value={findFromList(
-                      customerId,
-                      customerList?.data,
-                      "contactPersonName",
-                    )}
-                    disabled={true}
-                  />
-                </div>
-                <div className="">
-                  <TextInput
-                    name="Phone"
-                    placeholder="Contact number"
-                    value={findFromList(
-                      customerId,
-                      customerList?.data,
-                      "contactNumber",
-                    )}
-                    disabled={true}
-                    className="w-20"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-              <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                Order Details
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                <DropdownInput
-                  name="Order Type"
-                  options={orderTypes}
-                  value={orderType}
-                  setValue={(value) => setOrderType(value)}
-                  required={true}
-                  readOnly={readOnly}
-                  disabled={childRecord.current > 0 || readOnly}
-                  beforeChange={() => {
-                    setProFormaId("");
-                  }}
-                />
-                <div className="col-span-1">
-                  <DropdownNew
-                    name="PI No"
-                    dataList={PIList?.data?.filter((item) =>
-                      id
-                        ? item?.customerId === customerId
-                        : isRepeatedPI
-                          ? item?.customerId === customerId && item?.hasBulk
-                          : item?.customerId === customerId && !item?.hasBulk,
-                    )}
-                    value={proFormaId}
-                    setValue={setProFormaId}
-                    required={orderType === "AGAINSTPI"}
-                    readOnly={readOnly || orderType === "GENERAL"}
-                    disabled={readOnly || orderType === "GENERAL"}
-                    otherField={"docId"}
-                    beforeChange={async (selectedValue) => {
-                      if (!selectedValue) {
-                        setOrderItems(fillWithDefaultRows([]));
-                        return;
-                      }
-
-                      const res = await getPIById(selectedValue?.id).unwrap();
-                      {
-                        console.log("res", res);
-                      }
-
-                      setTaxTemplateId(res?.data?.taxTemplateId || "");
-                      setDiscountType(res?.data?.discountType || "Percentage");
-                      setDiscountValue(res?.data?.discountValue || 0);
-                      setConversionType(res?.data?.conversionType || "DOZEN");
-                      if (res?.data?.termsId) setTermsId(res.data.termsId);
-                      if (res?.data?.termsAndCondition)
-                        setTermsAndCondition(res.data.termsAndCondition);
-                      if (res?.data?.deliveryDate)
-                        setDeliveryDate(
-                          moment
-                            .utc(res.data.deliveryDate)
-                            .format("YYYY-MM-DD"),
-                        );
-                      if (res?.data?.remarks) setRemarks(res.data.remarks);
-
-                      const mappedItems =
-                        Object.values(
-                          (res?.data?.items || []).reduce((acc, item) => {
-                            const key = item.styleItemId;
-
-                            if (
-                              !acc[key] ||
-                              acc[key].quoteVersion < item.quoteVersion
-                            ) {
-                              acc[key] = item;
-                            }
-
-                            return acc;
-                          }, {}),
-                        )
-                          .sort((a, b) => a.id - b.id)
-                          .map((item) => ({
-                            styleItemId: item.styleItemId,
-                            orderQty: item.qty || "",
-                            piQty: Number(item.qty) || 0,
-                            sizeId: item.sizeId || "",
-                            uomId: item.uomId || "",
-                            gsmId: item.gsmId || "",
-                            hsnId: item.hsnId || "",
-                            price: item.price || "",
-                            amount: item.amount || "",
-                            dozen: item.dozen || "",
-                            sizeBreakup: [],
-                            itemGroupId: item.StyleItem?.itemGroupId,
-                            itemSubGroupId: item.StyleItem?.itemSubGroupId,
-                          })) || [];
-
-                      setOrderItems(fillWithDefaultRows(mappedItems));
+                    beforeChange={() => {
+                      setProFormaId("");
                     }}
                   />
-                </div>
-                <DropdownInput
-                  name="Production Type"
-                  options={productionTypes}
-                  value={productionType}
-                  setValue={(value) => setProductionType(value)}
-                  required={true}
-                  readOnly={readOnly}
-                  disabled={childRecord.current > 0 || readOnly}
-                  beforeChange={() => {
-                    setRefNo("");
-                  }}
-                />
-                {productionType === "SAMPLE" ? (
-                  <TextInput
-                    name="Ref No"
-                    value={refNo}
-                    setValue={setRefNo}
-                    disabled={readOnly || productionType === "SAMPLE"}
-                    required={productionType === "BULK"}
-                  />
-                ) : (
-                  <DropdownNew
-                    name="Ref No"
-                    dataList={refList?.data?.filter(
-                      (item) => item?.customerId === customerId,
-                    )}
-                    value={refNo}
-                    setValue={setRefNo}
-                    required={
-                      productionType === "BULK" && orderType === "AGAINSTPI"
-                    }
-                    readOnly={readOnly}
-                    disabled={readOnly}
-                    otherField={"refNo"}
-                    otherValue={"refNo"}
-                  />
-                )}
+                  <div className="col-span-1">
+                    <DropdownNew
+                      name="PI No"
+                      dataList={PIList?.data?.filter((item) =>
+                        id
+                          ? item?.customerId === customerId
+                          : isRepeatedPI
+                            ? item?.customerId === customerId && item?.hasBulk
+                            : item?.customerId === customerId && !item?.hasBulk,
+                      )}
+                      value={proFormaId}
+                      setValue={setProFormaId}
+                      required={orderType === "AGAINSTPI"}
+                      readOnly={readOnly || orderType === "GENERAL"}
+                      disabled={readOnly || orderType === "GENERAL"}
+                      otherField={"docId"}
+                      beforeChange={async (selectedValue) => {
+                        if (!selectedValue) {
+                          setOrderItems(fillWithDefaultRows([]));
+                          return;
+                        }
 
-                <div className="w-28">
-                  <DateInputNew
-                    name="Delivery Date"
-                    value={deliveryDate}
-                    setValue={setDeliveryDate}
+                        const res = await getPIById(selectedValue?.id).unwrap();
+                        {
+                          console.log("res", res);
+                        }
+
+                        setTaxTemplateId(res?.data?.taxTemplateId || "");
+                        setDiscountType(
+                          res?.data?.discountType || "Percentage",
+                        );
+                        setDiscountValue(res?.data?.discountValue || 0);
+                        setConversionType(res?.data?.conversionType || "DOZEN");
+                        if (res?.data?.termsId) setTermsId(res.data.termsId);
+                        if (res?.data?.termsAndCondition)
+                          setTermsAndCondition(res.data.termsAndCondition);
+                        if (res?.data?.deliveryDate)
+                          setDeliveryDate(
+                            moment
+                              .utc(res.data.deliveryDate)
+                              .format("YYYY-MM-DD"),
+                          );
+                        if (res?.data?.remarks) setRemarks(res.data.remarks);
+
+                        setPayTermId(res?.data?.payTermId || "");
+                        setBankId(res?.data?.bankId || "");
+                        setCurrencyId(res?.data?.currencyId || "");
+                        setWeightInKg(res?.data?.weightInKg || "");
+                        setCarriageCharge(res?.data?.carriageCharge || "");
+
+                        const mappedItems =
+                          Object.values(
+                            (res?.data?.items || []).reduce((acc, item) => {
+                              const key = item.styleItemId;
+
+                              if (
+                                !acc[key] ||
+                                acc[key].quoteVersion < item.quoteVersion
+                              ) {
+                                acc[key] = item;
+                              }
+
+                              return acc;
+                            }, {}),
+                          )
+                            .sort((a, b) => a.id - b.id)
+                            .map((item) => ({
+                              styleItemId: item.styleItemId,
+                              orderQty: item.qty || "",
+                              piQty: Number(item.qty) || 0,
+                              sizeId: item.sizeId || "",
+                              uomId: item.uomId || "",
+                              gsmId: item.gsmId || "",
+                              hsnId: item.hsnId || "",
+                              price: item.price || "",
+                              amount: item.amount || "",
+                              dozen: item.dozen || "",
+                              discountType: item.discountType || "",
+                              discountValue: item.discountValue || "",
+                              taxPercent: item.taxPercent || "",
+                              taxType: item.taxType || "",
+                              sizeBreakup: [],
+                              itemGroupId: item.StyleItem?.itemGroupId,
+                              itemSubGroupId: item.StyleItem?.itemSubGroupId,
+                            })) || [];
+
+                        setOrderItems(fillWithDefaultRows(mappedItems));
+                      }}
+                    />
+                  </div>
+                  <DropdownInput
+                    name="Production Type"
+                    options={productionTypes}
+                    value={productionType}
+                    setValue={(value) => setProductionType(value)}
                     required={true}
                     readOnly={readOnly}
-                    type={"date"}
+                    disabled={childRecord.current > 0 || readOnly}
+                    beforeChange={() => {
+                      setRefNo("");
+                    }}
                   />
-                </div>
-                <TextInput
-                  name="ValidDays"
-                  value={validDays}
-                  setValue={setValidDays}
-                  disabled={readOnly}
-                  type="number"
-                  min="0"
-                  className="text-right"
-                  required={true}
-                  onBlur={(e) =>
-                    setValidDays(e.target.value ? Number(e.target.value) : "")
-                  }
-                  onFocus={(e) => {
-                    e.target.select();
-                  }}
-                />
-                <div className="m-2 p-0 flex items-center">
+                  {productionType === "SAMPLE" ? (
+                    <TextInput
+                      name="Ref No"
+                      value={refNo}
+                      setValue={setRefNo}
+                      disabled={readOnly || productionType === "SAMPLE"}
+                      required={productionType === "BULK"}
+                    />
+                  ) : (
+                    <DropdownNew
+                      name="Ref No"
+                      dataList={refList?.data?.filter(
+                        (item) => item?.customerId === customerId,
+                      )}
+                      value={refNo}
+                      setValue={setRefNo}
+                      required={
+                        productionType === "BULK" && orderType === "AGAINSTPI"
+                      }
+                      readOnly={readOnly}
+                      disabled={readOnly}
+                      otherField={"refNo"}
+                      otherValue={"refNo"}
+                    />
+                  )}
+
+                  <TextInput
+                    name="ValidDays"
+                    value={validDays}
+                    setValue={setValidDays}
+                    disabled={readOnly}
+                    type="number"
+                    min="0"
+                    className="text-right"
+                    required={true}
+                    onBlur={(e) =>
+                      setValidDays(e.target.value ? Number(e.target.value) : "")
+                    }
+                    onFocus={(e) => {
+                      e.target.select();
+                    }}
+                  />
+                  {/* <div className="m-2 p-0 flex items-center">
                   <CheckBoxNew
                     name="Repeated PI"
                     readOnly={readOnly}
@@ -1318,7 +1370,16 @@ const OrderEntryForm = ({
                     disabled={readOnly || childRecord.current > 0}
                     className="text-[11px] font-medium"
                   />
+                </div> */}
                 </div>
+              </div>
+            </div>
+
+            <div className="border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+              <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                Other Details
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-6 lg:grid-cols-8 gap-2 items-end">
                 <div className="col-span-1">
                   <DropdownInput
                     name="Tax Type"
@@ -1329,8 +1390,111 @@ const OrderEntryForm = ({
                     )}
                     value={taxTemplateId}
                     setValue={setTaxTemplateId}
+                    required={!isCustomerExport}
+                    readOnly={readOnly || orderType === "AGAINSTPI"}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <DropdownWithModal
+                    name="Pay Term"
+                    options={dropDownListObject(
+                      id
+                        ? payTermList?.data
+                        : payTermList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={payTermId}
+                    setValue={setPayTermId}
                     required={false}
+                    readOnly={readOnly || orderType === "AGAINSTPI"}
+                    className={`w-full max-w-none`}
+                    dropdownMinWidth={240}
+                    addNewLabel="+ Add New Pay Term"
+                    childComponent={PayTermMaster}
+                    addNewModalWidth="w-[40%] h-[66%]"
+                    disabled={readOnly || orderType === "AGAINSTPI"}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <DropdownInput
+                    name="Conversion"
+                    options={conversionTypes}
+                    value={conversionType}
+                    setValue={setConversionType}
+                    required={false}
+                    readOnly={readOnly || orderType === "AGAINSTPI"}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <TextInput
+                    name="Weight In Kg(KG)*"
+                    value={weightInKg}
+                    setValue={setWeightInKg}
+                    type="number"
+                    disabled={readOnly || orderType === "AGAINSTPI"}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <TextInput
+                    name="Carriage and Air Freight"
+                    value={carriageCharge}
+                    setValue={setCarriageCharge}
+                    type="number"
+                    disabled={readOnly || orderType === "AGAINSTPI"}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <DropdownWithModal
+                    name="Advising Bank"
+                    options={dropDownListObjectMultiple(
+                      bankList?.data,
+                      ["name", "Branch.name"],
+                      "id",
+                    )}
+                    value={bankId}
+                    setValue={setBankId}
+                    required={false}
+                    readOnly={readOnly || orderType === "AGAINSTPI"}
+                    className={`w-[150px]`}
+                    addNewLabel="+ Add New Bank"
+                    childComponent={BankMaster}
+                    addNewModalWidth="w-[45%] h-[64%]"
+                    disabled={readOnly || orderType === "AGAINSTPI"}
+                  />
+                </div>
+                {isCustomerExport && (
+                  <div className="col-span-1">
+                    <DropdownWithModal
+                      name="Currency"
+                      options={dropDownListObject(
+                        id
+                          ? currencyList?.data
+                          : currencyList?.data?.filter((item) => item?.active),
+                        "name",
+                        "id",
+                      )}
+                      value={currencyId}
+                      setValue={setCurrencyId}
+                      required={true}
+                      readOnly={readOnly || orderType === "AGAINSTPI"}
+                      className={`w-full max-w-none`}
+                      dropdownMinWidth={240}
+                      addNewLabel="+ Add New Currency"
+                      childComponent={CurrencyMaster}
+                      addNewModalWidth="w-[40%] h-[66%]"
+                      disabled={readOnly || orderType === "AGAINSTPI"}
+                    />
+                  </div>
+                )}
+                <div className="col-span-1">
+                  <DateInputNew
+                    name="Delivery Date"
+                    value={deliveryDate}
+                    setValue={setDeliveryDate}
+                    required={true}
                     readOnly={readOnly}
+                    type={"date"}
                   />
                 </div>
               </div>
@@ -1343,7 +1507,7 @@ const OrderEntryForm = ({
           <OrderItems
             orderItems={orderItems}
             setOrderItems={setOrderItems}
-            readOnly={readOnly}
+            readOnly={readOnly || orderType === "AGAINSTPI"}
             styleItemList={styleItemList}
             sizeList={sizeList}
             uomList={uomList}
@@ -1360,6 +1524,9 @@ const OrderEntryForm = ({
             conversionType={conversionType}
             isSupplierOutside={isSupplierOutside}
             orderType={orderType}
+            isCustomerExport={isCustomerExport}
+            currencyCode={currencyCode}
+            isCurrencySymbol={isCurrencySymbol}
           />
         }
         footer={
@@ -1404,34 +1571,51 @@ const OrderEntryForm = ({
                 {
                   key: "grossAmount",
                   label: "Gross Amount",
-                  value: `${formatCurrencyAmount(enrichedData.gross, "")}`,
+                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(
+                    isCustomerExport
+                      ? enrichedData.items?.reduce(
+                          (sum, item) => sum + (parseFloat(item.amount) || 0),
+                          0,
+                        )
+                      : enrichedData.gross,
+                    currencyCode || isCurrencySymbol,
+                  )}`,
                   summaryColumn: "right",
                   emphasized: true,
                 },
-                ...(() => {
-                  const taxTotals = (enrichedData.slabBreakup || []).reduce(
-                    (acc, curr) => {
-                      const type = curr.tax.split(" ")[0];
-                      acc[type] = (acc[type] || 0) + curr.amount;
-                      return acc;
-                    },
-                    {},
-                  );
-                  return Object.keys(taxTotals).map((type) => ({
-                    key: type,
-                    label: type,
-                    value: `${formatCurrencyAmount(taxTotals[type], "")}`,
-                    summaryColumn: "right",
-                    emphasized: false,
-                  }));
-                })(),
-                {
-                  key: "netAmount",
-                  label: "Net Amount",
-                  value: `${formatCurrencyAmount(enrichedData.net, "")}`,
-                  summaryColumn: "right",
-                  emphasized: true,
-                },
+                ...(!isCustomerExport
+                  ? (() => {
+                      const taxTotals = enrichedData.items.reduce(
+                        (acc, item) => {
+                          const taxes = item?.totals?.taxes || [];
+                          taxes.forEach((tax) => {
+                            acc[tax.type] =
+                              (acc[tax.type] || 0) + (tax.amount || 0);
+                          });
+                          return acc;
+                        },
+                        {},
+                      );
+                      return Object.keys(taxTotals).map((type) => ({
+                        key: type,
+                        label: type,
+                        value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(taxTotals[type], currencyCode || isCurrencySymbol)}`,
+                        summaryColumn: "right",
+                        emphasized: false,
+                      }));
+                    })()
+                  : []),
+                ...(!isCustomerExport
+                  ? [
+                      {
+                        key: "netAmount",
+                        label: "Net Amount",
+                        value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(enrichedData.net, currencyCode || isCurrencySymbol)}`,
+                        summaryColumn: "right",
+                        emphasized: true,
+                      },
+                    ]
+                  : []),
               ]}
             />
             <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
