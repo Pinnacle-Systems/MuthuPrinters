@@ -1120,6 +1120,8 @@ const OrderEntryForm = ({
         header={
           <div className="flex flex-col gap-2">
             <div className="flex flex-col xl:flex-row gap-1">
+              {/* Basic Details */}
+
               <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                 <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
                   Basic Details
@@ -1140,6 +1142,8 @@ const OrderEntryForm = ({
                   </div>
                 </div>
               </div>
+              {/* Customer Details */}
+
               <div className=" w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                 <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
                   Customer Details
@@ -1199,12 +1203,13 @@ const OrderEntryForm = ({
                   </div>
                 </div>
               </div>
+              {/* Order Details */}
 
               <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                 <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
                   Order Details
                 </h2>
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                   <DropdownInput
                     name="Order Type"
                     options={orderTypes}
@@ -1374,6 +1379,7 @@ const OrderEntryForm = ({
                 </div>
               </div>
             </div>
+            {/* Other Details */}
 
             <div className="border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
               <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
@@ -1507,7 +1513,7 @@ const OrderEntryForm = ({
           <OrderItems
             orderItems={orderItems}
             setOrderItems={setOrderItems}
-            readOnly={readOnly || orderType === "AGAINSTPI"}
+            readOnly={readOnly}
             styleItemList={styleItemList}
             sizeList={sizeList}
             uomList={uomList}

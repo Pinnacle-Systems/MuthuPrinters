@@ -66,11 +66,14 @@ const OrderItems = ({
       if (field === "styleItemId" && value) {
         const found = styleItemList?.data?.find((i) => i.id === value);
         if (found) {
+          const hsnId = found.hsnId || "";
+          const hsnObj = hsnList?.data?.find((h) => h.id === hsnId);
           row = {
             ...row,
             // itemGroupId: found.itemGroupId || "",
             uomId: found.uomId || "",
-            hsnId: found.hsnId || "",
+            hsnId: hsnId,
+            taxPercent: hsnObj ? hsnObj.tax : "",
             sizeBreakup: id ? [...(row.sizeBreakup || [])] : [EMPTY_SIZE_ROW()],
             orderQty: row.orderQty,
           };
@@ -176,7 +179,7 @@ const OrderItems = ({
                 }}
             >
                 <TaxDetailsFullTemplate
-                    readOnly={readOnly}
+                    readOnly={readOnly || orderType === "AGAINSTPI"}
                     taxTypeId={taxTemplateId}
                     currentIndex={currentSelectedIndex}
                     setCurrentSelectedIndex={setCurrentSelectedIndex}
@@ -423,7 +426,7 @@ const OrderItems = ({
                             )
                           }
                           className="w-full text-left px-1 bg-transparent text-[11px] outline-none focus:bg-white"
-                          readOnly={orderType === "AGAINSTPI"}
+                          readOnly={readOnly || orderType === "AGAINSTPI"}
                         />
                       </td>
                       <td
