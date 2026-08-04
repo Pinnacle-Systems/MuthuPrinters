@@ -101,7 +101,7 @@ const ProformaInvoiceItems = ({
         const response = await triggerGetStyleItem(value).unwrap();
 
         const hsnId = response?.data?.hsnId;
-        const hsnObj = hsnList?.data?.find(h => h.id === hsnId);
+        const hsnObj = hsnList?.data?.find((h) => h.id === hsnId);
 
         const updatedItems = items.map((item, i) =>
           i === index
@@ -227,9 +227,9 @@ const ProformaInvoiceItems = ({
               <th className="w-32 px-1 py-2 text-center font-medium border border-gray-300">
                 Gross
               </th>
-              <th className="w-32 px-1 py-2 text-center font-medium border border-gray-300">
+              {/* <th className="w-32 px-1 py-2 text-center font-medium border border-gray-300">
                 Net Amount
-              </th>
+              </th> */}
               {!isCustomerExport && (
                 <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
                   Tax
@@ -475,7 +475,7 @@ const ProformaInvoiceItems = ({
                       )
                     : ""}
                 </td>
-                <td className="text-[11px] text-right  px-1 border border-gray-300 bg-gray-50 bg-transparent gap-x-2">
+                {/* <td className="text-[11px] text-right  px-1 border border-gray-300 bg-gray-50 bg-transparent gap-x-2">
                   <span className="pr-1">
                     {isCurrencySymbol && item.styleItemId
                       ? ` ${isCurrencySymbol}`
@@ -487,7 +487,7 @@ const ProformaInvoiceItems = ({
                         currencyCode || isCurrencySymbol,
                       )
                     : ""}
-                </td>
+                </td> */}
                 {!isCustomerExport && (
                   <td className="border border-gray-300 text-center text-[11px]">
                     <button
@@ -546,11 +546,10 @@ const ProformaInvoiceItems = ({
                   .toFixed(2)}
               </td>
               <td className="text-right px-1  border border-gray-300">
-                {/* {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
-                                {
-                                    items?.reduce((sum, i) => sum + (parseFloat(i.price) || 0), 0)
-                                        .toFixed(2)
-                                } */}
+                {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
+                {items
+                  ?.reduce((sum, i) => sum + (parseFloat(i.price) || 0), 0)
+                  .toFixed(2)}
               </td>
               <td className="text-right px-1 border border-gray-300  text-black">
                 {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
@@ -562,7 +561,7 @@ const ProformaInvoiceItems = ({
                   currencyCode || isCurrencySymbol,
                 )}
               </td>
-              <td className="text-right px-1 border border-gray-300  text-black">
+              {/* <td className="text-right px-1 border border-gray-300  text-black">
                 {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
                 {formatCurrencyAmount(
                   enrichedItems?.items?.reduce(
@@ -571,7 +570,7 @@ const ProformaInvoiceItems = ({
                   ),
                   currencyCode || isCurrencySymbol,
                 )}
-              </td>
+              </td> */}
               {!isCustomerExport && (
                 <td className="border border-gray-300"></td>
               )}
