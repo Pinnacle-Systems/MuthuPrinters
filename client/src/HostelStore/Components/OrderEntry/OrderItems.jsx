@@ -10,7 +10,12 @@ import { formatCurrencyAmount } from "../../../Utils/helper";
 import Modal from "../../../UiComponents/Modal";
 import { VIEW } from "../../../icons";
 
-import { DEFAULT_ROW_COUNT, EMPTY_SIZE_ROW, makeEmptyRow, padRows } from "./OrderItemsUtils";
+import {
+  DEFAULT_ROW_COUNT,
+  EMPTY_SIZE_ROW,
+  makeEmptyRow,
+  padRows,
+} from "./OrderItemsUtils";
 
 const OrderItems = ({
   orderItems,
@@ -79,19 +84,19 @@ const OrderItems = ({
           };
         }
       }
-      
+
       if (field === "price" || field === "orderQty" || field === "dozen") {
-          const qty = field === "orderQty" ? value : row.orderQty;
-          const price = field === "price" ? value : row.price;
-          const dozen = field === "dozen" ? value : (qty / 12);
-          if (field !== "dozen") {
-            row.dozen = dozen ? Number(dozen).toFixed(2) : "";
-          }
-          if (conversionType === "DOZEN") {
-              row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
-          } else {
-              row.amount = qty && price ? (qty * price).toFixed(2) : "";
-          }
+        const qty = field === "orderQty" ? value : row.orderQty;
+        const price = field === "price" ? value : row.price;
+        const dozen = field === "dozen" ? value : qty / 12;
+        if (field !== "dozen") {
+          row.dozen = dozen ? Number(dozen).toFixed(2) : "";
+        }
+        if (conversionType === "DOZEN") {
+          row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
+        } else {
+          row.amount = qty && price ? (qty * price).toFixed(2) : "";
+        }
       }
 
       rows[index] = row;
@@ -105,33 +110,43 @@ const OrderItems = ({
       const rows = [...prev];
       const row = { ...rows[rowIndex] };
       const breakup = [...(row.sizeBreakup || [])];
-      
+
       if (field === "qty") {
         const newValue = Number(value) || 0;
-        const currentSum = breakup.reduce((s, i, idx) => s + (idx === sizeIndex ? newValue : (Number(i.qty) || 0)), 0);
-        
-        if (orderType === "AGAINSTPI" && row.piQty !== undefined && currentSum > row.piQty) {
-           Swal.fire({
-              icon: "warning",
-              title: "Quantity Exceeded",
-              text: `Sum of size quantities (${currentSum}) cannot exceed PI quantity (${row.piQty}).`
-           });
-           return prev;
+        const currentSum = breakup.reduce(
+          (s, i, idx) =>
+            s + (idx === sizeIndex ? newValue : Number(i.qty) || 0),
+          0,
+        );
+
+        if (
+          orderType === "AGAINSTPI" &&
+          row.piQty !== undefined &&
+          currentSum > row.piQty
+        ) {
+          Swal.fire({
+            icon: "warning",
+            title: "Quantity Exceeded",
+            text: `Sum of size quantities (${currentSum}) cannot exceed PI quantity (${row.piQty}).`,
+          });
+          return prev;
         }
       }
-      
+
       breakup[sizeIndex] = { ...breakup[sizeIndex], [field]: value };
       row.sizeBreakup = breakup;
       if (field === "qty") {
-        const orderQty = breakup.reduce((s, i) => s + (Number(i.qty) || 0), 0);
-        row.orderQty = orderQty;
-        const price = row.price;
-        const dozen = orderQty / 12;
-        row.dozen = dozen ? dozen.toFixed(2) : "";
-        if (conversionType === "DOZEN") {
+        if (orderType !== "AGAINSTPI") {
+          const orderQty = breakup.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+          row.orderQty = orderQty;
+          const price = row.price;
+          const dozen = orderQty / 12;
+          row.dozen = dozen ? dozen.toFixed(2) : "";
+          if (conversionType === "DOZEN") {
             row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
-        } else {
+          } else {
             row.amount = orderQty && price ? (orderQty * price).toFixed(2) : "";
+          }
         }
       }
       rows[rowIndex] = row;
@@ -155,10 +170,12 @@ const OrderItems = ({
       const row = { ...rows[rowIndex] };
       const breakup = row.sizeBreakup.filter((_, i) => i !== sizeIndex);
       row.sizeBreakup = breakup.length > 0 ? breakup : [EMPTY_SIZE_ROW()];
-      row.orderQty = row.sizeBreakup.reduce(
-        (s, i) => s + (Number(i.qty) || 0),
-        0,
-      );
+      if (orderType !== "AGAINSTPI") {
+        row.orderQty = row.sizeBreakup.reduce(
+          (s, i) => s + (Number(i.qty) || 0),
+          0,
+        );
+      }
       rows[rowIndex] = row;
       return rows;
     });
@@ -172,25 +189,25 @@ const OrderItems = ({
   /* ── render ── */
   return (
     <>
-            <Modal
-                isOpen={Number.isInteger(currentSelectedIndex)}
-                onClose={() => {
-                    setCurrentSelectedIndex("");
-                }}
-            >
-                <TaxDetailsFullTemplate
-                    readOnly={readOnly || orderType === "AGAINSTPI"}
-                    taxTypeId={taxTemplateId}
-                    currentIndex={currentSelectedIndex}
-                    setCurrentSelectedIndex={setCurrentSelectedIndex}
-                    poItems={enrichedItems?.items || orderItems}
-                    handleInputChange={handleInputChange}
-                    id={id}
-                    isNewVersion={false}
-                    isSupplierOutside={isSupplierOutside}
-                    currencyCode={currencyCode || isCurrencySymbol}
-                />
-            </Modal>
+      <Modal
+        isOpen={Number.isInteger(currentSelectedIndex)}
+        onClose={() => {
+          setCurrentSelectedIndex("");
+        }}
+      >
+        <TaxDetailsFullTemplate
+          readOnly={readOnly || orderType === "AGAINSTPI"}
+          taxTypeId={taxTemplateId}
+          currentIndex={currentSelectedIndex}
+          setCurrentSelectedIndex={setCurrentSelectedIndex}
+          poItems={enrichedItems?.items || orderItems}
+          handleInputChange={handleInputChange}
+          id={id}
+          isNewVersion={false}
+          isSupplierOutside={isSupplierOutside}
+          currencyCode={currencyCode || isCurrencySymbol}
+        />
+      </Modal>
       <div className="w-full h-full overflow-y-auto bg-white">
         <table className="table-fixed min-h-full bg-white border-collapse">
           <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10 text-[12px]">
@@ -220,21 +237,22 @@ const OrderItems = ({
                 Label Width
               </th>
               <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
-                  Dozen
+                Dozen
               </th>
               <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
-                  Price {isCurrencySymbol && `(${isCurrencySymbol})`}<span className="text-red-500">*</span>
+                Price {isCurrencySymbol && `(${isCurrencySymbol})`}
+                <span className="text-red-500">*</span>
               </th>
               <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
-                  Gross
+                Gross
               </th>
-              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+              {/* <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                   Net Amount
-              </th>
+              </th> */}
               {!isCustomerExport && (
-                  <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
-                      Tax
-                  </th>
+                <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
+                  Tax
+                </th>
               )}
               {/* Actions column — header label only, no button */}
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
@@ -271,7 +289,11 @@ const OrderItems = ({
                   key={`${index}-${sizeIndex}`}
                   className={`${rowBg} border-b border-gray-200 h-7 cursor-pointer`}
                   onContextMenu={(e) => {
-                    if (!readOnly && orderType !== "AGAINSTPI" && sizeIndex === 0)
+                    if (
+                      !readOnly &&
+                      orderType !== "AGAINSTPI" &&
+                      sizeIndex === 0
+                    )
                       handleRightClick(e, index);
                   }}
                 >
@@ -296,7 +318,11 @@ const OrderItems = ({
                           options={(itemGroupList?.data || [])
                             .filter((i) => (id ? true : i.active))
                             .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                          readOnly={
+                            readOnly ||
+                            childRecord?.current > 0 ||
+                            orderType === "AGAINSTPI"
+                          }
                           placeholder=""
                           onBlur={() =>
                             handleInputChange(
@@ -331,7 +357,11 @@ const OrderItems = ({
                                 i.itemGroupId === row.itemGroupId,
                             )
                             .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                          readOnly={
+                            readOnly ||
+                            childRecord?.current > 0 ||
+                            orderType === "AGAINSTPI"
+                          }
                           placeholder=""
                           onBlur={() =>
                             handleInputChange(
@@ -369,7 +399,11 @@ const OrderItems = ({
                                   : true),
                             )
                             .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                          readOnly={
+                            readOnly ||
+                            childRecord?.current > 0 ||
+                            orderType === "AGAINSTPI"
+                          }
                           placeholder=""
                           onBlur={() =>
                             handleInputChange(
@@ -434,26 +468,32 @@ const OrderItems = ({
                         rowSpan={rowSpan}
                       >
                         <input
-                            type="number"
-                            className="text-right px-1 w-full table-data-input outline-none bg-transparent focus:bg-white"
-                            value={
-                                focusedField === `dozen-${index}`
-                                    ? (row?.dozen ?? "")
-                                    : row?.dozen
-                                        ? Number(row.dozen).toFixed(2)
-                                        : ""
-                            }
-                            onChange={(e) => handleInputChange(e.target.value, index, "dozen")}
-                            onFocus={(e) => {
-                                e.target.select();
-                                setFocusedField(`dozen-${index}`);
-                            }}
-                            onBlur={(e) => {
-                                const val = e.target.value;
-                                handleInputChange(val ? Number(val).toFixed(2) : "", index, "dozen");
-                                setFocusedField(null);
-                            }}
-                            disabled={true}
+                          type="number"
+                          className="text-right px-1 w-full table-data-input outline-none bg-transparent focus:bg-white"
+                          value={
+                            focusedField === `dozen-${index}`
+                              ? (row?.dozen ?? "")
+                              : row?.dozen
+                                ? Number(row.dozen).toFixed(2)
+                                : ""
+                          }
+                          onChange={(e) =>
+                            handleInputChange(e.target.value, index, "dozen")
+                          }
+                          onFocus={(e) => {
+                            e.target.select();
+                            setFocusedField(`dozen-${index}`);
+                          }}
+                          onBlur={(e) => {
+                            const val = e.target.value;
+                            handleInputChange(
+                              val ? Number(val).toFixed(2) : "",
+                              index,
+                              "dozen",
+                            );
+                            setFocusedField(null);
+                          }}
+                          disabled={true}
                         />
                       </td>
                       <td
@@ -461,69 +501,93 @@ const OrderItems = ({
                         rowSpan={rowSpan}
                       >
                         <input
-                            type={focusedField === `price-${index}` ? "number" : "text"}
-                            step="0.01"
-                            className="text-right px-1 w-full table-data-input outline-none bg-transparent focus:bg-white"
-                            value={
-                                focusedField === `price-${index}`
-                                    ? row.price ?? ""
-                                    : row.price
-                                        ? formatCurrencyAmount(row.price, currencyCode || isCurrencySymbol)
-                                        : ""
-                            }
-                            onChange={(e) => {
-                                handleInputChange(e.target.value === "" ? "" : e.target.value, index, "price");
-                            }}
-                            readOnly={readOnly || orderType === "AGAINSTPI"}
-                            onFocus={(e) => {
-                                e.target.select();
-                                setFocusedField(`price-${index}`);
-                            }}
-                            onBlur={(e) => {
-                                const num = parseFloat(e.target.value);
-                                handleInputChange(num ? Number(num).toFixed(2) : "", index, "price");
-                                setFocusedField(null);
-                            }}
+                          type={
+                            focusedField === `price-${index}`
+                              ? "number"
+                              : "text"
+                          }
+                          step="0.01"
+                          className="text-right px-1 w-full table-data-input outline-none bg-transparent focus:bg-white"
+                          value={
+                            focusedField === `price-${index}`
+                              ? (row.price ?? "")
+                              : row.price
+                                ? formatCurrencyAmount(
+                                    row.price,
+                                    currencyCode || isCurrencySymbol,
+                                  )
+                                : ""
+                          }
+                          onChange={(e) => {
+                            handleInputChange(
+                              e.target.value === "" ? "" : e.target.value,
+                              index,
+                              "price",
+                            );
+                          }}
+                          readOnly={readOnly || orderType === "AGAINSTPI"}
+                          onFocus={(e) => {
+                            e.target.select();
+                            setFocusedField(`price-${index}`);
+                          }}
+                          onBlur={(e) => {
+                            const num = parseFloat(e.target.value);
+                            handleInputChange(
+                              num ? Number(num).toFixed(2) : "",
+                              index,
+                              "price",
+                            );
+                            setFocusedField(null);
+                          }}
                         />
                       </td>
                       <td
                         className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium text-black"
                         rowSpan={rowSpan}
                       >
-                        <span className="pr-1">{isCurrencySymbol && row.styleItemId ? ` ${isCurrencySymbol}` : ""}</span>
-                        {row.styleItemId ? formatCurrencyAmount(row.amount || 0, currencyCode || isCurrencySymbol) : ""}
+                        <span className="pr-1">
+                          {isCurrencySymbol && row.styleItemId
+                            ? ` ${isCurrencySymbol}`
+                            : ""}
+                        </span>
+                        {row.styleItemId
+                          ? formatCurrencyAmount(
+                              row.amount || 0,
+                              currencyCode || isCurrencySymbol,
+                            )
+                          : ""}
                       </td>
-                      <td
+                      {/* <td
                         className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium text-black"
                         rowSpan={rowSpan}
                       >
                         <span className="pr-1">{isCurrencySymbol && row.styleItemId ? ` ${isCurrencySymbol}` : ""}</span>
                         {row.styleItemId ? formatCurrencyAmount(enrichedItems?.items?.[index]?.totals?.net || 0, currencyCode || isCurrencySymbol) : ""}
-                      </td>
+                      </td> */}
                       {!isCustomerExport && (
-                          <td
-                            className="text-[11px] border border-gray-300 text-center items-center pt-2 font-medium"
-                            rowSpan={rowSpan}
-                          >
-                        <button
+                        <td
+                          className="text-[11px] border border-gray-300 text-center items-center pt-2 font-medium"
+                          rowSpan={rowSpan}
+                        >
+                          <button
                             disabled={!row.styleItemId}
                             className="text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
                             onClick={() => {
-                                if (!taxTemplateId) {
-                                    return Swal.fire({
-                                        title: "Information",
-                                        text: "Please select Tax Type",
-                                        icon: "info",
-                                        confirmButtonColor: "#3085d6",
-                                    });
-                                }
-                                setCurrentSelectedIndex(index);
+                              if (!taxTemplateId) {
+                                return Swal.fire({
+                                  title: "Information",
+                                  text: "Please select Tax Type",
+                                  icon: "info",
+                                  confirmButtonColor: "#3085d6",
+                                });
+                              }
+                              setCurrentSelectedIndex(index);
                             }}
                             type="button"
-                        >
+                          >
                             {VIEW}
-                        </button>
-                      </td>
+                          </button>
+                        </td>
                       )}
                       {/* Per-row: Add only (no delete in cell) */}
                       <td
@@ -659,19 +723,30 @@ const OrderItems = ({
               </td>
               <td className="border border-gray-300 bg-gray-50" colSpan={1} />
               <td className="text-right border border-gray-300 px-1 font-medium">
-                {orderItems?.reduce((s, r) => s + (Number(r.dozen) || 0), 0).toFixed(2)}
+                {orderItems
+                  ?.reduce((s, r) => s + (Number(r.dozen) || 0), 0)
+                  .toFixed(2)}
               </td>
               <td className="border border-gray-300 bg-gray-50" colSpan={1} />
               <td className="text-right border border-gray-300 px-1 font-medium text-black">
                 {isCurrencySymbol ? `${isCurrencySymbol} ` : ""}
-                {formatCurrencyAmount(orderItems?.reduce((s, r) => s + (Number(r.amount) || 0), 0), currencyCode || isCurrencySymbol)}
+                {formatCurrencyAmount(
+                  orderItems?.reduce((s, r) => s + (Number(r.amount) || 0), 0),
+                  currencyCode || isCurrencySymbol,
+                )}
               </td>
-              <td className="text-right border border-gray-300 px-1 font-medium text-black">
+              {/* <td className="text-right border border-gray-300 px-1 font-medium text-black">
                 {isCurrencySymbol ? `${isCurrencySymbol} ` : ""}
-                {formatCurrencyAmount(enrichedItems?.items?.reduce((s, r) => s + (Number(r.totals?.net) || 0), 0), currencyCode || isCurrencySymbol)}
-              </td>
+                {formatCurrencyAmount(
+                  enrichedItems?.items?.reduce(
+                    (s, r) => s + (Number(r.totals?.net) || 0),
+                    0,
+                  ),
+                  currencyCode || isCurrencySymbol,
+                )}
+              </td> */}
               {!isCustomerExport && (
-                  <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+                <td className="border border-gray-300 bg-gray-50" colSpan={1} />
               )}
               <td className="border border-gray-300 bg-gray-50" colSpan={1} />
               <td

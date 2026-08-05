@@ -92,34 +92,24 @@ const PoSummary = ({
               {(totals?.taxable).toFixed(2)}
             </td>
           </tr>
-          {totals?.slabBreakup
-            ?.filter((item) => item.amount > 0)
-            ?.map((i) => (
-              <tr className="h-7">
-                <td className="border border-gray-500">{i.tax} </td>
-                <td className="border border-gray-500" colSpan={2}>
-                  <input
-                    disabled
-                    type="text"
-                    name="value"
-                    className="h-7 w-full text-right"
-                    value={i.amount.toFixed(2)}
-                  />
-                </td>
-              </tr>
-            ))}
-          <tr className="h-7">
-            <td className="border border-gray-500">IGST Amount</td>
-            <td className="border border-gray-500" colSpan={2}>
-              <input
-                disabled
-                type="text"
-                name="value"
-                className="h-7 w-full text-right"
-                value={0}
-              />
-            </td>
-          </tr>
+          {!isCustomerExport &&
+            totals?.slabBreakup
+              ?.filter((item) => item.amount > 0)
+              ?.map((i, idx) => (
+                <tr className="h-7" key={idx}>
+                  <td className="border border-gray-500">{i.tax} </td>
+                  <td className="border border-gray-500" colSpan={2}>
+                    <input
+                      disabled
+                      type="text"
+                      name="value"
+                      className="h-7 w-full text-right"
+                      value={i.amount.toFixed(2)}
+                    />
+                  </td>
+                </tr>
+              ))}
+
           <tr className="h-7">
             <td className="border border-gray-500">Net Amount</td>
             <td className="border border-gray-500" colSpan={2}>
@@ -128,7 +118,10 @@ const PoSummary = ({
                 type="text"
                 name="value"
                 className="h-7 w-full text-right"
-                value={(totals?.net).toFixed(2)}
+                value={(isCustomerExport
+                  ? totals?.taxable
+                  : totals?.net
+                ).toFixed(2)}
               />
             </td>
           </tr>
@@ -166,6 +159,7 @@ const PoSummary = ({
               />
             </td>
           </tr>
+
         </tbody>
       </table>
     </div>

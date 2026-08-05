@@ -49,7 +49,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFooter.jsx";
 import { PDFViewer } from "@react-pdf/renderer";
 import OrderEntryPrintFormat from "./OrderEntryPrintFormat.jsx";
-import { FiFileText, FiPrinter } from "react-icons/fi";
+import { FiFileText, FiPrinter, FiEye } from "react-icons/fi";
 import OrderItems from "./OrderItems.jsx";
 import { padRows } from "./OrderItemsUtils.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
@@ -69,6 +69,7 @@ import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.
 import { useDispatch } from "react-redux";
 import JobCardApi from "../../../redux/uniformService/JobCardService.js";
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
+import PoSummary from "../PurchaseOrder/PoSummary";
 import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
 import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
 import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
@@ -412,6 +413,7 @@ const OrderEntryForm = ({
       }
       if (item.sizeBreakup?.length) {
         const sizeSeen = new Set();
+        let sizeSum = 0;
 
         item.sizeBreakup.forEach((size, sizeIndex) => {
           // size required
@@ -423,6 +425,7 @@ const OrderEntryForm = ({
 
           // qty validation
           const qty = Number(size.qty || 0);
+          sizeSum += qty;
 
           if (qty <= 0) {
             errors.push(
@@ -439,6 +442,12 @@ const OrderEntryForm = ({
             }
           }
         });
+
+        if (orderType === "AGAINSTPI" && sizeSum !== Number(item.orderQty)) {
+          errors.push(
+            `Row ${index + 1}: Sum of size quantities (${sizeSum}) must match the PI quantity (${item.orderQty})`,
+          );
+        }
       }
     });
 
@@ -707,9 +716,46 @@ const OrderEntryForm = ({
     discountValue,
     conversionType,
   ]);
+  const handleConversionChange = (newVal) => {
+    setConversionType(newVal);
+    setOrderItems((prev) =>
+      prev.map((row) => {
+        const qty = parseFloat(row.orderQty) || 0;
+        const price = parseFloat(row.price) || 0;
+        const dozen = qty / 12;
+        let amount = "";
+
+        if (newVal === "DOZEN") {
+          amount = dozen > 0 && price > 0 ? (dozen * price).toFixed(2) : "";
+        } else {
+          amount = qty > 0 && price > 0 ? (qty * price).toFixed(2) : "";
+        }
+
+        return {
+          ...row,
+          dozen: dozen > 0 ? dozen.toFixed(2) : "",
+          amount,
+        };
+      }),
+    );
+  };
 
   return (
     <>
+      <Modal isOpen={summary} onClose={() => setSummary(false)} widthClass="">
+        <PoSummary
+          poItems={orderItems}
+          totals={enrichedData}
+          readOnly={readOnly || isDisabled}
+          discountType={discountType}
+          setDiscountType={setDiscountType}
+          discountValue={discountValue}
+          setDiscountValue={setDiscountValue}
+          setSummary={setSummary}
+          isCustomerExport={isCustomerExport}
+        />
+      </Modal>
+
       <Modal
         isOpen={approvalModal}
         onClose={() => setApprovalModal(false)}
@@ -1214,13 +1260,29 @@ const OrderEntryForm = ({
                     name="Order Type"
                     options={orderTypes}
                     value={orderType}
-                    setValue={(value) => setOrderType(value)}
+                    setValue={(value) => {
+                      setOrderType(value);
+                      setProFormaId("");
+                      if (value === "GENERAL") {
+                        setOrderItems(fillWithDefaultRows([]));
+                        setTaxTemplateId("");
+                        setDiscountType("Percentage");
+                        setDiscountValue(0);
+                        setConversionType("DOZEN");
+                        setTermsId("");
+                        setTermsAndCondition("");
+                        setDeliveryDate("");
+                        setRemarks("");
+                        setPayTermId("");
+                        setBankId("");
+                        setCurrencyId("");
+                        setWeightInKg("");
+                        setCarriageCharge("");
+                      }
+                    }}
                     required={true}
                     readOnly={readOnly}
                     disabled={childRecord.current > 0 || readOnly}
-                    beforeChange={() => {
-                      setProFormaId("");
-                    }}
                   />
                   <div className="col-span-1">
                     <DropdownNew
@@ -1427,7 +1489,7 @@ const OrderEntryForm = ({
                     name="Conversion"
                     options={conversionTypes}
                     value={conversionType}
-                    setValue={setConversionType}
+                    setValue={handleConversionChange}
                     required={false}
                     readOnly={readOnly || orderType === "AGAINSTPI"}
                   />
@@ -1438,16 +1500,36 @@ const OrderEntryForm = ({
                     value={weightInKg}
                     setValue={setWeightInKg}
                     type="number"
+                    min="0"
+                    className="text-right"
                     disabled={readOnly || orderType === "AGAINSTPI"}
+                    onBlur={(e) =>
+                      setWeightInKg(
+                        e.target.value ? Number(e.target.value).toFixed(3) : "",
+                      )
+                    }
+                    onFocus={(e) => {
+                      e.target.select();
+                    }}
                   />
                 </div>
                 <div className="col-span-1">
                   <TextInput
-                    name="Carriage and Air Freight"
+                    name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
                     value={carriageCharge}
                     setValue={setCarriageCharge}
                     type="number"
+                    min="0"
+                    className="text-right"
                     disabled={readOnly || orderType === "AGAINSTPI"}
+                    onBlur={(e) =>
+                      setCarriageCharge(
+                        e.target.value ? Number(e.target.value).toFixed(2) : "",
+                      )
+                    }
+                    onFocus={(e) => {
+                      e.target.select();
+                    }}
                   />
                 </div>
                 <div className="col-span-1">
@@ -1499,7 +1581,7 @@ const OrderEntryForm = ({
                     value={deliveryDate}
                     setValue={setDeliveryDate}
                     required={true}
-                    readOnly={readOnly}
+                    readOnly={readOnly || orderType === "AGAINSTPI"}
                     type={"date"}
                   />
                 </div>
@@ -1556,6 +1638,8 @@ const OrderEntryForm = ({
                 },
               ]}
               hasSummaryTitle="Summary"
+              sectionColClass="md:col-span-3"
+              summaryColClass="md:col-span-6"
               totalsRows={[
                 {
                   key: "orderType",
@@ -1589,15 +1673,24 @@ const OrderEntryForm = ({
                   summaryColumn: "right",
                   emphasized: true,
                 },
+                {
+                  key: "totalDiscount",
+                  label: "Total Discount",
+                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(
+                    enrichedData.itemDiscount + enrichedData.overallDiscount > 0
+                      ? enrichedData.itemDiscount + enrichedData.overallDiscount
+                      : 0,
+                    currencyCode || isCurrencySymbol,
+                  )}`,
+                  summaryColumn: "right",
+                  emphasized: false,
+                },
                 ...(!isCustomerExport
                   ? (() => {
-                      const taxTotals = enrichedData.items.reduce(
-                        (acc, item) => {
-                          const taxes = item?.totals?.taxes || [];
-                          taxes.forEach((tax) => {
-                            acc[tax.type] =
-                              (acc[tax.type] || 0) + (tax.amount || 0);
-                          });
+                      const taxTotals = (enrichedData.slabBreakup || []).reduce(
+                        (acc, curr) => {
+                          const type = curr.tax.split(" ")[0];
+                          acc[type] = (acc[type] || 0) + curr.amount;
                           return acc;
                         },
                         {},
@@ -1611,17 +1704,34 @@ const OrderEntryForm = ({
                       }));
                     })()
                   : []),
-                ...(!isCustomerExport
-                  ? [
-                      {
-                        key: "netAmount",
-                        label: "Net Amount",
-                        value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(enrichedData.net, currencyCode || isCurrencySymbol)}`,
-                        summaryColumn: "right",
-                        emphasized: true,
-                      },
-                    ]
-                  : []),
+                {
+                  key: "carriageCharge",
+                  label: "Carriage Charges",
+                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(carriageCharge || 0, currencyCode || isCurrencySymbol)}`,
+                  summaryColumn: "right",
+                  emphasized: false,
+                },
+                {
+                  key: "netAmount",
+                  label: "Net Amount",
+                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(
+                    (!isCustomerExport
+                      ? enrichedData.net
+                      : (enrichedData.items?.reduce(
+                          (sum, item) => sum + (parseFloat(item.amount) || 0),
+                          0,
+                        ) || 0) -
+                        (enrichedData.itemDiscount +
+                          enrichedData.overallDiscount >
+                        0
+                          ? enrichedData.itemDiscount +
+                            enrichedData.overallDiscount
+                          : 0)) + (parseFloat(carriageCharge) || 0),
+                    currencyCode || isCurrencySymbol,
+                  )}`,
+                  summaryColumn: "right",
+                  emphasized: true,
+                },
               ]}
             />
             <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
@@ -1661,6 +1771,39 @@ const OrderEntryForm = ({
                     </button>
                   </>
                 )}
+                <button
+                  onClick={() => {
+                    if (!taxTemplateId) {
+                      Swal.fire({
+                        title: "Information",
+                        text: "Please Select Tax Template !",
+                        icon: "info",
+                        confirmButtonColor: "#3085d6",
+                      });
+                      return;
+                    }
+                    setSummary(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!taxTemplateId) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toast.info("Please Select Tax Template !", {
+                        position: "top-center",
+                      });
+                      return;
+                    }
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSummary(true);
+                    }
+                  }}
+                  className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center text-xs"
+                >
+                  <FiEye className="w-4 h-4 mr-2" />
+                  View Summary
+                </button>
                 {status === "REJECTED" && (
                   <button
                     onClick={() => saveData("close", { submitApproval: true })}

@@ -8,7 +8,12 @@ import {
   useGetProformaInvoiceByIdQuery,
   useGetProformaInvoiceQuery,
 } from "../../../redux/uniformService/ProformaInvoiceService";
-import { findFromList, getCommonParams, ModeChip, formatCurrencyAmount } from "../../../Utils/helper";
+import {
+  findFromList,
+  getCommonParams,
+  ModeChip,
+  formatCurrencyAmount,
+} from "../../../Utils/helper";
 import {
   dropDownListObject,
   dropDownListObjectMultiple,
@@ -1084,6 +1089,8 @@ const ProformaInvoiceForm = ({
         readOnly={readOnly}
         showTermSelect={true}
         termsRef={termsRef}
+        sectionColClass="md:col-span-3"
+        summaryColClass="md:col-span-6"
         termValue={termsId}
         onTermChange={(value) => setTermsId(value)}
         termOptions={
@@ -1098,74 +1105,68 @@ const ProformaInvoiceForm = ({
             key: "totalQty",
             label: "Total Qty",
             value: totalQty.toFixed(2) || 0,
-            summaryColumn: "right",
+            summaryColumn: "left",
             emphasized: true,
           },
           {
             key: "grossAmount",
             label: "Gross Amount",
             value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(isCustomerExport ? enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0) : enrichedData.gross, currencyCode || isCurrencySymbol)}`,
-            summaryColumn: "right",
+            summaryColumn: "left",
             emphasized: true,
           },
           {
             key: "totalDiscount",
             label: "Total Discount",
-            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(enrichedData.itemDiscount + enrichedData.overallDiscount > 0 ? (enrichedData.itemDiscount + enrichedData.overallDiscount) : 0, currencyCode || isCurrencySymbol)}`,
+            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(enrichedData.itemDiscount + enrichedData.overallDiscount > 0 ? enrichedData.itemDiscount + enrichedData.overallDiscount : 0, currencyCode || isCurrencySymbol)}`,
+            summaryColumn: "left",
+            emphasized: false,
+          },
+          ...(!isCustomerExport
+            ? (() => {
+                const taxTotals = (enrichedData.slabBreakup || []).reduce(
+                  (acc, curr) => {
+                    const type = curr.tax.split(" ")[0];
+                    acc[type] = (acc[type] || 0) + curr.amount;
+                    return acc;
+                  },
+                  {},
+                );
+                return Object.keys(taxTotals).map((type) => ({
+                  key: type,
+                  label: type,
+                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(taxTotals[type], currencyCode || isCurrencySymbol)}`,
+                  summaryColumn: "right",
+                  emphasized: false,
+                }));
+              })()
+            : []),
+
+          {
+            key: "carriageCharge",
+            label: "Carriage Charges",
+            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(carriageCharge || 0, currencyCode || isCurrencySymbol)}`,
             summaryColumn: "right",
             emphasized: false,
           },
-          ...(!isCustomerExport ? (() => {
-            const taxTotals = (enrichedData.slabBreakup || []).reduce(
-              (acc, curr) => {
-                const type = curr.tax.split(" ")[0];
-                acc[type] = (acc[type] || 0) + curr.amount;
-                return acc;
-              },
-              {},
-            );
-            return Object.keys(taxTotals).map((type) => ({
-              key: type,
-              label: type,
-              value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(taxTotals[type], currencyCode || isCurrencySymbol)}`,
-              summaryColumn: "right",
-              emphasized: false,
-            }));
-          })() : []),
-
-          ...(!isCustomerExport
-            ? [
-                {
-                  key: "netAmount",
-                  label: "Net Amount",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(enrichedData.net, currencyCode || isCurrencySymbol)}`,
-                  summaryColumn: "right",
-                  emphasized: true,
-                },
-              ]
-            : [
-                {
-                  key: "carriageCharge",
-                  label: "Carraige Charges",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(carriageCharge || 0, currencyCode || isCurrencySymbol)}`,
-                  summaryColumn: "right",
-                  emphasized: false,
-                },
-                {
-                  key: "netAmount",
-                  label: "Net Amount",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(
-                    (enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0) || 0) -
-                      (enrichedData.itemDiscount + enrichedData.overallDiscount > 0
-                        ? enrichedData.itemDiscount + enrichedData.overallDiscount
-                        : 0) +
-                      (parseFloat(carriageCharge) || 0),
-                    currencyCode || isCurrencySymbol
-                  )}`,
-                  summaryColumn: "right",
-                  emphasized: true,
-                },
-              ]),
+          {
+            key: "netAmount",
+            label: "Net Amount",
+            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(
+              (!isCustomerExport
+                ? enrichedData.net
+                : (enrichedData.items?.reduce(
+                    (sum, item) => sum + (parseFloat(item.amount) || 0),
+                    0,
+                  ) || 0) -
+                  (enrichedData.itemDiscount + enrichedData.overallDiscount > 0
+                    ? enrichedData.itemDiscount + enrichedData.overallDiscount
+                    : 0)) + (parseFloat(carriageCharge) || 0),
+              currencyCode || isCurrencySymbol,
+            )}`,
+            summaryColumn: "right",
+            emphasized: true,
+          },
         ]}
       />
       <TransactionActions

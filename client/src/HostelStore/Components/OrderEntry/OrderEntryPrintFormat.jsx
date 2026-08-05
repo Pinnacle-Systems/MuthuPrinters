@@ -8,7 +8,8 @@ import {
 } from "@react-pdf/renderer";
 import Logo from "../../../assets/mplogo.png";
 import moment from "moment";
-import { findFromList } from "../../../Utils/helper";
+import { findFromList, formatCurrencyAmount } from "../../../Utils/helper";
+import { numberToWords } from "number-to-words";
 
 // ─── COLOR PALETTE ────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
@@ -68,11 +69,11 @@ const styles = StyleSheet.create({
   // ── META PILLS ──
   metaRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "flex-start",
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 4,
-    gap: 8,
+    paddingTop: 4,
+    paddingBottom: 6,
+    gap: 6,
   },
   metaPill: {
     flexDirection: "row",
@@ -383,6 +384,7 @@ const OrderEntryPrintFormat = ({
                         label: "Delivery Date",
                         value: moment(data?.deliveryDate).format("DD-MM-YYYY"),
                       },
+                      ...(parseFloat(data?.carriageCharge) > 0 ? [{ label: "Carriage Charge", value: data?.carriageCharge }] : []),
                     ].map(({ label, value }) => (
                       <View key={label} style={styles.metaPill}>
                         <Text style={styles.metaLabel}>{label}:</Text>

@@ -74,6 +74,8 @@ const CommonFormFooter = ({
   hasSummaryTitle = false,
   remarksReadOnly = null,
   termsRef = null,
+  sectionColClass = "md:col-span-4",
+  summaryColClass = "md:col-span-4",
 }) => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -310,7 +312,7 @@ const CommonFormFooter = ({
         <div
           className={[
             "flex h-full flex-col rounded-md border border-slate-200 bg-white p-1.5 shadow-sm",
-            stacked ? "" : "md:col-span-4",
+            stacked ? "" : sectionColClass,
           ]
             .filter(Boolean)
             .join(" ")}
@@ -385,7 +387,7 @@ const CommonFormFooter = ({
         <div
           className={[
             "flex h-full flex-col rounded-md border border-slate-200 bg-white p-1.5 shadow-sm",
-            stacked ? "" : "md:col-span-4",
+            stacked ? "" : sectionColClass,
           ]
             .filter(Boolean)
             .join(" ")}
@@ -426,7 +428,7 @@ const CommonFormFooter = ({
         <div
           className={[
             "grid grid-cols-1 gap-2",
-            stacked ? "" : "md:col-span-4",
+            stacked ? "" : summaryColClass,
             stacked
               ? ""
               : hasLeftSummaryContent && hasRightSummaryContent
