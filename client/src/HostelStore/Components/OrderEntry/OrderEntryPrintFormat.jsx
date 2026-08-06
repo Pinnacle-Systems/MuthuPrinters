@@ -69,6 +69,7 @@ const styles = StyleSheet.create({
   // ── META PILLS ──
   metaRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "flex-start",
     paddingHorizontal: 20,
     paddingTop: 4,
@@ -83,6 +84,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 2,
+    marginBottom: 4,
   },
   metaLabel: { fontSize: 7.5, color: "#888", marginRight: 3 },
   metaValue: { fontSize: 7.5, fontWeight: "bold", color: "#1a1a2e" },
@@ -186,16 +188,46 @@ const styles = StyleSheet.create({
   // ── FOOTER BAR ──
   footerBar: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 10,
     position: "absolute",
-    bottom: 20,
+    bottom: 10,
     left: 0,
     right: 0,
   },
-  footerRight: { fontSize: 8, color: "#1a1a2e", fontWeight: "bold" },
+  footerRight: {
+    textAlign: "center",
+    fontSize: 8,
+    color: "#1a1a2e",
+    fontWeight: "bold",
+  },
+  summaryRow: {
+    flexDirection: "row",
+    borderBottom: "1 solid #e0e0e0",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  summaryLabel: {
+    fontSize: 7.5,
+    color: "#888",
+    textAlign: "right",
+    flex: 1,
+  },
+  summaryColon: {
+    fontSize: 7.5,
+    color: "#888",
+    width: 8,
+    textAlign: "center",
+  },
+  summaryValue: {
+    fontSize: 7.5,
+    color: "#1a1a2e",
+    fontWeight: "bold",
+    width: 65,
+    textAlign: "right",
+  },
 });
 
 // ── TABLE COLUMNS ─────────────────────────────────────────────────────────────
@@ -205,9 +237,12 @@ const COLUMNS = [
   { label: "Item Sub Group", flex: 1.2 },
   { label: "Item Group", flex: 1.2 },
   { label: "HSN", flex: 0.8 },
-  { label: "Type", flex: 1.2 },
   { label: "UOM", flex: 0.7 },
+
   { label: "Order Qty", flex: 0.9 },
+  { label: "Price", flex: 0.9 },
+  { label: "Tax %", flex: 0.7 },
+  { label: "Gross", flex: 1.2 },
 ];
 
 const ROWS_PAGE_1 = 15;
@@ -278,6 +313,9 @@ const OrderEntryPrintFormat = ({
   itemGroupList,
   itemSubGroupList,
   hsnList,
+  totals,
+  discountType,
+  currencyCode,
 }) => {
   if (!data) return null;
 
@@ -290,6 +328,12 @@ const OrderEntryPrintFormat = ({
     (s, r) => s + (parseFloat(r.orderQty) || 0),
     0,
   );
+  const totalPrice = orderItems.reduce(
+    (s, r) => s + (parseFloat(r.price) || 0),
+    0,
+  );
+  const carriageCharge = parseFloat(data?.carriageCharge) || 0;
+  const finalNetAmount = (totals?.net || 0) + carriageCharge;
 
   // ── Pagination ──
   const pageChunks = chunkItems(orderItems);
@@ -384,7 +428,14 @@ const OrderEntryPrintFormat = ({
                         label: "Delivery Date",
                         value: moment(data?.deliveryDate).format("DD-MM-YYYY"),
                       },
-                      ...(parseFloat(data?.carriageCharge) > 0 ? [{ label: "Carriage Charge", value: data?.carriageCharge }] : []),
+                      ...(parseFloat(data?.carriageCharge) > 0
+                        ? [
+                            {
+                              label: "Carriage Charge",
+                              value: data?.carriageCharge,
+                            },
+                          ]
+                        : []),
                     ].map(({ label, value }) => (
                       <View key={label} style={styles.metaPill}>
                         <Text style={styles.metaLabel}>{label}:</Text>
@@ -549,32 +600,49 @@ const OrderEntryPrintFormat = ({
                         {row?.Hsn?.name ||
                           findFromList(row.hsnId, hsnList?.data, "name")}
                       </Text>
-
-                      {/* Type */}
-                      <Text style={[styles.td, { flex: 1.2 }]}>
-                        {row?.trackingType || "None"}
-                      </Text>
-
                       {/* UOM */}
-                      <Text style={[styles.td, { flex: 0.7 }]}>
+                      <Text
+                        style={[styles.td, { flex: 0.7, textAlign: "left" }]}
+                      >
                         {row?.Uom?.name ||
                           findFromList(row.uomId, uomList?.data, "name")}
                       </Text>
-
                       {/* Order Qty */}
+                      <Text
+                        style={[styles.td, { flex: 0.9, textAlign: "right" }]}
+                      >
+                        {row?.orderQty
+                          ? parseFloat(row.orderQty).toFixed(2)
+                          : ""}
+                      </Text>
+                      {/* Price */}
+                      <Text
+                        style={[styles.td, { flex: 0.9, textAlign: "right" }]}
+                      >
+                        {row?.price ? formatCurrencyAmount(row.price) : ""}
+                      </Text>
+
+                      {/* Tax % */}
+                      <Text
+                        style={[styles.td, { flex: 0.7, textAlign: "right" }]}
+                      >
+                        {row?.taxPercent
+                          ? `${parseFloat(row.taxPercent).toFixed(1)}%`
+                          : ""}
+                      </Text>
+
+                      {/* Gross */}
                       <Text
                         style={[
                           styles.td,
                           {
-                            flex: 0.9,
+                            flex: 1.2,
                             textAlign: "right",
                             borderRight: "none",
                           },
                         ]}
                       >
-                        {row?.orderQty
-                          ? parseFloat(row.orderQty).toFixed(2)
-                          : ""}
+                        {row?.amount ? formatCurrencyAmount(row.amount) : ""}
                       </Text>
                     </View>
                   );
@@ -597,10 +665,12 @@ const OrderEntryPrintFormat = ({
                       <Text style={[styles.td, { flex: 1.2 }]}> </Text>
                       <Text style={[styles.td, { flex: 1.2 }]}> </Text>
                       <Text style={[styles.td, { flex: 0.8 }]}> </Text>
-                      <Text style={[styles.td, { flex: 1.2 }]}> </Text>
+                      <Text style={[styles.td, { flex: 0.7 }]}> </Text>
+                      <Text style={[styles.td, { flex: 0.9 }]}> </Text>
+                      <Text style={[styles.td, { flex: 0.9 }]}> </Text>
                       <Text style={[styles.td, { flex: 0.7 }]}> </Text>
                       <Text
-                        style={[styles.td, { flex: 0.9, borderRight: "none" }]}
+                        style={[styles.td, { flex: 1.2, borderRight: "none" }]}
                       >
                         {" "}
                       </Text>
@@ -611,154 +681,420 @@ const OrderEntryPrintFormat = ({
 
               {/* ── GRAND TOTAL — last page only ── */}
               {isLastPage && (
-                <View
-                  style={{
-                    flexDirection: "row",
-                    marginHorizontal: 20,
-                    backgroundColor: "#e8e8ec",
-                    borderLeft: "1 solid #b0b0b8",
-                    borderRight: "1 solid #b0b0b8",
-                    borderBottom: "1 solid #b0b0b8",
-                  }}
-                >
-                  <Text style={[styles.td, { flex: 0.4, color: "transparent" }]}> </Text>
-                  <Text style={[styles.td, { flex: 2.5, fontWeight: "bold", color: "#1a1a2e", textAlign: "right", paddingRight: 1 }]}>TOTAL</Text>
-                  <Text style={[styles.td, { flex: 1.2, color: "transparent" }]}> </Text>
-                  <Text style={[styles.td, { flex: 1.2, color: "transparent" }]}> </Text>
-                  <Text style={[styles.td, { flex: 0.8, color: "transparent" }]}> </Text>
-                  <Text style={[styles.td, { flex: 1.2, color: "transparent" }]}> </Text>
-                  <Text style={[styles.td, { flex: 0.7, color: "transparent" }]}> </Text>
-                  <Text style={[styles.td, { flex: 0.9, fontWeight: "bold", color: "#1a1a2e", textAlign: "right", borderRight: "none" }]}>
-                    {totalOrderQty.toFixed(2)}
-                  </Text>
-                </View>
-              )}
-
-              {/* ── SUB TOTAL — non-last pages ── */}
-              {!isLastPage && (
-                <View
-                  style={{
-                    flexDirection: "row",
-                    marginHorizontal: 20,
-                    backgroundColor: "#f4f4f6",
-                    borderLeft: "1 solid #b0b0b8",
-                    borderRight: "1 solid #b0b0b8",
-                    borderBottom: "1 solid #b0b0b8",
-                  }}
-                >
-                  <Text style={[styles.td, { flex: 0.4, color: "transparent" }]}> </Text>
-                  <Text style={[styles.td, { flex: 7.6, color: "#888", fontStyle: "italic", textAlign: "right", paddingRight: 8 }]}>
-                    Sub Total (Continued on next page...)
-                  </Text>
-                  <Text style={[styles.td, { flex: 0.9, fontWeight: "bold", color: "#1a1a2e", textAlign: "right", borderRight: "none" }]}>
-                    {chunkRows
-                      .reduce((s, r) => s + (parseFloat(r.orderQty) || 0), 0)
-                      .toFixed(2)}
-                  </Text>
-                </View>
-              )}
-
-              {/* ── REQUIREMENTS, REMARKS & TERMS — last page only ── */}
-              {isLastPage && (
                 <>
-                  {/* CUSTOMER REQUIREMENTS */}
-                  <View style={[styles.requirementsBox, { marginTop: 10 }]}>
-                    <View
-                      style={{
-                        backgroundColor: "#2d2d44",
-                        paddingHorizontal: 10,
-                        paddingVertical: 5,
-                      }}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      marginHorizontal: 20,
+                      backgroundColor: "#e8e8ec",
+                      borderLeft: "1 solid #b0b0b8",
+                      borderRight: "1 solid #b0b0b8",
+                      borderBottom: "1 solid #b0b0b8",
+                    }}
+                  >
+                    <Text
+                      style={[styles.td, { flex: 0.4, color: "transparent" }]}
                     >
-                      <Text
-                        style={{
-                          color: "#e8e8f0",
-                          fontSize: 7.5,
-                          fontWeight: "bold",
-                        }}
-                      >
-                        CUSTOMER REQUIREMENTS
-                      </Text>
-                    </View>
-                    <View style={styles.requirementsBody}>
-                      <Text>
-                        {data?.requirements ||
-                          "No specific requirements mentioned."}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* REMARKS */}
-                  <View style={[styles.twoCol, { marginTop: 5 }]}>
-                    <View
+                      {" "}
+                    </Text>
+                    <Text
                       style={[
-                        styles.colHalf,
+                        styles.td,
                         {
-                          borderRight: "1 solid #ddd",
-                          backgroundColor: "#f8f8f9",
+                          flex: 2.5,
+                          fontWeight: "bold",
+                          color: "#1a1a2e",
+                          textAlign: "right",
+                          paddingRight: 1,
                         },
                       ]}
                     >
-                      <Text style={styles.sectionHeader}>REMARKS</Text>
-                      <View style={styles.sectionBody}>
-                        <Text style={{ fontSize: 7.5, color: "#555" }}>
-                          {data?.remarks || "N/A"}
-                        </Text>
+                      TOTAL
+                    </Text>
+                    <Text
+                      style={[styles.td, { flex: 1.2, color: "transparent" }]}
+                    >
+                      {" "}
+                    </Text>
+                    <Text
+                      style={[styles.td, { flex: 1.2, color: "transparent" }]}
+                    >
+                      {" "}
+                    </Text>
+                    <Text
+                      style={[styles.td, { flex: 0.8, color: "transparent" }]}
+                    >
+                      {" "}
+                    </Text>
+                    <Text
+                      style={[styles.td, { flex: 0.7, color: "transparent" }]}
+                    >
+                      {" "}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.td,
+                        {
+                          flex: 0.9,
+                          fontWeight: "bold",
+                          color: "#1a1a2e",
+                          textAlign: "right",
+                        },
+                      ]}
+                    >
+                      {totalOrderQty.toFixed(2)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.td,
+                        {
+                          flex: 0.9,
+                          fontWeight: "bold",
+                          color: "#1a1a2e",
+                          textAlign: "right",
+                        },
+                      ]}
+                    >
+                      {totalPrice > 0 ? formatCurrencyAmount(totalPrice) : ""}
+                    </Text>
+                    <Text
+                      style={[styles.td, { flex: 0.7, color: "transparent" }]}
+                    >
+                      {" "}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.td,
+                        {
+                          flex: 1.2,
+                          fontWeight: "bold",
+                          color: "#1a1a2e",
+                          textAlign: "right",
+                          borderRight: "none",
+                        },
+                      ]}
+                    >
+                      {totals?.gross
+                        ? formatCurrencyAmount(totals.gross, currencyCode)
+                        : ""}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      marginHorizontal: 20,
+                      marginTop: 8,
+                      gap: 8,
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    {/* CUSTOMER REQUIREMENTS & REMARKS */}
+                    <View style={{ flex: 1, gap: 5 }}>
+                      <View style={{ border: "1 solid #ddd", borderRadius: 3 }}>
+                        <View
+                          style={{
+                            backgroundColor: "#2d2d44",
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: "#e8e8f0",
+                              fontSize: 7.5,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            CUSTOMER REQUIREMENTS
+                          </Text>
+                        </View>
+                        <View style={styles.requirementsBody}>
+                          <Text>
+                            {data?.requirements ||
+                              "No specific requirements mentioned."}
+                          </Text>
+                        </View>
+                      </View>
+                      <View
+                        style={{
+                          border: "1 solid #ddd",
+                          borderRadius: 3,
+                          backgroundColor: "#f8f8f9",
+                        }}
+                      >
+                        <View
+                          style={{
+                            backgroundColor: "#2d2d44",
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: "#e8e8f0",
+                              fontSize: 7.5,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            REMARKS
+                          </Text>
+                        </View>
+                        <View style={styles.sectionBody}>
+                          <Text style={{ fontSize: 7.5, color: "#555" }}>
+                            {data?.remarks || ""}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* SUMMARY */}
+                    <View
+                      style={{
+                        width: "45%",
+                        border: "1 solid #ddd",
+                        borderRadius: 3,
+                      }}
+                    >
+                      <Text
+                        style={[styles.sectionHeader, { textAlign: "center" }]}
+                      >
+                        SUMMARY
+                      </Text>
+                      <View style={{ padding: 8 }}>
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>Total Qty</Text>
+                          <Text style={styles.summaryColon}>:</Text>
+                          <Text style={styles.summaryValue}>
+                            {Number(totalOrderQty).toFixed(3)}
+                          </Text>
+                        </View>
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>Gross Amount</Text>
+                          <Text style={styles.summaryColon}>:</Text>
+                          <Text style={styles.summaryValue}>
+                            {currencyCode || ""}{" "}
+                            {formatCurrencyAmount(
+                              totals?.gross || 0,
+                              currencyCode,
+                            )}
+                          </Text>
+                        </View>
+                        {(totals?.itemDiscount || 0) +
+                          (totals?.overallDiscount || 0) >
+                          0 && (
+                          <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>
+                              Total Discount
+                            </Text>
+                            <Text style={styles.summaryColon}>:</Text>
+                            <Text style={styles.summaryValue}>
+                              {currencyCode || ""}{" "}
+                              {formatCurrencyAmount(
+                                (totals?.itemDiscount || 0) +
+                                  (totals?.overallDiscount || 0),
+                                currencyCode,
+                              )}
+                            </Text>
+                          </View>
+                        )}
+                        {totals?.taxable > 0 && (
+                          <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>
+                              Taxable Amount
+                            </Text>
+                            <Text style={styles.summaryColon}>:</Text>
+                            <Text style={styles.summaryValue}>
+                              {currencyCode || ""}{" "}
+                              {formatCurrencyAmount(
+                                totals.taxable,
+                                currencyCode,
+                              )}
+                            </Text>
+                          </View>
+                        )}
+                        {totals?.slabBreakup
+                          ?.filter((slab) => (slab.amount || 0) > 0)
+                          .map((slab) => (
+                            <View key={slab.tax} style={styles.summaryRow}>
+                              <Text style={styles.summaryLabel}>
+                                {slab.tax}
+                              </Text>
+                              <Text style={styles.summaryColon}>:</Text>
+                              <Text style={styles.summaryValue}>
+                                {currencyCode || ""}{" "}
+                                {formatCurrencyAmount(
+                                  slab.amount || 0,
+                                  currencyCode,
+                                )}
+                              </Text>
+                            </View>
+                          ))}
+                        {parseFloat(data?.carriageCharge || 0) > 0 && (
+                          <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>
+                              Carriage Charge
+                            </Text>
+                            <Text style={styles.summaryColon}>:</Text>
+                            <Text style={styles.summaryValue}>
+                              {currencyCode || ""}{" "}
+                              {formatCurrencyAmount(
+                                data.carriageCharge,
+                                currencyCode,
+                              )}
+                            </Text>
+                          </View>
+                        )}
+                        {totals?.roundOff !== 0 &&
+                          totals?.roundOff !== undefined && (
+                            <View style={styles.summaryRow}>
+                              <Text style={styles.summaryLabel}>Round Off</Text>
+                              <Text style={styles.summaryColon}>:</Text>
+                              <Text style={styles.summaryValue}>
+                                {totals?.roundOff > 0 ? "+" : ""}{" "}
+                                {currencyCode || ""}{" "}
+                                {formatCurrencyAmount(
+                                  Math.abs(totals?.roundOff || 0),
+                                  currencyCode,
+                                )}
+                              </Text>
+                            </View>
+                          )}
+                        <View
+                          style={[
+                            styles.summaryRow,
+                            {
+                              backgroundColor: "#1a1a2e",
+                              borderBottom: "none",
+                              borderRadius: 2,
+                              marginTop: "auto",
+                              paddingTop: 4,
+                              paddingBottom: 4,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.summaryLabel,
+                              {
+                                fontWeight: "bold",
+                                color: "#ccc",
+                                marginLeft: 4,
+                              },
+                            ]}
+                          >
+                            Net Amount
+                          </Text>
+                          <Text
+                            style={[styles.summaryColon, { color: "#ccc" }]}
+                          >
+                            :
+                          </Text>
+                          <Text
+                            style={[
+                              styles.summaryValue,
+                              { fontSize: 9, color: "#fff" },
+                            ]}
+                          >
+                            {currencyCode || ""}{" "}
+                            {formatCurrencyAmount(finalNetAmount, currencyCode)}
+                          </Text>
+                        </View>
+                        {finalNetAmount > 0 && (
+                          <View
+                            style={{
+                              marginTop: 6,
+                              paddingTop: 4,
+                              borderTop: "1 solid #ddd",
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 7,
+                                fontStyle: "italic",
+                                color: "#555",
+                              }}
+                            >
+                              Amount in Words:
+                            </Text>
+                            <Text
+                              style={{
+                                fontSize: 7.5,
+                                fontWeight: "bold",
+                                color: "#1a1a2e",
+                                marginTop: 2,
+                              }}
+                            >
+                              {numberToWords
+                                .toWords(Math.round(finalNetAmount))
+                                .replace(/\b\w/g, (c) => c.toUpperCase()) +
+                                " Only"}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     </View>
                   </View>
 
-                  {/* SIGNATURES */}
-                  <View
-                    style={{
-                      marginHorizontal: 20,
-                      marginTop: 14,
-                      marginBottom: 8,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        textAlign: "right",
-                        fontSize: 8,
-                        fontWeight: "bold",
-                        color: "#1a1a2e",
-                        marginBottom: 18,
-                      }}
-                    >
-                      For {branchData?.branchName || ""}
-                    </Text>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        borderTop: "1 solid #ddd",
-                        paddingTop: 4,
-                      }}
-                    >
-                      {[
-                        "Prepared By",
-                        "Checked By",
-                        "Approved By",
-                        "Customer Sign",
-                      ].map((role) => (
-                        <Text
-                          key={role}
-                          style={{
-                            flex: 1,
-                            textAlign: "center",
-                            fontSize: 7.5,
-                            color: "#555",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {role}
-                        </Text>
-                      ))}
-                    </View>
-                  </View>
+                  {/* Spacer to reserve space for the fixed absolute signature block at the bottom */}
+                  <View style={{ height: 80 }} />
                 </>
               )}
             </View>
+
+            {/* ── FOOTER: SIGNATURES (ABSOLUTE BOTTOM) ── */}
+            <View
+              style={{ position: "absolute", bottom: 40, left: 20, right: 20 }}
+              fixed
+              render={({ pageNumber, totalPages }) => {
+                if (pageNumber === totalPages) {
+                  return (
+                    <View>
+                      <Text
+                        style={{
+                          textAlign: "right",
+                          fontSize: 8,
+                          fontWeight: "bold",
+                          color: "#1a1a2e",
+                          marginBottom: 18,
+                        }}
+                      >
+                        For {branchData?.branchName || ""}
+                      </Text>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          borderTop: "1 solid #ddd",
+                          paddingTop: 4,
+                        }}
+                      >
+                        {[
+                          "Prepared By",
+                          "Checked By",
+                          "Approved By",
+                          "Customer Sign",
+                        ].map((role) => (
+                          <Text
+                            key={role}
+                            style={{
+                              flex: 1,
+                              textAlign: "center",
+                              fontSize: 7.5,
+                              color: "#555",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {role}
+                          </Text>
+                        ))}
+                      </View>
+                    </View>
+                  );
+                }
+                return null;
+              }}
+            />
 
             {/* FOOTER BAR — all pages */}
             <View style={styles.footerBar} fixed>

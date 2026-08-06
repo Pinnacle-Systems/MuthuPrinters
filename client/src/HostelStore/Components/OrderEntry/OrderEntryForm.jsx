@@ -1153,6 +1153,10 @@ const OrderEntryForm = ({
               gsmList={gsmList}
               uomList={uomList}
               sizeList={sizeList}
+              hsnList={hsnList}
+              totals={enrichedData}
+              discountType={discountType}
+              currencyCode={currencyCode}
             />
           </PDFViewer>
         </Modal>

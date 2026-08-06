@@ -111,6 +111,20 @@ const OrderItems = ({
       const row = { ...rows[rowIndex] };
       const breakup = [...(row.sizeBreakup || [])];
 
+      if (field === "sizeId" && value) {
+        const isDuplicate = breakup.some(
+          (item, idx) => idx !== sizeIndex && item.sizeId === value,
+        );
+        if (isDuplicate) {
+          Swal.fire({
+            icon: "warning",
+            title: "Duplicate Size",
+            text: "This size is already selected for this item. Please select a different size.",
+          });
+          return prev;
+        }
+      }
+
       if (field === "qty") {
         const newValue = Number(value) || 0;
         const currentSum = breakup.reduce(
