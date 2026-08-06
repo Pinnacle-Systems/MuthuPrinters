@@ -63,7 +63,7 @@ const ProformaInvoiceItems = ({
     useLazyGetStyleItemMasterByIdQuery();
 
   const addRow = () => {
-    setItems([...items, EMPTY_ROW]);
+    setItems([...items, { ...EMPTY_ROW, rowId: Math.random().toString(36).substring(2, 9) }]);
   };
 
   const deleteRow = (index) => {
@@ -141,7 +141,7 @@ const ProformaInvoiceItems = ({
     const nextIndex = index + 1;
 
     if (!items[nextIndex]) {
-      setItems((prev) => [...prev, EMPTY_ROW]);
+      setItems((prev) => [...prev, { ...EMPTY_ROW, rowId: Math.random().toString(36).substring(2, 9) }]);
 
       setTimeout(() => {
         styleItemRefs.current[nextIndex]?.focus?.();
@@ -159,7 +159,7 @@ const ProformaInvoiceItems = ({
   };
 
   const handleDeleteAllRows = () => {
-    setItems(Array.from({ length: 10 }, () => ({ ...EMPTY_ROW })));
+    setItems(Array.from({ length: 14 }, () => ({ ...EMPTY_ROW, rowId: Math.random().toString(36).substring(2, 9) })));
   };
 
   // The padding to 14 elements is now handled synchronously in the parent (ProformaInvoiceForm)
@@ -242,7 +242,7 @@ const ProformaInvoiceItems = ({
           <tbody>
             {items?.map((item, index) => (
               <tr
-                key={index}
+                key={item.rowId || index}
                 className={`h-6 hover:bg-gray-50 ${
                   index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                 }`}
@@ -451,7 +451,6 @@ const ProformaInvoiceItems = ({
                           e.preventDefault();
                         if (e.key === "Delete") {
                           handleInputChange("", index, "price");
-                          ``;
                         }
                         if (e.key === "Enter") {
                           if (index === items.length - 1) {

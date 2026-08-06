@@ -27,10 +27,7 @@ import tw from "../../../Utils/tailwind-react-pdf";
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 import { FiEdit2, FiSave, FiPrinter, FiEye } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
-import OrderEntryApi, {
-  useGetOrderEntryQuery,
-  useLazyGetOrderEntryByIdQuery,
-} from "../../../redux/uniformService/OrderEntryService";
+import OrderEntryApi from "../../../redux/uniformService/OrderEntryService";
 import {
   CommonFormFooter,
   TransactionActions,
@@ -69,13 +66,21 @@ const EMPTY_ROW = {
 const padItems = (itemsArray = []) => {
   const minLength = 14;
   const currentLength = itemsArray.length;
+
+  const formattedItems = itemsArray.map((item) =>
+    item.rowId
+      ? item
+      : { ...item, rowId: Math.random().toString(36).substring(2, 9) },
+  );
+
   if (currentLength < minLength) {
     const padding = Array.from({ length: minLength - currentLength }, () => ({
       ...EMPTY_ROW,
+      rowId: Math.random().toString(36).substring(2, 9),
     }));
-    return [...itemsArray, ...padding];
+    return [...formattedItems, ...padding];
   }
-  return itemsArray;
+  return formattedItems;
 };
 
 const ProformaInvoiceForm = ({
@@ -142,14 +147,12 @@ const ProformaInvoiceForm = ({
   const { data: singleData } = useGetProformaInvoiceByIdQuery(id, {
     skip: !id,
   });
-  const { data: orderList } = useGetOrderEntryQuery({ params: { branchId } });
   const { data: taxTypeList } = useGetTaxTemplateQuery({
     params: { companyId },
   });
   const { data: supplierData } = useGetPartyByIdQuery(customerId, {
     skip: !customerId,
   });
-  const [triggerGetOrderById] = useLazyGetOrderEntryByIdQuery();
   const [dispatchInvalidate] = useInvalidateTags();
 
   const [addData] = useAddProformaInvoiceMutation();
@@ -514,8 +517,7 @@ const ProformaInvoiceForm = ({
   };
 
   const handleKeyDown = (event) => {
-    let charCode = String.fromCharCode(event.which).toLowerCase();
-    if ((event.ctrlKey || event.metaKey) && charCode === "s") {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       handleSave();
     }
@@ -564,7 +566,7 @@ const ProformaInvoiceForm = ({
         taxTypeList?.data?.filter((item) => item.name === "DEFAULT")[0]?.id,
       );
     }
-  }, []);
+  }, [taxTypeList, id]);
 
   const totalAmount = items.reduce(
     (sum, item) => sum + (parseFloat(item.amount) || 0),
