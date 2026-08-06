@@ -300,7 +300,7 @@ const OrderItems = ({
 
               return sizeRows.map((sizeRow, sizeIndex) => (
                 <tr
-                  key={`${index}-${sizeIndex}`}
+                  key={`${row.rowId || index}-${sizeRow.rowId || sizeIndex}`}
                   className={`${rowBg} border-b border-gray-200 h-7 cursor-pointer`}
                   onContextMenu={(e) => {
                     if (

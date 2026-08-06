@@ -26,12 +26,8 @@ const TaxDetailsFullTemplate = ({
   if (!row) return null;
 
   let discountType = row["discountType"];
-  let discountValue = isNaN(parseFloat(row["discountValue"]))
-    ? 0
-    : parseFloat(row["discountValue"]);
-  let taxPercent = isNaN(parseFloat(row["taxPercent"]))
-    ? 0
-    : parseFloat(row["taxPercent"]);
+  let discountValue = row["discountValue"] ?? "";
+  let taxPercent = row["taxPercent"] ?? "";
 
   const handleExitToNextRow = useCallback(
     (event) => {
