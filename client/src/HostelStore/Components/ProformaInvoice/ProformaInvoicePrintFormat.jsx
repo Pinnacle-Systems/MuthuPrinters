@@ -439,6 +439,10 @@ const ProformaInvoicePrintFormat = ({
     (s, i) => s + (parseFloat(i.amount) || 0),
     0,
   );
+  const totalPrice = allItems.reduce(
+    (s, i) => s + (parseFloat(i.price) || 0),
+    0,
+  );
   const carriageCharge = parseFloat(data?.carriageCharge) || 0;
   const grandTotal = isExport ? totalGross + carriageCharge : totalGross;
 
@@ -502,7 +506,7 @@ const ProformaInvoicePrintFormat = ({
 
   return (
     <Document>
-      {renderChunks.map((chunkRows, pageIndex) => {
+      {renderChunks?.map((chunkRows, pageIndex) => {
         const isFirstPage = pageIndex === 0;
         const isLastPage = pageIndex === renderChunks.length - 1;
         const globalOffset = pageOffsets[pageIndex] || 0;
@@ -513,7 +517,7 @@ const ProformaInvoicePrintFormat = ({
           <Page key={pageIndex} size="A4" style={styles.borderBox}>
             <View style={styles.page}>
               {/* TOP ACCENT BAR */}
-              <View style={styles.topBar} />
+              {/* <View style={styles.topBar} /> */}
 
               {isFirstPage ? (
                 <>
@@ -611,10 +615,33 @@ const ProformaInvoicePrintFormat = ({
                           ? moment(data.deliveryDate).format("DD-MM-YYYY")
                           : "",
                       },
-                    ].map(({ label, value }) => (
+                      ...(data?.quoteVersion > 1
+                        ? [
+                            {
+                              label: "Revised PI",
+                              value: `V${data.quoteVersion}`,
+                              valueColor: "red",
+                            },
+                          ]
+                        : []),
+                    ].map(({ label, value, valueColor }) => (
                       <View key={label} style={styles.metaPill}>
-                        <Text style={styles.metaLabel}>{label}:</Text>
-                        <Text style={styles.metaValue}>{value}</Text>
+                        <Text
+                          style={[
+                            styles.metaLabel,
+                            valueColor ? { color: valueColor } : {},
+                          ]}
+                        >
+                          {label}:
+                        </Text>
+                        <Text
+                          style={[
+                            styles.metaValue,
+                            valueColor ? { color: valueColor } : {},
+                          ]}
+                        >
+                          {value}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -797,7 +824,7 @@ const ProformaInvoicePrintFormat = ({
                         style={[
                           styles.td,
                           { flex: 1.2, textAlign: "right" },
-                          isExport && { borderRight: "none" },
+                          { borderRight: "none" },
                         ]}
                       >
                         {gross
@@ -894,9 +921,19 @@ const ProformaInvoicePrintFormat = ({
                       {totalDozen.toFixed(2)}
                     </Text>
                     <Text
-                      style={[styles.td, { flex: 1, color: "transparent" }]}
+                      style={[
+                        styles.td,
+                        {
+                          flex: 1,
+                          fontFamily: "Helvetica-Bold",
+                          color: DARK,
+                          textAlign: "right",
+                        },
+                      ]}
                     >
-                      {" "}
+                      {totalPrice > 0
+                        ? `${currencySymbol} ${formatCurrencyAmount(totalPrice, currencyCode || currencySymbol)}`
+                        : ""}
                     </Text>
                     {!isExport && (
                       <Text
@@ -914,7 +951,7 @@ const ProformaInvoicePrintFormat = ({
                           color: DARK,
                           textAlign: "right",
                         },
-                        isExport && { borderRight: "none" },
+                        { borderRight: "none" },
                       ]}
                     >
                       {currencySymbol}{" "}
@@ -925,19 +962,61 @@ const ProformaInvoicePrintFormat = ({
                     </Text>
                   </View>
 
-                  {/* ── SUMMARY & NET AMOUNT ── */}
-                  <View
-                    style={[
-                      styles.bankSummaryRow,
-                      { justifyContent: "flex-end" },
-                    ]}
-                    wrap={false}
-                  >
+                  {/* ── BOTTOM SECTION: TERMS, REMARKS, SUMMARY ── */}
+                  <View style={styles.bankSummaryRow} wrap={false}>
+                    {/* LEFT SIDE: TERMS & REMARKS */}
+                    <View style={{ flex: 1, flexDirection: "column", gap: 8 }}>
+                      {/* TERMS & CONDITIONS */}
+                      {data?.termsAndCondition ? (
+                        <View
+                          style={{
+                            border: `1 solid ${BORDER_LIGHT}`,
+                            borderRadius: 3,
+                          }}
+                        >
+                          <Text style={styles.sectionHeader}>
+                            TERMS &amp; CONDITIONS
+                          </Text>
+                          <View style={styles.sectionBody}>
+                            <Text
+                              style={{
+                                fontSize: 7.5,
+                                color: "#555",
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              {data.termsAndCondition}
+                            </Text>
+                          </View>
+                        </View>
+                      ) : null}
+
+                      {/* REMARKS */}
+                      {data?.remarks ? (
+                        <View
+                          style={{
+                            border: `1 solid ${BORDER_LIGHT}`,
+                            borderRadius: 3,
+                          }}
+                        >
+                          <Text style={styles.sectionHeader}>REMARKS</Text>
+                          <View style={styles.sectionBody}>
+                            <Text style={{ fontSize: 7.5, color: "#555" }}>
+                              {data.remarks}
+                            </Text>
+                          </View>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    {/* RIGHT SIDE: SUMMARY */}
                     <View
                       style={{
-                        width: "60%",
+                        width: "45%",
                         border: `1 solid ${BORDER_LIGHT}`,
                         borderRadius: 3,
+                        display: "flex",
+                        flexDirection: "column",
                       }}
                     >
                       <Text
@@ -946,41 +1025,18 @@ const ProformaInvoicePrintFormat = ({
                         SUMMARY
                       </Text>
 
-                      <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>Total Qty</Text>
-                        <Text style={styles.summaryColon}>:</Text>
-                        <Text style={styles.summaryValue}>
-                          {Number(totalQty).toFixed(3)}
-                        </Text>
-                      </View>
-
-                      <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>Gross Amount</Text>
-                        <Text style={styles.summaryColon}>:</Text>
-                        <Text style={styles.summaryValue}>
-                          {currencySymbol}{" "}
-                          {formatCurrencyAmount(
-                            totalGross,
-                            currencyCode || currencySymbol,
-                          )}
-                        </Text>
-                      </View>
-
-                      {data?.discountValue > 0 && (
+                      {(taxDetails?.itemDiscount > 0 ||
+                        taxDetails?.overallDiscount > 0) && (
                         <View style={styles.summaryRow}>
                           <Text style={styles.summaryLabel}>
-                            Discount{" "}
-                            {data.discountType === "Percentage"
-                              ? `(${data.discountValue}%)`
-                              : ""}
+                            Total Discount
                           </Text>
                           <Text style={styles.summaryColon}>:</Text>
                           <Text style={styles.summaryValue}>
-                            - {currencySymbol}{" "}
+                            {currencySymbol}{" "}
                             {formatCurrencyAmount(
-                              data.discountType === "Percentage"
-                                ? (totalGross * data.discountValue) / 100
-                                : data.discountValue,
+                              (taxDetails?.itemDiscount || 0) +
+                                (taxDetails?.overallDiscount || 0),
                               currencyCode || currencySymbol,
                             )}
                           </Text>
@@ -1093,36 +1149,6 @@ const ProformaInvoicePrintFormat = ({
                       Amount in Words ({(currencyCode || currencySymbol).trim()}
                       ): <Text style={styles.wordsValue}>{amountWords}</Text>
                     </Text>
-                  </View>
-
-                  {/* ── REMARKS & TERMS ── */}
-                  <View style={styles.bottomSection} wrap={false}>
-                    <View style={styles.remarksBox}>
-                      <Text style={styles.sectionHeader}>REMARKS</Text>
-                      <View style={styles.sectionBody}>
-                        <Text style={{ fontSize: 7.5, color: "#555" }}>
-                          {data?.remarks || ""}
-                        </Text>
-                      </View>
-                    </View>
-                    {data?.termsAndCondition ? (
-                      <View style={styles.termsBox}>
-                        <Text style={styles.sectionHeader}>
-                          TERMS &amp; CONDITIONS
-                        </Text>
-                        <View style={styles.sectionBody}>
-                          <Text
-                            style={{
-                              fontSize: 7.5,
-                              color: "#555",
-                              lineHeight: 1.5,
-                            }}
-                          >
-                            {data.termsAndCondition}
-                          </Text>
-                        </View>
-                      </View>
-                    ) : null}
                   </View>
 
                   {/* Spacer to reserve space for the fixed absolute signature block at the bottom */}

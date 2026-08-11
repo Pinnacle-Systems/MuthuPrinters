@@ -200,7 +200,11 @@ const ProformaInvoiceForm = ({
       setDeliveryDate(
         data.deliveryDate ? moment(data.deliveryDate).format("YYYY-MM-DD") : "",
       );
-      setCarriageCharge(parseFloat(data.carriageCharge).toFixed(2) || "");
+      setCarriageCharge(
+        !isNaN(parseFloat(data.carriageCharge))
+          ? parseFloat(data.carriageCharge).toFixed(2)
+          : "",
+      );
       setWeightInKg(parseFloat(data.weightInKg).toFixed(3) || "");
       setBankId(data.bankId || "");
       setConversionType(data.conversionType || "DOZEN");
@@ -1090,9 +1094,10 @@ const ProformaInvoiceForm = ({
         setTerms={setTermsAndCondition}
         readOnly={readOnly}
         showTermSelect={true}
+        hasSummaryTitle={<span className="block text-center w-full">Summary</span>}
         termsRef={termsRef}
-        sectionColClass="md:col-span-3"
-        summaryColClass="md:col-span-6"
+        sectionColClass="md:col-span-4"
+        summaryColClass="md:col-span-4"
         termValue={termsId}
         onTermChange={(value) => setTermsId(value)}
         termOptions={
@@ -1104,71 +1109,124 @@ const ProformaInvoiceForm = ({
         }
         totalsRows={[
           {
-            key: "totalQty",
-            label: "Total Qty",
-            value: totalQty.toFixed(2) || 0,
-            summaryColumn: "left",
-            emphasized: true,
-          },
-          {
-            key: "grossAmount",
-            label: "Gross Amount",
-            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(isCustomerExport ? enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0) : enrichedData.gross, currencyCode || isCurrencySymbol)}`,
-            summaryColumn: "left",
-            emphasized: true,
-          },
-          {
-            key: "totalDiscount",
-            label: "Total Discount",
-            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(enrichedData.itemDiscount + enrichedData.overallDiscount > 0 ? enrichedData.itemDiscount + enrichedData.overallDiscount : 0, currencyCode || isCurrencySymbol)}`,
-            summaryColumn: "left",
-            emphasized: false,
-          },
-          ...(!isCustomerExport
-            ? (() => {
-                const taxTotals = (enrichedData.slabBreakup || []).reduce(
-                  (acc, curr) => {
-                    const type = curr.tax.split(" ")[0];
-                    acc[type] = (acc[type] || 0) + curr.amount;
-                    return acc;
-                  },
-                  {},
-                );
-                return Object.keys(taxTotals).map((type) => ({
-                  key: type,
-                  label: type,
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(taxTotals[type], currencyCode || isCurrencySymbol)}`,
-                  summaryColumn: "right",
-                  emphasized: false,
-                }));
-              })()
-            : []),
+            key: "summary_grid",
+            label: "",
+            valueContainerClassName: "w-full",
+            renderValue: () => {
+              const taxTotals = (!isCustomerExport ? (enrichedData.slabBreakup || []).reduce(
+                (acc, curr) => {
+                  const type = curr?.tax?.split(" ")[0];
+                  acc[type] = (acc[type] || 0) + curr.amount;
+                  return acc;
+                },
+                {}
+              ) : {});
 
-          {
-            key: "carriageCharge",
-            label: "Carriage Charges",
-            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(carriageCharge || 0, currencyCode || isCurrencySymbol)}`,
-            summaryColumn: "right",
+              return (
+                <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1">
+                  {/* Left Column */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Total Discount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""} {formatCurrencyAmount(enrichedData.itemDiscount + enrichedData.overallDiscount > 0 ? enrichedData.itemDiscount + enrichedData.overallDiscount : 0, currencyCode || isCurrencySymbol)}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Taxable Amount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""} {formatCurrencyAmount(enrichedData.taxable || 0, currencyCode || isCurrencySymbol)}
+                      </span>
+                    </div>
+                    
+                    {taxTotals.CGST !== undefined && taxTotals.SGST !== undefined ? (
+                      <div className="flex items-center justify-between w-full max-w-[210px]">
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-800 w-[32px]">CGST</span>
+                          <span className="text-slate-800">:</span>
+                          <span className="font-medium text-slate-800">
+                            {formatCurrencyAmount(taxTotals.CGST, currencyCode || isCurrencySymbol)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-800 w-[32px]">SGST</span>
+                          <span className="text-slate-800">:</span>
+                          <span className="font-medium text-slate-800 text-right">
+                            {formatCurrencyAmount(taxTotals.SGST, currencyCode || isCurrencySymbol)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      Object.keys(taxTotals).map(type => (
+                        <div key={type} className="flex items-center justify-between w-full max-w-[210px]">
+                          <div className="flex justify-between w-[130px] text-slate-800">
+                            <span>{type}</span>
+                            <span>:</span>
+                          </div>
+                          <span className="font-medium text-slate-800 text-right w-[65px]">
+                            {isCurrencySymbol ? isCurrencySymbol : ""} {formatCurrencyAmount(taxTotals[type], currencyCode || isCurrencySymbol)}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Carriage Charges</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""} {!isNaN(parseFloat(carriageCharge)) && carriageCharge !== "" ? formatCurrencyAmount(carriageCharge, currencyCode || isCurrencySymbol) : "0.00"}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Round Off</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""} {formatCurrencyAmount(enrichedData.roundOff || 0, currencyCode || isCurrencySymbol)}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                        <span>Net Amount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-bold text-indigo-700 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""} {formatCurrencyAmount(
+                          (!isCustomerExport
+                            ? enrichedData.net
+                            : (enrichedData.items?.reduce(
+                                (sum, item) => sum + (parseFloat(item.amount) || 0),
+                                0,
+                              ) || 0) -
+                              (enrichedData.itemDiscount + enrichedData.overallDiscount > 0
+                                ? enrichedData.itemDiscount + enrichedData.overallDiscount
+                                : 0)) + (parseFloat(carriageCharge) || 0),
+                          currencyCode || isCurrencySymbol,
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            },
+            summaryColumn: "left",
             emphasized: false,
-          },
-          {
-            key: "netAmount",
-            label: "Net Amount",
-            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(
-              (!isCustomerExport
-                ? enrichedData.net
-                : (enrichedData.items?.reduce(
-                    (sum, item) => sum + (parseFloat(item.amount) || 0),
-                    0,
-                  ) || 0) -
-                  (enrichedData.itemDiscount + enrichedData.overallDiscount > 0
-                    ? enrichedData.itemDiscount + enrichedData.overallDiscount
-                    : 0)) + (parseFloat(carriageCharge) || 0),
-              currencyCode || isCurrencySymbol,
-            )}`,
-            summaryColumn: "right",
-            emphasized: true,
-          },
+          }
         ]}
       />
       <TransactionActions
@@ -1204,6 +1262,9 @@ const ProformaInvoiceForm = ({
             data={{
               ...singleData?.data,
               items: items.filter((i) => i.styleItemId), // ✅ only current version's filled items
+              quoteVersion: selectedQuoteVersion !== "Latest" 
+                ? parseInt(selectedQuoteVersion.replace("V", "")) 
+                : singleData?.data?.quoteVersion || 1,
             }}
             taxDetails={enrichedData}
             isCustomerExport={isCustomerExport}
