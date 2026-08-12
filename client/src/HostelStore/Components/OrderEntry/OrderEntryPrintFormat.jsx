@@ -10,7 +10,10 @@ import Logo from "../../../assets/mplogo.png";
 import moment from "moment";
 import { findFromList, formatCurrencyAmount } from "../../../Utils/helper";
 import { numberToWords } from "number-to-words";
-
+const BORDER_LIGHT = "#ddd";
+const LIGHT_BG = "#fafafa";
+const DARK = "#1a1a2e";
+const DARK2 = "#2d2d44";
 // ─── COLOR PALETTE ────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   borderBox: { border: "1 solid #ccc", margin: 0, padding: 0 },
@@ -124,6 +127,24 @@ const styles = StyleSheet.create({
   partyRow: { flexDirection: "row", marginBottom: 1.5 },
   partyLabel: { fontSize: 7.5, color: "#888", width: 58 },
   partyValue: { fontSize: 7.5, color: "#222", fontWeight: "bold" },
+  // ── EXPORT DETAILS GRID ──
+  exportGrid: {
+    marginHorizontal: 20,
+    marginBottom: 8,
+    border: `1 solid ${BORDER_LIGHT}`,
+    borderRadius: 3,
+    flexDirection: "row",
+    backgroundColor: LIGHT_BG,
+  },
+  exportCol: { flex: 1, padding: 8, borderRight: `1 solid ${BORDER_LIGHT}` },
+  exportItem: { flexDirection: "row", marginBottom: 4 },
+  exportLabel: { fontSize: 7.5, color: "#888", width: 88 },
+  exportValue: {
+    fontSize: 7.5,
+    color: DARK,
+    fontFamily: "Helvetica-Bold",
+    flex: 1,
+  },
 
   // ── ORDER DETAILS BOX ──
   detailsGrid: {
@@ -262,12 +283,15 @@ const ROWS_PAGE_CONT = 22;
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 const forceWrap = (text) => {
   if (typeof text !== "string") return text || "";
-  return text.split(" ").map(word => {
-    if (word.length > 20) {
-      return word.match(/.{1,20}/g).join("\n");
-    }
-    return word;
-  }).join(" ");
+  return text
+    .split(" ")
+    .map((word) => {
+      if (word.length > 20) {
+        return word.match(/.{1,20}/g).join("\n");
+      }
+      return word;
+    })
+    .join(" ");
 };
 
 const chunkItems = (items) => {
@@ -346,12 +370,17 @@ const OrderEntryPrintFormat = ({
   currencyCode,
   isCurrencySymbol,
   isCustomerExport: isExportProp,
+  cityList,
 }) => {
   if (!data) return null;
 
   const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
-  const currencySymbol = isCurrencySymbol || currencyCode || "";
-
+  let currencySymbol = isCurrencySymbol || currencyCode || "";
+  if (currencySymbol.includes("₹")) currencySymbol = currencySymbol.replace("₹", "Rs.");
+  const loadingPort =
+    findFromList(data?.loadingId, cityList?.data, "name") || "";
+  const deliveryPort =
+    findFromList(data?.deliveryId, cityList?.data, "name") || "";
   const taxSlabBreakup = (totals?.slabBreakup || []).filter(
     (s) => (s.amount || 0) > 0,
   );
@@ -562,6 +591,46 @@ const OrderEntryPrintFormat = ({
                       </View>
                     </View>
                   </View>
+
+                  {isExport && (
+                    <View style={styles.exportGrid}>
+                      <View style={styles.exportCol}>
+                        <View style={styles.exportItem}>
+                          <Text style={styles.exportLabel}>
+                            Country of Origin
+                          </Text>
+                          <Text style={styles.exportValue}>: INDIA</Text>
+                        </View>
+                        <View style={styles.exportItem}>
+                          <Text style={styles.exportLabel}>
+                            Port of Loading
+                          </Text>
+                          <Text style={styles.exportValue}>
+                            : {loadingPort || "—"}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={[styles.exportCol, { borderRight: "none" }]}>
+                        <View style={styles.exportItem}>
+                          <Text style={styles.exportLabel}>
+                            Port of Delivery
+                          </Text>
+                          <Text style={styles.exportValue}>
+                            : {deliveryPort || "—"}
+                          </Text>
+                        </View>
+                        <View style={styles.exportItem}>
+                          <Text style={styles.exportLabel}>Weight (KG)</Text>
+                          <Text style={styles.exportValue}>
+                            :{" "}
+                            {data?.weightInKg
+                              ? parseFloat(data.weightInKg).toFixed(3)
+                              : "—"}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
                 </>
               ) : (
                 <ContinuationBar
@@ -617,7 +686,7 @@ const OrderEntryPrintFormat = ({
                                 row.styleItemId,
                                 styleItemList?.data,
                                 "name",
-                              )
+                              ),
                           )}
                         </Text>
                         {breakupText ? (
@@ -643,7 +712,7 @@ const OrderEntryPrintFormat = ({
                               row.itemSubGroupId,
                               itemSubGroupList?.data,
                               "name",
-                            )
+                            ),
                         )}
                       </Text>
                       {/* Item Group */}
@@ -656,7 +725,7 @@ const OrderEntryPrintFormat = ({
                               row.itemGroupId,
                               itemGroupList?.data,
                               "name",
-                            )
+                            ),
                         )}
                       </Text>
 

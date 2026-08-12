@@ -1171,6 +1171,7 @@ const OrderEntryForm = ({
               currencyCode={currencyCode}
               isCurrencySymbol={isCurrencySymbol}
               isCustomerExport={isCustomerExport}
+              cityList={cityList}
             />
           </PDFViewer>
         </Modal>
