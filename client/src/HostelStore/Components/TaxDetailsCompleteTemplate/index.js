@@ -17,6 +17,7 @@ const TaxDetailsFullTemplate = ({
   onCloseFocus,
   isSupplierOutside,
   currencyCode,
+  allowTaxEdit = false,
 }) => {
   const row = poItems[index];
   const discountTypeRef = useRef(null);
@@ -26,12 +27,8 @@ const TaxDetailsFullTemplate = ({
   if (!row) return null;
 
   let discountType = row["discountType"];
-  let discountValue = isNaN(parseFloat(row["discountValue"]))
-    ? 0
-    : parseFloat(row["discountValue"]);
-  let taxPercent = isNaN(parseFloat(row["taxPercent"]))
-    ? 0
-    : parseFloat(row["taxPercent"]);
+  let discountValue = row["discountValue"] ?? "";
+  let taxPercent = row["taxPercent"] ?? "";
 
   const handleExitToNextRow = useCallback(
     (event) => {
@@ -78,7 +75,7 @@ const TaxDetailsFullTemplate = ({
         {
           key: "taxPercent",
           ref: taxPercentRef,
-          disabled: readOnly,
+          disabled: readOnly || !allowTaxEdit,
         },
       ];
 
@@ -97,7 +94,7 @@ const TaxDetailsFullTemplate = ({
 
       handleExitToNextRow(event);
     },
-    [discountType, handleExitToNextRow, id, isNewVersion, readOnly],
+    [discountType, handleExitToNextRow, id, isNewVersion, readOnly, allowTaxEdit],
   );
 
   return (
@@ -178,14 +175,15 @@ const TaxDetailsFullTemplate = ({
               <input
                 ref={taxPercentRef}
                 type="text"
-                disabled={readOnly}
+                disabled={readOnly || !allowTaxEdit}
+                readOnly={readOnly || !allowTaxEdit}
                 className="h-7 w-full text-right new-data-input px-1"
                 value={taxPercent}
                 onChange={(e) => {
                   handleInputChange(e.target.value, index, "taxPercent");
                 }}
                 onFocus={(e) => e.target.select()}
-                onKeyDown={handleExitToNextRow}
+                onKeyDown={(event) => focusNextEditableField(event, "taxPercent")}
               />
             </td>
           </tr>

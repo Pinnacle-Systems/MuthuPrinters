@@ -24,8 +24,9 @@ const PoSummary = ({
         <thead className="border border-gray-500">
           <tr>
             <th className="w-36 border border-gray-500">Tax Details</th>
-            <th className="w-28 border border-gray-500">Value</th>
-            <th className="w-28 border border-gray-500">Amount</th>
+            <th className="w-52 border border-gray-500" colSpan={2}>
+              Value
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -60,7 +61,7 @@ const PoSummary = ({
 
           <tr className="">
             <td className="border border-gray-500">Discount</td>
-            <td className="border border-gray-500">
+            <td className="border border-gray-500" colSpan={2}>
               <input
                 type="text"
                 name="value"
@@ -84,15 +85,6 @@ const PoSummary = ({
                 }}
               />
             </td>
-            <td className="border border-gray-500">
-              <input
-                disabled
-                type="text"
-                name="value"
-                className="h-7 w-full text-right"
-                //  value={}
-              />
-            </td>
           </tr>
           <tr>
             <td className="border border-gray-500 py-1.5">Taxable Amount</td>
@@ -100,34 +92,24 @@ const PoSummary = ({
               {(totals?.taxable).toFixed(2)}
             </td>
           </tr>
-          {totals?.slabBreakup
-            ?.filter((item) => item.amount > 0)
-            ?.map((i) => (
-              <tr className="h-7">
-                <td className="border border-gray-500">{i.tax} </td>
-                <td className="border border-gray-500" colSpan={2}>
-                  <input
-                    disabled
-                    type="text"
-                    name="value"
-                    className="h-7 w-full text-right"
-                    value={i.amount.toFixed(2)}
-                  />
-                </td>
-              </tr>
-            ))}
-          <tr className="h-7">
-            <td className="border border-gray-500">IGST Amount</td>
-            <td className="border border-gray-500" colSpan={2}>
-              <input
-                disabled
-                type="text"
-                name="value"
-                className="h-7 w-full text-right"
-                value={0}
-              />
-            </td>
-          </tr>
+          {!isCustomerExport &&
+            totals?.slabBreakup
+              ?.filter((item) => item.amount > 0)
+              ?.map((i, idx) => (
+                <tr className="h-7" key={idx}>
+                  <td className="border border-gray-500">{i.tax} </td>
+                  <td className="border border-gray-500" colSpan={2}>
+                    <input
+                      disabled
+                      type="text"
+                      name="value"
+                      className="h-7 w-full text-right"
+                      value={i.amount.toFixed(2)}
+                    />
+                  </td>
+                </tr>
+              ))}
+
           <tr className="h-7">
             <td className="border border-gray-500">Net Amount</td>
             <td className="border border-gray-500" colSpan={2}>
@@ -136,7 +118,10 @@ const PoSummary = ({
                 type="text"
                 name="value"
                 className="h-7 w-full text-right"
-                value={(totals?.net).toFixed(2)}
+                value={(isCustomerExport
+                  ? totals?.taxable
+                  : totals?.net
+                ).toFixed(2)}
               />
             </td>
           </tr>
@@ -174,6 +159,7 @@ const PoSummary = ({
               />
             </td>
           </tr>
+
         </tbody>
       </table>
     </div>

@@ -349,6 +349,8 @@ model City {
   bank                    Bank[]
   proformaInvoiceDelivery ProformaInvoice[] @relation(name: "delivery")
   proformaInvoiceLoading  ProformaInvoice[] @relation(name: "loading")
+  orderEntryDelivery      OrderEntry[]      @relation(name: "delivery")
+  orderEntryLoading       OrderEntry[]      @relation(name: "loading")
 }
 
 model Department {
@@ -1182,6 +1184,7 @@ model TaxTemplate {
   proformaInvoices    ProformaInvoice[]
   processBills        ProcessBill[]
   salesDeliveries     SalesDelivery[]
+  orderEntries        OrderEntry[]
 }
 
 model TaxTemplateDetails {
@@ -1347,6 +1350,7 @@ model PayTerm {
   pos              Po[]
   proformaInvoices ProformaInvoice[]
   salesDeliveries  SalesDelivery[]
+  orderEntries     OrderEntry[]
 }
 
 model PurchaseInward {
@@ -1882,8 +1886,24 @@ model OrderEntry {
   attachments       attachments[]
   JobCard           JobCard[]
   salesDeliveries   SalesDelivery[]
-
-  orderItems OrderItems[]
+  TaxTemplate       TaxTemplate?        @relation(fields: [taxTemplateId], references: [id])
+  taxTemplateId     Int?
+  discountType      String?
+  discountValue     Float?
+  conversionType    String?
+  PayTerm           PayTerm?            @relation(fields: [payTermId], references: [id])
+  payTermId         Int?
+  Bank              Bank?               @relation(fields: [bankId], references: [id])
+  bankId            Int?
+  Currency          Currency?           @relation(fields: [currencyId], references: [id])
+  currencyId        Int?
+  weightInKg        Float?
+  carriageCharge    Float?
+  orderItems        OrderItems[]
+  Loading           City?               @relation("loading", fields: [loadingId], references: [id])
+  loadingId         Int?
+  Delivery          City?               @relation("delivery", fields: [deliveryId], references: [id])
+  deliveryId        Int?
 }
 
 model Process {
@@ -2194,6 +2214,12 @@ model OrderItems {
   itemSubGroupId Int?
   ItemSubGroup   ItemSubGroup?      @relation(fields: [itemSubGroupId], references: [id])
   labelWidth     String?
+  price          Float?
+  amount         Float?
+  dozen          Float?
+  taxPercent     Float?
+  discountType   String?
+  discountValue  Float?
 }
 
 model OrderSizeBreakup {
@@ -2403,6 +2429,7 @@ model Currency {
 
   proformaInvoices ProformaInvoice[]
   salesDeliveries  SalesDelivery[]
+  orderEntries     OrderEntry[]
 }
 
 model Bank {
@@ -2419,6 +2446,7 @@ model Bank {
 
   proformaInvoices ProformaInvoice[]
   salesDeliveries  SalesDelivery[]
+  orderEntries     OrderEntry[]
 }
 
 model ProductionAllocation {

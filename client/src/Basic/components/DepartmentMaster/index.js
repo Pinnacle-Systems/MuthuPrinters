@@ -535,6 +535,7 @@ export default function Form({
             onClose={() => {
               setForm(false);
               syncFormWithDb(undefined);
+              setId("");
             }}
           >
             <div className="h-full flex flex-col bg-gray-200 ">

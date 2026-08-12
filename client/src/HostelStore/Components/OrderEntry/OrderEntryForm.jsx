@@ -9,11 +9,16 @@ import {
   ReusableInput,
   TextInput,
 } from "../../../Inputs";
-import { orderTypes, productionTypes } from "../../../Utils/DropdownData";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  orderTypes,
+  productionTypes,
+  conversionTypes,
+} from "../../../Utils/DropdownData";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
 import {
   findFromList,
+  formatCurrencyAmount,
   getCommonParams,
   ModeChip,
   renameFile,
@@ -23,7 +28,10 @@ import { FiCheck, FiEdit2, FiSave, FiSend } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
 import { TransactionLayout } from "../../../Basic/components/Reuseable";
-import { dropDownListObject } from "../../../Utils/contructObject";
+import {
+  dropDownListObject,
+  dropDownListObjectMultiple,
+} from "../../../Utils/contructObject";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { PartyMaster } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
@@ -41,8 +49,9 @@ import { QRCodeCanvas } from "qrcode.react";
 import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFooter.jsx";
 import { PDFViewer } from "@react-pdf/renderer";
 import OrderEntryPrintFormat from "./OrderEntryPrintFormat.jsx";
-import { FiFileText, FiPrinter } from "react-icons/fi";
-import OrderItems, { padRows } from "./OrderItems.jsx";
+import { FiFileText, FiPrinter, FiEye } from "react-icons/fi";
+import OrderItems from "./OrderItems.jsx";
+import { padRows } from "./OrderItemsUtils.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
@@ -60,6 +69,19 @@ import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.
 import { useDispatch } from "react-redux";
 import JobCardApi from "../../../redux/uniformService/JobCardService.js";
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
+import PoSummary from "../PurchaseOrder/PoSummary";
+import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
+import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
+import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
+import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterService.js";
+import { useGetbankQuery } from "../../../redux/services/BankMasterService.js";
+import { useGetCurrenciesQuery } from "../../../redux/services/CurrencyMasterService.js";
+import {
+  PayTermMaster,
+  BankMaster,
+  CurrencyMaster,
+} from "../../../Basic/components";
+
 const OrderEntryForm = ({
   onClose,
   id,
@@ -73,6 +95,7 @@ const OrderEntryForm = ({
   userData,
   branchData,
   hasPermission,
+  cityList,
 }) => {
   const today = new Date();
   const [docDate, setDocDate] = useState(
@@ -106,6 +129,17 @@ const OrderEntryForm = ({
   const [refNo, setRefNo] = useState("");
   const [isRepeatedPI, setIsRepeatedPI] = useState(false);
   const [validDays, setValidDays] = useState("");
+  const [taxTemplateId, setTaxTemplateId] = useState("");
+  const [discountType, setDiscountType] = useState("Percentage");
+  const [discountValue, setDiscountValue] = useState(0);
+  const [conversionType, setConversionType] = useState("DOZEN");
+  const [payTermId, setPayTermId] = useState("");
+  const [bankId, setBankId] = useState("");
+  const [currencyId, setCurrencyId] = useState("");
+  const [weightInKg, setWeightInKg] = useState("");
+  const [carriageCharge, setCarriageCharge] = useState("");
+  const [loadingId, setLoadingId] = useState("");
+  const [deliveryId, setDeliveryId] = useState("");
   const dispatch = useDispatch();
   const qrRef = useRef(null);
   const customerRef = useRef(null);
@@ -120,11 +154,19 @@ const OrderEntryForm = ({
     finYearId,
   };
 
+  const { data: payTermList } = useGetPaytermMasterQuery({ params });
+  const { data: bankList } = useGetbankQuery({ params });
+  const { data: currencyList } = useGetCurrenciesQuery({ params });
+
   const {
     data: singleData,
+    status: queryStatus,
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
-  } = useGetOrderEntryByIdQuery(id, { skip: !id });
+  } = useGetOrderEntryByIdQuery(id, {
+    params,
+    skip: !id,
+  });
   const { data: styleItemList } = useGetStyleItemMasterQuery({
     params: { ...params },
   });
@@ -139,6 +181,21 @@ const OrderEntryForm = ({
     params: { companyId },
   });
   const { data: hsnList } = useGetHsnMasterQuery({ params });
+  const { data: taxTypeList } = useGetTaxTemplateQuery({
+    params: { companyId },
+  });
+  const { data: supplierData } = useGetPartyByIdQuery(customerId, {
+    skip: !customerId,
+  });
+
+  const isCustomerExport = supplierData?.data?.isCustomerExport;
+  const isCurrencySymbol = currencyList?.data?.find(
+    (item) => item?.id === currencyId,
+  )?.symbol;
+  const currencyCode = currencyList?.data?.find(
+    (item) => item?.id === currencyId,
+  )?.code;
+
   const { data: refList } = useGetRefListQuery({
     params: { branchId, isRefDistinct: "true" },
   });
@@ -182,6 +239,17 @@ const OrderEntryForm = ({
       setRefNo(data?.refNo || "");
       setIsRepeatedPI(data?.isRepeatedPI || false);
       setValidDays(data?.validDays ? data?.validDays : "");
+      setTaxTemplateId(data?.taxTemplateId || "");
+      setDiscountType(data?.discountType || "Percentage");
+      setDiscountValue(data?.discountValue || 0);
+      setConversionType(data?.conversionType || "DOZEN");
+      setPayTermId(data?.payTermId || "");
+      setBankId(data?.bankId || "");
+      setCurrencyId(data?.currencyId || "");
+      setWeightInKg(data?.weightInKg?.toFixed(3) || "");
+      setCarriageCharge(data?.carriageCharge?.toFixed(2) || "");
+      setLoadingId(data?.loadingId || "");
+      setDeliveryId(data?.deliveryId || "");
     },
     [id],
   );
@@ -217,6 +285,17 @@ const OrderEntryForm = ({
     refNo,
     isRepeatedPI,
     validDays,
+    taxTemplateId,
+    discountType,
+    discountValue,
+    conversionType,
+    payTermId,
+    bankId,
+    currencyId,
+    weightInKg,
+    carriageCharge,
+    deliveryId,
+    loadingId,
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -340,6 +419,7 @@ const OrderEntryForm = ({
       }
       if (item.sizeBreakup?.length) {
         const sizeSeen = new Set();
+        let sizeSum = 0;
 
         item.sizeBreakup.forEach((size, sizeIndex) => {
           // size required
@@ -351,6 +431,7 @@ const OrderEntryForm = ({
 
           // qty validation
           const qty = Number(size.qty || 0);
+          sizeSum += qty;
 
           if (qty <= 0) {
             errors.push(
@@ -367,6 +448,19 @@ const OrderEntryForm = ({
             }
           }
         });
+
+        if (orderType === "AGAINSTPI" && sizeSum !== Number(item.orderQty)) {
+          errors.push(
+            `Row ${index + 1}: Sum of size quantities (${sizeSum}) must match the PI quantity (${item.orderQty})`,
+          );
+        }
+      }
+      if (isCustomerExport && !loadingId) {
+        errors.push(`Loading Port is required`);
+      }
+
+      if (isCustomerExport && !deliveryId) {
+        errors.push(`Delivery Port is required`);
       }
     });
 
@@ -484,8 +578,7 @@ const OrderEntryForm = ({
   };
 
   const handleKeyDown = (event) => {
-    let charCode = String.fromCharCode(event.which).toLowerCase();
-    if ((event.ctrlKey || event.metaKey) && charCode === "s") {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       saveData("close");
     }
@@ -598,10 +691,83 @@ const OrderEntryForm = ({
   //     if (!id) {
   //         setOrderItems(fillWithDefaultRows([]));
   //     }
-  // }, [id]);
   const fillWithDefaultRows = (items = []) => padRows(items);
+
+  const isSupplierOutside = useMemo(() => {
+    return supplierData?.data?.City?.state?.name !== "TAMILNADU";
+  }, [supplierData]);
+
+  const enrichedData = useMemo(() => {
+    const filteredItems = orderItems
+      .filter((i) => i.styleItemId)
+      .map((i) => ({
+        ...i,
+        qty: i.orderQty,
+      }));
+    if (!filteredItems.length)
+      return {
+        items: [],
+        gross: 0,
+        taxable: 0,
+        net: 0,
+        slabBreakup: [],
+        roundOff: 0,
+      };
+
+    return calculateTaxWithHSNBreakupAndInsertIntoPoItems(
+      filteredItems,
+      isSupplierOutside,
+      discountType,
+      discountValue,
+      conversionType === "DOZEN" ? true : false,
+    );
+  }, [
+    orderItems,
+    isSupplierOutside,
+    discountType,
+    discountValue,
+    conversionType,
+  ]);
+  const handleConversionChange = (newVal) => {
+    setConversionType(newVal);
+    setOrderItems((prev) =>
+      prev.map((row) => {
+        const qty = parseFloat(row.orderQty) || 0;
+        const price = parseFloat(row.price) || 0;
+        const dozen = qty / 12;
+        let amount = "";
+
+        if (newVal === "DOZEN") {
+          amount = dozen > 0 && price > 0 ? (dozen * price).toFixed(2) : "";
+        } else {
+          amount = qty > 0 && price > 0 ? (qty * price).toFixed(2) : "";
+        }
+
+        return {
+          ...row,
+          dozen: dozen > 0 ? dozen.toFixed(2) : "",
+          amount,
+        };
+      }),
+    );
+  };
+
   return (
     <>
+      <Modal isOpen={summary} onClose={() => setSummary(false)} widthClass="">
+        <PoSummary
+          poItems={orderItems}
+          totals={enrichedData}
+          readOnly={readOnly || isDisabled || childRecord.current > 0}
+          discountType={discountType}
+          setDiscountType={setDiscountType}
+          discountValue={discountValue}
+          setDiscountValue={setDiscountValue}
+          setSummary={setSummary}
+          isCustomerExport={isCustomerExport}
+        />
+      </Modal>
+
       <Modal
         isOpen={approvalModal}
         onClose={() => setApprovalModal(false)}
@@ -999,6 +1165,12 @@ const OrderEntryForm = ({
               gsmList={gsmList}
               uomList={uomList}
               sizeList={sizeList}
+              hsnList={hsnList}
+              totals={enrichedData}
+              discountType={discountType}
+              currencyCode={currencyCode}
+              isCurrencySymbol={isCurrencySymbol}
+              isCustomerExport={isCustomerExport}
             />
           </PDFViewer>
         </Modal>
@@ -1010,225 +1182,286 @@ const OrderEntryForm = ({
         onClose={onClose}
         onKeyDown={handleKeyDown}
         header={
-          <div className="flex flex-col xl:flex-row gap-1">
-            <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-              <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                Basic Details
-              </h2>
-              <div className="flex gap-2">
-                <div className="w-36">
-                  <TextInput name="ORD No" value={docId} disabled={true} />
-                </div>
-                <div className="w-32">
-                  <DateInputNew
-                    name="ORD Date"
-                    value={docDate}
-                    setValue={setDocDate}
-                    disabled={true}
-                    required={true}
-                    type="date"
-                  />
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col xl:flex-row gap-1">
+              {/* Basic Details */}
+
+              <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                  Basic Details
+                </h2>
+                <div className="flex gap-2">
+                  <div className="w-36">
+                    <TextInput name="Order No" value={docId} disabled={true} />
+                  </div>
+                  <div className="w-24">
+                    <DateInputNew
+                      name="Order Date"
+                      value={docDate}
+                      setValue={setDocDate}
+                      disabled={true}
+                      required={true}
+                      type="date"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className=" w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-              <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                Customer Details
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-2 gap-2">
-                <div className="md:col-span-2">
-                  <DropdownWithModal
-                    name="Customer"
-                    options={dropDownListObject(
-                      id
-                        ? customerList?.data?.filter((item) => item?.isCustomer)
-                        : customerList?.data?.filter(
-                            (item) => item?.active && item?.isCustomer,
-                          ),
-                      "name",
-                      "id",
-                    )}
-                    value={customerId}
-                    setValue={setCustomerId}
+              {/* Customer Details */}
+
+              <div className=" w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                  Customer Details
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="md:col-span-2">
+                    <DropdownWithModal
+                      name="Customer"
+                      options={dropDownListObject(
+                        id
+                          ? customerList?.data?.filter(
+                              (item) => item?.isCustomer,
+                            )
+                          : customerList?.data?.filter(
+                              (item) => item?.active && item?.isCustomer,
+                            ),
+                        "name",
+                        "id",
+                      )}
+                      value={customerId}
+                      setValue={setCustomerId}
+                      required={true}
+                      readOnly={readOnly}
+                      className={`w-full`}
+                      addNewLabel="+ Add New Customer"
+                      childComponent={PartyMaster}
+                      addNewModalWidth="w-[90%] h-[95%]"
+                      disabled={childRecord.current > 0 || readOnly}
+                      ref={customerRef}
+                      openOnFocus={true}
+                    />
+                  </div>
+                  <div className="">
+                    <TextInput
+                      name="Contact Person"
+                      placeholder="Contact name"
+                      value={findFromList(
+                        customerId,
+                        customerList?.data,
+                        "contactPersonName",
+                      )}
+                      disabled={true}
+                    />
+                  </div>
+                  <div className="">
+                    <TextInput
+                      name="Phone"
+                      placeholder="Contact number"
+                      value={findFromList(
+                        customerId,
+                        customerList?.data,
+                        "contactNumber",
+                      )}
+                      disabled={true}
+                      className="w-20"
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* Order Details */}
+
+              <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+                <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                  Order Details
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                  <DropdownInput
+                    name="Order Type"
+                    options={orderTypes}
+                    value={orderType}
+                    setValue={(value) => {
+                      setOrderType(value);
+                      setProFormaId("");
+                      if (value === "GENERAL") {
+                        setOrderItems(fillWithDefaultRows([]));
+                        setTaxTemplateId("");
+                        setDiscountType("Percentage");
+                        setDiscountValue(0);
+                        setConversionType("DOZEN");
+                        setTermsId("");
+                        setTermsAndCondition("");
+                        setDeliveryDate("");
+                        setRemarks("");
+                        setPayTermId("");
+                        setBankId("");
+                        setCurrencyId("");
+                        setWeightInKg("");
+                        setCarriageCharge("");
+                        setLoadingId("");
+                        setDeliveryId("");
+                      }
+                    }}
                     required={true}
                     readOnly={readOnly}
-                    className={`w-full`}
-                    addNewLabel="+ Add New Customer"
-                    childComponent={PartyMaster}
-                    addNewModalWidth="w-[90%] h-[95%]"
                     disabled={childRecord.current > 0 || readOnly}
-                    ref={customerRef}
-                    openOnFocus={true}
                   />
-                </div>
-                <div className="">
-                  <TextInput
-                    name="Contact Person"
-                    placeholder="Contact name"
-                    value={findFromList(
-                      customerId,
-                      customerList?.data,
-                      "contactPersonName",
-                    )}
-                    disabled={true}
-                  />
-                </div>
-                <div className="">
-                  <TextInput
-                    name="Phone"
-                    placeholder="Contact number"
-                    value={findFromList(
-                      customerId,
-                      customerList?.data,
-                      "contactNumber",
-                    )}
-                    disabled={true}
-                    className="w-20"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-              <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                Order Details
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                <DropdownInput
-                  name="Order Type"
-                  options={orderTypes}
-                  value={orderType}
-                  setValue={(value) => setOrderType(value)}
-                  required={true}
-                  readOnly={readOnly}
-                  disabled={childRecord.current > 0 || readOnly}
-                  beforeChange={() => {
-                    setProFormaId("");
-                  }}
-                />
-                <div className="col-span-1">
-                  <DropdownNew
-                    name="PI No"
-                    dataList={PIList?.data?.filter((item) =>
-                      id
-                        ? item?.customerId === customerId
-                        : isRepeatedPI
-                          ? item?.customerId === customerId && item?.hasBulk
-                          : item?.customerId === customerId && !item?.hasBulk,
-                    )}
-                    value={proFormaId}
-                    setValue={setProFormaId}
-                    required={orderType === "AGAINSTPI"}
-                    readOnly={readOnly || orderType === "GENERAL"}
-                    disabled={readOnly || orderType === "GENERAL"}
-                    otherField={"docId"}
-                    beforeChange={async (selectedValue) => {
-                      if (!selectedValue) {
-                        setOrderItems(fillWithDefaultRows([]));
-                        return;
+                  <div className="col-span-1">
+                    <DropdownNew
+                      name="PI No"
+                      dataList={PIList?.data?.filter((item) =>
+                        id
+                          ? item?.customerId === customerId
+                          : isRepeatedPI
+                            ? item?.customerId === customerId && item?.hasBulk
+                            : item?.customerId === customerId && !item?.hasBulk,
+                      )}
+                      value={proFormaId}
+                      setValue={setProFormaId}
+                      required={orderType === "AGAINSTPI"}
+                      readOnly={
+                        childRecord.current > 0 ||
+                        readOnly ||
+                        orderType === "GENERAL"
                       }
-
-                      const res = await getPIById(selectedValue?.id).unwrap();
-                      {
-                        console.log("res", res);
+                      disabled={
+                        childRecord.current > 0 ||
+                        readOnly ||
+                        orderType === "GENERAL"
                       }
-                      const mappedItems =
-                        Object.values(
-                          (res?.data?.items || []).reduce((acc, item) => {
-                            const key = item.styleItemId;
+                      otherField={"docId"}
+                      beforeChange={async (selectedValue) => {
+                        if (!selectedValue) {
+                          setOrderItems(fillWithDefaultRows([]));
+                          return;
+                        }
 
-                            if (
-                              !acc[key] ||
-                              acc[key].quoteVersion < item.quoteVersion
-                            ) {
-                              acc[key] = item;
-                            }
+                        const res = await getPIById(selectedValue?.id).unwrap();
+                        {
+                          console.log("res", res);
+                        }
 
-                            return acc;
-                          }, {}),
-                        )
-                          .sort((a, b) => a.id - b.id)
-                          .map((item) => ({
-                            styleItemId: item.styleItemId,
-                            orderQty: item.qty || "",
-                            sizeId: item.sizeId || "",
-                            uomId: item.uomId || "",
-                            gsmId: item.gsmId || "",
-                            hsnId: item.hsnId || "",
-                            sizeBreakup: [],
-                            itemGroupId: item.StyleItem?.itemGroupId,
-                            itemSubGroupId: item.StyleItem?.itemSubGroupId,
-                          })) || [];
+                        setTaxTemplateId(res?.data?.taxTemplateId || "");
+                        setDiscountType(
+                          res?.data?.discountType || "Percentage",
+                        );
+                        setDiscountValue(res?.data?.discountValue || 0);
+                        setConversionType(res?.data?.conversionType || "DOZEN");
+                        if (res?.data?.termsId) setTermsId(res.data.termsId);
+                        if (res?.data?.termsAndCondition)
+                          setTermsAndCondition(res.data.termsAndCondition);
+                        if (res?.data?.deliveryDate)
+                          setDeliveryDate(
+                            moment
+                              .utc(res.data.deliveryDate)
+                              .format("YYYY-MM-DD"),
+                          );
+                        if (res?.data?.remarks) setRemarks(res.data.remarks);
 
-                      setOrderItems(fillWithDefaultRows(mappedItems));
+                        setPayTermId(res?.data?.payTermId || "");
+                        setBankId(res?.data?.bankId || "");
+                        setCurrencyId(res?.data?.currencyId || "");
+                        setWeightInKg(res?.data?.weightInKg || "");
+                        setCarriageCharge(res?.data?.carriageCharge || "");
+                        setLoadingId(res?.data?.loadingId || "");
+                        setDeliveryId(res?.data?.deliveryId || "");
+
+                        const mappedItems =
+                          Object.values(
+                            (res?.data?.items || []).reduce((acc, item) => {
+                              const key = item.styleItemId;
+
+                              if (
+                                !acc[key] ||
+                                acc[key].quoteVersion < item.quoteVersion
+                              ) {
+                                acc[key] = item;
+                              }
+
+                              return acc;
+                            }, {}),
+                          )
+                            .sort((a, b) => a.id - b.id)
+                            .map((item) => ({
+                              styleItemId: item.styleItemId,
+                              orderQty: item.qty || "",
+                              piQty: Number(item.qty) || 0,
+                              sizeId: item.sizeId || "",
+                              uomId: item.uomId || "",
+                              gsmId: item.gsmId || "",
+                              hsnId: item.hsnId || "",
+                              price: item.price || "",
+                              amount: item.amount || "",
+                              dozen: item.dozen || "",
+                              discountType: item.discountType || "",
+                              discountValue: item.discountValue || "",
+                              taxPercent: item.taxPercent || "",
+                              taxType: item.taxType || "",
+                              sizeBreakup: [],
+                              itemGroupId: item.StyleItem?.itemGroupId,
+                              itemSubGroupId: item.StyleItem?.itemSubGroupId,
+                            })) || [];
+
+                        setOrderItems(fillWithDefaultRows(mappedItems));
+                      }}
+                    />
+                  </div>
+                  <DropdownInput
+                    name="Production Type"
+                    options={productionTypes}
+                    value={productionType}
+                    setValue={(value) => setProductionType(value)}
+                    required={true}
+                    readOnly={readOnly}
+                    disabled={childRecord.current > 0 || readOnly}
+                    beforeChange={() => {
+                      setRefNo("");
                     }}
                   />
-                </div>
-                <DropdownInput
-                  name="Production Type"
-                  options={productionTypes}
-                  value={productionType}
-                  setValue={(value) => setProductionType(value)}
-                  required={true}
-                  readOnly={readOnly}
-                  disabled={childRecord.current > 0 || readOnly}
-                  beforeChange={() => {
-                    setRefNo("");
-                  }}
-                />
-                {productionType === "SAMPLE" ? (
-                  <TextInput
-                    name="Ref No"
-                    value={refNo}
-                    setValue={setRefNo}
-                    disabled={readOnly || productionType === "SAMPLE"}
-                    required={productionType === "BULK"}
-                  />
-                ) : (
-                  <DropdownNew
-                    name="Ref No"
-                    dataList={refList?.data?.filter(
-                      (item) => item?.customerId === customerId,
-                    )}
-                    value={refNo}
-                    setValue={setRefNo}
-                    required={
-                      productionType === "BULK" && orderType === "AGAINSTPI"
-                    }
-                    readOnly={readOnly}
-                    disabled={readOnly}
-                    otherField={"refNo"}
-                    otherValue={"refNo"}
-                  />
-                )}
+                  {productionType === "SAMPLE" ? (
+                    <TextInput
+                      name="Ref No"
+                      value={refNo}
+                      setValue={setRefNo}
+                      disabled={
+                        productionType === "SAMPLE" ||
+                        childRecord.current > 0 ||
+                        readOnly
+                      }
+                      required={productionType === "BULK"}
+                    />
+                  ) : (
+                    <DropdownNew
+                      name="Ref No"
+                      dataList={refList?.data?.filter(
+                        (item) => item?.customerId === customerId,
+                      )}
+                      value={refNo}
+                      setValue={setRefNo}
+                      required={
+                        productionType === "BULK" && orderType === "AGAINSTPI"
+                      }
+                      disabled={childRecord.current > 0 || readOnly}
+                      otherField={"refNo"}
+                      otherValue={"refNo"}
+                    />
+                  )}
 
-                <div className="w-28">
-                  <DateInputNew
-                    name="Delivery Date"
-                    value={deliveryDate}
-                    setValue={setDeliveryDate}
+                  <TextInput
+                    name="ValidDays"
+                    value={validDays}
+                    setValue={setValidDays}
+                    disabled={childRecord.current > 0 || readOnly}
+                    type="number"
+                    min="0"
+                    className="text-right"
                     required={true}
-                    readOnly={readOnly}
-                    type={"date"}
+                    onBlur={(e) =>
+                      setValidDays(e.target.value ? Number(e.target.value) : "")
+                    }
+                    onFocus={(e) => {
+                      e.target.select();
+                    }}
                   />
-                </div>
-                <TextInput
-                  name="ValidDays"
-                  value={validDays}
-                  setValue={setValidDays}
-                  disabled={readOnly}
-                  type="number"
-                  min="0"
-                  className="text-right"
-                  required={true}
-                  onBlur={(e) =>
-                    setValidDays(e.target.value ? Number(e.target.value) : "")
-                  }
-                  onFocus={(e) => {
-                    e.target.select();
-                  }}
-                />
-                <div className="m-2 p-0 flex items-center">
+                  {/* <div className="m-2 p-0 flex items-center">
                   <CheckBoxNew
                     name="Repeated PI"
                     readOnly={readOnly}
@@ -1236,6 +1469,233 @@ const OrderEntryForm = ({
                     setValue={setIsRepeatedPI}
                     disabled={readOnly || childRecord.current > 0}
                     className="text-[11px] font-medium"
+                  />
+                </div> */}
+                </div>
+              </div>
+            </div>
+            {/* Other Details */}
+
+            <div className="border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+              <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+                Other Details
+              </h2>
+              <div className="flex gap-2 gap-x-2">
+                {isCustomerExport && (
+                  <>
+                    <div className="w-60">
+                      <DropdownInput
+                        name="Loading Port"
+                        options={dropDownListObject(
+                          cityList?.data?.filter((item) => item.active),
+                          "name",
+                          "id",
+                        )}
+                        value={loadingId}
+                        setValue={setLoadingId}
+                        readOnly={
+                          childRecord.current > 0 ||
+                          readOnly ||
+                          orderType === "AGAINSTPI"
+                        }
+                        required={true}
+                      />
+                    </div>
+                    <div className="w-60">
+                      <DropdownInput
+                        name="Delivery Port"
+                        options={dropDownListObject(
+                          cityList?.data?.filter((item) => item.active),
+                          "name",
+                          "id",
+                        )}
+                        value={deliveryId}
+                        setValue={setDeliveryId}
+                        readOnly={
+                          childRecord.current > 0 ||
+                          readOnly ||
+                          orderType === "AGAINSTPI"
+                        }
+                        required={true}
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="w-32">
+                  <DropdownInput
+                    name="Tax Type"
+                    options={dropDownListObject(
+                      taxTypeList ? taxTypeList?.data : [],
+                      "name",
+                      "id",
+                    )}
+                    value={taxTemplateId}
+                    setValue={setTaxTemplateId}
+                    required={!isCustomerExport}
+                    readOnly={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
+                  />
+                </div>
+                <div className="w-32">
+                  <DropdownWithModal
+                    name="Pay Term"
+                    options={dropDownListObject(
+                      id
+                        ? payTermList?.data
+                        : payTermList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={payTermId}
+                    setValue={setPayTermId}
+                    required={false}
+                    readOnly={readOnly || orderType === "AGAINSTPI"}
+                    className={`w-full max-w-none`}
+                    dropdownMinWidth={240}
+                    addNewLabel="+ Add New Pay Term"
+                    childComponent={PayTermMaster}
+                    addNewModalWidth="w-[40%] h-[66%]"
+                    disabled={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
+                  />
+                </div>
+                <div className="w-28">
+                  <DropdownInput
+                    name="Conversion"
+                    options={conversionTypes}
+                    value={conversionType}
+                    setValue={handleConversionChange}
+                    required={false}
+                    readOnly={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
+                  />
+                </div>
+                <div className="w-24">
+                  <TextInput
+                    name="Weight In Kg(KG)"
+                    value={weightInKg}
+                    setValue={setWeightInKg}
+                    type="number"
+                    min="0"
+                    className="text-right"
+                    disabled={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
+                    onBlur={(e) =>
+                      setWeightInKg(
+                        e.target.value ? Number(e.target.value).toFixed(3) : "",
+                      )
+                    }
+                    onFocus={(e) => {
+                      e.target.select();
+                    }}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <TextInput
+                    name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
+                    value={carriageCharge}
+                    setValue={setCarriageCharge}
+                    type="number"
+                    min="0"
+                    className="text-right"
+                    disabled={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
+                    onBlur={(e) =>
+                      setCarriageCharge(
+                        e.target.value ? Number(e.target.value).toFixed(2) : "",
+                      )
+                    }
+                    onFocus={(e) => {
+                      e.target.select();
+                    }}
+                  />
+                </div>
+                <div className="w-44">
+                  <DropdownWithModal
+                    name="Advising Bank"
+                    options={dropDownListObjectMultiple(
+                      bankList?.data,
+                      ["name", "Branch.name"],
+                      "id",
+                    )}
+                    value={bankId}
+                    setValue={setBankId}
+                    required={false}
+                    readOnly={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
+                    className={`w-[150px]`}
+                    addNewLabel="+ Add New Bank"
+                    childComponent={BankMaster}
+                    addNewModalWidth="w-[45%] h-[64%]"
+                    disabled={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
+                  />
+                </div>
+                {isCustomerExport && (
+                  <div className="w-24">
+                    <DropdownWithModal
+                      name="Currency"
+                      options={dropDownListObject(
+                        id
+                          ? currencyList?.data
+                          : currencyList?.data?.filter((item) => item?.active),
+                        "name",
+                        "id",
+                      )}
+                      value={currencyId}
+                      setValue={setCurrencyId}
+                      required={true}
+                      readOnly={
+                        childRecord.current > 0 ||
+                        readOnly ||
+                        orderType === "AGAINSTPI"
+                      }
+                      className={`w-full max-w-none`}
+                      dropdownMinWidth={240}
+                      addNewLabel="+ Add New Currency"
+                      childComponent={CurrencyMaster}
+                      addNewModalWidth="w-[40%] h-[66%]"
+                      disabled={
+                        childRecord.current > 0 ||
+                        readOnly ||
+                        orderType === "AGAINSTPI"
+                      }
+                    />
+                  </div>
+                )}
+                <div className="w-[105px]">
+                  <DateInputNew
+                    name="Delivery Date"
+                    value={deliveryDate}
+                    setValue={setDeliveryDate}
+                    required={true}
+                    readOnly={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
+                    type={"date"}
                   />
                 </div>
               </div>
@@ -1248,7 +1708,7 @@ const OrderEntryForm = ({
           <OrderItems
             orderItems={orderItems}
             setOrderItems={setOrderItems}
-            readOnly={readOnly}
+            readOnly={readOnly || childRecord?.current > 0}
             styleItemList={styleItemList}
             sizeList={sizeList}
             uomList={uomList}
@@ -1260,6 +1720,14 @@ const OrderEntryForm = ({
             requirementRef={requirementRef}
             childRecord={childRecord}
             itemSubGroupList={itemSubGroupList}
+            enrichedItems={enrichedData}
+            taxTemplateId={taxTemplateId}
+            conversionType={conversionType}
+            isSupplierOutside={isSupplierOutside}
+            orderType={orderType}
+            isCustomerExport={isCustomerExport}
+            currencyCode={currencyCode}
+            isCurrencySymbol={isCurrencySymbol}
           />
         }
         footer={
@@ -1271,7 +1739,7 @@ const OrderEntryForm = ({
                   value: requirements,
                   onChange: setRequirements,
                   placeholder: "Enter requirements...",
-                  readOnly: readOnly,
+                  readOnly: readOnly || childRecord.current > 0,
                   ref: requirementRef,
                 },
                 {
@@ -1279,27 +1747,179 @@ const OrderEntryForm = ({
                   value: remarks,
                   onChange: setRemarks,
                   placeholder: "Additional notes...",
-                  readOnly: readOnly,
+                  readOnly: readOnly || childRecord.current > 0,
                 },
               ]}
-              hasSummaryTitle="Summary"
+              hasSummaryTitle={
+                <span className="block text-center w-full">Summary</span>
+              }
+              sectionColClass="md:col-span-4"
+              summaryColClass="md:col-span-4"
               totalsRows={[
                 {
-                  key: "orderType",
-                  label: "Order Type",
-                  value: orderType,
+                  key: "summary_grid",
+                  label: "",
+                  valueContainerClassName: "w-full",
+                  renderValue: () => {
+                    const taxTotals = !isCustomerExport
+                      ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
+                          const type = curr?.tax?.split(" ")[0];
+                          acc[type] = (acc[type] || 0) + curr.amount;
+                          return acc;
+                        }, {})
+                      : {};
+
+                    return (
+                      <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1">
+                        {/* Left Column */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Total Discount</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                enrichedData.itemDiscount +
+                                  enrichedData.overallDiscount >
+                                  0
+                                  ? enrichedData.itemDiscount +
+                                      enrichedData.overallDiscount
+                                  : 0,
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Taxable Amount</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                enrichedData.taxable || 0,
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          {taxTotals.CGST !== undefined &&
+                          taxTotals.SGST !== undefined ? (
+                            <div className="flex items-center justify-between w-full max-w-[210px]">
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-800 w-[32px]">
+                                  CGST
+                                </span>
+                                <span className="text-slate-800">:</span>
+                                <span className="font-medium text-slate-800">
+                                  {formatCurrencyAmount(
+                                    taxTotals.CGST,
+                                    currencyCode || isCurrencySymbol,
+                                  )}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-800 w-[32px]">
+                                  SGST
+                                </span>
+                                <span className="text-slate-800">:</span>
+                                <span className="font-medium text-slate-800 text-right">
+                                  {formatCurrencyAmount(
+                                    taxTotals.SGST,
+                                    currencyCode || isCurrencySymbol,
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            Object.keys(taxTotals).map((type) => (
+                              <div
+                                key={type}
+                                className="flex items-center justify-between w-full max-w-[210px]"
+                              >
+                                <div className="flex justify-between w-[130px] text-slate-800">
+                                  <span>{type}</span>
+                                  <span>:</span>
+                                </div>
+                                <span className="font-medium text-slate-800 text-right w-[65px]">
+                                  {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                                  {formatCurrencyAmount(
+                                    taxTotals[type],
+                                    currencyCode || isCurrencySymbol,
+                                  )}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Right Column */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Carriage Charges</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {!isNaN(parseFloat(carriageCharge)) &&
+                              carriageCharge !== ""
+                                ? formatCurrencyAmount(
+                                    carriageCharge,
+                                    currencyCode || isCurrencySymbol,
+                                  )
+                                : "0.00"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Round Off</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                enrichedData.roundOff || 0,
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                              <span>Net Amount</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-bold text-indigo-700 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                (!isCustomerExport
+                                  ? enrichedData.net
+                                  : (enrichedData.items?.reduce(
+                                      (sum, item) =>
+                                        sum + (parseFloat(item.amount) || 0),
+                                      0,
+                                    ) || 0) -
+                                    (enrichedData.itemDiscount +
+                                      enrichedData.overallDiscount >
+                                    0
+                                      ? enrichedData.itemDiscount +
+                                        enrichedData.overallDiscount
+                                      : 0)) + (parseFloat(carriageCharge) || 0),
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  },
                   summaryColumn: "left",
-                },
-                {
-                  key: "orderQty",
-                  label: "Order Qty",
-                  value: orderItems
-                    ?.reduce((acc, item) => {
-                      const qty = parseFloat(item.orderQty) || 0;
-                      return acc + qty;
-                    }, 0)
-                    .toFixed(2),
-                  summaryColumn: "left",
+                  emphasized: false,
                 },
               ]}
             />
@@ -1310,7 +1930,7 @@ const OrderEntryForm = ({
                   <>
                     <button
                       onClick={() => saveData("close")}
-                      disabled={readOnly || isDisabled}
+                      disabled={isDisabled || readOnly}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -1321,11 +1941,11 @@ const OrderEntryForm = ({
                       className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
                     >
                       <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                      Save & Close
+                      {id ? "Update & Close" : "Save & Close"}
                     </button>
                     <button
                       onClick={() => saveData("new")}
-                      disabled={readOnly || isDisabled}
+                      disabled={isDisabled || readOnly}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -1336,10 +1956,43 @@ const OrderEntryForm = ({
                       className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
                     >
                       <FiSave className="w-4 h-4 mr-2" />
-                      Save & New
+                      {id ? "Update & New" : " Save & New"}
                     </button>
                   </>
                 )}
+                <button
+                  onClick={() => {
+                    if (!taxTemplateId) {
+                      Swal.fire({
+                        title: "Information",
+                        text: "Please Select Tax Template !",
+                        icon: "info",
+                        confirmButtonColor: "#3085d6",
+                      });
+                      return;
+                    }
+                    setSummary(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!taxTemplateId) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toast.info("Please Select Tax Template !", {
+                        position: "top-center",
+                      });
+                      return;
+                    }
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSummary(true);
+                    }
+                  }}
+                  className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center text-xs"
+                >
+                  <FiEye className="w-4 h-4 mr-2" />
+                  View Summary
+                </button>
                 {status === "REJECTED" && (
                   <button
                     onClick={() => saveData("close", { submitApproval: true })}

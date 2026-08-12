@@ -239,7 +239,7 @@ const BoardDetails = ({
                     type="number"
                     className="w-full  border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
                     value={item.noOfSheets}
-                    readOnly={readOnly}
+                    disabled={readOnly || childRecord?.current > 0}
                     onChange={(e) =>
                       handleInputChange(e.target.value, idx, "noOfSheets")
                     }
