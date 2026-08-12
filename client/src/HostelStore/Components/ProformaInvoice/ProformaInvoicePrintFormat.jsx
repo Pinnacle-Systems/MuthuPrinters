@@ -430,12 +430,12 @@ const ProformaInvoicePrintFormat = ({
   const allItems = (data?.items || []).filter((i) => i.styleItemId);
 
   // Totals
-  const totalQty = allItems.reduce((s, i) => s + (parseFloat(i.qty) || 0), 0);
-  const totalDozen = allItems.reduce(
-    (s, i) => s + (parseFloat(i.dozen) || 0),
+  const totalQty = allItems?.reduce((s, i) => s + (parseFloat(i?.qty) || 0), 0);
+  const totalDozen = allItems?.reduce(
+    (s, i) => s + (parseFloat(i?.dozen) || 0),
     0,
   );
-  const totalGross = allItems.reduce(
+  const totalGross = allItems?.reduce(
     (s, i) => s + (parseFloat(i.amount) || 0),
     0,
   );
@@ -443,17 +443,50 @@ const ProformaInvoicePrintFormat = ({
     (s, i) => s + (parseFloat(i.price) || 0),
     0,
   );
-  const carriageCharge = parseFloat(data?.carriageCharge) || 0;
-  const grandTotal = isExport ? totalGross + carriageCharge : totalGross;
-
   // ── DOMESTIC TAX: per-slab breakup (mirrors PurchaseOrderPrintFormat taxBox) ──
   // Each item carries taxPercent; group by slab, sum taxable + tax amounts
   const taxableTotal = parseFloat(taxDetails?.taxable || 0);
+
+  const carriageCharge = parseFloat(data?.carriageCharge) || 0;
+  const grandTotal = isExport ? taxableTotal + carriageCharge : totalGross;
+
   const totalTaxAmt = parseFloat(taxDetails?.net || 0) - taxableTotal;
   const netAmount = parseFloat(taxDetails?.net || 0);
-  const taxSlabBreakup = (taxDetails?.slabBreakup || []).filter(
-    (s) => (s.amount || 0) > 0,
+  const taxSlabBreakup = (taxDetails?.slabBreakup || [])?.filter(
+    (s) => (s?.amount || 0) > 0,
   );
+
+  const consolidatedTaxSlabs = (() => {
+    const gstMap = {};
+    const others = [];
+    taxSlabBreakup.forEach((slab) => {
+      const cgstMatch = slab.tax.match(/^CGST\s+([\d.]+)%$/i);
+      const sgstMatch = slab.tax.match(/^SGST\s+([\d.]+)%$/i);
+      const igstMatch = slab.tax.match(/^IGST\s+([\d.]+)%$/i);
+
+      if (cgstMatch || sgstMatch) {
+        const rate = parseFloat((cgstMatch || sgstMatch)[1]);
+        const totalRate = rate * 2;
+        const key = `GST @${totalRate}%`;
+        if (!gstMap[key]) {
+          gstMap[key] = { tax: key, amount: 0, order: totalRate };
+        }
+        gstMap[key].amount += slab.amount;
+      } else if (igstMatch) {
+        const rate = parseFloat(igstMatch[1]);
+        const key = `IGST @${rate}%`;
+        if (!gstMap[key]) {
+          gstMap[key] = { tax: key, amount: 0, order: rate };
+        }
+        gstMap[key].amount += slab.amount;
+      } else {
+        others.push(slab);
+      }
+    });
+
+    const combined = Object.values(gstMap).sort((a, b) => a.order - b.order);
+    return [...combined, ...others];
+  })();
 
   const finalAmountForWords = isExport
     ? grandTotal
@@ -1043,10 +1076,10 @@ const ProformaInvoicePrintFormat = ({
                         </View>
                       )}
 
-                      {!isExport && data?.discountValue > 0 && (
+                      {((!isExport && data?.discountValue > 0) || isExport) && (
                         <View style={styles.summaryRow}>
                           <Text style={styles.summaryLabel}>
-                            Taxable Amount
+                            {isExport ? "Net Amount" : "Taxable Amount"}
                           </Text>
                           <Text style={styles.summaryColon}>:</Text>
                           <Text style={styles.summaryValue}>
@@ -1060,7 +1093,7 @@ const ProformaInvoicePrintFormat = ({
                       )}
 
                       {!isExport &&
-                        taxSlabBreakup.map((slab) => (
+                        consolidatedTaxSlabs.map((slab) => (
                           <View key={slab.tax} style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>{slab.tax}</Text>
                             <Text style={styles.summaryColon}>:</Text>

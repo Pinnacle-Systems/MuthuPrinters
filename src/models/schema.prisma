@@ -349,6 +349,8 @@ model City {
   bank                    Bank[]
   proformaInvoiceDelivery ProformaInvoice[] @relation(name: "delivery")
   proformaInvoiceLoading  ProformaInvoice[] @relation(name: "loading")
+  orderEntryDelivery      OrderEntry[]      @relation(name: "delivery")
+  orderEntryLoading       OrderEntry[]      @relation(name: "loading")
 }
 
 model Department {
@@ -1898,6 +1900,10 @@ model OrderEntry {
   weightInKg        Float?
   carriageCharge    Float?
   orderItems        OrderItems[]
+  Loading           City?               @relation("loading", fields: [loadingId], references: [id])
+  loadingId         Int?
+  Delivery          City?               @relation("delivery", fields: [deliveryId], references: [id])
+  deliveryId        Int?
 }
 
 model Process {

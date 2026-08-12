@@ -622,6 +622,8 @@ async function create(body) {
     currencyId,
     weightInKg,
     carriageCharge,
+    loadingId,
+    deliveryId,
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
@@ -660,9 +662,15 @@ async function create(body) {
           price: item?.price ? parseFloat(item.price) : null,
           amount: item?.amount ? parseFloat(item.amount) : null,
           dozen: item?.dozen ? parseFloat(item.dozen) : null,
-          taxPercent: item?.taxPercent && !isNaN(Number(item.taxPercent)) ? parseFloat(item.taxPercent) : null,
+          taxPercent:
+            item?.taxPercent && !isNaN(Number(item.taxPercent))
+              ? parseFloat(item.taxPercent)
+              : null,
           discountType: item?.discountType || null,
-          discountValue: item?.discountValue && !isNaN(Number(item.discountValue)) ? parseFloat(item.discountValue) : null,
+          discountValue:
+            item?.discountValue && !isNaN(Number(item.discountValue))
+              ? parseFloat(item.discountValue)
+              : null,
           orderQty:
             item?.orderQty && !isNaN(Number(item.orderQty))
               ? parseInt(item.orderQty)
@@ -728,6 +736,8 @@ async function create(body) {
         currencyId: currencyId ? parseInt(currencyId) : null,
         weightInKg: weightInKg ? parseFloat(weightInKg) : null,
         carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+        loadingId: loadingId ? parseInt(loadingId) : null,
+        deliveryId: deliveryId ? parseInt(deliveryId) : null,
         orderItems:
           safeOrderItems.length > 0
             ? {
@@ -804,6 +814,8 @@ async function update(id, body, files) {
     currencyId,
     weightInKg,
     carriageCharge,
+    loadingId,
+    deliveryId,
   } = await body;
 
   const safeorderQty =
@@ -919,6 +931,8 @@ async function update(id, body, files) {
         currencyId: currencyId ? parseInt(currencyId) : null,
         weightInKg: weightInKg ? parseFloat(weightInKg) : null,
         carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+        loadingId: loadingId ? parseInt(loadingId) : null,
+        deliveryId: deliveryId ? parseInt(deliveryId) : null,
         orderItems: {
           deleteMany: incomingItemIds.length
             ? { id: { notIn: incomingItemIds } }
@@ -942,9 +956,15 @@ async function update(id, body, files) {
                 price: item?.price ? parseFloat(item.price) : null,
                 amount: item?.amount ? parseFloat(item.amount) : null,
                 dozen: item?.dozen ? parseFloat(item.dozen) : null,
-                taxPercent: item?.taxPercent && !isNaN(Number(item.taxPercent)) ? parseFloat(item.taxPercent) : null,
+                taxPercent:
+                  item?.taxPercent && !isNaN(Number(item.taxPercent))
+                    ? parseFloat(item.taxPercent)
+                    : null,
                 discountType: item?.discountType || null,
-                discountValue: item?.discountValue && !isNaN(Number(item.discountValue)) ? parseFloat(item.discountValue) : null,
+                discountValue:
+                  item?.discountValue && !isNaN(Number(item.discountValue))
+                    ? parseFloat(item.discountValue)
+                    : null,
                 sizeTemplateId: item.sizeTemplateId
                   ? parseInt(item.sizeTemplateId)
                   : null,
@@ -982,9 +1002,15 @@ async function update(id, body, files) {
               price: item?.price ? parseFloat(item.price) : null,
               amount: item?.amount ? parseFloat(item.amount) : null,
               dozen: item?.dozen ? parseFloat(item.dozen) : null,
-              taxPercent: item?.taxPercent && !isNaN(Number(item.taxPercent)) ? parseFloat(item.taxPercent) : null,
+              taxPercent:
+                item?.taxPercent && !isNaN(Number(item.taxPercent))
+                  ? parseFloat(item.taxPercent)
+                  : null,
               discountType: item?.discountType || null,
-              discountValue: item?.discountValue && !isNaN(Number(item.discountValue)) ? parseFloat(item.discountValue) : null,
+              discountValue:
+                item?.discountValue && !isNaN(Number(item.discountValue))
+                  ? parseFloat(item.discountValue)
+                  : null,
               sizeTemplateId: item.sizeTemplateId
                 ? parseInt(item.sizeTemplateId)
                 : null,

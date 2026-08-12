@@ -1143,7 +1143,9 @@ const JobCardForm = ({
               setValue={setFollowUpId}
               required
               readOnly={readOnly}
-              disabled={isDisabledPermission || readOnly}
+              disabled={
+                isDisabledPermission || readOnly || childRecord.current > 0
+              }
             />
           </div>
           <div className="w-40">
@@ -1158,7 +1160,9 @@ const JobCardForm = ({
               setValue={setDesignerId}
               required
               readOnly={readOnly}
-              disabled={isDisabledPermission || readOnly}
+              disabled={
+                isDisabledPermission || readOnly || childRecord.current > 0
+              }
             />
           </div>
         </div>
@@ -1177,7 +1181,7 @@ const JobCardForm = ({
               readOnly={readOnly}
               className="w-full text-right"
               onFocus={(e) => e.target.select()}
-              disabled={isDisabledPermission}
+              disabled={isDisabledPermission || childRecord.current > 0}
             />
           </div>
           <div className="w-28">
@@ -1189,7 +1193,7 @@ const JobCardForm = ({
               className="w-full text-right"
               type="number"
               onFocus={(e) => e.target.select()}
-              disabled={isDisabledPermission}
+              disabled={isDisabledPermission || childRecord.current > 0}
             />
           </div>
         </div>
@@ -1745,9 +1749,9 @@ const JobCardForm = ({
                         const isAlreadySelected = prev.includes(item.id);
                         // Remove any other die processes to ensure only one is ticked
                         const filtered = prev.filter(
-                          (pId) => !dieProcessList.some((dp) => dp.id === pId)
+                          (pId) => !dieProcessList.some((dp) => dp.id === pId),
                         );
-                        
+
                         if (isAlreadySelected) {
                           // Toggle off
                           return filtered;

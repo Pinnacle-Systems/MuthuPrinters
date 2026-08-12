@@ -203,6 +203,17 @@ const styles = StyleSheet.create({
     color: "#1a1a2e",
     fontWeight: "bold",
   },
+  // ── AMOUNT IN WORDS ──
+  wordsBar: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    backgroundColor: "#f8f8f9",
+    padding: 6,
+    border: "1 solid #ddd",
+    borderRadius: 3,
+  },
+  wordsText: { fontSize: 7.5, color: "#555" },
+  wordsValue: { fontWeight: "bold", color: "#1a1a2e" },
   summaryRow: {
     flexDirection: "row",
     borderBottom: "1 solid #e0e0e0",
@@ -231,7 +242,7 @@ const styles = StyleSheet.create({
 });
 
 // ── TABLE COLUMNS ─────────────────────────────────────────────────────────────
-const COLUMNS = [
+const getColumns = (isExport) => [
   { label: "S.No", flex: 0.4 },
   { label: "Description of Goods", flex: 2.5 },
   { label: "Item Sub Group", flex: 1.2 },
@@ -241,14 +252,24 @@ const COLUMNS = [
 
   { label: "Order Qty", flex: 0.9 },
   { label: "Price", flex: 0.9 },
-  { label: "Tax %", flex: 0.7 },
+  ...(!isExport ? [{ label: "Tax %", flex: 0.7 }] : []),
   { label: "Gross", flex: 1.2 },
 ];
 
-const ROWS_PAGE_1 = 15;
+const ROWS_PAGE_1 = 10;
 const ROWS_PAGE_CONT = 22;
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
+const forceWrap = (text) => {
+  if (typeof text !== "string") return text || "";
+  return text.split(" ").map(word => {
+    if (word.length > 20) {
+      return word.match(/.{1,20}/g).join("\n");
+    }
+    return word;
+  }).join(" ");
+};
+
 const chunkItems = (items) => {
   const pages = [];
   let rem = [...items];
@@ -257,22 +278,29 @@ const chunkItems = (items) => {
   return pages;
 };
 
-const TableHeader = () => (
-  <View style={styles.tableHeader}>
-    {COLUMNS.map(({ label, flex }, i) => (
-      <Text
-        key={label}
-        style={[
-          styles.th,
-          { flex },
-          i === COLUMNS.length - 1 && { borderRight: "none" },
-        ]}
-      >
-        {label}
-      </Text>
-    ))}
-  </View>
-);
+const TableHeader = ({ isExport, currencySymbol }) => {
+  const cols = getColumns(isExport);
+  return (
+    <View style={styles.tableHeader}>
+      {cols.map(({ label, flex }, i) => (
+        <Text
+          key={label}
+          style={[
+            styles.th,
+            { flex },
+            i === cols.length - 1 && { borderRight: "none" },
+          ]}
+        >
+          {label === "Price" && currencySymbol
+            ? `Price (${currencySymbol})`
+            : label === "Gross" && currencySymbol
+              ? `Gross (${currencySymbol})`
+              : label}
+        </Text>
+      ))}
+    </View>
+  );
+};
 
 const ContinuationBar = ({ docId, branchName }) => (
   <View
@@ -316,8 +344,55 @@ const OrderEntryPrintFormat = ({
   totals,
   discountType,
   currencyCode,
+  isCurrencySymbol,
+  isCustomerExport: isExportProp,
 }) => {
   if (!data) return null;
+
+  const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
+  const currencySymbol = isCurrencySymbol || currencyCode || "";
+
+  const taxSlabBreakup = (totals?.slabBreakup || []).filter(
+    (s) => (s.amount || 0) > 0,
+  );
+
+  const consolidatedTaxSlabs = (() => {
+    const gstMap = {};
+    const others = [];
+    taxSlabBreakup.forEach((slab) => {
+      const cgstMatch = slab.tax.match(/^CGST\s+([\d.]+)%$/i);
+      const sgstMatch = slab.tax.match(/^SGST\s+([\d.]+)%$/i);
+      const igstMatch = slab.tax.match(/^IGST\s+([\d.]+)%$/i);
+
+      if (cgstMatch || sgstMatch) {
+        const rate = parseFloat((cgstMatch || sgstMatch)[1]);
+        const totalRate = rate * 2;
+        const key = `GST @${totalRate}%`;
+        if (!gstMap[key]) {
+          gstMap[key] = { tax: key, amount: 0, order: totalRate };
+        }
+        gstMap[key].amount += slab.amount;
+      } else if (igstMatch) {
+        const rate = parseFloat(igstMatch[1]);
+        const key = `IGST @${rate}%`;
+        if (!gstMap[key]) {
+          gstMap[key] = { tax: key, amount: 0, order: rate };
+        }
+        gstMap[key].amount += slab.amount;
+      } else {
+        others.push(slab);
+      }
+    });
+
+    const combined = Object.values(gstMap).sort((a, b) => a.order - b.order);
+    return [...combined, ...others];
+  })();
+
+  const taxableTotal = totals?.taxable || 0;
+
+  const carriageCharge = parseFloat(data?.carriageCharge) || 0;
+  const grandTotalExport = taxableTotal + carriageCharge;
+  const netAmountDomestic = (totals?.net || 0) + carriageCharge;
 
   const orderItems = (data?.orderItems || []).filter(
     (item) => item.styleItemId,
@@ -332,8 +407,6 @@ const OrderEntryPrintFormat = ({
     (s, r) => s + (parseFloat(r.price) || 0),
     0,
   );
-  const carriageCharge = parseFloat(data?.carriageCharge) || 0;
-  const finalNetAmount = (totals?.net || 0) + carriageCharge;
 
   // ── Pagination ──
   const pageChunks = chunkItems(orderItems);
@@ -373,9 +446,6 @@ const OrderEntryPrintFormat = ({
         return (
           <Page key={pageIndex} size="A4" style={styles.borderBox}>
             <View style={styles.page}>
-              {/* TOP ACCENT BAR */}
-              <View style={styles.topBar} />
-
               {isFirstPage ? (
                 <>
                   {/* ── FULL HEADER ── */}
@@ -387,27 +457,21 @@ const OrderEntryPrintFormat = ({
                       <Text style={styles.companyName}>
                         {branchData?.branchName || "MUTHU PRINTERS"}
                       </Text>
-                    </View>
-                    <View style={styles.companyRight}>
-                      {qrCodeDataUrl && (
-                        <View
-                          style={{
-                            border: "none",
-                            width: 60,
-                            height: 60,
-                            marginTop: 5,
-                            alignSelf: "flex-end",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
+                      <Text style={styles.companyAddress}>
+                        {branchData?.address || ""}
+                      </Text>
+                      {branchData?.contactEmail ? (
+                        <Text
+                          style={{ fontSize: 7.5, color: "#555", marginTop: 1 }}
                         >
-                          <Image
-                            src={qrCodeDataUrl}
-                            style={{ width: 50, height: 50 }}
-                          />
-                        </View>
-                      )}
+                          {branchData.contactEmail}
+                          {branchData?.contactMobile
+                            ? `  |  ${branchData.contactMobile}`
+                            : ""}
+                        </Text>
+                      ) : null}
                     </View>
+                    <View style={{ width: 60 }} />
                   </View>
 
                   {/* TITLE BAND */}
@@ -428,14 +492,6 @@ const OrderEntryPrintFormat = ({
                         label: "Delivery Date",
                         value: moment(data?.deliveryDate).format("DD-MM-YYYY"),
                       },
-                      ...(parseFloat(data?.carriageCharge) > 0
-                        ? [
-                            {
-                              label: "Carriage Charge",
-                              value: data?.carriageCharge,
-                            },
-                          ]
-                        : []),
                     ].map(({ label, value }) => (
                       <View key={label} style={styles.metaPill}>
                         <Text style={styles.metaLabel}>{label}:</Text>
@@ -516,7 +572,10 @@ const OrderEntryPrintFormat = ({
 
               {/* ── TABLE ── */}
               <View style={styles.tableWrap}>
-                <TableHeader />
+                <TableHeader
+                  isExport={isExport}
+                  currencySymbol={currencySymbol}
+                />
 
                 {/* Item rows */}
                 {chunkRows.map((row, index) => {
@@ -552,12 +611,14 @@ const OrderEntryPrintFormat = ({
                             color: "#1a1a2e",
                           }}
                         >
-                          {row?.StyleItem?.name ||
-                            findFromList(
-                              row.styleItemId,
-                              styleItemList?.data,
-                              "name",
-                            )}
+                          {forceWrap(
+                            row?.StyleItem?.name ||
+                              findFromList(
+                                row.styleItemId,
+                                styleItemList?.data,
+                                "name",
+                              )
+                          )}
                         </Text>
                         {breakupText ? (
                           <Text
@@ -576,23 +637,27 @@ const OrderEntryPrintFormat = ({
                       <Text
                         style={[styles.td, { flex: 1.2, textAlign: "left" }]}
                       >
-                        {row?.ItemSubGroup?.name ||
-                          findFromList(
-                            row.itemSubGroupId,
-                            itemSubGroupList?.data,
-                            "name",
-                          )}
+                        {forceWrap(
+                          row?.ItemSubGroup?.name ||
+                            findFromList(
+                              row.itemSubGroupId,
+                              itemSubGroupList?.data,
+                              "name",
+                            )
+                        )}
                       </Text>
                       {/* Item Group */}
                       <Text
                         style={[styles.td, { flex: 1.2, textAlign: "left" }]}
                       >
-                        {row?.ItemGroup?.name ||
-                          findFromList(
-                            row.itemGroupId,
-                            itemGroupList?.data,
-                            "name",
-                          )}
+                        {forceWrap(
+                          row?.ItemGroup?.name ||
+                            findFromList(
+                              row.itemGroupId,
+                              itemGroupList?.data,
+                              "name",
+                            )
+                        )}
                       </Text>
 
                       {/* HSN */}
@@ -619,17 +684,20 @@ const OrderEntryPrintFormat = ({
                       <Text
                         style={[styles.td, { flex: 0.9, textAlign: "right" }]}
                       >
-                        {row?.price ? formatCurrencyAmount(row.price) : ""}
-                      </Text>
-
-                      {/* Tax % */}
-                      <Text
-                        style={[styles.td, { flex: 0.7, textAlign: "right" }]}
-                      >
-                        {row?.taxPercent
-                          ? `${parseFloat(row.taxPercent).toFixed(1)}%`
+                        {row?.price
+                          ? `${currencySymbol} ${formatCurrencyAmount(row.price)}`
                           : ""}
                       </Text>
+
+                      {!isExport && (
+                        <Text
+                          style={[styles.td, { flex: 0.7, textAlign: "right" }]}
+                        >
+                          {row?.taxPercent
+                            ? `${parseFloat(row.taxPercent).toFixed(1)}%`
+                            : ""}
+                        </Text>
+                      )}
 
                       {/* Gross */}
                       <Text
@@ -642,7 +710,9 @@ const OrderEntryPrintFormat = ({
                           },
                         ]}
                       >
-                        {row?.amount ? formatCurrencyAmount(row.amount) : ""}
+                        {row?.amount
+                          ? `${currencySymbol} ${formatCurrencyAmount(row.amount)}`
+                          : ""}
                       </Text>
                     </View>
                   );
@@ -668,7 +738,9 @@ const OrderEntryPrintFormat = ({
                       <Text style={[styles.td, { flex: 0.7 }]}> </Text>
                       <Text style={[styles.td, { flex: 0.9 }]}> </Text>
                       <Text style={[styles.td, { flex: 0.9 }]}> </Text>
-                      <Text style={[styles.td, { flex: 0.7 }]}> </Text>
+                      {!isExport && (
+                        <Text style={[styles.td, { flex: 0.7 }]}> </Text>
+                      )}
                       <Text
                         style={[styles.td, { flex: 1.2, borderRight: "none" }]}
                       >
@@ -755,13 +827,17 @@ const OrderEntryPrintFormat = ({
                         },
                       ]}
                     >
-                      {totalPrice > 0 ? formatCurrencyAmount(totalPrice) : ""}
+                      {totalPrice > 0
+                        ? `${currencySymbol} ${formatCurrencyAmount(totalPrice)}`
+                        : ""}
                     </Text>
-                    <Text
-                      style={[styles.td, { flex: 0.7, color: "transparent" }]}
-                    >
-                      {" "}
-                    </Text>
+                    {!isExport && (
+                      <Text
+                        style={[styles.td, { flex: 0.7, color: "transparent" }]}
+                      >
+                        {" "}
+                      </Text>
+                    )}
                     <Text
                       style={[
                         styles.td,
@@ -775,7 +851,7 @@ const OrderEntryPrintFormat = ({
                       ]}
                     >
                       {totals?.gross
-                        ? formatCurrencyAmount(totals.gross, currencyCode)
+                        ? `${currencySymbol} ${formatCurrencyAmount(totals.gross, currencyCode)}`
                         : ""}
                     </Text>
                   </View>
@@ -791,61 +867,65 @@ const OrderEntryPrintFormat = ({
                   >
                     {/* CUSTOMER REQUIREMENTS & REMARKS */}
                     <View style={{ flex: 1, gap: 5 }}>
-                      <View style={{ border: "1 solid #ddd", borderRadius: 3 }}>
+                      {data?.requirements ? (
                         <View
-                          style={{
-                            backgroundColor: "#2d2d44",
-                            paddingHorizontal: 10,
-                            paddingVertical: 5,
-                          }}
+                          style={{ border: "1 solid #ddd", borderRadius: 3 }}
                         >
-                          <Text
+                          <View
                             style={{
-                              color: "#e8e8f0",
-                              fontSize: 7.5,
-                              fontWeight: "bold",
+                              backgroundColor: "#2d2d44",
+                              paddingHorizontal: 10,
+                              paddingVertical: 5,
                             }}
                           >
-                            CUSTOMER REQUIREMENTS
-                          </Text>
+                            <Text
+                              style={{
+                                color: "#e8e8f0",
+                                fontSize: 7.5,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              CUSTOMER REQUIREMENTS
+                            </Text>
+                          </View>
+                          <View style={styles.requirementsBody}>
+                            <Text>{data.requirements}</Text>
+                          </View>
                         </View>
-                        <View style={styles.requirementsBody}>
-                          <Text>
-                            {data?.requirements ||
-                              "No specific requirements mentioned."}
-                          </Text>
-                        </View>
-                      </View>
-                      <View
-                        style={{
-                          border: "1 solid #ddd",
-                          borderRadius: 3,
-                          backgroundColor: "#f8f8f9",
-                        }}
-                      >
+                      ) : null}
+
+                      {data?.remarks ? (
                         <View
                           style={{
-                            backgroundColor: "#2d2d44",
-                            paddingHorizontal: 10,
-                            paddingVertical: 5,
+                            border: "1 solid #ddd",
+                            borderRadius: 3,
+                            backgroundColor: "#f8f8f9",
                           }}
                         >
-                          <Text
+                          <View
                             style={{
-                              color: "#e8e8f0",
-                              fontSize: 7.5,
-                              fontWeight: "bold",
+                              backgroundColor: "#2d2d44",
+                              paddingHorizontal: 10,
+                              paddingVertical: 5,
                             }}
                           >
-                            REMARKS
-                          </Text>
+                            <Text
+                              style={{
+                                color: "#e8e8f0",
+                                fontSize: 7.5,
+                                fontWeight: "bold",
+                              }}
+                            >
+                              REMARKS
+                            </Text>
+                          </View>
+                          <View style={styles.sectionBody}>
+                            <Text style={{ fontSize: 7.5, color: "#555" }}>
+                              {data.remarks}
+                            </Text>
+                          </View>
                         </View>
-                        <View style={styles.sectionBody}>
-                          <Text style={{ fontSize: 7.5, color: "#555" }}>
-                            {data?.remarks || ""}
-                          </Text>
-                        </View>
-                      </View>
+                      ) : null}
                     </View>
 
                     {/* SUMMARY */}
@@ -863,33 +943,25 @@ const OrderEntryPrintFormat = ({
                       </Text>
                       <View style={{ padding: 8 }}>
                         <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>Total Qty</Text>
-                          <Text style={styles.summaryColon}>:</Text>
-                          <Text style={styles.summaryValue}>
-                            {Number(totalOrderQty).toFixed(3)}
-                          </Text>
-                        </View>
-                        <View style={styles.summaryRow}>
                           <Text style={styles.summaryLabel}>Gross Amount</Text>
                           <Text style={styles.summaryColon}>:</Text>
                           <Text style={styles.summaryValue}>
-                            {currencyCode || ""}{" "}
+                            {currencySymbol}{" "}
                             {formatCurrencyAmount(
                               totals?.gross || 0,
                               currencyCode,
                             )}
                           </Text>
                         </View>
-                        {(totals?.itemDiscount || 0) +
-                          (totals?.overallDiscount || 0) >
-                          0 && (
+                        {(totals?.itemDiscount > 0 ||
+                          totals?.overallDiscount > 0) && (
                           <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>
                               Total Discount
                             </Text>
                             <Text style={styles.summaryColon}>:</Text>
                             <Text style={styles.summaryValue}>
-                              {currencyCode || ""}{" "}
+                              {currencySymbol}{" "}
                               {formatCurrencyAmount(
                                 (totals?.itemDiscount || 0) +
                                   (totals?.overallDiscount || 0),
@@ -898,31 +970,28 @@ const OrderEntryPrintFormat = ({
                             </Text>
                           </View>
                         )}
-                        {totals?.taxable > 0 && (
+                        {((!isExport && totals?.discountValue > 0) ||
+                          isExport) && (
                           <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>
-                              Taxable Amount
+                              {isExport ? "Net Amount" : "Taxable Amount"}
                             </Text>
                             <Text style={styles.summaryColon}>:</Text>
                             <Text style={styles.summaryValue}>
-                              {currencyCode || ""}{" "}
-                              {formatCurrencyAmount(
-                                totals.taxable,
-                                currencyCode,
-                              )}
+                              {currencySymbol}{" "}
+                              {formatCurrencyAmount(taxableTotal, currencyCode)}
                             </Text>
                           </View>
                         )}
-                        {totals?.slabBreakup
-                          ?.filter((slab) => (slab.amount || 0) > 0)
-                          .map((slab) => (
+                        {!isExport &&
+                          consolidatedTaxSlabs.map((slab) => (
                             <View key={slab.tax} style={styles.summaryRow}>
                               <Text style={styles.summaryLabel}>
                                 {slab.tax}
                               </Text>
                               <Text style={styles.summaryColon}>:</Text>
                               <Text style={styles.summaryValue}>
-                                {currencyCode || ""}{" "}
+                                {currencySymbol}{" "}
                                 {formatCurrencyAmount(
                                   slab.amount || 0,
                                   currencyCode,
@@ -930,29 +999,30 @@ const OrderEntryPrintFormat = ({
                               </Text>
                             </View>
                           ))}
-                        {parseFloat(data?.carriageCharge || 0) > 0 && (
+                        {carriageCharge > 0 && (
                           <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>
-                              Carriage Charge
+                              Carriage & Air Freight
                             </Text>
                             <Text style={styles.summaryColon}>:</Text>
                             <Text style={styles.summaryValue}>
-                              {currencyCode || ""}{" "}
+                              {currencySymbol}{" "}
                               {formatCurrencyAmount(
-                                data.carriageCharge,
+                                carriageCharge,
                                 currencyCode,
                               )}
                             </Text>
                           </View>
                         )}
-                        {totals?.roundOff !== 0 &&
+                        {!isExport &&
+                          totals?.roundOff !== 0 &&
                           totals?.roundOff !== undefined && (
                             <View style={styles.summaryRow}>
                               <Text style={styles.summaryLabel}>Round Off</Text>
                               <Text style={styles.summaryColon}>:</Text>
                               <Text style={styles.summaryValue}>
                                 {totals?.roundOff > 0 ? "+" : ""}{" "}
-                                {currencyCode || ""}{" "}
+                                {currencySymbol}{" "}
                                 {formatCurrencyAmount(
                                   Math.abs(totals?.roundOff || 0),
                                   currencyCode,
@@ -983,7 +1053,7 @@ const OrderEntryPrintFormat = ({
                               },
                             ]}
                           >
-                            Net Amount
+                            {isExport ? "Grand Total" : "Net Amount"}
                           </Text>
                           <Text
                             style={[styles.summaryColon, { color: "#ccc" }]}
@@ -996,45 +1066,35 @@ const OrderEntryPrintFormat = ({
                               { fontSize: 9, color: "#fff" },
                             ]}
                           >
-                            {currencyCode || ""}{" "}
-                            {formatCurrencyAmount(finalNetAmount, currencyCode)}
+                            {currencySymbol}{" "}
+                            {formatCurrencyAmount(
+                              isExport ? grandTotalExport : netAmountDomestic,
+                              currencyCode,
+                            )}
                           </Text>
                         </View>
-                        {finalNetAmount > 0 && (
-                          <View
-                            style={{
-                              marginTop: 6,
-                              paddingTop: 4,
-                              borderTop: "1 solid #ddd",
-                            }}
-                          >
-                            <Text
-                              style={{
-                                fontSize: 7,
-                                fontStyle: "italic",
-                                color: "#555",
-                              }}
-                            >
-                              Amount in Words:
-                            </Text>
-                            <Text
-                              style={{
-                                fontSize: 7.5,
-                                fontWeight: "bold",
-                                color: "#1a1a2e",
-                                marginTop: 2,
-                              }}
-                            >
-                              {numberToWords
-                                .toWords(Math.round(finalNetAmount))
-                                .replace(/\b\w/g, (c) => c.toUpperCase()) +
-                                " Only"}
-                            </Text>
-                          </View>
-                        )}
                       </View>
                     </View>
                   </View>
+
+                  {(isExport ? grandTotalExport : netAmountDomestic) > 0 && (
+                    <View style={styles.wordsBar}>
+                      <Text style={styles.wordsText}>
+                        Amount in Words (
+                        {(currencyCode || currencySymbol || "").trim()}
+                        ):{" "}
+                        <Text style={styles.wordsValue}>
+                          {numberToWords
+                            .toWords(
+                              Math.round(
+                                isExport ? grandTotalExport : netAmountDomestic,
+                              ),
+                            )
+                            .replace(/\b\w/g, (c) => c.toUpperCase()) + " Only"}
+                        </Text>
+                      </Text>
+                    </View>
+                  )}
 
                   {/* Spacer to reserve space for the fixed absolute signature block at the bottom */}
                   <View style={{ height: 80 }} />
@@ -1056,7 +1116,7 @@ const OrderEntryPrintFormat = ({
                           fontSize: 8,
                           fontWeight: "bold",
                           color: "#1a1a2e",
-                          marginBottom: 18,
+                          marginBottom: 30,
                         }}
                       >
                         For {branchData?.branchName || ""}

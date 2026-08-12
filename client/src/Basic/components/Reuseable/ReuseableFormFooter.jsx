@@ -246,9 +246,15 @@ const ReusableFormFooter = ({
                                 </h2>
                             )}
                             {leftSummaryRows.map((row) => (
-                                <div key={row.key} className="flex justify-between text-[12px]">
-                                    <span>{row.label}</span>
-                                    <span>{row.value}</span>
+                                <div key={row.key} className={`flex justify-between text-[12px] ${row.className || ""}`}>
+                                    <span className={row.labelClassName || ""}>{row.label}</span>
+                                    {row.renderValue ? (
+                                        <div className={row.valueContainerClassName || "flex-1"}>
+                                            {row.renderValue()}
+                                        </div>
+                                    ) : (
+                                        <span className={row.valueClassName || ""}>{row.value}</span>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -257,9 +263,15 @@ const ReusableFormFooter = ({
                     {hasRightSummaryContent && (
                         <div className="rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
                             {rightSummaryRows.map((row) => (
-                                <div key={row.key} className="flex justify-between text-[12px]">
-                                    <span>{row.label}</span>
-                                    <span>{row.value}</span>
+                                <div key={row.key} className={`flex justify-between text-[12px] ${row.className || ""}`}>
+                                    <span className={row.labelClassName || ""}>{row.label}</span>
+                                    {row.renderValue ? (
+                                        <div className={row.valueContainerClassName || "flex-1"}>
+                                            {row.renderValue()}
+                                        </div>
+                                    ) : (
+                                        <span className={row.valueClassName || ""}>{row.value}</span>
+                                    )}
                                 </div>
                             ))}
                         </div>

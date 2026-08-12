@@ -95,6 +95,7 @@ const OrderEntryForm = ({
   userData,
   branchData,
   hasPermission,
+  cityList,
 }) => {
   const today = new Date();
   const [docDate, setDocDate] = useState(
@@ -137,7 +138,8 @@ const OrderEntryForm = ({
   const [currencyId, setCurrencyId] = useState("");
   const [weightInKg, setWeightInKg] = useState("");
   const [carriageCharge, setCarriageCharge] = useState("");
-
+  const [loadingId, setLoadingId] = useState("");
+  const [deliveryId, setDeliveryId] = useState("");
   const dispatch = useDispatch();
   const qrRef = useRef(null);
   const customerRef = useRef(null);
@@ -244,8 +246,10 @@ const OrderEntryForm = ({
       setPayTermId(data?.payTermId || "");
       setBankId(data?.bankId || "");
       setCurrencyId(data?.currencyId || "");
-      setWeightInKg(data?.weightInKg || "");
-      setCarriageCharge(data?.carriageCharge || "");
+      setWeightInKg(data?.weightInKg?.toFixed(3) || "");
+      setCarriageCharge(data?.carriageCharge?.toFixed(2) || "");
+      setLoadingId(data?.loadingId || "");
+      setDeliveryId(data?.deliveryId || "");
     },
     [id],
   );
@@ -290,6 +294,8 @@ const OrderEntryForm = ({
     currencyId,
     weightInKg,
     carriageCharge,
+    deliveryId,
+    loadingId,
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -448,6 +454,13 @@ const OrderEntryForm = ({
             `Row ${index + 1}: Sum of size quantities (${sizeSum}) must match the PI quantity (${item.orderQty})`,
           );
         }
+      }
+      if (isCustomerExport && !loadingId) {
+        errors.push(`Loading Port is required`);
+      }
+
+      if (isCustomerExport && !deliveryId) {
+        errors.push(`Delivery Port is required`);
       }
     });
 
@@ -745,7 +758,7 @@ const OrderEntryForm = ({
         <PoSummary
           poItems={orderItems}
           totals={enrichedData}
-          readOnly={readOnly || isDisabled}
+          readOnly={readOnly || isDisabled || childRecord.current > 0}
           discountType={discountType}
           setDiscountType={setDiscountType}
           discountValue={discountValue}
@@ -1156,6 +1169,8 @@ const OrderEntryForm = ({
               totals={enrichedData}
               discountType={discountType}
               currencyCode={currencyCode}
+              isCurrencySymbol={isCurrencySymbol}
+              isCustomerExport={isCustomerExport}
             />
           </PDFViewer>
         </Modal>
@@ -1281,6 +1296,8 @@ const OrderEntryForm = ({
                         setCurrencyId("");
                         setWeightInKg("");
                         setCarriageCharge("");
+                        setLoadingId("");
+                        setDeliveryId("");
                       }
                     }}
                     required={true}
@@ -1300,8 +1317,16 @@ const OrderEntryForm = ({
                       value={proFormaId}
                       setValue={setProFormaId}
                       required={orderType === "AGAINSTPI"}
-                      readOnly={readOnly || orderType === "GENERAL"}
-                      disabled={readOnly || orderType === "GENERAL"}
+                      readOnly={
+                        childRecord.current > 0 ||
+                        readOnly ||
+                        orderType === "GENERAL"
+                      }
+                      disabled={
+                        childRecord.current > 0 ||
+                        readOnly ||
+                        orderType === "GENERAL"
+                      }
                       otherField={"docId"}
                       beforeChange={async (selectedValue) => {
                         if (!selectedValue) {
@@ -1336,6 +1361,8 @@ const OrderEntryForm = ({
                         setCurrencyId(res?.data?.currencyId || "");
                         setWeightInKg(res?.data?.weightInKg || "");
                         setCarriageCharge(res?.data?.carriageCharge || "");
+                        setLoadingId(res?.data?.loadingId || "");
+                        setDeliveryId(res?.data?.deliveryId || "");
 
                         const mappedItems =
                           Object.values(
@@ -1394,7 +1421,11 @@ const OrderEntryForm = ({
                       name="Ref No"
                       value={refNo}
                       setValue={setRefNo}
-                      disabled={readOnly || productionType === "SAMPLE"}
+                      disabled={
+                        productionType === "SAMPLE" ||
+                        childRecord.current > 0 ||
+                        readOnly
+                      }
                       required={productionType === "BULK"}
                     />
                   ) : (
@@ -1408,8 +1439,7 @@ const OrderEntryForm = ({
                       required={
                         productionType === "BULK" && orderType === "AGAINSTPI"
                       }
-                      readOnly={readOnly}
-                      disabled={readOnly}
+                      disabled={childRecord.current > 0 || readOnly}
                       otherField={"refNo"}
                       otherValue={"refNo"}
                     />
@@ -1419,7 +1449,7 @@ const OrderEntryForm = ({
                     name="ValidDays"
                     value={validDays}
                     setValue={setValidDays}
-                    disabled={readOnly}
+                    disabled={childRecord.current > 0 || readOnly}
                     type="number"
                     min="0"
                     className="text-right"
@@ -1450,8 +1480,48 @@ const OrderEntryForm = ({
               <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
                 Other Details
               </h2>
-              <div className="grid grid-cols-2 md:grid-cols-6 lg:grid-cols-8 gap-2 items-end">
-                <div className="col-span-1">
+              <div className="flex gap-2 gap-x-2">
+                {isCustomerExport && (
+                  <>
+                    <div className="w-60">
+                      <DropdownInput
+                        name="Loading Port"
+                        options={dropDownListObject(
+                          cityList?.data?.filter((item) => item.active),
+                          "name",
+                          "id",
+                        )}
+                        value={loadingId}
+                        setValue={setLoadingId}
+                        readOnly={
+                          childRecord.current > 0 ||
+                          readOnly ||
+                          orderType === "AGAINSTPI"
+                        }
+                        required={true}
+                      />
+                    </div>
+                    <div className="w-60">
+                      <DropdownInput
+                        name="Delivery Port"
+                        options={dropDownListObject(
+                          cityList?.data?.filter((item) => item.active),
+                          "name",
+                          "id",
+                        )}
+                        value={deliveryId}
+                        setValue={setDeliveryId}
+                        readOnly={
+                          childRecord.current > 0 ||
+                          readOnly ||
+                          orderType === "AGAINSTPI"
+                        }
+                        required={true}
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="w-32">
                   <DropdownInput
                     name="Tax Type"
                     options={dropDownListObject(
@@ -1462,10 +1532,14 @@ const OrderEntryForm = ({
                     value={taxTemplateId}
                     setValue={setTaxTemplateId}
                     required={!isCustomerExport}
-                    readOnly={readOnly || orderType === "AGAINSTPI"}
+                    readOnly={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
                   />
                 </div>
-                <div className="col-span-1">
+                <div className="w-32">
                   <DropdownWithModal
                     name="Pay Term"
                     options={dropDownListObject(
@@ -1484,28 +1558,40 @@ const OrderEntryForm = ({
                     addNewLabel="+ Add New Pay Term"
                     childComponent={PayTermMaster}
                     addNewModalWidth="w-[40%] h-[66%]"
-                    disabled={readOnly || orderType === "AGAINSTPI"}
+                    disabled={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
                   />
                 </div>
-                <div className="col-span-1">
+                <div className="w-28">
                   <DropdownInput
                     name="Conversion"
                     options={conversionTypes}
                     value={conversionType}
                     setValue={handleConversionChange}
                     required={false}
-                    readOnly={readOnly || orderType === "AGAINSTPI"}
+                    readOnly={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
                   />
                 </div>
-                <div className="col-span-1">
+                <div className="w-24">
                   <TextInput
-                    name="Weight In Kg(KG)*"
+                    name="Weight In Kg(KG)"
                     value={weightInKg}
                     setValue={setWeightInKg}
                     type="number"
                     min="0"
                     className="text-right"
-                    disabled={readOnly || orderType === "AGAINSTPI"}
+                    disabled={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
                     onBlur={(e) =>
                       setWeightInKg(
                         e.target.value ? Number(e.target.value).toFixed(3) : "",
@@ -1524,7 +1610,11 @@ const OrderEntryForm = ({
                     type="number"
                     min="0"
                     className="text-right"
-                    disabled={readOnly || orderType === "AGAINSTPI"}
+                    disabled={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
                     onBlur={(e) =>
                       setCarriageCharge(
                         e.target.value ? Number(e.target.value).toFixed(2) : "",
@@ -1535,7 +1625,7 @@ const OrderEntryForm = ({
                     }}
                   />
                 </div>
-                <div className="col-span-1">
+                <div className="w-44">
                   <DropdownWithModal
                     name="Advising Bank"
                     options={dropDownListObjectMultiple(
@@ -1546,16 +1636,24 @@ const OrderEntryForm = ({
                     value={bankId}
                     setValue={setBankId}
                     required={false}
-                    readOnly={readOnly || orderType === "AGAINSTPI"}
+                    readOnly={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
                     className={`w-[150px]`}
                     addNewLabel="+ Add New Bank"
                     childComponent={BankMaster}
                     addNewModalWidth="w-[45%] h-[64%]"
-                    disabled={readOnly || orderType === "AGAINSTPI"}
+                    disabled={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
                   />
                 </div>
                 {isCustomerExport && (
-                  <div className="col-span-1">
+                  <div className="w-24">
                     <DropdownWithModal
                       name="Currency"
                       options={dropDownListObject(
@@ -1568,23 +1666,35 @@ const OrderEntryForm = ({
                       value={currencyId}
                       setValue={setCurrencyId}
                       required={true}
-                      readOnly={readOnly || orderType === "AGAINSTPI"}
+                      readOnly={
+                        childRecord.current > 0 ||
+                        readOnly ||
+                        orderType === "AGAINSTPI"
+                      }
                       className={`w-full max-w-none`}
                       dropdownMinWidth={240}
                       addNewLabel="+ Add New Currency"
                       childComponent={CurrencyMaster}
                       addNewModalWidth="w-[40%] h-[66%]"
-                      disabled={readOnly || orderType === "AGAINSTPI"}
+                      disabled={
+                        childRecord.current > 0 ||
+                        readOnly ||
+                        orderType === "AGAINSTPI"
+                      }
                     />
                   </div>
                 )}
-                <div className="col-span-1">
+                <div className="w-[105px]">
                   <DateInputNew
                     name="Delivery Date"
                     value={deliveryDate}
                     setValue={setDeliveryDate}
                     required={true}
-                    readOnly={readOnly || orderType === "AGAINSTPI"}
+                    readOnly={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
                     type={"date"}
                   />
                 </div>
@@ -1598,7 +1708,7 @@ const OrderEntryForm = ({
           <OrderItems
             orderItems={orderItems}
             setOrderItems={setOrderItems}
-            readOnly={readOnly}
+            readOnly={readOnly || childRecord?.current > 0}
             styleItemList={styleItemList}
             sizeList={sizeList}
             uomList={uomList}
@@ -1629,7 +1739,7 @@ const OrderEntryForm = ({
                   value: requirements,
                   onChange: setRequirements,
                   placeholder: "Enter requirements...",
-                  readOnly: readOnly,
+                  readOnly: readOnly || childRecord.current > 0,
                   ref: requirementRef,
                 },
                 {
@@ -1637,103 +1747,179 @@ const OrderEntryForm = ({
                   value: remarks,
                   onChange: setRemarks,
                   placeholder: "Additional notes...",
-                  readOnly: readOnly,
+                  readOnly: readOnly || childRecord.current > 0,
                 },
               ]}
-              hasSummaryTitle="Summary"
-              sectionColClass="md:col-span-3"
-              summaryColClass="md:col-span-6"
+              hasSummaryTitle={
+                <span className="block text-center w-full">Summary</span>
+              }
+              sectionColClass="md:col-span-4"
+              summaryColClass="md:col-span-4"
               totalsRows={[
                 {
-                  key: "orderType",
-                  label: "Order Type",
-                  value: orderType,
-                  summaryColumn: "left",
-                },
-                {
-                  key: "orderQty",
-                  label: "Order Qty",
-                  value: orderItems
-                    ?.reduce((acc, item) => {
-                      const qty = parseFloat(item.orderQty) || 0;
-                      return acc + qty;
-                    }, 0)
-                    .toFixed(2),
-                  summaryColumn: "left",
-                },
-                {
-                  key: "grossAmount",
-                  label: "Gross Amount",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(
-                    isCustomerExport
-                      ? enrichedData.items?.reduce(
-                          (sum, item) => sum + (parseFloat(item.amount) || 0),
-                          0,
-                        )
-                      : enrichedData.gross,
-                    currencyCode || isCurrencySymbol,
-                  )}`,
-                  summaryColumn: "right",
-                  emphasized: true,
-                },
-                {
-                  key: "totalDiscount",
-                  label: "Total Discount",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(
-                    enrichedData.itemDiscount + enrichedData.overallDiscount > 0
-                      ? enrichedData.itemDiscount + enrichedData.overallDiscount
-                      : 0,
-                    currencyCode || isCurrencySymbol,
-                  )}`,
-                  summaryColumn: "right",
-                  emphasized: false,
-                },
-                ...(!isCustomerExport
-                  ? (() => {
-                      const taxTotals = (enrichedData.slabBreakup || []).reduce(
-                        (acc, curr) => {
-                          const type = curr.tax.split(" ")[0];
+                  key: "summary_grid",
+                  label: "",
+                  valueContainerClassName: "w-full",
+                  renderValue: () => {
+                    const taxTotals = !isCustomerExport
+                      ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
+                          const type = curr?.tax?.split(" ")[0];
                           acc[type] = (acc[type] || 0) + curr.amount;
                           return acc;
-                        },
-                        {},
-                      );
-                      return Object.keys(taxTotals).map((type) => ({
-                        key: type,
-                        label: type,
-                        value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(taxTotals[type], currencyCode || isCurrencySymbol)}`,
-                        summaryColumn: "right",
-                        emphasized: false,
-                      }));
-                    })()
-                  : []),
-                {
-                  key: "carriageCharge",
-                  label: "Carriage Charges",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(carriageCharge || 0, currencyCode || isCurrencySymbol)}`,
-                  summaryColumn: "right",
+                        }, {})
+                      : {};
+
+                    return (
+                      <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1">
+                        {/* Left Column */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Total Discount</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                enrichedData.itemDiscount +
+                                  enrichedData.overallDiscount >
+                                  0
+                                  ? enrichedData.itemDiscount +
+                                      enrichedData.overallDiscount
+                                  : 0,
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Taxable Amount</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                enrichedData.taxable || 0,
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          {taxTotals.CGST !== undefined &&
+                          taxTotals.SGST !== undefined ? (
+                            <div className="flex items-center justify-between w-full max-w-[210px]">
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-800 w-[32px]">
+                                  CGST
+                                </span>
+                                <span className="text-slate-800">:</span>
+                                <span className="font-medium text-slate-800">
+                                  {formatCurrencyAmount(
+                                    taxTotals.CGST,
+                                    currencyCode || isCurrencySymbol,
+                                  )}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-800 w-[32px]">
+                                  SGST
+                                </span>
+                                <span className="text-slate-800">:</span>
+                                <span className="font-medium text-slate-800 text-right">
+                                  {formatCurrencyAmount(
+                                    taxTotals.SGST,
+                                    currencyCode || isCurrencySymbol,
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            Object.keys(taxTotals).map((type) => (
+                              <div
+                                key={type}
+                                className="flex items-center justify-between w-full max-w-[210px]"
+                              >
+                                <div className="flex justify-between w-[130px] text-slate-800">
+                                  <span>{type}</span>
+                                  <span>:</span>
+                                </div>
+                                <span className="font-medium text-slate-800 text-right w-[65px]">
+                                  {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                                  {formatCurrencyAmount(
+                                    taxTotals[type],
+                                    currencyCode || isCurrencySymbol,
+                                  )}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Right Column */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Carriage Charges</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {!isNaN(parseFloat(carriageCharge)) &&
+                              carriageCharge !== ""
+                                ? formatCurrencyAmount(
+                                    carriageCharge,
+                                    currencyCode || isCurrencySymbol,
+                                  )
+                                : "0.00"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Round Off</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                enrichedData.roundOff || 0,
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                              <span>Net Amount</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-bold text-indigo-700 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                (!isCustomerExport
+                                  ? enrichedData.net
+                                  : (enrichedData.items?.reduce(
+                                      (sum, item) =>
+                                        sum + (parseFloat(item.amount) || 0),
+                                      0,
+                                    ) || 0) -
+                                    (enrichedData.itemDiscount +
+                                      enrichedData.overallDiscount >
+                                    0
+                                      ? enrichedData.itemDiscount +
+                                        enrichedData.overallDiscount
+                                      : 0)) + (parseFloat(carriageCharge) || 0),
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  },
+                  summaryColumn: "left",
                   emphasized: false,
-                },
-                {
-                  key: "netAmount",
-                  label: "Net Amount",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${formatCurrencyAmount(
-                    (!isCustomerExport
-                      ? enrichedData.net
-                      : (enrichedData.items?.reduce(
-                          (sum, item) => sum + (parseFloat(item.amount) || 0),
-                          0,
-                        ) || 0) -
-                        (enrichedData.itemDiscount +
-                          enrichedData.overallDiscount >
-                        0
-                          ? enrichedData.itemDiscount +
-                            enrichedData.overallDiscount
-                          : 0)) + (parseFloat(carriageCharge) || 0),
-                    currencyCode || isCurrencySymbol,
-                  )}`,
-                  summaryColumn: "right",
-                  emphasized: true,
                 },
               ]}
             />
@@ -1744,7 +1930,7 @@ const OrderEntryForm = ({
                   <>
                     <button
                       onClick={() => saveData("close")}
-                      disabled={readOnly || isDisabled}
+                      disabled={isDisabled || readOnly}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -1755,11 +1941,11 @@ const OrderEntryForm = ({
                       className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
                     >
                       <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                      Save & Close
+                      {id ? "Update & Close" : "Save & Close"}
                     </button>
                     <button
                       onClick={() => saveData("new")}
-                      disabled={readOnly || isDisabled}
+                      disabled={isDisabled || readOnly}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -1770,7 +1956,7 @@ const OrderEntryForm = ({
                       className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
                     >
                       <FiSave className="w-4 h-4 mr-2" />
-                      Save & New
+                      {id ? "Update & New" : " Save & New"}
                     </button>
                   </>
                 )}
