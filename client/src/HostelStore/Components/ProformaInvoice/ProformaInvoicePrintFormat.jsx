@@ -406,8 +406,9 @@ const ProformaInvoicePrintFormat = ({
   if (!data) return null;
 
   const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
-  const currencySymbol =
+  let currencySymbol =
     findFromList(data?.currencyId, currencyList?.data, "symbol") || "Rs.";
+  if (currencySymbol.includes("₹")) currencySymbol = currencySymbol.replace("₹", "Rs.");
   const currencyCode =
     findFromList(data?.currencyId, currencyList?.data, "code") || "INR";
 
