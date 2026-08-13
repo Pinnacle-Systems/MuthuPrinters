@@ -1657,6 +1657,7 @@ model Size {
   boardQualities         BoardQuality[]
 
   salesSizeBreakups SalesSizeBreakup[]
+  pisizeBreakups    PISizeBreakup[]
 }
 
 model Gsm {
@@ -1697,6 +1698,7 @@ model ItemGroup {
   orderItems             OrderItems[]
   jobCards               JobCard[]
   ItemSubGroup           ItemSubGroup[]
+  proformaInvoiceItems   ProformaInvoiceItem[]
 }
 
 model SizeTemplate {
@@ -1899,6 +1901,7 @@ model OrderEntry {
   currencyId        Int?
   weightInKg        Float?
   carriageCharge    Float?
+    carriageTax       Float?
   orderItems        OrderItems[]
   Loading           City?               @relation("loading", fields: [loadingId], references: [id])
   loadingId         Int?
@@ -2376,6 +2379,7 @@ model ProformaInvoice {
   Delivery          City?                 @relation("delivery", fields: [deliveryId], references: [id])
   deliveryId        Int?
   carriageCharge    Float?
+  carriageTax       Float?
   bankId            Int?
   Bank              Bank?                 @relation(fields: [bankId], references: [id])
   conversionType    String?
@@ -2386,6 +2390,10 @@ model ProformaInvoiceItem {
   id                Int             @id @default(autoincrement())
   ProformaInvoice   ProformaInvoice @relation(fields: [proformaInvoiceId], references: [id], onDelete: Cascade)
   proformaInvoiceId Int
+  itemGroupId       Int?
+  ItemGroup         ItemGroup?      @relation(fields: [itemGroupId], references: [id])
+  itemSubGroupId    Int?
+  ItemSubGroup      ItemSubGroup?   @relation(fields: [itemSubGroupId], references: [id])
   styleItemId       Int?
   StyleItem         StyleItem?      @relation(fields: [styleItemId], references: [id])
   qty               Float?
@@ -2404,6 +2412,17 @@ model ProformaInvoiceItem {
   Hsn               Hsn?            @relation(fields: [hsnId], references: [id])
   quoteVersion      Int             @default(1)
   dozen             Float?
+  labelWidth        String?
+  pisizeBreakups    PISizeBreakup[]
+}
+
+model PISizeBreakup {
+  id                    Int                 @id @default(autoincrement())
+  ProformaInvoiceItemId Int
+  ProformaInvoiceItem   ProformaInvoiceItem @relation(fields: [ProformaInvoiceItemId], references: [id], onDelete: Cascade)
+  sizeId                Int?
+  Size                  Size?               @relation(fields: [sizeId], references: [id])
+  qty                   Int?
 }
 
 model ProformaAttachments {
@@ -2759,19 +2778,20 @@ model SalesSizeBreakup {
 }
 
 model ItemSubGroup {
-  id          Int          @id @default(autoincrement())
-  name        String
-  active      Boolean      @default(true)
-  Company     Company?     @relation(fields: [companyId], references: [id])
-  companyId   Int?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  createdById Int?
-  createdBy   User?        @relation("createdBy", fields: [createdById], references: [id])
-  updatedById Int?
-  updatedBy   User?        @relation("updatedBy", fields: [updatedById], references: [id])
-  itemGroupId Int
-  ItemGroup   ItemGroup    @relation(fields: [itemGroupId], references: [id], onDelete: Cascade)
-  StyleItem   StyleItem[]
-  OrderItems  OrderItems[]
+  id                   Int                   @id @default(autoincrement())
+  name                 String
+  active               Boolean               @default(true)
+  Company              Company?              @relation(fields: [companyId], references: [id])
+  companyId            Int?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  createdById          Int?
+  createdBy            User?                 @relation("createdBy", fields: [createdById], references: [id])
+  updatedById          Int?
+  updatedBy            User?                 @relation("updatedBy", fields: [updatedById], references: [id])
+  itemGroupId          Int
+  ItemGroup            ItemGroup             @relation(fields: [itemGroupId], references: [id], onDelete: Cascade)
+  StyleItem            StyleItem[]
+  OrderItems           OrderItems[]
+  proformaInvoiceItems ProformaInvoiceItem[]
 }

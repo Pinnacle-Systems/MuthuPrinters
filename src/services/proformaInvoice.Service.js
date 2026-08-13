@@ -269,8 +269,7 @@ async function create(body) {
       bankId: bankId ? parseInt(bankId) : null,
       conversionType: conversionType || null,
       items: {
-        createMany: {
-          data: JSON.parse(items || "[]").map((item) => ({
+        create: JSON.parse(items || "[]").map((item) => ({
             styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
             sizeId: item.sizeId ? parseInt(item.sizeId) : null,
             uomId: item.uomId ? parseInt(item.uomId) : null,
@@ -283,8 +282,16 @@ async function create(body) {
             discountType: item.discountType,
             discountValue: parseFloat(item.discountValue || 0),
             amount: parseFloat(item.amount || 0),
+            pisizeBreakups:
+              item?.sizeBreakup?.length > 0
+                ? {
+                    create: item.sizeBreakup.map((s) => ({
+                      sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                      qty: s.qty ? parseInt(s.qty) : null,
+                    })),
+                  }
+                : undefined,
           })),
-        },
       },
       attachments:
         attachments && JSON.parse(attachments)?.length > 0
@@ -342,7 +349,7 @@ async function update(id, body, files) {
 
   const dataFound = await prisma.proformaInvoice.findUnique({
     where: { id: parseInt(id) },
-    include: { attachments: true, items: true },
+    include: { attachments: true, items: { include: { pisizeBreakups: true } } },
   });
 
   if (!dataFound) return NoRecordFound("Proforma Invoice");
@@ -405,6 +412,20 @@ async function update(id, body, files) {
       // Since ProformaInvoiceForm sets/gets the entire array in order, index matching works fine.
       const oldItem = latestItems[index];
       if (!oldItem) return true;
+      const newSizes = newItem.sizeBreakup || [];
+      const oldSizes = oldItem.pisizeBreakups || [];
+
+      const isSizesChanged =
+        newSizes.length !== oldSizes.length ||
+        newSizes.some((ns, sIndex) => {
+          const os = oldSizes[sIndex];
+          if (!os) return true;
+          return (
+            parseInt(ns.sizeId || 0) !== parseInt(os.sizeId || 0) ||
+            parseFloat(ns.qty || 0) !== parseFloat(os.qty || 0)
+          );
+        });
+
       return (
         parseInt(newItem.styleItemId || 0) !==
           parseInt(oldItem.styleItemId || 0) ||
@@ -419,7 +440,8 @@ async function update(id, body, files) {
         parseInt(newItem.uomId || 0) !== parseInt(oldItem.uomId || 0) ||
         parseInt(newItem.gsmId || 0) !== parseInt(oldItem.gsmId || 0) ||
         parseInt(newItem.hsnId || 0) !== parseInt(oldItem.hsnId || 0) ||
-        parseFloat(newItem.dozen || 0) !== parseFloat(oldItem.dozen || 0)
+        parseFloat(newItem.dozen || 0) !== parseFloat(oldItem.dozen || 0) ||
+        isSizesChanged
       );
     });
   }
@@ -476,6 +498,15 @@ async function update(id, body, files) {
                 amount: parseFloat(item.amount || 0),
                 quoteVersion: nextQuoteVersion,
                 dozen: parseFloat(item.dozen || 0),
+                pisizeBreakups:
+                  item?.sizeBreakup?.length > 0
+                    ? {
+                        create: item.sizeBreakup.map((s) => ({
+                          sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                          qty: s.qty ? parseInt(s.qty) : null,
+                        })),
+                      }
+                    : undefined,
               })),
             },
           }

@@ -51,6 +51,8 @@ import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { conversionTypes } from "../../../Utils/DropdownData.js";
 import { useDispatch } from "react-redux";
 //need to work
+import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
+import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
 
 const EMPTY_ROW = {
   styleItemId: "",
@@ -153,6 +155,9 @@ const ProformaInvoiceForm = ({
   const { data: supplierData } = useGetPartyByIdQuery(customerId, {
     skip: !customerId,
   });
+
+  const { data: itemGroupList } = useGetItemGroupMasterQuery({});
+  const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({});
   const [dispatchInvalidate] = useInvalidateTags();
 
   const [addData] = useAddProformaInvoiceMutation();
@@ -1334,6 +1339,8 @@ const ProformaInvoiceForm = ({
             isCustomerExport={isCustomerExport}
             conversionType={conversionType}
             isSupplierOutside={isSupplierOutside}
+            itemGroupList={itemGroupList}
+            itemSubGroupList={itemSubGroupList}
           />
         }
         footer={footerContent}
