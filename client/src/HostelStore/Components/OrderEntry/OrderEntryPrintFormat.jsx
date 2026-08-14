@@ -449,7 +449,7 @@ const OrderEntryPrintFormat = ({
 
   // ── Helper: build size breakup label lines ──
   const getSizeBreakupText = (row) => {
-    const breakup = row.sizeBreakup?.filter((sb) => (Number(sb.qty) || 0) > 0);
+    const breakup = row?.sizeBreakup?.filter((sb) => (Number(sb.qty) || 0) > 0);
     if (!breakup || breakup.length === 0) return null;
 
     return breakup

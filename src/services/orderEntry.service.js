@@ -623,7 +623,8 @@ async function create(body) {
     weightInKg,
     carriageCharge,
     loadingId,
-    deliveryId,
+    deliveryId,    carriageTax,
+
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
@@ -738,6 +739,8 @@ async function create(body) {
         carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
         loadingId: loadingId ? parseInt(loadingId) : null,
         deliveryId: deliveryId ? parseInt(deliveryId) : null,
+              carriageTax: carriageTax ? parseFloat(carriageTax) : null,
+
         orderItems:
           safeOrderItems.length > 0
             ? {
@@ -815,7 +818,8 @@ async function update(id, body, files) {
     weightInKg,
     carriageCharge,
     loadingId,
-    deliveryId,
+    deliveryId,    carriageTax,
+
   } = await body;
 
   const safeorderQty =
@@ -933,6 +937,8 @@ async function update(id, body, files) {
         carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
         loadingId: loadingId ? parseInt(loadingId) : null,
         deliveryId: deliveryId ? parseInt(deliveryId) : null,
+              carriageTax: carriageTax ? parseFloat(carriageTax) : null,
+
         orderItems: {
           deleteMany: incomingItemIds.length
             ? { id: { notIn: incomingItemIds } }

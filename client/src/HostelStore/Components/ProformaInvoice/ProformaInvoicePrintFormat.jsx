@@ -331,6 +331,8 @@ const styles = StyleSheet.create({
 const getColumns = (isExport) => [
   { label: "S.No", flex: 0.4 },
   { label: "Description of Goods", flex: 3 },
+  { label: "Item Sub Group", flex: 1.2 },
+  { label: "Item Group", flex: 1.2 },
   { label: "HSN", flex: 1.2 },
   { label: "UOM", flex: 0.8 },
   { label: "Qty", flex: 0.8 },
@@ -402,13 +404,15 @@ const ProformaInvoicePrintFormat = ({
   cityList,
   currencyList,
   payTermList,
+  carriageFinalAmt,
 }) => {
   if (!data) return null;
 
   const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
   let currencySymbol =
     findFromList(data?.currencyId, currencyList?.data, "symbol") || "Rs.";
-  if (currencySymbol.includes("₹")) currencySymbol = currencySymbol.replace("₹", "Rs.");
+  if (currencySymbol.includes("₹"))
+    currencySymbol = currencySymbol.replace("₹", "Rs.");
   const currencyCode =
     findFromList(data?.currencyId, currencyList?.data, "code") || "INR";
 
@@ -429,7 +433,22 @@ const ProformaInvoicePrintFormat = ({
 
   // Filter only real items
   const allItems = (data?.items || []).filter((i) => i.styleItemId);
+  const getSizeBreakupText = (row) => {
+    const breakup = row?.pisizeBreakups?.filter(
+      (sb) => (Number(sb.qty) || 0) > 0,
+    );
+    if (!breakup || breakup.length === 0) return null;
 
+    return breakup
+      .map((sb) => {
+        const size = sb?.Size?.name;
+        const qty = Number(sb.qty);
+
+        return `${size || "All"}: ${qty}`;
+      })
+      .filter(Boolean)
+      .join("  |  ");
+  };
   // Totals
   const totalQty = allItems?.reduce((s, i) => s + (parseFloat(i?.qty) || 0), 0);
   const totalDozen = allItems?.reduce(
@@ -437,18 +456,18 @@ const ProformaInvoicePrintFormat = ({
     0,
   );
   const totalGross = allItems?.reduce(
-    (s, i) => s + (parseFloat(i.amount) || 0),
+    (s, i) => s + (parseFloat(i?.amount) || 0),
     0,
   );
-  const totalPrice = allItems.reduce(
-    (s, i) => s + (parseFloat(i.price) || 0),
+  const totalPrice = allItems?.reduce(
+    (s, i) => s + (parseFloat(i?.price) || 0),
     0,
   );
   // ── DOMESTIC TAX: per-slab breakup (mirrors PurchaseOrderPrintFormat taxBox) ──
   // Each item carries taxPercent; group by slab, sum taxable + tax amounts
   const taxableTotal = parseFloat(taxDetails?.taxable || 0);
 
-  const carriageCharge = parseFloat(data?.carriageCharge) || 0;
+  const carriageCharge = parseFloat(carriageFinalAmt) || 0;
   const grandTotal = isExport ? taxableTotal + carriageCharge : totalGross;
 
   const totalTaxAmt = parseFloat(taxDetails?.net || 0) - taxableTotal;
@@ -807,13 +826,48 @@ const ProformaInvoicePrintFormat = ({
                   const gross = parseFloat(row.amount) || 0;
                   const taxPct = parseFloat(row.taxPercent) || 0;
                   const netAmt = gross + (gross * taxPct) / 100;
+                  const breakupText = getSizeBreakupText(row);
+
                   return (
                     <View key={globalOffset + index} style={rowStyle}>
                       <Text style={[styles.td, { flex: 0.4 }]}>
                         {globalOffset + index + 1}
                       </Text>
-                      <Text style={[styles.td, { flex: 3, textAlign: "left" }]}>
-                        {row?.StyleItem?.name || ""}
+                      <View
+                        style={[
+                          styles.td,
+                          {
+                            flex: 3,
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                            justifyContent: "center",
+                          },
+                        ]}
+                      >
+                        <Text style={{ textAlign: "left" }}>
+                          {row?.StyleItem?.name || ""}
+                        </Text>
+                        {breakupText ? (
+                          <Text
+                            style={{
+                              fontSize: 6.5,
+                              color: "#555",
+                              marginTop: 2,
+                            }}
+                          >
+                            {breakupText}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Text
+                        style={[styles.td, { flex: 1.2, textAlign: "left" }]}
+                      >
+                        {row?.ItemSubGroup?.name || ""}
+                      </Text>
+                      <Text
+                        style={[styles.td, { flex: 1.2, textAlign: "left" }]}
+                      >
+                        {row?.ItemGroup?.name || ""}
                       </Text>
                       <Text
                         style={[styles.td, { flex: 1.2, textAlign: "left" }]}
@@ -917,6 +971,16 @@ const ProformaInvoicePrintFormat = ({
                       ]}
                     >
                       TOTAL
+                    </Text>
+                    <Text
+                      style={[styles.td, { flex: 1.2, color: "transparent" }]}
+                    >
+                      {" "}
+                    </Text>
+                    <Text
+                      style={[styles.td, { flex: 1.2, color: "transparent" }]}
+                    >
+                      {" "}
                     </Text>
                     <Text
                       style={[styles.td, { flex: 1.2, color: "transparent" }]}

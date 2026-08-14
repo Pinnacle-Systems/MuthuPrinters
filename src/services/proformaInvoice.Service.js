@@ -163,11 +163,18 @@ async function getOne(id) {
     include: {
       items: {
         include: {
+          ItemGroup: true,
+          ItemSubGroup: true,
           StyleItem: true,
           Size: true,
           Uom: true,
           Gsm: true,
           Hsn: true,
+          pisizeBreakups: {
+            include: {
+              Size: true,
+            },
+          },
         },
       },
       attachments: true,
@@ -223,6 +230,7 @@ async function create(body) {
     carriageCharge,
     bankId,
     conversionType,
+    carriageTax,
   } = body;
 
   console.log(conversionType, "conversionType");
@@ -268,30 +276,35 @@ async function create(body) {
       carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
       bankId: bankId ? parseInt(bankId) : null,
       conversionType: conversionType || null,
+      carriageTax: carriageTax ? parseFloat(carriageTax) : null,
       items: {
         create: JSON.parse(items || "[]").map((item) => ({
-            styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
-            sizeId: item.sizeId ? parseInt(item.sizeId) : null,
-            uomId: item.uomId ? parseInt(item.uomId) : null,
-            gsmId: item.gsmId ? parseInt(item.gsmId) : null,
-            hsnId: item.hsnId ? parseInt(item.hsnId) : null,
-            qty: parseFloat(item.qty || 0),
-            dozen: parseFloat(item.dozen || 0),
-            price: parseFloat(item.price || 0),
-            taxPercent: parseFloat(item.taxPercent || 0),
-            discountType: item.discountType,
-            discountValue: parseFloat(item.discountValue || 0),
-            amount: parseFloat(item.amount || 0),
-            pisizeBreakups:
-              item?.sizeBreakup?.length > 0
-                ? {
-                    create: item.sizeBreakup.map((s) => ({
-                      sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                      qty: s.qty ? parseInt(s.qty) : null,
-                    })),
-                  }
-                : undefined,
-          })),
+          itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+          itemSubGroupId: item?.itemSubGroupId
+            ? parseInt(item?.itemSubGroupId)
+            : null,
+          styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
+          sizeId: item.sizeId ? parseInt(item.sizeId) : null,
+          uomId: item.uomId ? parseInt(item.uomId) : null,
+          gsmId: item.gsmId ? parseInt(item.gsmId) : null,
+          hsnId: item.hsnId ? parseInt(item.hsnId) : null,
+          qty: parseFloat(item.qty || 0),
+          dozen: parseFloat(item.dozen || 0),
+          price: parseFloat(item.price || 0),
+          taxPercent: parseFloat(item.taxPercent || 0),
+          discountType: item.discountType,
+          discountValue: parseFloat(item.discountValue || 0),
+          amount: parseFloat(item.amount || 0),
+          pisizeBreakups:
+            item?.sizeBreakup?.length > 0
+              ? {
+                  create: item.sizeBreakup.map((s) => ({
+                    sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                    qty: s.qty ? parseInt(s.qty) : null,
+                  })),
+                }
+              : undefined,
+        })),
       },
       attachments:
         attachments && JSON.parse(attachments)?.length > 0
@@ -339,6 +352,7 @@ async function update(id, body, files) {
     carriageCharge,
     bankId,
     conversionType,
+    carriageTax,
   } = body;
 
   const parseItems = JSON.parse(items || "[]");
@@ -349,7 +363,10 @@ async function update(id, body, files) {
 
   const dataFound = await prisma.proformaInvoice.findUnique({
     where: { id: parseInt(id) },
-    include: { attachments: true, items: { include: { pisizeBreakups: true } } },
+    include: {
+      attachments: true,
+      items: { include: { pisizeBreakups: true } },
+    },
   });
 
   if (!dataFound) return NoRecordFound("Proforma Invoice");
@@ -429,6 +446,10 @@ async function update(id, body, files) {
       return (
         parseInt(newItem.styleItemId || 0) !==
           parseInt(oldItem.styleItemId || 0) ||
+        parseInt(newItem.itemGroupId || 0) !==
+          parseInt(oldItem.itemGroupId || 0) ||
+        parseInt(newItem.itemSubGroupId || 0) !==
+          parseInt(oldItem.itemSubGroupId || 0) ||
         parseFloat(newItem.qty || 0) !== parseFloat(oldItem.qty || 0) ||
         parseFloat(newItem.price || 0) !== parseFloat(oldItem.price || 0) ||
         parseFloat(newItem.taxPercent || 0) !==
@@ -479,36 +500,42 @@ async function update(id, body, files) {
         isApproved: isApproved === "true" || isApproved === true,
       }),
       conversionType: conversionType || null,
+      carriageTax: carriageTax ? parseFloat(carriageTax) : null,
+
       items: isTableChanged
         ? {
-            createMany: {
-              data: parseItems.map((item) => ({
-                styleItemId: item.styleItemId
-                  ? parseInt(item.styleItemId)
-                  : null,
-                sizeId: item.sizeId ? parseInt(item.sizeId) : null,
-                uomId: item.uomId ? parseInt(item.uomId) : null,
-                gsmId: item.gsmId ? parseInt(item.gsmId) : null,
-                hsnId: item.hsnId ? parseInt(item.hsnId) : null,
-                qty: parseFloat(item.qty || 0),
-                price: parseFloat(item.price || 0),
-                taxPercent: parseFloat(item.taxPercent || 0),
-                discountType: item.discountType,
-                discountValue: parseFloat(item.discountValue || 0),
-                amount: parseFloat(item.amount || 0),
-                quoteVersion: nextQuoteVersion,
-                dozen: parseFloat(item.dozen || 0),
-                pisizeBreakups:
-                  item?.sizeBreakup?.length > 0
-                    ? {
-                        create: item.sizeBreakup.map((s) => ({
-                          sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                          qty: s.qty ? parseInt(s.qty) : null,
-                        })),
-                      }
-                    : undefined,
-              })),
-            },
+            create: parseItems.map((item) => ({
+              styleItemId: item?.styleItemId
+                ? parseInt(item.styleItemId)
+                : null,
+              itemGroupId: item?.itemGroupId
+                ? parseInt(item.itemGroupId)
+                : null,
+              itemSubGroupId: item?.itemSubGroupId
+                ? parseInt(item?.itemSubGroupId)
+                : null,
+              sizeId: item.sizeId ? parseInt(item.sizeId) : null,
+              uomId: item.uomId ? parseInt(item.uomId) : null,
+              gsmId: item.gsmId ? parseInt(item.gsmId) : null,
+              hsnId: item.hsnId ? parseInt(item.hsnId) : null,
+              qty: parseFloat(item.qty || 0),
+              price: parseFloat(item.price || 0),
+              taxPercent: parseFloat(item.taxPercent || 0),
+              discountType: item.discountType,
+              discountValue: parseFloat(item.discountValue || 0),
+              amount: parseFloat(item.amount || 0),
+              quoteVersion: nextQuoteVersion,
+              dozen: parseFloat(item.dozen || 0),
+              pisizeBreakups:
+                item?.sizeBreakup?.length > 0
+                  ? {
+                      create: item.sizeBreakup.map((s) => ({
+                        sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                        qty: s.qty ? parseInt(s.qty) : null,
+                      })),
+                    }
+                  : undefined,
+            })),
           }
         : undefined,
       attachments: {

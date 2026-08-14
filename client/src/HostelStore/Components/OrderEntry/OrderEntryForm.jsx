@@ -140,6 +140,9 @@ const OrderEntryForm = ({
   const [carriageCharge, setCarriageCharge] = useState("");
   const [loadingId, setLoadingId] = useState("");
   const [deliveryId, setDeliveryId] = useState("");
+    const [carriageTax, setCarriageTax] = useState("");
+  const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
+
   const dispatch = useDispatch();
   const qrRef = useRef(null);
   const customerRef = useRef(null);
@@ -248,6 +251,7 @@ const OrderEntryForm = ({
       setCurrencyId(data?.currencyId || "");
       setWeightInKg(data?.weightInKg?.toFixed(3) || "");
       setCarriageCharge(data?.carriageCharge?.toFixed(2) || "");
+      setCarriageTax(data?.carriageTax?.toFixed(2) || "");
       setLoadingId(data?.loadingId || "");
       setDeliveryId(data?.deliveryId || "");
     },
@@ -295,7 +299,7 @@ const OrderEntryForm = ({
     weightInKg,
     carriageCharge,
     deliveryId,
-    loadingId,
+    loadingId,carriageTax
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -387,7 +391,12 @@ const OrderEntryForm = ({
 
     return duplicates;
   };
-
+ useEffect(() => {
+    const charge = parseFloat(carriageCharge) || 0;
+    const tax = parseFloat(carriageTax) || 0;
+    const finalAmt = charge + (charge * tax) / 100;
+    setCarriageFinalAmt(finalAmt ? finalAmt.toFixed(2) : "");
+  }, [carriageCharge, carriageTax]);
   const validateRows = (items) => {
     const errors = [];
     const seen = new Set();
@@ -1299,6 +1308,7 @@ const OrderEntryForm = ({
                         setCarriageCharge("");
                         setLoadingId("");
                         setDeliveryId("");
+                        setCarriageTax("")
                       }
                     }}
                     required={true}
@@ -1364,7 +1374,7 @@ const OrderEntryForm = ({
                         setCarriageCharge(res?.data?.carriageCharge || "");
                         setLoadingId(res?.data?.loadingId || "");
                         setDeliveryId(res?.data?.deliveryId || "");
-
+                        setCarriageTax(res?.data?.carriageTax || "")
                         const mappedItems =
                           Object.values(
                             (res?.data?.items || []).reduce((acc, item) => {
@@ -1626,6 +1636,40 @@ const OrderEntryForm = ({
                     }}
                   />
                 </div>
+                  <div className="w-24">
+              <TextInput
+                name="Carriage Tax%"
+                value={carriageTax}
+                setValue={setCarriageTax}
+                disabled={ childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"}
+                type="number"
+                min="0"
+                className="text-right"
+                onBlur={(e) =>
+                  setCarriageTax(
+                    e.target.value ? Number(e.target.value).toFixed(2) : "",
+                  )
+                }
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
+            <div className="w-32">
+              <TextInput
+                name="Carriage Final Amount"
+                value={carriageFinalAmt}
+                disabled={true}
+                type="number"
+                min="0"
+                className="text-right"
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
                 <div className="w-44">
                   <DropdownWithModal
                     name="Advising Bank"

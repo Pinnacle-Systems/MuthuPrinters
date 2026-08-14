@@ -378,7 +378,7 @@ const ProformaInvoiceItems = ({
               const rowSpan = sizeRows.length;
               return sizeRows.map((sizeRow, sizeIndex) => (
                 <tr
-                  key={item.rowId || index}
+                  key={`${item.rowId || index}-${sizeIndex}`}
                   className={`h-6 hover:bg-gray-50 ${
                     index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                   }`}
@@ -397,7 +397,7 @@ const ProformaInvoiceItems = ({
                         {index + 1}
                       </td>
                       <td
-                        className="border border-gray-300 text-[11px]   items-center pt-2"
+                        className="border border-gray-300 text-[11px]   items-center "
                         rowSpan={rowSpan}
                       >
                         {/* <span className="px-1">{findFromList(row.itemGroupId, itemGroupList?.data, "name") || ""}</span> */}
@@ -429,7 +429,7 @@ const ProformaInvoiceItems = ({
                         />
                       </td>
                       <td
-                        className="border border-gray-300 text-[11px]  items-center pt-2 "
+                        className="border border-gray-300 text-[11px]  items-center  "
                         rowSpan={rowSpan}
                       >
                         <FxSelectWithAdd

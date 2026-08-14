@@ -63,6 +63,7 @@ const EMPTY_ROW = {
   qty: "",
   price: "",
   amount: "",
+  sizeBreakup: [],
 };
 
 const padItems = (itemsArray = []) => {
@@ -128,6 +129,8 @@ const ProformaInvoiceForm = ({
   const [availableVersions, setAvailableVersions] = useState([]);
   const [bankId, setBankId] = useState("");
   const [conversionType, setConversionType] = useState("DOZEN");
+  const [carriageTax, setCarriageTax] = useState("");
+  const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
   const childRecord = useRef(0);
 
   const customerRef = useRef(null);
@@ -213,6 +216,7 @@ const ProformaInvoiceForm = ({
       setWeightInKg(parseFloat(data.weightInKg).toFixed(3) || "");
       setBankId(data.bankId || "");
       setConversionType(data.conversionType || "DOZEN");
+      setCarriageTax(data.carriageTax || "");
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
 
       let loadedVersions = [];
@@ -229,7 +233,29 @@ const ProformaInvoiceForm = ({
       const filteredItems = (data.items || []).filter(
         (i) => (i.quoteVersion || 1) === targetVersion,
       );
-      setItems(padItems(filteredItems));
+      const mappedItems = filteredItems.map((item) => ({
+        ...item,
+        itemGroupId: item?.ItemGroup?.id || "",
+        itemSubGroupId: item?.ItemSubGroup?.id || "",
+        styleItemId: item?.StyleItem?.id || "",
+        uomId: item?.Uom?.id || "",
+        gsmId: item?.Gsm?.id || "",
+        hsnId: item?.Hsn?.id || "",
+
+        sizeBreakup:
+          item?.pisizeBreakups?.length > 0
+            ? item.pisizeBreakups.map((val) => {
+                return {
+                  ...val,
+                  sizeId: val.sizeId || "",
+                };
+              })
+            : [{ sizeId: "", qty: "" }],
+      }));
+      console.log(mappedItems, "mappedItems");
+
+      setItems(padItems(mappedItems));
+      console.log(items, "aftermapped");
 
       const cust = data.customer || data.OrderEntry?.customer;
       if (cust) {
@@ -256,7 +282,28 @@ const ProformaInvoiceForm = ({
       const filteredItems = itemsArr.filter(
         (i) => (i.quoteVersion || 1) === targetVersion,
       );
-      setItems(padItems(filteredItems));
+
+      const mappedItems = filteredItems.map((item) => ({
+        ...item,
+        itemGroupId: item?.ItemGroup?.id || "",
+        itemSubGroupId: item?.ItemSubGroup?.id || "",
+        styleItemId: item?.StyleItem?.id || "",
+        uomId: item?.Uom?.id || "",
+        gsmId: item?.Gsm?.id || "",
+        hsnId: item?.Hsn?.id || "",
+
+        sizeBreakup:
+          item?.pisizeBreakups?.length > 0
+            ? item.pisizeBreakups.map((val) => {
+                return {
+                  ...val,
+                  sizeId: val.sizeId || "",
+                };
+              })
+            : [{ sizeId: "", qty: "" }],
+      }));
+
+      setItems(padItems(mappedItems));
     }
   }, [selectedQuoteVersion, singleData, id, availableVersions]);
 
@@ -288,6 +335,13 @@ const ProformaInvoiceForm = ({
   useEffect(() => {
     customerRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    const charge = parseFloat(carriageCharge) || 0;
+    const tax = parseFloat(carriageTax) || 0;
+    const finalAmt = charge + (charge * tax) / 100;
+    setCarriageFinalAmt(finalAmt ? finalAmt.toFixed(2) : "");
+  }, [carriageCharge, carriageTax]);
 
   const validateRows = (items) => {
     const errors = [];
@@ -475,6 +529,7 @@ const ProformaInvoiceForm = ({
       carriageCharge,
       bankId,
       conversionType,
+      carriageTax,
     };
 
     try {
@@ -560,6 +615,7 @@ const ProformaInvoiceForm = ({
     setCurrencyId("");
     setAccordionOpen(false);
     setBankId("");
+    setCarriageTax("");
   };
 
   useEffect(() => {
@@ -707,7 +763,38 @@ const ProformaInvoiceForm = ({
                 e.target.select();
               }}
             />
-
+            <div className="w-24">
+              <TextInput
+                name="Carriage Tax%"
+                value={carriageTax}
+                setValue={setCarriageTax}
+                disabled={effectiveReadOnly}
+                type="number"
+                min="0"
+                className="text-right"
+                onBlur={(e) =>
+                  setCarriageTax(
+                    e.target.value ? Number(e.target.value).toFixed(2) : "",
+                  )
+                }
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
+            <div className="w-32">
+              <TextInput
+                name="Carriage Final Amount"
+                value={carriageFinalAmt}
+                disabled={true}
+                type="number"
+                min="0"
+                className="text-right"
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
             <div className="w-72">
               <DropdownWithModal
                 name="Advising Bank"
@@ -1121,10 +1208,10 @@ const ProformaInvoiceForm = ({
                       </div>
                       <span className="font-medium text-slate-800 text-right w-[65px]">
                         {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                        {!isNaN(parseFloat(carriageCharge)) &&
-                        carriageCharge !== ""
+                        {!isNaN(parseFloat(carriageFinalAmt)) &&
+                        carriageFinalAmt !== ""
                           ? formatCurrencyAmount(
-                              carriageCharge,
+                              carriageFinalAmt,
                               currencyCode || isCurrencySymbol,
                             )
                           : "0.00"}
@@ -1165,7 +1252,7 @@ const ProformaInvoiceForm = ({
                               0
                                 ? enrichedData.itemDiscount +
                                   enrichedData.overallDiscount
-                                : 0)) + (parseFloat(carriageCharge) || 0),
+                                : 0)) + (parseFloat(carriageFinalAmt) || 0),
                           currencyCode || isCurrencySymbol,
                         )}
                       </span>
@@ -1312,6 +1399,7 @@ const ProformaInvoiceForm = ({
             cityList={cityList}
             currencyList={currencyList}
             payTermList={payTermList}
+            carriageFinalAmt={carriageFinalAmt}
           />
         </PDFViewer>
       </Modal>
