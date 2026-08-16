@@ -365,6 +365,44 @@ const ProformaInvoiceForm = ({
       } else {
         seen.add(key);
       }
+
+      if (item.sizeBreakup?.length) {
+        const sizeSeen = new Set();
+        let sizeSum = 0;
+
+        item.sizeBreakup.forEach((size, sizeIndex) => {
+          if (!size.sizeId) {
+            errors.push(
+              `Row ${index + 1}, Size Row ${sizeIndex + 1}: Size is required`,
+            );
+          }
+
+          const qty = Number(size.qty || 0);
+          sizeSum += qty;
+
+          if (qty <= 0) {
+            errors.push(
+              `Row ${index + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`,
+            );
+          }
+
+          if (size.sizeId) {
+            if (sizeSeen.has(size.sizeId)) {
+              errors.push(`Row ${index + 1}: Duplicate size found`);
+            } else {
+              sizeSeen.add(size.sizeId);
+            }
+          }
+        });
+
+        if (sizeSum !== Number(item.qty)) {
+          errors.push(
+            `Row ${index + 1}: Sum of size quantities (${sizeSum}) must match the total quantity (${item.qty})`,
+          );
+        }
+      } else {
+        errors.push(`Row ${index + 1}: Size breakup is required`);
+      }
     });
 
     return errors;

@@ -370,7 +370,7 @@ const OrderEntryPrintFormat = ({
   currencyCode,
   isCurrencySymbol,
   isCustomerExport: isExportProp,
-  cityList,
+  cityList, carriageFinalAmt
 }) => {
   if (!data) return null;
 
@@ -419,7 +419,7 @@ const OrderEntryPrintFormat = ({
 
   const taxableTotal = totals?.taxable || 0;
 
-  const carriageCharge = parseFloat(data?.carriageCharge) || 0;
+  const carriageCharge = parseFloat(carriageFinalAmt) || 0;
   const grandTotalExport = taxableTotal + carriageCharge;
   const netAmountDomestic = (totals?.net || 0) + carriageCharge;
 
@@ -682,11 +682,11 @@ const OrderEntryPrintFormat = ({
                         >
                           {forceWrap(
                             row?.StyleItem?.name ||
-                              findFromList(
-                                row.styleItemId,
-                                styleItemList?.data,
-                                "name",
-                              ),
+                            findFromList(
+                              row.styleItemId,
+                              styleItemList?.data,
+                              "name",
+                            ),
                           )}
                         </Text>
                         {breakupText ? (
@@ -708,11 +708,11 @@ const OrderEntryPrintFormat = ({
                       >
                         {forceWrap(
                           row?.ItemSubGroup?.name ||
-                            findFromList(
-                              row.itemSubGroupId,
-                              itemSubGroupList?.data,
-                              "name",
-                            ),
+                          findFromList(
+                            row.itemSubGroupId,
+                            itemSubGroupList?.data,
+                            "name",
+                          ),
                         )}
                       </Text>
                       {/* Item Group */}
@@ -721,11 +721,11 @@ const OrderEntryPrintFormat = ({
                       >
                         {forceWrap(
                           row?.ItemGroup?.name ||
-                            findFromList(
-                              row.itemGroupId,
-                              itemGroupList?.data,
-                              "name",
-                            ),
+                          findFromList(
+                            row.itemGroupId,
+                            itemGroupList?.data,
+                            "name",
+                          ),
                         )}
                       </Text>
 
@@ -1011,47 +1011,37 @@ const OrderEntryPrintFormat = ({
                         SUMMARY
                       </Text>
                       <View style={{ padding: 8 }}>
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>Gross Amount</Text>
-                          <Text style={styles.summaryColon}>:</Text>
-                          <Text style={styles.summaryValue}>
-                            {currencySymbol}{" "}
-                            {formatCurrencyAmount(
-                              totals?.gross || 0,
-                              currencyCode,
-                            )}
-                          </Text>
-                        </View>
+
                         {(totals?.itemDiscount > 0 ||
                           totals?.overallDiscount > 0) && (
-                          <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>
-                              Total Discount
-                            </Text>
-                            <Text style={styles.summaryColon}>:</Text>
-                            <Text style={styles.summaryValue}>
-                              {currencySymbol}{" "}
-                              {formatCurrencyAmount(
-                                (totals?.itemDiscount || 0) +
+                            <View style={styles.summaryRow}>
+                              <Text style={styles.summaryLabel}>
+                                Total Discount
+                              </Text>
+                              <Text style={styles.summaryColon}>:</Text>
+                              <Text style={styles.summaryValue}>
+                                {currencySymbol}{" "}
+                                {formatCurrencyAmount(
+                                  (totals?.itemDiscount || 0) +
                                   (totals?.overallDiscount || 0),
-                                currencyCode,
-                              )}
-                            </Text>
-                          </View>
-                        )}
+                                  currencyCode,
+                                )}
+                              </Text>
+                            </View>
+                          )}
                         {((!isExport && totals?.discountValue > 0) ||
                           isExport) && (
-                          <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>
-                              {isExport ? "Net Amount" : "Taxable Amount"}
-                            </Text>
-                            <Text style={styles.summaryColon}>:</Text>
-                            <Text style={styles.summaryValue}>
-                              {currencySymbol}{" "}
-                              {formatCurrencyAmount(taxableTotal, currencyCode)}
-                            </Text>
-                          </View>
-                        )}
+                            <View style={styles.summaryRow}>
+                              <Text style={styles.summaryLabel}>
+                                {isExport ? "Net Amount" : "Taxable Amount"}
+                              </Text>
+                              <Text style={styles.summaryColon}>:</Text>
+                              <Text style={styles.summaryValue}>
+                                {currencySymbol}{" "}
+                                {formatCurrencyAmount(taxableTotal, currencyCode)}
+                              </Text>
+                            </View>
+                          )}
                         {!isExport &&
                           consolidatedTaxSlabs.map((slab) => (
                             <View key={slab.tax} style={styles.summaryRow}>

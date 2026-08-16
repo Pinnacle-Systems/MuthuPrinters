@@ -330,13 +330,13 @@ const styles = StyleSheet.create({
 // For domestic: include Tax% and Net Amount
 const getColumns = (isExport) => [
   { label: "S.No", flex: 0.4 },
-  { label: "Description of Goods", flex: 3 },
-  { label: "Item Sub Group", flex: 1.2 },
-  { label: "Item Group", flex: 1.2 },
+  { label: "Description of Goods", flex: 3.8 },
+  { label: "Item Sub Group", flex: 1.6 },
+  { label: "Item Group", flex: 1.6 },
   { label: "HSN", flex: 1.2 },
-  { label: "UOM", flex: 0.8 },
+  // { label: "UOM", flex: 0.8 },
   { label: "Qty", flex: 0.8 },
-  { label: "Dozen", flex: 0.8 },
+  // { label: "Dozen", flex: 0.8 },
   { label: "Price", flex: 1 },
   ...(!isExport ? [{ label: "Tax %", flex: 0.7 }] : []),
   { label: "Gross Amount", flex: 1.2 },
@@ -837,7 +837,7 @@ const ProformaInvoicePrintFormat = ({
                         style={[
                           styles.td,
                           {
-                            flex: 3,
+                            flex: 3.8,
                             flexDirection: "column",
                             alignItems: "flex-start",
                             justifyContent: "center",
@@ -860,12 +860,12 @@ const ProformaInvoicePrintFormat = ({
                         ) : null}
                       </View>
                       <Text
-                        style={[styles.td, { flex: 1.2, textAlign: "left" }]}
+                        style={[styles.td, { flex: 1.6, textAlign: "left" }]}
                       >
                         {row?.ItemSubGroup?.name || ""}
                       </Text>
                       <Text
-                        style={[styles.td, { flex: 1.2, textAlign: "left" }]}
+                        style={[styles.td, { flex: 1.6, textAlign: "left" }]}
                       >
                         {row?.ItemGroup?.name || ""}
                       </Text>
@@ -874,21 +874,21 @@ const ProformaInvoicePrintFormat = ({
                       >
                         {row?.Hsn?.name || ""}
                       </Text>
-                      <Text
+                      {/* <Text
                         style={[styles.td, { flex: 0.8, textAlign: "left" }]}
                       >
                         {row?.Uom?.name || ""}
-                      </Text>
+                      </Text> */}
                       <Text
                         style={[styles.td, { flex: 0.8, textAlign: "right" }]}
                       >
                         {row.qty ? parseFloat(row.qty).toFixed(3) : ""}
                       </Text>
-                      <Text
+                      {/* <Text
                         style={[styles.td, { flex: 0.8, textAlign: "right" }]}
                       >
                         {row.dozen ? parseFloat(row.dozen).toFixed(2) : ""}
-                      </Text>
+                      </Text> */}
                       <Text
                         style={[styles.td, { flex: 1, textAlign: "right" }]}
                       >
@@ -963,7 +963,7 @@ const ProformaInvoicePrintFormat = ({
                       style={[
                         styles.td,
                         {
-                          flex: 3,
+                          flex: 3.8,
                           fontFamily: "Helvetica-Bold",
                           color: DARK,
                           textAlign: "right",
@@ -973,7 +973,12 @@ const ProformaInvoicePrintFormat = ({
                       TOTAL
                     </Text>
                     <Text
-                      style={[styles.td, { flex: 1.2, color: "transparent" }]}
+                      style={[styles.td, { flex: 1.6, color: "transparent" }]}
+                    >
+                      {" "}
+                    </Text>
+                    <Text
+                      style={[styles.td, { flex: 1.6, color: "transparent" }]}
                     >
                       {" "}
                     </Text>
@@ -982,16 +987,11 @@ const ProformaInvoicePrintFormat = ({
                     >
                       {" "}
                     </Text>
-                    <Text
-                      style={[styles.td, { flex: 1.2, color: "transparent" }]}
-                    >
-                      {" "}
-                    </Text>
-                    <Text
+                    {/* <Text
                       style={[styles.td, { flex: 0.8, color: "transparent" }]}
                     >
                       {" "}
-                    </Text>
+                    </Text> */}
                     <Text
                       style={[
                         styles.td,
@@ -1005,7 +1005,7 @@ const ProformaInvoicePrintFormat = ({
                     >
                       {totalQty.toFixed(3)}
                     </Text>
-                    <Text
+                    {/* <Text
                       style={[
                         styles.td,
                         {
@@ -1017,7 +1017,7 @@ const ProformaInvoicePrintFormat = ({
                       ]}
                     >
                       {totalDozen.toFixed(2)}
-                    </Text>
+                    </Text> */}
                     <Text
                       style={[
                         styles.td,

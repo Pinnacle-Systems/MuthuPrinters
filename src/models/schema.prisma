@@ -2462,7 +2462,7 @@ model Bank {
   branchId  Int?
   Branch    City?    @relation(fields: [branchId], references: [id])
   active    Boolean  @default(true)
-
+  bankHolderName String? 
   proformaInvoices ProformaInvoice[]
   salesDeliveries  SalesDelivery[]
   orderEntries     OrderEntry[]

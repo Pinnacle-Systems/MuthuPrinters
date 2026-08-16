@@ -62,6 +62,7 @@ const ProformaInvoiceItems = ({
     gsmId: "",
     hsnId: "",
     qty: "",
+    labelWidth: "",
     price: "",
     amount: "", // Used for "Gross"
     dozen: "",
@@ -121,12 +122,12 @@ const ProformaInvoiceItems = ({
         const updatedItems = items.map((item, i) =>
           i === index
             ? {
-                ...item,
-                styleItemId: value,
-                hsnId: hsnId,
-                uomId: response?.data?.uomId,
-                taxPercent: hsnObj ? hsnObj.tax : "",
-              }
+              ...item,
+              styleItemId: value,
+              hsnId: hsnId,
+              uomId: response?.data?.uomId,
+              taxPercent: hsnObj ? hsnObj.tax : "",
+            }
             : item,
         );
 
@@ -331,6 +332,9 @@ const ProformaInvoiceItems = ({
               <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                 Qty<span className="text-red-500">*</span>
               </th>
+              <th className="w-32 px-2 py-2 text-center font-medium border border-gray-300 ">
+                Label Width
+              </th>
               <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                 Dozen
               </th>
@@ -379,9 +383,8 @@ const ProformaInvoiceItems = ({
               return sizeRows.map((sizeRow, sizeIndex) => (
                 <tr
                   key={`${item.rowId || index}-${sizeIndex}`}
-                  className={`h-6 hover:bg-gray-50 ${
-                    index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
-                  }`}
+                  className={`h-6 hover:bg-gray-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                    }`}
                   onContextMenu={(e) => {
                     if (!readOnly && sizeIndex === 0) {
                       handleRightClick(e, index, "");
@@ -425,7 +428,7 @@ const ProformaInvoiceItems = ({
                           addNew={true}
                           childComponent={ItemGroup}
                           addNewModalWidth="w-[38%] h-[50%]"
-                          // nextRef={requirementRef}
+                        // nextRef={requirementRef}
                         />
                       </td>
                       <td
@@ -460,7 +463,7 @@ const ProformaInvoiceItems = ({
                           addNew={true}
                           childComponent={ItemSubGroupMaster}
                           addNewModalWidth="w-[38%] h-[50%]"
-                          // nextRef={requirementRef}
+                        // nextRef={requirementRef}
                         />
                       </td>
                       <td className="border border-gray-300" rowSpan={rowSpan}>
@@ -506,7 +509,6 @@ const ProformaInvoiceItems = ({
                             ""}
                         </span>
                       </td>
-
                       <td
                         className="text-[11px] border border-gray-300  text-right"
                         rowSpan={rowSpan}
@@ -514,6 +516,42 @@ const ProformaInvoiceItems = ({
                         {" "}
                         {item.qty ? Number(item.qty) : ""}
                       </td>
+                      <td
+                        className="text-[11px] border border-gray-300  text-right"
+                        rowSpan={rowSpan}
+                      >
+                        <div className="relative w-full">
+                          <input
+                            type="text"
+                            step="0.01"
+                            className="text-right  px-3 w-full table-data-input"
+                            value={
+                              item?.labelWidth || ""
+                            }
+                            onChange={(e) => {
+                              const val = e.target.value;
+
+                              handleInputChange(
+                                val === "" ? "" : val, // allow empty while typing
+                                index,
+                                "labelWidth",
+                              );
+                            }}
+                            readOnly={readOnly}
+
+
+                            onKeyDown={(e) => {
+
+                              if (e.key === "Delete") {
+                                handleInputChange("", index, "labelWidth");
+                              }
+
+                            }}
+                          />
+                        </div>
+                      </td>
+
+
                       <td
                         className="text-[11px] border border-gray-300  text-right"
                         rowSpan={rowSpan}
@@ -573,9 +611,9 @@ const ProformaInvoiceItems = ({
                                 ? (item.price ?? "")
                                 : item.price
                                   ? formatCurrencyAmount(
-                                      item.price,
-                                      currencyCode || isCurrencySymbol,
-                                    )
+                                    item.price,
+                                    currencyCode || isCurrencySymbol,
+                                  )
                                   : ""
                             }
                             onChange={(e) => {
@@ -630,9 +668,9 @@ const ProformaInvoiceItems = ({
                         </span>
                         {item.styleItemId
                           ? formatCurrencyAmount(
-                              item.amount || 0,
-                              currencyCode || isCurrencySymbol,
-                            )
+                            item.amount || 0,
+                            currencyCode || isCurrencySymbol,
+                          )
                           : ""}
                       </td>
 
@@ -807,13 +845,12 @@ const ProformaInvoiceItems = ({
                   ?.reduce((sum, i) => sum + (parseFloat(i.qty) || 0), 0)
                   .toFixed(3)}
               </td>
-              {/* <td className="border border-gray-300 bg-gray-50" colSpan={1} /> */}
+              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
               <td className="text-right px-1  border border-gray-300">
                 {items
                   ?.reduce((sum, i) => sum + (parseFloat(i.dozen) || 0), 0)
                   .toFixed(2)}
               </td>
-              {/* <td className="border border-gray-300 bg-gray-50" colSpan={1} /> */}
 
               <td className="text-right px-1  border border-gray-300">
                 {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
@@ -831,16 +868,6 @@ const ProformaInvoiceItems = ({
                   currencyCode || isCurrencySymbol,
                 )}
               </td>
-              {/* <td className="text-right px-1 border border-gray-300  text-black">
-                {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
-                {formatCurrencyAmount(
-                  enrichedItems?.items?.reduce(
-                    (sum, i) => sum + (parseFloat(i.totals?.net) || 0),
-                    0,
-                  ),
-                  currencyCode || isCurrencySymbol,
-                )}
-              </td> */}
               {!isCustomerExport && (
                 <td className="border border-gray-300 bg-gray-50" colSpan={1} />
               )}
@@ -866,7 +893,7 @@ const ProformaInvoiceItems = ({
                 )}
               </td>
               <td
-                colSpan={2}
+                colSpan={1}
                 className="border border-gray-300 bg-indigo-50/30 text-right px-2 text-[11px] text-indigo-600"
               ></td>
             </tr>

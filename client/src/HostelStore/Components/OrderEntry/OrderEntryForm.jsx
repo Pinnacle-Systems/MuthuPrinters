@@ -140,7 +140,7 @@ const OrderEntryForm = ({
   const [carriageCharge, setCarriageCharge] = useState("");
   const [loadingId, setLoadingId] = useState("");
   const [deliveryId, setDeliveryId] = useState("");
-    const [carriageTax, setCarriageTax] = useState("");
+  const [carriageTax, setCarriageTax] = useState("");
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
 
   const dispatch = useDispatch();
@@ -299,7 +299,7 @@ const OrderEntryForm = ({
     weightInKg,
     carriageCharge,
     deliveryId,
-    loadingId,carriageTax
+    loadingId, carriageTax
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -391,7 +391,7 @@ const OrderEntryForm = ({
 
     return duplicates;
   };
- useEffect(() => {
+  useEffect(() => {
     const charge = parseFloat(carriageCharge) || 0;
     const tax = parseFloat(carriageTax) || 0;
     const finalAmt = charge + (charge * tax) / 100;
@@ -654,9 +654,9 @@ const OrderEntryForm = ({
       if (result.statusCode === 0) {
         toast.success(
           result.message ||
-            (actionType === "APPROVE"
-              ? "Order Entry Approved!"
-              : "Sent Back for Review!"),
+          (actionType === "APPROVE"
+            ? "Order Entry Approved!"
+            : "Sent Back for Review!"),
         );
         setApprovalModal(false);
         // dispatchInvalidate();
@@ -784,9 +784,8 @@ const OrderEntryForm = ({
       >
         <div className="space-y-4">
           <h2
-            className={`text-base font-semibold ${
-              actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
-            }`}
+            className={`text-base font-semibold ${actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
+              }`}
           >
             {actionType === "APPROVE"
               ? "✅ Approve Order Entry"
@@ -807,15 +806,14 @@ const OrderEntryForm = ({
             <div className="flex justify-between items-center">
               <span className="text-gray-500">Current Approval</span>
               <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                  status === "APPROVED"
-                    ? "bg-green-100 text-green-700"
-                    : status === "REJECTED"
-                      ? "bg-red-100 text-red-700"
-                      : status === "SUPERSEDED"
-                        ? "bg-orange-100 text-orange-700" // ✅ NEW
-                        : "bg-orange-100 text-orange-700"
-                }`}
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${status === "APPROVED"
+                  ? "bg-green-100 text-green-700"
+                  : status === "REJECTED"
+                    ? "bg-red-100 text-red-700"
+                    : status === "SUPERSEDED"
+                      ? "bg-orange-100 text-orange-700" // ✅ NEW
+                      : "bg-orange-100 text-orange-700"
+                  }`}
               >
                 {status === "PENDING"
                   ? "Waiting For Approval"
@@ -869,11 +867,10 @@ const OrderEntryForm = ({
                   handleConfirmAction();
                 }
               }}
-              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${
-                actionType === "APPROVE"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-blue-600 hover:bg-blue-700"
-              } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
+              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${actionType === "APPROVE"
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-blue-600 hover:bg-blue-700"
+                } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
             >
               {actionLoading ? (
                 <>
@@ -999,13 +996,12 @@ const OrderEntryForm = ({
                       <tr
                         key={index}
                         onClick={() => setSelectedAttachmentIndex(index)}
-                        className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${
-                          index === selectedAttachmentIndex
-                            ? "bg-indigo-100 border-l-2 border-l-indigo-500"
-                            : index % 2 === 0
-                              ? "bg-white hover:bg-gray-50"
-                              : "bg-gray-100 hover:bg-gray-50"
-                        }`}
+                        className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${index === selectedAttachmentIndex
+                          ? "bg-indigo-100 border-l-2 border-l-indigo-500"
+                          : index % 2 === 0
+                            ? "bg-white hover:bg-gray-50"
+                            : "bg-gray-100 hover:bg-gray-50"
+                          }`}
                       >
                         {/* S.No */}
                         <td className="border-r border-white/50 h-8 text-center">
@@ -1181,6 +1177,7 @@ const OrderEntryForm = ({
               isCurrencySymbol={isCurrencySymbol}
               isCustomerExport={isCustomerExport}
               cityList={cityList}
+              carriageFinalAmt={carriageFinalAmt}
             />
           </PDFViewer>
         </Modal>
@@ -1229,11 +1226,11 @@ const OrderEntryForm = ({
                       options={dropDownListObject(
                         id
                           ? customerList?.data?.filter(
-                              (item) => item?.isCustomer,
-                            )
+                            (item) => item?.isCustomer,
+                          )
                           : customerList?.data?.filter(
-                              (item) => item?.active && item?.isCustomer,
-                            ),
+                            (item) => item?.active && item?.isCustomer,
+                          ),
                         "name",
                         "id",
                       )}
@@ -1315,7 +1312,7 @@ const OrderEntryForm = ({
                     readOnly={readOnly}
                     disabled={childRecord.current > 0 || readOnly}
                   />
-                  <div className="col-span-1">
+                  <div className="w-32">
                     <DropdownNew
                       name="PI No"
                       dataList={PIList?.data?.filter((item) =>
@@ -1399,6 +1396,7 @@ const OrderEntryForm = ({
                               uomId: item.uomId || "",
                               gsmId: item.gsmId || "",
                               hsnId: item.hsnId || "",
+                              labelWidth: item.labelWidth || "",
                               price: item.price || "",
                               amount: item.amount || "",
                               dozen: item.dozen || "",
@@ -1406,7 +1404,13 @@ const OrderEntryForm = ({
                               discountValue: item.discountValue || "",
                               taxPercent: item.taxPercent || "",
                               taxType: item.taxType || "",
-                              sizeBreakup: [],
+                              sizeBreakup:
+                                item?.pisizeBreakups?.length > 0
+                                  ? item.pisizeBreakups.map((val) => ({
+                                    sizeId: val.sizeId || "",
+                                    qty: val.qty || "",
+                                  }))
+                                  : [],
                               itemGroupId: item.StyleItem?.itemGroupId,
                               itemSubGroupId: item.StyleItem?.itemSubGroupId,
                             })) || [];
@@ -1455,23 +1459,23 @@ const OrderEntryForm = ({
                       otherValue={"refNo"}
                     />
                   )}
-
-                  <TextInput
-                    name="ValidDays"
-                    value={validDays}
-                    setValue={setValidDays}
-                    disabled={childRecord.current > 0 || readOnly}
-                    type="number"
-                    min="0"
-                    className="text-right"
-                    required={true}
-                    onBlur={(e) =>
-                      setValidDays(e.target.value ? Number(e.target.value) : "")
-                    }
-                    onFocus={(e) => {
-                      e.target.select();
-                    }}
-                  />
+                  <div className="w-24">
+                    <TextInput
+                      name="ValidDays"
+                      value={validDays}
+                      setValue={setValidDays}
+                      disabled={childRecord.current > 0 || readOnly}
+                      type="number"
+                      min="0"
+                      className="text-right"
+                      required={true}
+                      onBlur={(e) =>
+                        setValidDays(e.target.value ? Number(e.target.value) : "")
+                      }
+                      onFocus={(e) => {
+                        e.target.select();
+                      }}
+                    /></div>
                   {/* <div className="m-2 p-0 flex items-center">
                   <CheckBoxNew
                     name="Repeated PI"
@@ -1494,7 +1498,7 @@ const OrderEntryForm = ({
               <div className="flex gap-2 gap-x-2">
                 {isCustomerExport && (
                   <>
-                    <div className="w-60">
+                    <div className="w-52">
                       <DropdownInput
                         name="Loading Port"
                         options={dropDownListObject(
@@ -1512,7 +1516,7 @@ const OrderEntryForm = ({
                         required={true}
                       />
                     </div>
-                    <div className="w-60">
+                    <div className="w-52">
                       <DropdownInput
                         name="Delivery Port"
                         options={dropDownListObject(
@@ -1532,7 +1536,7 @@ const OrderEntryForm = ({
                     </div>
                   </>
                 )}
-                <div className="w-32">
+                <div className="w-28">
                   <DropdownInput
                     name="Tax Type"
                     options={dropDownListObject(
@@ -1550,7 +1554,7 @@ const OrderEntryForm = ({
                     }
                   />
                 </div>
-                <div className="w-32">
+                <div className="w-28">
                   <DropdownWithModal
                     name="Pay Term"
                     options={dropDownListObject(
@@ -1576,6 +1580,20 @@ const OrderEntryForm = ({
                     }
                   />
                 </div>
+                <div className="w-[105px]">
+                  <DateInputNew
+                    name="Delivery Date"
+                    value={deliveryDate}
+                    setValue={setDeliveryDate}
+                    required={true}
+                    readOnly={
+                      childRecord.current > 0 ||
+                      readOnly ||
+                      orderType === "AGAINSTPI"
+                    }
+                    type={"date"}
+                  />
+                </div>
                 <div className="w-28">
                   <DropdownInput
                     name="Conversion"
@@ -1590,7 +1608,7 @@ const OrderEntryForm = ({
                     }
                   />
                 </div>
-                <div className="w-24">
+                <div className="w-28">
                   <TextInput
                     name="Weight In Kg(KG)"
                     value={weightInKg}
@@ -1613,7 +1631,7 @@ const OrderEntryForm = ({
                     }}
                   />
                 </div>
-                <div className="col-span-1">
+                <div className="w-40">
                   <TextInput
                     name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
                     value={carriageCharge}
@@ -1636,40 +1654,40 @@ const OrderEntryForm = ({
                     }}
                   />
                 </div>
-                  <div className="w-24">
-              <TextInput
-                name="Carriage Tax%"
-                value={carriageTax}
-                setValue={setCarriageTax}
-                disabled={ childRecord.current > 0 ||
+                <div className="w-24">
+                  <TextInput
+                    name="Carriage Tax%"
+                    value={carriageTax}
+                    setValue={setCarriageTax}
+                    disabled={childRecord.current > 0 ||
                       readOnly ||
                       orderType === "AGAINSTPI"}
-                type="number"
-                min="0"
-                className="text-right"
-                onBlur={(e) =>
-                  setCarriageTax(
-                    e.target.value ? Number(e.target.value).toFixed(2) : "",
-                  )
-                }
-                onFocus={(e) => {
-                  e.target.select();
-                }}
-              />
-            </div>
-            <div className="w-32">
-              <TextInput
-                name="Carriage Final Amount"
-                value={carriageFinalAmt}
-                disabled={true}
-                type="number"
-                min="0"
-                className="text-right"
-                onFocus={(e) => {
-                  e.target.select();
-                }}
-              />
-            </div>
+                    type="number"
+                    min="0"
+                    className="text-right"
+                    onBlur={(e) =>
+                      setCarriageTax(
+                        e.target.value ? Number(e.target.value).toFixed(2) : "",
+                      )
+                    }
+                    onFocus={(e) => {
+                      e.target.select();
+                    }}
+                  />
+                </div>
+                <div className="w-32">
+                  <TextInput
+                    name="Carriage Final Amount"
+                    value={carriageFinalAmt}
+                    disabled={true}
+                    type="number"
+                    min="0"
+                    className="text-right"
+                    onFocus={(e) => {
+                      e.target.select();
+                    }}
+                  />
+                </div>
                 <div className="w-44">
                   <DropdownWithModal
                     name="Advising Bank"
@@ -1729,20 +1747,7 @@ const OrderEntryForm = ({
                     />
                   </div>
                 )}
-                <div className="w-[105px]">
-                  <DateInputNew
-                    name="Delivery Date"
-                    value={deliveryDate}
-                    setValue={setDeliveryDate}
-                    required={true}
-                    readOnly={
-                      childRecord.current > 0 ||
-                      readOnly ||
-                      orderType === "AGAINSTPI"
-                    }
-                    type={"date"}
-                  />
-                </div>
+
               </div>
             </div>
           </div>
@@ -1808,10 +1813,10 @@ const OrderEntryForm = ({
                   renderValue: () => {
                     const taxTotals = !isCustomerExport
                       ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
-                          const type = curr?.tax?.split(" ")[0];
-                          acc[type] = (acc[type] || 0) + curr.amount;
-                          return acc;
-                        }, {})
+                        const type = curr?.tax?.split(" ")[0];
+                        acc[type] = (acc[type] || 0) + curr.amount;
+                        return acc;
+                      }, {})
                       : {};
 
                     return (
@@ -1830,7 +1835,7 @@ const OrderEntryForm = ({
                                   enrichedData.overallDiscount >
                                   0
                                   ? enrichedData.itemDiscount +
-                                      enrichedData.overallDiscount
+                                  enrichedData.overallDiscount
                                   : 0,
                                 currencyCode || isCurrencySymbol,
                               )}
@@ -1852,7 +1857,7 @@ const OrderEntryForm = ({
                           </div>
 
                           {taxTotals.CGST !== undefined &&
-                          taxTotals.SGST !== undefined ? (
+                            taxTotals.SGST !== undefined ? (
                             <div className="flex items-center justify-between w-full max-w-[210px]">
                               <div className="flex items-center gap-1">
                                 <span className="text-slate-800 w-[32px]">
@@ -1910,12 +1915,12 @@ const OrderEntryForm = ({
                             </div>
                             <span className="font-medium text-slate-800 text-right w-[65px]">
                               {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                              {!isNaN(parseFloat(carriageCharge)) &&
-                              carriageCharge !== ""
+                              {!isNaN(parseFloat(carriageFinalAmt)) &&
+                                carriageFinalAmt !== ""
                                 ? formatCurrencyAmount(
-                                    carriageCharge,
-                                    currencyCode || isCurrencySymbol,
-                                  )
+                                  carriageFinalAmt,
+                                  currencyCode || isCurrencySymbol,
+                                )
                                 : "0.00"}
                             </span>
                           </div>
@@ -1945,16 +1950,16 @@ const OrderEntryForm = ({
                                 (!isCustomerExport
                                   ? enrichedData.net
                                   : (enrichedData.items?.reduce(
-                                      (sum, item) =>
-                                        sum + (parseFloat(item.amount) || 0),
-                                      0,
-                                    ) || 0) -
-                                    (enrichedData.itemDiscount +
-                                      enrichedData.overallDiscount >
+                                    (sum, item) =>
+                                      sum + (parseFloat(item.amount) || 0),
+                                    0,
+                                  ) || 0) -
+                                  (enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount >
                                     0
-                                      ? enrichedData.itemDiscount +
-                                        enrichedData.overallDiscount
-                                      : 0)) + (parseFloat(carriageCharge) || 0),
+                                    ? enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount
+                                    : 0)) + (parseFloat(carriageFinalAmt) || 0),
                                 currencyCode || isCurrencySymbol,
                               )}
                             </span>
