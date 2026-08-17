@@ -317,23 +317,24 @@ async function UpdatePushProcess(req) {
           },
         });
       }
+    
     } else if (flag === "RESUME") {
-      var checkTaken_M = await tx?.takenmachines?.findFirst({
-        where: {
-          stDatetime: {
+     
+      var checkTaken_M =  await tx?.takenmachines?.findFirst({
+        where:{
+             stDatetime: {
             gte: startDate,
             lt: endDate,
-          },
-          isAvailable: false,
-          Machineid: machineId,
-        },
-      });
+            },
+            Userid:{not:userId},
+            isAvailable: false,
+            Machineid:machineId
+        }
+      })
 
-      if (checkTaken_M?.id) {
-        addMain_punch_log = {
-          statusCode: 1,
-          message: "Machine have taken by another employee.!!!!",
-        };
+      
+      if(checkTaken_M?.id){
+        addMain_punch_log = { statusCode: 1, message:"Machine have taken by another employee.!!!!" }
         data = addMain_punch_log;
         return;
       }
