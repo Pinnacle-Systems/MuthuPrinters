@@ -465,7 +465,9 @@ const OrderEntryPrintFormat = ({
       .filter(Boolean)
       .join("  |  ");
   };
-  const bank = data?.Bank;
+  const bank = data?.Bank || {};
+  console.log(bank, "bank");
+
   return (
     <Document>
       {renderChunks.map((chunkRows, pageIndex) => {
