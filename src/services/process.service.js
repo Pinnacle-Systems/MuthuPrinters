@@ -325,9 +325,10 @@ async function UpdatePushProcess(req) {
              stDatetime: {
             gte: startDate,
             lt: endDate,
-           },
+            },
+            Userid:{not:userId},
             isAvailable: false,
-           Machineid:machineId
+            Machineid:machineId
         }
       })
 
