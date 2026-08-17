@@ -113,7 +113,9 @@ export default function Form({ onSuccess, defaultName = "" }) {
   );
 
   useEffect(() => {
-    syncFormWithDb(singleData?.data);
+    if (id && singleData?.data) {
+      syncFormWithDb(singleData.data);
+    }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
   const data = {
@@ -153,10 +155,12 @@ export default function Form({ onSuccess, defaultName = "" }) {
       }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
+        setId("");
         onNew();
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
+        setId("");
       }
       Swal.fire({
         title: text + "  " + "Successfully",
@@ -415,7 +419,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
                     }}
                     readOnly={readOnly}
                     className={`w-[150px]`}
-                    // disabled={childRecord.current > 0}
+                    disabled={childRecord.current > 0}
                     addNewLabel="+ Add New Item Sub Group"
                     childComponent={ItemSubGroupMaster}
                     addNewModalWidth="w-[40%] h-[45%]"
@@ -438,7 +442,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
                   required={true}
                   readOnly={readOnly}
                   className={`w-[150px]`}
-                  // disabled={childRecord.current > 0}
+                  disabled={childRecord.current > 0}
                   addNewLabel="+ Add New Item Group"
                   childComponent={ItemGroup}
                   addNewModalWidth="w-[40%] h-[45%]"
@@ -538,7 +542,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
                     setValue={setGsmId}
                     readOnly={readOnly}
                     className={`w-[150px]`}
-                    // disabled={childRecord.current > 0}
+                    disabled={childRecord.current > 0}
                     addNewLabel="+ Add New Gsm"
                     childComponent={Gsm}
                     addNewModalWidth="w-[40%] h-[50%]"

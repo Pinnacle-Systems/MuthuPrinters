@@ -55,6 +55,8 @@ const ReusableFormFooter = ({
     rightActions = null,
     stacked = false,
     hasSummaryTitle = false,
+    sectionColClass = "md:col-span-4",
+    summaryColClass = "md:col-span-4",
 }) => {
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
     const [activeSectionIndex, setActiveSectionIndex] = useState(null);
@@ -166,7 +168,7 @@ const ReusableFormFooter = ({
                         key={index}
                         className={[
                             "flex h-full flex-col rounded-md border border-slate-200 bg-white p-1.5 shadow-sm",
-                            stacked ? "" : "md:col-span-4",
+                            stacked ? "" : sectionColClass,
                         ].join(" ")}
                     >
                         <div className="flex h-full flex-col gap-1">
@@ -228,7 +230,7 @@ const ReusableFormFooter = ({
                 <div
                     className={[
                         "grid grid-cols-1 gap-2",
-                        stacked ? "" : "md:col-span-4",
+                        stacked ? "" : summaryColClass,
                         stacked
                             ? ""
                             : hasLeftSummaryContent && hasRightSummaryContent
@@ -244,9 +246,15 @@ const ReusableFormFooter = ({
                                 </h2>
                             )}
                             {leftSummaryRows.map((row) => (
-                                <div key={row.key} className="flex justify-between text-[12px]">
-                                    <span>{row.label}</span>
-                                    <span>{row.value}</span>
+                                <div key={row.key} className={`flex justify-between text-[12px] ${row.className || ""}`}>
+                                    <span className={row.labelClassName || ""}>{row.label}</span>
+                                    {row.renderValue ? (
+                                        <div className={row.valueContainerClassName || "flex-1"}>
+                                            {row.renderValue()}
+                                        </div>
+                                    ) : (
+                                        <span className={row.valueClassName || ""}>{row.value}</span>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -255,9 +263,15 @@ const ReusableFormFooter = ({
                     {hasRightSummaryContent && (
                         <div className="rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
                             {rightSummaryRows.map((row) => (
-                                <div key={row.key} className="flex justify-between text-[12px]">
-                                    <span>{row.label}</span>
-                                    <span>{row.value}</span>
+                                <div key={row.key} className={`flex justify-between text-[12px] ${row.className || ""}`}>
+                                    <span className={row.labelClassName || ""}>{row.label}</span>
+                                    {row.renderValue ? (
+                                        <div className={row.valueContainerClassName || "flex-1"}>
+                                            {row.renderValue()}
+                                        </div>
+                                    ) : (
+                                        <span className={row.valueClassName || ""}>{row.value}</span>
+                                    )}
                                 </div>
                             ))}
                         </div>

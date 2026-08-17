@@ -10,6 +10,7 @@ async function get(req) {
       // active: active ? Boolean(active) : undefined,
     },
     include: {
+      Department: true,
       _count: {
         select: {
           processGroupList: true,
@@ -184,9 +185,9 @@ async function UpdateProcess(req) {
       } else {
         await tx?.takenmachines?.updateMany({
           data: {
-            jobCardId: Number(jobcardId) ,
-            processRouteId: Number(processId || 0) ,
-            Userid: Number(userId) ,
+            jobCardId: Number(jobcardId),
+            processRouteId: Number(processId || 0),
+            Userid: Number(userId),
             departmentid: Number(departmentId),
             Machineid: Number(machineId),
             isAvailable: false,
@@ -259,7 +260,7 @@ async function UpdatePushProcess(req) {
     splitSizes,
     pauseQty,
     sizeswise,
-    machineId
+    machineId,
   } = req?.body;
 
   var splitSizes__ = splitSizes?.length > 0 ? splitSizes : [];
@@ -302,22 +303,21 @@ async function UpdatePushProcess(req) {
         }),
       );
 
-
-      if(reason === "Partially Completed" || reason === "Others"){
+      if (reason === "Partially Completed" || reason === "Others") {
         await tx?.takenmachines?.updateMany({
-        data: {
-          isAvailable: true,
-        },
-        where: {
-          stDatetime: {
-            gte: startDate,
-            lt: endDate,
+          data: {
+            isAvailable: true,
           },
-          Machineid:machineId
-        },
+          where: {
+            stDatetime: {
+              gte: startDate,
+              lt: endDate,
+            },
+            Machineid: machineId,
+          },
         });
-
       }
+    
     } else if (flag === "RESUME") {
      
       var checkTaken_M =  await tx?.takenmachines?.findFirst({
@@ -337,7 +337,6 @@ async function UpdatePushProcess(req) {
         addMain_punch_log = { statusCode: 1, message:"Machine have taken by another employee.!!!!" }
         data = addMain_punch_log;
         return;
-
       }
 
       const lastPausedLog = await tx.pushLogs.findFirst({
@@ -351,14 +350,14 @@ async function UpdatePushProcess(req) {
           pushtime: "desc",
         },
       });
-       addMain_punch_log = await tx.pushLogs.update({
+      addMain_punch_log = await tx.pushLogs.update({
         where: {
           id: lastPausedLog.id, // ✅ unique id — safe to update
         },
         data: {
           resumetime: istISOString,
         },
-       });
+      });
       await tx?.takenmachines?.updateMany({
         data: {
           isAvailable: false,
@@ -368,7 +367,7 @@ async function UpdatePushProcess(req) {
             gte: startDate,
             lt: endDate,
           },
-          Machineid:machineId
+          Machineid: machineId,
         },
       });
     }
@@ -376,8 +375,8 @@ async function UpdatePushProcess(req) {
     data = addMain_punch_log;
   });
 
-  console.log("process PUSH",data);
-  if(data?.statusCode === 1) return data
+  console.log("process PUSH", data);
+  if (data?.statusCode === 1) return data;
   return { statusCode: 0, data };
 }
 

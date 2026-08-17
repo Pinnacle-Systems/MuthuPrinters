@@ -147,11 +147,13 @@ export default function Form({
       }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
+        setId("");
         onNew();
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
         syncFormWithDb(undefined);
+        setId("");
       }
       Swal.fire({
         title: text + "  " + "Successfully",

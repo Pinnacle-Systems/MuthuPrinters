@@ -229,7 +229,7 @@ async function get(req) {
         select: { purchaseReturnItems: true, purchaseBillEntryItems: true },
       },
     },
-    orderBy: { docId: "desc" },
+    orderBy: { id: "desc" },
   });
 
   let totalCount = data.length;

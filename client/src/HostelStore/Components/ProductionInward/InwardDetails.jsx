@@ -186,6 +186,7 @@ const InwardDetails = ({
           id={id}
           isSupplierOutside={isSupplierOutside}
           onCloseFocus={focusActionCell}
+          allowTaxEdit={true}
         />
       </Modal>
       <div className="bg-white p-1 h-full">
@@ -338,7 +339,7 @@ const InwardDetails = ({
                         id={`receivedQty-input-${index}`}
                         type="number"
                         min="0"
-                        className={`w-full text-right px-1 text-[11px] outline-none ${
+                        className={`w-full text-right px-1 text-[11px] outline-none bg-transparent${
                           isDisabled
                             ? " text-gray-400 cursor-not-allowed"
                             : "bg-transparent focus:bg-white"
@@ -368,7 +369,7 @@ const InwardDetails = ({
                       <input
                         type="number"
                         min="0"
-                        className={`w-full text-right px-1 text-[11px] outline-none ${
+                        className={`w-full text-right px-1 text-[11px] outline-none bg-transparent ${
                           isDisabled
                             ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                             : "bg-transparent focus:bg-white"
@@ -390,7 +391,7 @@ const InwardDetails = ({
                       />
                     </td>
 
-                    <td className="border border-gray-300 text-[11px] text-right px-1 bg-gray-50">
+                    <td className="border border-gray-300 text-[11px] text-right px-1 bg-gray-50 bg-transparent">
                       {isEmpty
                         ? ""
                         : row.acceptedQty !== "" &&

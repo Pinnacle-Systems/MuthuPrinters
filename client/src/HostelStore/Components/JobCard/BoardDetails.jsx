@@ -125,7 +125,7 @@ const BoardDetails = ({
                 Gsm
               </th>
               <th className="sticky top-0 z-20  border-b border-r border-slate-200 w-16 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
-                Full Board
+                Board Size
               </th>
               <th className="sticky top-0 z-20 border-b border-r border-slate-200 w-12 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase">
                 Stk Qty
@@ -239,7 +239,7 @@ const BoardDetails = ({
                     type="number"
                     className="w-full  border-none text-right pr-2 bg-transparent text-[11px] text-black outline-none focus:bg-white"
                     value={item.noOfSheets}
-                    readOnly={readOnly}
+                    disabled={readOnly || childRecord?.current > 0}
                     onChange={(e) =>
                       handleInputChange(e.target.value, idx, "noOfSheets")
                     }

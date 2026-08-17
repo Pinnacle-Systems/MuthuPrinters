@@ -8,7 +8,12 @@ import {
   useGetProformaInvoiceByIdQuery,
   useGetProformaInvoiceQuery,
 } from "../../../redux/uniformService/ProformaInvoiceService";
-import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
+import {
+  findFromList,
+  getCommonParams,
+  ModeChip,
+  formatCurrencyAmount,
+} from "../../../Utils/helper";
 import {
   dropDownListObject,
   dropDownListObjectMultiple,
@@ -22,10 +27,7 @@ import tw from "../../../Utils/tailwind-react-pdf";
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 import { FiEdit2, FiSave, FiPrinter, FiEye } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
-import OrderEntryApi, {
-  useGetOrderEntryQuery,
-  useLazyGetOrderEntryByIdQuery,
-} from "../../../redux/uniformService/OrderEntryService";
+import OrderEntryApi from "../../../redux/uniformService/OrderEntryService";
 import {
   CommonFormFooter,
   TransactionActions,
@@ -48,6 +50,9 @@ import {
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { conversionTypes } from "../../../Utils/DropdownData.js";
 import { useDispatch } from "react-redux";
+//need to work
+import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
+import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
 
 const EMPTY_ROW = {
   styleItemId: "",
@@ -58,18 +63,27 @@ const EMPTY_ROW = {
   qty: "",
   price: "",
   amount: "",
+  sizeBreakup: [],
 };
 
 const padItems = (itemsArray = []) => {
   const minLength = 14;
   const currentLength = itemsArray.length;
+
+  const formattedItems = itemsArray.map((item) =>
+    item.rowId
+      ? item
+      : { ...item, rowId: Math.random().toString(36).substring(2, 9) },
+  );
+
   if (currentLength < minLength) {
     const padding = Array.from({ length: minLength - currentLength }, () => ({
       ...EMPTY_ROW,
+      rowId: Math.random().toString(36).substring(2, 9),
     }));
-    return [...itemsArray, ...padding];
+    return [...formattedItems, ...padding];
   }
-  return itemsArray;
+  return formattedItems;
 };
 
 const ProformaInvoiceForm = ({
@@ -105,7 +119,7 @@ const ProformaInvoiceForm = ({
   const [payTermId, setPayTermId] = useState("");
   const [validityTo, setValidityTo] = useState("");
   const [currencyId, setCurrencyId] = useState("");
-  const [accordionOpen, setAccordionOpen] = useState(false);
+  const [accordionOpen, setAccordionOpen] = useState(true);
   const [loadingId, setLoadingId] = useState("");
   const [deliveryId, setDeliveryId] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
@@ -115,6 +129,8 @@ const ProformaInvoiceForm = ({
   const [availableVersions, setAvailableVersions] = useState([]);
   const [bankId, setBankId] = useState("");
   const [conversionType, setConversionType] = useState("DOZEN");
+  const [carriageTax, setCarriageTax] = useState("");
+  const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
   const childRecord = useRef(0);
 
   const customerRef = useRef(null);
@@ -136,14 +152,15 @@ const ProformaInvoiceForm = ({
   const { data: singleData } = useGetProformaInvoiceByIdQuery(id, {
     skip: !id,
   });
-  const { data: orderList } = useGetOrderEntryQuery({ params: { branchId } });
   const { data: taxTypeList } = useGetTaxTemplateQuery({
     params: { companyId },
   });
   const { data: supplierData } = useGetPartyByIdQuery(customerId, {
     skip: !customerId,
   });
-  const [triggerGetOrderById] = useLazyGetOrderEntryByIdQuery();
+
+  const { data: itemGroupList } = useGetItemGroupMasterQuery({});
+  const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({});
   const [dispatchInvalidate] = useInvalidateTags();
 
   const [addData] = useAddProformaInvoiceMutation();
@@ -154,6 +171,9 @@ const ProformaInvoiceForm = ({
   const isCurrencySymbol = currencyList?.data?.find(
     (item) => item?.id === currencyId,
   )?.symbol;
+  const currencyCode = currencyList?.data?.find(
+    (item) => item?.id === currencyId,
+  )?.code;
   useEffect(() => {
     if (!id && allData?.nextDocId) {
       setDocId(allData.nextDocId);
@@ -188,10 +208,15 @@ const ProformaInvoiceForm = ({
       setDeliveryDate(
         data.deliveryDate ? moment(data.deliveryDate).format("YYYY-MM-DD") : "",
       );
-      setCarriageCharge(parseFloat(data.carriageCharge).toFixed(2) || "");
+      setCarriageCharge(
+        !isNaN(parseFloat(data.carriageCharge))
+          ? parseFloat(data.carriageCharge).toFixed(2)
+          : "",
+      );
       setWeightInKg(parseFloat(data.weightInKg).toFixed(3) || "");
       setBankId(data.bankId || "");
       setConversionType(data.conversionType || "DOZEN");
+      setCarriageTax(data.carriageTax || "");
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
 
       let loadedVersions = [];
@@ -208,7 +233,29 @@ const ProformaInvoiceForm = ({
       const filteredItems = (data.items || []).filter(
         (i) => (i.quoteVersion || 1) === targetVersion,
       );
-      setItems(padItems(filteredItems));
+      const mappedItems = filteredItems.map((item) => ({
+        ...item,
+        itemGroupId: item?.ItemGroup?.id || "",
+        itemSubGroupId: item?.ItemSubGroup?.id || "",
+        styleItemId: item?.StyleItem?.id || "",
+        uomId: item?.Uom?.id || "",
+        gsmId: item?.Gsm?.id || "",
+        hsnId: item?.Hsn?.id || "",
+
+        sizeBreakup:
+          item?.pisizeBreakups?.length > 0
+            ? item.pisizeBreakups.map((val) => {
+                return {
+                  ...val,
+                  sizeId: val.sizeId || "",
+                };
+              })
+            : [{ sizeId: "", qty: "" }],
+      }));
+      console.log(mappedItems, "mappedItems");
+
+      setItems(padItems(mappedItems));
+      console.log(items, "aftermapped");
 
       const cust = data.customer || data.OrderEntry?.customer;
       if (cust) {
@@ -235,7 +282,28 @@ const ProformaInvoiceForm = ({
       const filteredItems = itemsArr.filter(
         (i) => (i.quoteVersion || 1) === targetVersion,
       );
-      setItems(padItems(filteredItems));
+
+      const mappedItems = filteredItems.map((item) => ({
+        ...item,
+        itemGroupId: item?.ItemGroup?.id || "",
+        itemSubGroupId: item?.ItemSubGroup?.id || "",
+        styleItemId: item?.StyleItem?.id || "",
+        uomId: item?.Uom?.id || "",
+        gsmId: item?.Gsm?.id || "",
+        hsnId: item?.Hsn?.id || "",
+
+        sizeBreakup:
+          item?.pisizeBreakups?.length > 0
+            ? item.pisizeBreakups.map((val) => {
+                return {
+                  ...val,
+                  sizeId: val.sizeId || "",
+                };
+              })
+            : [{ sizeId: "", qty: "" }],
+      }));
+
+      setItems(padItems(mappedItems));
     }
   }, [selectedQuoteVersion, singleData, id, availableVersions]);
 
@@ -268,6 +336,13 @@ const ProformaInvoiceForm = ({
     customerRef.current?.focus();
   }, []);
 
+  useEffect(() => {
+    const charge = parseFloat(carriageCharge) || 0;
+    const tax = parseFloat(carriageTax) || 0;
+    const finalAmt = charge + (charge * tax) / 100;
+    setCarriageFinalAmt(finalAmt ? finalAmt.toFixed(2) : "");
+  }, [carriageCharge, carriageTax]);
+
   const validateRows = (items) => {
     const errors = [];
     const seen = new Set();
@@ -289,6 +364,44 @@ const ProformaInvoiceForm = ({
         errors.push(`Row ${index + 1}: Duplicate item found`);
       } else {
         seen.add(key);
+      }
+
+      if (item.sizeBreakup?.length) {
+        const sizeSeen = new Set();
+        let sizeSum = 0;
+
+        item.sizeBreakup.forEach((size, sizeIndex) => {
+          if (!size.sizeId) {
+            errors.push(
+              `Row ${index + 1}, Size Row ${sizeIndex + 1}: Size is required`,
+            );
+          }
+
+          const qty = Number(size.qty || 0);
+          sizeSum += qty;
+
+          if (qty <= 0) {
+            errors.push(
+              `Row ${index + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`,
+            );
+          }
+
+          if (size.sizeId) {
+            if (sizeSeen.has(size.sizeId)) {
+              errors.push(`Row ${index + 1}: Duplicate size found`);
+            } else {
+              sizeSeen.add(size.sizeId);
+            }
+          }
+        });
+
+        if (sizeSum !== Number(item.qty)) {
+          errors.push(
+            `Row ${index + 1}: Sum of size quantities (${sizeSum}) must match the total quantity (${item.qty})`,
+          );
+        }
+      } else {
+        errors.push(`Row ${index + 1}: Size breakup is required`);
       }
     });
 
@@ -454,6 +567,7 @@ const ProformaInvoiceForm = ({
       carriageCharge,
       bankId,
       conversionType,
+      carriageTax,
     };
 
     try {
@@ -505,8 +619,7 @@ const ProformaInvoiceForm = ({
   };
 
   const handleKeyDown = (event) => {
-    let charCode = String.fromCharCode(event.which).toLowerCase();
-    if ((event.ctrlKey || event.metaKey) && charCode === "s") {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       handleSave();
     }
@@ -540,6 +653,7 @@ const ProformaInvoiceForm = ({
     setCurrencyId("");
     setAccordionOpen(false);
     setBankId("");
+    setCarriageTax("");
   };
 
   useEffect(() => {
@@ -555,121 +669,14 @@ const ProformaInvoiceForm = ({
         taxTypeList?.data?.filter((item) => item.name === "DEFAULT")[0]?.id,
       );
     }
-  }, []);
+  }, [taxTypeList, id]);
 
   const totalAmount = items.reduce(
     (sum, item) => sum + (parseFloat(item.amount) || 0),
     0,
   );
 
-  const actionButtonClass =
-    "px-3 py-2 rounded-md flex items-center justify-center text-sm text-white transition";
-
-  const leftActions = [
-    ...(!effectiveReadOnly
-      ? [
-          {
-            key: "saveAndClose",
-            icon: (
-              <span className="flex items-center gap-1">
-                <FiSave className="h-4 w-4" />
-                <HiX className="h-4 w-4" />
-              </span>
-            ),
-            hoverLabel: "Save & Close",
-            iconOnly: true,
-            onClick: () => handleSave("close"),
-            onKeyDown: (e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                handleSave("close");
-              }
-            },
-            className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
-          },
-          {
-            key: "saveAndNew",
-            icon: (
-              <span className="flex items-center gap-1">
-                <FiSave className="h-4 w-4" />
-                <HiOutlineRefresh className="h-4 w-4" />
-              </span>
-            ),
-            hoverLabel: "Save & New",
-            iconOnly: true,
-            onClick: () => handleSave("new"),
-            onKeyDown: (e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                handleSave("new");
-              }
-            },
-            className: `bg-indigo-600 hover:bg-indigo-700 ${actionButtonClass}`,
-          },
-        ]
-      : []),
-  ];
-
-  const rightActions = [
-    {
-      key: "edit",
-      icon: <FiEdit2 className="h-4 w-4" />,
-      hoverLabel: "Edit",
-      iconOnly: true,
-      onClick: () => hasPermission(() => setReadOnly(false), "edit"),
-      className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
-      hidden: !readOnly || !id || isOldVersion,
-    },
-    {
-      key: "summary",
-      icon: <FiEye className="h-4 w-4" />,
-      hoverLabel: "View Summary",
-      iconOnly: true,
-      onClick: () => {
-        if (!taxTemplateId) {
-          Swal.fire({
-            title: "Information",
-            text: "Please Select Tax Template !",
-            icon: "info",
-            confirmButtonColor: "#3085d6",
-          });
-          return;
-        }
-        setSummary(true);
-      },
-      onKeyDown: (e) => {
-        if (!taxTemplateId) {
-          e.preventDefault();
-          e.stopPropagation();
-          toast.info("Please Select Tax Template !", {
-            position: "top-center",
-          });
-          return;
-        }
-        if (e.key === "Enter") {
-          e.preventDefault();
-          e.stopPropagation();
-          setSummary(true);
-        }
-      },
-      className:
-        "bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md transition",
-    },
-    ...(id
-      ? [
-          {
-            key: "print",
-            icon: <FiPrinter className="h-4 w-4" />,
-            hoverLabel: "Print",
-            iconOnly: true,
-            onClick: () => setPrintModalOpen(true),
-            className: `bg-slate-600 hover:bg-slate-700 ${actionButtonClass}`,
-          },
-        ]
-      : []),
-  ].filter((a) => !a.hidden);
+  // Actions moved to JSX
 
   const shippingAccordion = (
     <div className="border border-slate-200 rounded-md bg-white shadow-sm mt-1">
@@ -702,78 +709,86 @@ const ProformaInvoiceForm = ({
       {/* Accordion Body */}
       {accordionOpen && (
         <div className="px-3 pb-2 border-t border-slate-100">
-          <div className="grid grid-cols-2 md:grid-cols-8 gap-2 w-fit">
+          <div className="flex gap-2 gap-x-4 w-fit">
             {isCustomerExport && (
               <>
-                <DropdownInput
-                  name="Loading Port"
-                  options={dropDownListObject(
-                    cityList?.data?.filter((item) => item.active),
-                    "name",
-                    "id",
-                  )}
-                  value={loadingId}
-                  setValue={setLoadingId}
-                  readOnly={readOnly}
-                  required={true}
-                />
-                <DropdownInput
-                  name="Delivery Port"
-                  options={dropDownListObject(
-                    cityList?.data?.filter((item) => item.active),
-                    "name",
-                    "id",
-                  )}
-                  value={deliveryId}
-                  setValue={setDeliveryId}
-                  readOnly={readOnly}
-                  required={true}
-                />
+                <div className="w-60">
+                  <DropdownInput
+                    name="Loading Port"
+                    options={dropDownListObject(
+                      cityList?.data?.filter((item) => item.active),
+                      "name",
+                      "id",
+                    )}
+                    value={loadingId}
+                    setValue={setLoadingId}
+                    readOnly={effectiveReadOnly}
+                    required={true}
+                  />
+                </div>
+                <div className="w-60">
+                  <DropdownInput
+                    name="Delivery Port"
+                    options={dropDownListObject(
+                      cityList?.data?.filter((item) => item.active),
+                      "name",
+                      "id",
+                    )}
+                    value={deliveryId}
+                    setValue={setDeliveryId}
+                    readOnly={effectiveReadOnly}
+                    required={true}
+                  />
+                </div>
               </>
             )}
-            <DateInputNew
-              name="Delivery Date"
-              value={deliveryDate}
-              setValue={setDeliveryDate}
-              disabled={readOnly}
-              type="date"
-              required={true}
-            />
-            <div className="col-span-1 flex flex-col gap-1">
+            <div className="w-[105px]">
+              <DateInputNew
+                name="Delivery Date"
+                value={deliveryDate}
+                setValue={setDeliveryDate}
+                disabled={effectiveReadOnly}
+                type="date"
+                required={true}
+              />
+            </div>
+            <div className="w-32">
               <DropdownInput
                 name="Conversion"
                 options={conversionTypes}
                 value={conversionType}
                 setValue={(value) => setConversionType(value)}
                 required={true}
-                readOnly={readOnly}
+                readOnly={effectiveReadOnly}
                 disabled={childRecord.current > 0 || readOnly}
               />
             </div>
-            <TextInput
-              name="WeightInKg (KG)"
-              value={weightInKg}
-              setValue={setWeightInKg}
-              disabled={readOnly}
-              type="number"
-              min="0"
-              className="text-right"
-              required={true}
-              onBlur={(e) =>
-                setWeightInKg(
-                  e.target.value ? Number(e.target.value).toFixed(3) : "",
-                )
-              }
-              onFocus={(e) => {
-                e.target.select();
-              }}
-            />
+            <div className="w-24">
+              <TextInput
+                name="WeightInKg (KG)"
+                value={weightInKg}
+                setValue={setWeightInKg}
+                disabled={effectiveReadOnly}
+                type="number"
+                min="0"
+                className="text-right"
+                required={true}
+                onBlur={(e) =>
+                  setWeightInKg(
+                    e.target.value ? Number(e.target.value).toFixed(3) : "",
+                  )
+                }
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
 
             <TextInput
               name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
               value={carriageCharge}
               setValue={setCarriageCharge}
-              disabled={readOnly}
+              disabled={effectiveReadOnly}
               type="number"
               min="0"
               className="text-right"
@@ -786,8 +801,39 @@ const ProformaInvoiceForm = ({
                 e.target.select();
               }}
             />
-
-            <div className="col-span-2">
+            <div className="w-24">
+              <TextInput
+                name="Carriage Tax%"
+                value={carriageTax}
+                setValue={setCarriageTax}
+                disabled={effectiveReadOnly}
+                type="number"
+                min="0"
+                className="text-right"
+                onBlur={(e) =>
+                  setCarriageTax(
+                    e.target.value ? Number(e.target.value).toFixed(2) : "",
+                  )
+                }
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
+            <div className="w-32">
+              <TextInput
+                name="Carriage Final Amount"
+                value={carriageFinalAmt}
+                disabled={true}
+                type="number"
+                min="0"
+                className="text-right"
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
+            <div className="w-72">
               <DropdownWithModal
                 name="Advising Bank"
                 options={dropDownListObjectMultiple(
@@ -800,7 +846,7 @@ const ProformaInvoiceForm = ({
                 value={bankId}
                 setValue={setBankId}
                 required={isCustomerExport}
-                readOnly={readOnly}
+                readOnly={effectiveReadOnly}
                 className={`w-[150px]`}
                 addNewLabel="+ Add New Bank"
                 childComponent={BankMaster}
@@ -826,7 +872,7 @@ const ProformaInvoiceForm = ({
               <div className="w-36">
                 <TextInput name="PI No" value={docId} disabled={true} />
               </div>
-              <div className="w-32">
+              <div className="w-24">
                 <DateInputNew
                   name="PI Date"
                   value={docDate}
@@ -836,7 +882,7 @@ const ProformaInvoiceForm = ({
                   type="date"
                 />
               </div>
-              <div className="w-32">
+              <div className="w-[105px]">
                 <DateInputNew
                   name="User Date"
                   value={userDate}
@@ -941,22 +987,12 @@ const ProformaInvoiceForm = ({
                   value={payTermId}
                   setValue={setPayTermId}
                   required={true}
-                  readOnly={readOnly}
+                  readOnly={effectiveReadOnly}
                   className={`w-full max-w-none`}
                   dropdownMinWidth={240}
                   addNewLabel="+ Add New Pay Term"
                   childComponent={PayTermMaster}
                   addNewModalWidth="w-[40%] h-[66%]"
-                />
-              </div>
-              <div className="">
-                <DateInputNew
-                  name="Valid To"
-                  value={validityTo}
-                  setValue={setValidityTo}
-                  disabled={readOnly}
-                  required={true}
-                  type="date"
                 />
               </div>
               {isCustomerExport && (
@@ -973,7 +1009,7 @@ const ProformaInvoiceForm = ({
                     value={currencyId}
                     setValue={setCurrencyId}
                     required={true}
-                    readOnly={readOnly}
+                    readOnly={effectiveReadOnly}
                     className={`w-full max-w-none`}
                     dropdownMinWidth={240}
                     addNewLabel="+ Add New Currency"
@@ -982,6 +1018,16 @@ const ProformaInvoiceForm = ({
                   />
                 </div>
               )}
+              <div className="w-[105px]">
+                <DateInputNew
+                  name="Valid To"
+                  value={validityTo}
+                  setValue={setValidityTo}
+                  disabled={effectiveReadOnly}
+                  required={true}
+                  type="date"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -1077,9 +1123,14 @@ const ProformaInvoiceForm = ({
         setRemarks={setRemarks}
         terms={termsAndCondition}
         setTerms={setTermsAndCondition}
-        readOnly={readOnly}
+        readOnly={effectiveReadOnly}
         showTermSelect={true}
+        hasSummaryTitle={
+          <span className="block text-center w-full">Summary</span>
+        }
         termsRef={termsRef}
+        sectionColClass="md:col-span-4"
+        summaryColClass="md:col-span-4"
         termValue={termsId}
         onTermChange={(value) => setTermsId(value)}
         termOptions={
@@ -1091,69 +1142,262 @@ const ProformaInvoiceForm = ({
         }
         totalsRows={[
           {
-            key: "totalQty",
-            label: "Total Qty",
-            value: totalQty.toFixed(2) || 0,
-            summaryColumn: "right",
-            emphasized: true,
-          },
-          {
-            key: "grossAmount",
-            label: "Gross Amount",
-            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${isCustomerExport ? enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0).toFixed(2) : enrichedData.gross.toFixed(2)}`,
-            summaryColumn: "right",
-            emphasized: true,
-          },
-          {
-            key: "totalDiscount",
-            label: "Total Discount",
-            value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${enrichedData.itemDiscount + enrichedData.overallDiscount > 0 ? (enrichedData.itemDiscount + enrichedData.overallDiscount).toFixed(2) : "0"}`,
-            summaryColumn: "right",
+            key: "summary_grid",
+            label: "",
+            valueContainerClassName: "w-full",
+            renderValue: () => {
+              const taxTotals = !isCustomerExport
+                ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
+                    const type = curr?.tax?.split(" ")[0];
+                    acc[type] = (acc[type] || 0) + curr.amount;
+                    return acc;
+                  }, {})
+                : {};
+
+              return (
+                <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1">
+                  {/* Left Column */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Total Discount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                        {formatCurrencyAmount(
+                          enrichedData.itemDiscount +
+                            enrichedData.overallDiscount >
+                            0
+                            ? enrichedData.itemDiscount +
+                                enrichedData.overallDiscount
+                            : 0,
+                          currencyCode || isCurrencySymbol,
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Taxable Amount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                        {formatCurrencyAmount(
+                          enrichedData.taxable || 0,
+                          currencyCode || isCurrencySymbol,
+                        )}
+                      </span>
+                    </div>
+
+                    {taxTotals.CGST !== undefined &&
+                    taxTotals.SGST !== undefined ? (
+                      <div className="flex items-center justify-between w-full max-w-[210px]">
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-800 w-[32px]">CGST</span>
+                          <span className="text-slate-800">:</span>
+                          <span className="font-medium text-slate-800">
+                            {formatCurrencyAmount(
+                              taxTotals.CGST,
+                              currencyCode || isCurrencySymbol,
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-800 w-[32px]">SGST</span>
+                          <span className="text-slate-800">:</span>
+                          <span className="font-medium text-slate-800 text-right">
+                            {formatCurrencyAmount(
+                              taxTotals.SGST,
+                              currencyCode || isCurrencySymbol,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      Object.keys(taxTotals).map((type) => (
+                        <div
+                          key={type}
+                          className="flex items-center justify-between w-full max-w-[210px]"
+                        >
+                          <div className="flex justify-between w-[130px] text-slate-800">
+                            <span>{type}</span>
+                            <span>:</span>
+                          </div>
+                          <span className="font-medium text-slate-800 text-right w-[65px]">
+                            {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                            {formatCurrencyAmount(
+                              taxTotals[type],
+                              currencyCode || isCurrencySymbol,
+                            )}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Carriage Charges</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                        {!isNaN(parseFloat(carriageFinalAmt)) &&
+                        carriageFinalAmt !== ""
+                          ? formatCurrencyAmount(
+                              carriageFinalAmt,
+                              currencyCode || isCurrencySymbol,
+                            )
+                          : "0.00"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Round Off</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                        {formatCurrencyAmount(
+                          enrichedData.roundOff || 0,
+                          currencyCode || isCurrencySymbol,
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                        <span>Net Amount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-bold text-indigo-700 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                        {formatCurrencyAmount(
+                          (!isCustomerExport
+                            ? enrichedData.net
+                            : (enrichedData.items?.reduce(
+                                (sum, item) =>
+                                  sum + (parseFloat(item.amount) || 0),
+                                0,
+                              ) || 0) -
+                              (enrichedData.itemDiscount +
+                                enrichedData.overallDiscount >
+                              0
+                                ? enrichedData.itemDiscount +
+                                  enrichedData.overallDiscount
+                                : 0)) + (parseFloat(carriageFinalAmt) || 0),
+                          currencyCode || isCurrencySymbol,
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            },
+            summaryColumn: "left",
             emphasized: false,
           },
-          ...(() => {
-            const taxTotals = (enrichedData.slabBreakup || []).reduce(
-              (acc, curr) => {
-                const type = curr.tax.split(" ")[0];
-                acc[type] = (acc[type] || 0) + curr.amount;
-                return acc;
-              },
-              {},
-            );
-            return Object.keys(taxTotals).map((type) => ({
-              key: type,
-              label: type,
-              value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${taxTotals[type].toFixed(2)}`,
-              summaryColumn: "right",
-              emphasized: false,
-            }));
-          })(),
-
-          ...(!isCustomerExport
-            ? [
-                {
-                  key: "netAmount",
-                  label: "Net Amount",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${enrichedData.net.toFixed(2)}`,
-                  summaryColumn: "right",
-                  emphasized: true,
-                },
-              ]
-            : [
-                {
-                  key: "carriageCharge",
-                  label: "Carraige Charges",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${carriageCharge}`,
-                  summaryColumn: "right",
-                  emphasized: true,
-                },
-              ]),
         ]}
       />
-      <TransactionActions
-        leftActions={leftActions}
-        rightActions={rightActions}
-      />
+      <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
+        {/* Left Buttons */}
+        <div className="flex gap-2 flex-wrap">
+          {!effectiveReadOnly && (
+            <>
+              <button
+                onClick={() => handleSave("close")}
+                disabled={effectiveReadOnly}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSave("close");
+                    e.stopPropagation();
+                  }
+                }}
+                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+              >
+                <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                {id ? "Update & Close" : "Save & Close"}
+              </button>
+              <button
+                onClick={() => handleSave("new")}
+                disabled={effectiveReadOnly}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSave("new");
+                  }
+                }}
+                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+              >
+                <FiSave className="w-4 h-4 mr-2" />
+                {id ? "Update & New" : " Save & New"}
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => {
+              if (!taxTemplateId) {
+                Swal.fire({
+                  title: "Information",
+                  text: "Please Select Tax Template !",
+                  icon: "info",
+                  confirmButtonColor: "#3085d6",
+                });
+                return;
+              }
+              setSummary(true);
+            }}
+            onKeyDown={(e) => {
+              if (!taxTemplateId) {
+                e.preventDefault();
+                e.stopPropagation();
+                toast.info("Please Select Tax Template !", {
+                  position: "top-center",
+                });
+                return;
+              }
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                setSummary(true);
+              }
+            }}
+            className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center text-xs"
+          >
+            <FiEye className="w-4 h-4 mr-2" />
+            View Summary
+          </button>
+        </div>
+
+        {/* Right Buttons */}
+        <div className="flex gap-2 flex-wrap">
+          {readOnly && id && !isOldVersion && (
+            <button
+              onClick={() => hasPermission(() => setReadOnly(false), "edit")}
+              className="bg-yellow-600 text-white px-4 py-1 rounded hover:bg-yellow-700 flex items-center text-xs"
+            >
+              <FiEdit2 className="w-4 h-4 mr-2" />
+              Edit
+            </button>
+          )}
+          {id && (
+            <button
+              onClick={() => setPrintModalOpen(true)}
+              className="bg-slate-600 text-white px-4 py-1 rounded hover:bg-slate-700 flex items-center text-xs"
+            >
+              <FiPrinter className="w-4 h-4 mr-2" />
+              Print
+            </button>
+          )}
+        </div>
+      </div>
     </>
   );
 
@@ -1183,12 +1427,17 @@ const ProformaInvoiceForm = ({
             data={{
               ...singleData?.data,
               items: items.filter((i) => i.styleItemId), // ✅ only current version's filled items
+              quoteVersion:
+                selectedQuoteVersion !== "Latest"
+                  ? parseInt(selectedQuoteVersion.replace("V", ""))
+                  : singleData?.data?.quoteVersion || 1,
             }}
             taxDetails={enrichedData}
             isCustomerExport={isCustomerExport}
             cityList={cityList}
             currencyList={currencyList}
             payTermList={payTermList}
+            carriageFinalAmt={carriageFinalAmt}
           />
         </PDFViewer>
       </Modal>
@@ -1211,10 +1460,13 @@ const ProformaInvoiceForm = ({
             taxTemplateId={taxTemplateId}
             id={id}
             isCurrencySymbol={isCurrencySymbol}
+            currencyCode={currencyCode}
             termsRef={termsRef}
             isCustomerExport={isCustomerExport}
             conversionType={conversionType}
             isSupplierOutside={isSupplierOutside}
+            itemGroupList={itemGroupList}
+            itemSubGroupList={itemSubGroupList}
           />
         }
         footer={footerContent}

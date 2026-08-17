@@ -1293,6 +1293,8 @@ async function create(body) {
       colorId,
       isHold,
       isCancelled,
+      isNewPlate,
+      isOldPlate,
     } = body;
 
     // ─────────────────────────────
@@ -1404,6 +1406,8 @@ async function create(body) {
           lenght: lenght ? parseInt(lenght) : 0,
           width: width ? parseInt(width) : 0,
           meter: meter ? parseInt(meter) : 0,
+          isNewPlate: !!isNewPlate,
+          isOldPlate: !!isOldPlate,
 
           boardQualities: safeBoardItems.length
             ? {
@@ -1421,8 +1425,10 @@ async function create(body) {
           printingDetails: safeSelectedPrinting.length
             ? {
                 createMany: {
-                  data: safeSelectedPrinting.map((id) => ({
-                    processId: Number(id),
+                  data: safeSelectedPrinting.map((p) => ({
+                    processId: Number(p.processId),
+                    isFront: !!p.isFront,
+                    isFrontAndBack: !!p.isFrontAndBack,
                   })),
                 },
               }
@@ -1490,7 +1496,7 @@ async function create(body) {
             ? {
                 createMany: {
                   data: safeProcessRoute.map((r, idx) => ({
-                    processId: Number(r.processId),
+                    processId: r.processId ? Number(r.processId) : null,
                     type: r.type,
                     sequence: idx + 1,
                     isFront: !!r.isFront,
@@ -1718,6 +1724,8 @@ async function update(id, body) {
       lenght,
       width,
       meter,
+      isNewPlate,
+      isOldPlate,
     } = body;
     const dataFound = await prisma.jobCard.findUnique({
       where: { id: parseInt(id) },
@@ -1844,7 +1852,7 @@ async function update(id, body) {
               const r = incomingKeyToRoute[k];
               return {
                 jobCardId: parseInt(id),
-                processId: Number(r.processId),
+                processId: r.processId ? Number(r.processId) : null,
                 type: r.type,
                 sequence: r.sequence,
                 isFront: Boolean(r.isFront),
@@ -1990,6 +1998,9 @@ async function update(id, body) {
           lenght: lenght ? parseInt(lenght) : 0,
           width: width ? parseInt(width) : 0,
           meter: meter ? parseInt(meter) : 0,
+          isNewPlate: !!isNewPlate,
+          isOldPlate: !!isOldPlate,
+
           boardQualities:
             boardQualities.length > 0
               ? {
@@ -2007,8 +2018,10 @@ async function update(id, body) {
           printingDetails: selectedPrinting.length
             ? {
                 createMany: {
-                  data: selectedPrinting.map((id) => ({
-                    processId: Number(id),
+                  data: selectedPrinting.map((p) => ({
+                    processId: Number(p.processId),
+                    isFront: !!p.isFront,
+                    isFrontAndBack: !!p.isFrontAndBack,
                   })),
                 },
               }

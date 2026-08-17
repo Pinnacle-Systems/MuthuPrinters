@@ -517,6 +517,11 @@ async function getOne(id) {
           name: true,
         },
       },
+      Bank: {
+        include: {
+          Branch: true,
+        },
+      },
       _count: {
         select: {
           JobCard: true,
@@ -613,6 +618,18 @@ async function create(body) {
     refNo,
     isRepeatedPI,
     validDays,
+    taxTemplateId,
+    discountType,
+    discountValue,
+    conversionType,
+    payTermId,
+    bankId,
+    currencyId,
+    weightInKg,
+    carriageCharge,
+    loadingId,
+    deliveryId,
+    carriageTax,
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
@@ -648,6 +665,18 @@ async function create(body) {
             : null,
           labelWidth: item?.labelWidth ?? "",
           trackingType: item?.trackingType,
+          price: item?.price ? parseFloat(item.price) : null,
+          amount: item?.amount ? parseFloat(item.amount) : null,
+          dozen: item?.dozen ? parseFloat(item.dozen) : null,
+          taxPercent:
+            item?.taxPercent && !isNaN(Number(item.taxPercent))
+              ? parseFloat(item.taxPercent)
+              : null,
+          discountType: item?.discountType || null,
+          discountValue:
+            item?.discountValue && !isNaN(Number(item.discountValue))
+              ? parseFloat(item.discountValue)
+              : null,
           orderQty:
             item?.orderQty && !isNaN(Number(item.orderQty))
               ? parseInt(item.orderQty)
@@ -704,6 +733,19 @@ async function create(body) {
         refNo: finalRefNo ?? "",
         validDays: validDays ? parseInt(validDays) : null,
         validTo: validTo,
+        taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
+        discountType: discountType || null,
+        discountValue: discountValue ? parseFloat(discountValue) : null,
+        conversionType: conversionType || null,
+        payTermId: payTermId ? parseInt(payTermId) : null,
+        bankId: bankId ? parseInt(bankId) : null,
+        currencyId: currencyId ? parseInt(currencyId) : null,
+        weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+        carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+        loadingId: loadingId ? parseInt(loadingId) : null,
+        deliveryId: deliveryId ? parseInt(deliveryId) : null,
+        carriageTax: carriageTax ? parseFloat(carriageTax) : null,
+
         orderItems:
           safeOrderItems.length > 0
             ? {
@@ -771,6 +813,18 @@ async function update(id, body, files) {
     refNo,
     isRepeatedPI,
     validDays,
+    taxTemplateId,
+    discountType,
+    discountValue,
+    conversionType,
+    payTermId,
+    bankId,
+    currencyId,
+    weightInKg,
+    carriageCharge,
+    loadingId,
+    deliveryId,
+    carriageTax,
   } = await body;
 
   const safeorderQty =
@@ -877,6 +931,19 @@ async function update(id, body, files) {
         refNo: finalRefNo ?? "",
         validDays: validDays ? parseInt(validDays) : null,
         validTo: validTo,
+        taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
+        discountType: discountType || null,
+        discountValue: discountValue ? parseFloat(discountValue) : null,
+        conversionType: conversionType || null,
+        payTermId: payTermId ? parseInt(payTermId) : null,
+        bankId: bankId ? parseInt(bankId) : null,
+        currencyId: currencyId ? parseInt(currencyId) : null,
+        weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+        carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+        loadingId: loadingId ? parseInt(loadingId) : null,
+        deliveryId: deliveryId ? parseInt(deliveryId) : null,
+        carriageTax: carriageTax ? parseFloat(carriageTax) : null,
+
         orderItems: {
           deleteMany: incomingItemIds.length
             ? { id: { notIn: incomingItemIds } }
@@ -897,6 +964,18 @@ async function update(id, body, files) {
                   : null,
                 labelWidth: item?.labelWidth ?? "",
                 trackingType: item.trackingType,
+                price: item?.price ? parseFloat(item.price) : null,
+                amount: item?.amount ? parseFloat(item.amount) : null,
+                dozen: item?.dozen ? parseFloat(item.dozen) : null,
+                taxPercent:
+                  item?.taxPercent && !isNaN(Number(item.taxPercent))
+                    ? parseFloat(item.taxPercent)
+                    : null,
+                discountType: item?.discountType || null,
+                discountValue:
+                  item?.discountValue && !isNaN(Number(item.discountValue))
+                    ? parseFloat(item.discountValue)
+                    : null,
                 sizeTemplateId: item.sizeTemplateId
                   ? parseInt(item.sizeTemplateId)
                   : null,
@@ -931,6 +1010,18 @@ async function update(id, body, files) {
                 : null,
               labelWidth: item?.labelWidth ?? "",
               trackingType: item.trackingType,
+              price: item?.price ? parseFloat(item.price) : null,
+              amount: item?.amount ? parseFloat(item.amount) : null,
+              dozen: item?.dozen ? parseFloat(item.dozen) : null,
+              taxPercent:
+                item?.taxPercent && !isNaN(Number(item.taxPercent))
+                  ? parseFloat(item.taxPercent)
+                  : null,
+              discountType: item?.discountType || null,
+              discountValue:
+                item?.discountValue && !isNaN(Number(item.discountValue))
+                  ? parseFloat(item.discountValue)
+                  : null,
               sizeTemplateId: item.sizeTemplateId
                 ? parseInt(item.sizeTemplateId)
                 : null,

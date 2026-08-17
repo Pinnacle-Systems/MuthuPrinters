@@ -520,7 +520,7 @@ const ProductionOutwardForm = ({
   const [selectedProcesses, setSelectedProcesses] = useState([]);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
-
+  const [orderQty, setOrderQty] = useState("");
   const [dispatchInvalidate] = useInvalidateTags();
   const supplierRef = useRef(null);
   const childRecord = useRef(0);
@@ -531,9 +531,12 @@ const ProductionOutwardForm = ({
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetProductionOutwardByIdQuery(id, { skip: !id });
+
   const { data: jobCardList } = useGetJobCardListQuery({
     params: { companyId, branchId, isProcessIssue: true },
   });
+  console.log(jobCardList, "jobCardList");
+
   const { data: productionAllocationList } = useGetAllocationListQuery({
     params: { companyId, branchId },
   });
@@ -563,7 +566,12 @@ const ProductionOutwardForm = ({
       );
       setSupplierId(data?.supplierId || "");
       setRemarks(data?.remarks || "");
-      setJobCardId(data?.jobCardId || "");
+      console.log(data?.jobCardId, "data?.jobCardId");
+
+      setJobCardId(data?.jobCardId);
+
+      console.log(jobCardId, "sync");
+
       setProductionAllocationId(data?.productionAllocationId || "");
       setDcNo(data?.dcNo || "");
       setVehicleNo(data?.vehicleNo || "");
@@ -884,22 +892,36 @@ const ProductionOutwardForm = ({
             Job Card Details
           </p>
           <div className="flex gap-2">
-            <DropdownNew
-              name="Job Card No"
-              dataList={jobCardList?.data?.filter((item) =>
-                item.processRoute?.some(
-                  (route) => route.status === "NOT_STARTED",
-                ),
-              )}
-              value={jobCardId}
-              setValue={setJobCardId}
-              required
-              readOnly={readOnly}
-              disabled={readOnly}
-              otherField="docId"
-              beforeChange={handleJobCardChange}
-              ref={supplierRef}
-            />
+            {id ? (
+              <>
+                <TextInput
+                  name="Job Card No"
+                  value={singleData?.data?.JobCard?.docId}
+                  disabled
+                  className="min-w-32"
+                />
+              </>
+            ) : (
+              <>
+                <DropdownNew
+                  name="Job Card No"
+                  dataList={jobCardList?.data?.filter((item) =>
+                    item.processRoute?.some(
+                      (route) => route.status === "NOT_STARTED",
+                    ),
+                  )}
+                  value={jobCardId}
+                  setValue={setJobCardId}
+                  required
+                  readOnly={readOnly}
+                  disabled={readOnly}
+                  otherField="docId"
+                  beforeChange={handleJobCardChange}
+                  ref={supplierRef}
+                />
+              </>
+            )}
+
             <DropdownNew
               name="Production Allocation No"
               dataList={productionAllocationList?.data}
@@ -921,6 +943,15 @@ const ProductionOutwardForm = ({
               )}
               readOnly
               disabled
+            />
+          </div>
+          <div className="w-32">
+            <TextInput
+              name="Order Qty"
+              value={findFromList(jobCardId, jobCardList?.data, "orderQty")}
+              readOnly
+              disabled
+              className="text-right"
             />
           </div>
         </div>

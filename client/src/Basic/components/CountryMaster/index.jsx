@@ -80,9 +80,8 @@ export default function Form({
     },
     [id],
   );
-
   useEffect(() => {
-    if (singleData?.data) {
+    if (id && singleData?.data) {
       syncFormWithDb(singleData.data);
     }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
@@ -118,11 +117,13 @@ export default function Form({
       }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
+        setId("");
         onNew();
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
         syncFormWithDb(undefined);
+        setId("");
       }
       await Swal.fire({
         title: text + "  " + "Successfully",
@@ -238,8 +239,13 @@ export default function Form({
     setReadOnly(false);
     setForm(true);
     setSearchValue("");
-    syncFormWithDb(undefined);
+    setId("");
+    setName("");
+    setCode("");
+    // syncFormWithDb(undefined);
+    console.log(id, name, code, "onnew");
   };
+
   const handleView = (id) => {
     setId(id);
     setForm(true);

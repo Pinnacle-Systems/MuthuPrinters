@@ -6,11 +6,24 @@ import { Check, Power } from "lucide-react";
 import { ReusableTable, TextInputNew, ToggleButton } from "../../../Inputs";
 import Modal from "../../../UiComponents/Modal";
 import { statusDropdown } from "../../../Utils/DropdownData";
-import { useAddItemGroupMasterMutation, useDeleteItemGroupMasterMutation, useGetItemGroupMasterByIdQuery, useGetItemGroupMasterQuery, useLazyGetItemGroupMasterByIdQuery, useUpdateItemGroupMasterMutation } from "../../../redux/services/ItemGroupMasterService";
+import {
+  useAddItemGroupMasterMutation,
+  useDeleteItemGroupMasterMutation,
+  useGetItemGroupMasterByIdQuery,
+  useGetItemGroupMasterQuery,
+  useLazyGetItemGroupMasterByIdQuery,
+  useUpdateItemGroupMasterMutation,
+} from "../../../redux/services/ItemGroupMasterService";
 import { useFormKeyboardNavigation } from "../../../CustomHooks/useFormKeyboardNavigation";
 import { UserPermissions } from "../../../Utils/UserPermissions";
 
-export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel } = {}) {
+export default function Form({
+  onSuccess,
+  onClose,
+  editId,
+  deleteId,
+  deleteLabel,
+} = {}) {
   const [form, setForm] = useState(false);
 
   const [readOnly, setReadOnly] = useState(false);
@@ -63,7 +76,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
   );
 
   useEffect(() => {
-    syncFormWithDb(singleData?.data);
+    if (id && singleData?.data) {
+      syncFormWithDb(singleData.data);
+    }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
   const data = {
@@ -95,13 +110,13 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
+        setId("");
         onNew();
-        countryNameRef?.current?.focus()
-
+        countryNameRef?.current?.focus();
       } else {
         setForm(false);
         syncFormWithDb(undefined);
-
+        setId("");
       }
       Swal.fire({
         title: text + "  " + "Successfully",
@@ -125,7 +140,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         icon: "error",
         didClose: () => {
           countryNameRef?.current?.focus();
-        }
+        },
         // draggable: true,
         // timer: 1000,
         // showConfirmButton: false,
@@ -149,14 +164,12 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         text: "The Item Group Name already exists.",
         icon: "warning",
         didClose: () => {
-
           countryNameRef?.current?.focus();
-        }
+        },
       });
       return false;
     }
     if (id) {
-
       if (!window.confirm("Are you sure update the details ...?")) {
         return;
       }
@@ -196,7 +209,6 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
             // }
           });
           syncFormWithDb(undefined);
-
         } catch (error) {
           toast.error("something went wrong");
         }
@@ -309,7 +321,7 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
         </div>
       </div>
     </div>
-  )
+  );
 
   useEffect(() => {
     if ((form || onSuccess) && countryNameRef.current) {
@@ -325,7 +337,9 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
       try {
         const res = await removeData(deleteId).unwrap();
         if (res?.statusCode === 1) {
-          toast.error(res?.data?.message || "Cannot delete: child records exist");
+          toast.error(
+            res?.data?.message || "Cannot delete: child records exist",
+          );
           return;
         }
         toast.success("Deleted successfully");
@@ -347,9 +361,14 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
           ) : childCount > 0 ? (
             <>
               <p className="text-red-600 font-semibold">Cannot Delete</p>
-              <p>"{deleteLabel}" has {childCount} linked records.</p>
-              <button type="button" onClick={onClose}
-                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+              <p>
+                "{deleteLabel}" has {childCount} linked records.
+              </p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+              >
                 Close
               </button>
             </>
@@ -361,12 +380,18 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
                   <span className="font-semibold">"{deleteLabel}"</span>?
                 </p>
                 <div className="flex gap-3">
-                  <button type="button" onClick={onClose}
-                    className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-1.5 text-xs border border-gray-400 text-gray-600 hover:bg-gray-100 rounded"
+                  >
                     Cancel
                   </button>
-                  <button type="button" onClick={handleConfirmDelete}
-                    className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded">
+                  <button
+                    type="button"
+                    onClick={handleConfirmDelete}
+                    className="px-4 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700 rounded"
+                  >
                     Delete
                   </button>
                 </div>
@@ -380,7 +405,10 @@ export default function Form({ onSuccess, onClose, editId, deleteId, deleteLabel
 
   if (onSuccess) {
     return (
-      <div onKeyDown={handleKeyDown} className="h-full flex flex-col bg-gray-200">
+      <div
+        onKeyDown={handleKeyDown}
+        className="h-full flex flex-col bg-gray-200"
+      >
         <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
           <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
             {editId ? "Edit Item Group" : "Add New Item Group"}

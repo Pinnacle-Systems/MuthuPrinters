@@ -50,13 +50,13 @@ export default function Form({
     params,
     searchParams: searchValue,
   });
-  console.log(itemGroupList, "itemGroupList");
 
   const {
     data: allData,
     isLoading,
     isFetching,
   } = useGetItemSubGroupMasterQuery({ params, searchParams: searchValue });
+
   const {
     data: singleData,
     isFetching: isSingleFetching,
@@ -88,7 +88,9 @@ export default function Form({
   );
 
   useEffect(() => {
-    syncFormWithDb(singleData?.data);
+    if (id && singleData?.data) {
+      syncFormWithDb(singleData.data);
+    }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
   const data = {
@@ -125,11 +127,13 @@ export default function Form({
       }
       if (nextProcess == "new") {
         syncFormWithDb(undefined);
+        setId("");
         onNew();
         countryNameRef?.current?.focus();
       } else {
         setForm(false);
         syncFormWithDb(undefined);
+        setId("");
       }
       Swal.fire({
         title: text + "  " + "Successfully",
@@ -266,6 +270,12 @@ export default function Form({
     {
       header: "Item Sub Group",
       accessor: (item) => item?.name,
+      //   cellClass: () => "font-medium  text-gray-900",
+      className: "font-medium text-gray-900 text-left uppercase w-72",
+    },
+    {
+      header: "Item Group Name",
+      accessor: (item) => item?.ItemGroup?.name,
       //   cellClass: () => "font-medium  text-gray-900",
       className: "font-medium text-gray-900 text-left uppercase w-72",
     },

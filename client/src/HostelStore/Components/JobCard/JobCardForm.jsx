@@ -190,6 +190,8 @@ const JobCardForm = ({
   const [width, setWidth] = useState("");
   const [meter, setMeter] = useState("");
   const [colorId, setColorId] = useState("");
+  const [isOldPlate, setIsOldPlate] = useState(false);
+  const [isNewPlate, setIsNewPlate] = useState(false);
   const [triggerGetBoardQty] = useLazyGetBoardQtyQuery();
 
   const { data: processList } = useGetProcessMasterQuery({ params });
@@ -234,6 +236,10 @@ const JobCardForm = ({
   const varnishList = filterByGroup("VARNISH");
   const finishingList = filterByGroup("FINISHING");
   const labelPrintingList = filterByGroup("LABEL PRINTING");
+
+  // Make sure "DYEING" matches the exact casing of your Process Group name
+  // if it doesn't match exactly, you might need to change it to "Dyeing" etc.
+  const dieProcessList = filterByGroup("DYEING");
 
   const {
     data: singleData,
@@ -319,7 +325,13 @@ const JobCardForm = ({
     ]);
 
     setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
-    setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
+    setSelectedPrinting(
+      data?.printingDetails?.map((p) => ({
+        processId: p.processId,
+        isFront: p.isFront,
+        isFrontAndBack: p.isFrontAndBack,
+      })) || [],
+    );
     setSelectedFinishing(
       data?.finishingProcesses?.map((f) => f.processId) || [],
     );
@@ -354,7 +366,8 @@ const JobCardForm = ({
                 : r.isFrontAndBack
                   ? "frontback"
                   : "";
-              return `${r.type}:${r.processId}${sub ? `:${sub}` : ""}`;
+              const pid = r.type === "die" ? data?.dieId : r.processId;
+              return `${r.type}:${pid}${sub ? `:${sub}` : ""}`;
             })
         : [],
     );
@@ -392,6 +405,8 @@ const JobCardForm = ({
     while (paddedPlates.length < 6)
       paddedPlates.push({ plateName: "", qty: "" });
     setPlateDetails(paddedPlates);
+    setIsNewPlate(data?.isNewPlate);
+    setIsOldPlate(data?.isOldPlate);
     childRecord.current = data?.childRecord ? data?.childRecord : 0;
   }, []);
 
@@ -495,6 +510,8 @@ const JobCardForm = ({
     lenght,
     width,
     meter,
+    isNewPlate,
+    isOldPlate,
   };
 
   const openPrintModal = async (overrideId, overrideDocId) => {
@@ -607,7 +624,7 @@ const JobCardForm = ({
           d.boardQualities
             ?.filter((r) => r.processId)
             ?.some((r) => !r.fullBoardId),
-        title: "Select Full Board!",
+        title: "Select Board Size!",
       },
       {
         condition:
@@ -781,7 +798,13 @@ const JobCardForm = ({
       );
 
       setSelectedProcesses(data?.processDetails?.map((p) => p.processId) || []);
-      setSelectedPrinting(data?.printingDetails?.map((p) => p.processId) || []);
+      setSelectedPrinting(
+        data?.printingDetails?.map((p) => ({
+          processId: p.processId,
+          isFront: p.isFront,
+          isFrontAndBack: p.isFrontAndBack,
+        })) || [],
+      );
       setSelectedFinishing(
         data?.finishingProcesses?.map((f) => f.processId) || [],
       );
@@ -815,7 +838,8 @@ const JobCardForm = ({
                   : r.isFrontAndBack
                     ? "frontback"
                     : "";
-                return `${r.type}:${r.processId}${sub ? `:${sub}` : ""}`;
+                const pid = r.type === "die" ? data?.dieId : r.processId;
+                return `${r.type}:${pid}${sub ? `:${sub}` : ""}`;
               })
           : [],
       );
@@ -1119,7 +1143,9 @@ const JobCardForm = ({
               setValue={setFollowUpId}
               required
               readOnly={readOnly}
-              disabled={isDisabledPermission || readOnly}
+              disabled={
+                isDisabledPermission || readOnly || childRecord.current > 0
+              }
             />
           </div>
           <div className="w-40">
@@ -1134,7 +1160,9 @@ const JobCardForm = ({
               setValue={setDesignerId}
               required
               readOnly={readOnly}
-              disabled={isDisabledPermission || readOnly}
+              disabled={
+                isDisabledPermission || readOnly || childRecord.current > 0
+              }
             />
           </div>
         </div>
@@ -1153,7 +1181,7 @@ const JobCardForm = ({
               readOnly={readOnly}
               className="w-full text-right"
               onFocus={(e) => e.target.select()}
-              disabled={isDisabledPermission}
+              disabled={isDisabledPermission || childRecord.current > 0}
             />
           </div>
           <div className="w-28">
@@ -1165,7 +1193,7 @@ const JobCardForm = ({
               className="w-full text-right"
               type="number"
               onFocus={(e) => e.target.select()}
-              disabled={isDisabledPermission}
+              disabled={isDisabledPermission || childRecord.current > 0}
             />
           </div>
         </div>
@@ -1227,7 +1255,7 @@ const JobCardForm = ({
   const gridItemsContent = (
     <div className="h-full overflow-auto">
       {itemType !== "LABEL" && (
-        <div className="grid grid-cols-4 gap-x-2 items-start w-full">
+        <div className="grid grid-cols-4 gap-x-2 items-stretch w-full">
           {/* COL span-2: Board + Printing + Plate */}
           <div className="flex flex-col gap-2 col-span-2">
             <SectionCard title="Board & Cutting Details" overflow={false}>
@@ -1290,7 +1318,7 @@ const JobCardForm = ({
               </div>
             </SectionCard>
 
-            <SectionCard title="Plate Details">
+            <SectionCard title="Plate Details" className="flex-1 flex flex-col">
               <div className="grid grid-cols-5 gap-x-3 items-center">
                 <div className="w-72 px-1">
                   <DropdownNew
@@ -1351,9 +1379,29 @@ const JobCardForm = ({
                     View Size Details
                   </button>
                 </div> */}
+                <CheckBox
+                  name="Old Plate"
+                  value={isOldPlate}
+                  setValue={(val) => {
+                    setIsOldPlate(val);
+                    if (val) setIsNewPlate(false);
+                  }}
+                  readOnly={readOnly}
+                  disabled={isDisabledPermission}
+                />
+                <CheckBox
+                  name="New Plate"
+                  value={isNewPlate}
+                  setValue={(val) => {
+                    setIsNewPlate(val);
+                    if (val) setIsOldPlate(false);
+                  }}
+                  readOnly={readOnly}
+                  disabled={isDisabledPermission}
+                />
               </div>
 
-              <div className="mt-1 border border-slate-200 rounded-lg p-3 bg-white h-[250px] overflow-y-auto">
+              <div className="mt-1 border border-slate-200 rounded-lg p-3 bg-white flex-1 overflow-y-auto">
                 <h4 className="text-[13px] font-semibold text-slate-800 mb-2">
                   Plate Set Details
                 </h4>
@@ -1368,7 +1416,7 @@ const JobCardForm = ({
                           Machine Name
                         </th>
                         <th className="sticky top-0 z-20 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-32">
-                          Plate Name
+                          Plate Size
                         </th>
                         <th className="sticky top-0 z-20 border-b border-r border-slate-200 px-1 py-1 text-center text-[11px] font-bold text-slate-700 uppercase w-40">
                           Description
@@ -1570,7 +1618,10 @@ const JobCardForm = ({
                 ))}
               </div>
             </SectionCard>
-            <SectionCard title="Lamination Details " className="h-[347px]">
+            <SectionCard
+              title="Lamination Details "
+              className="flex-1 flex flex-col"
+            >
               {laminationList?.length > 0 ? (
                 <>
                   <LVHeader />
@@ -1648,44 +1699,77 @@ const JobCardForm = ({
             </SectionCard>
 
             <SectionCard title="Printing Details">
-              <div className="grid grid-cols-2 gap-y-4">
-                {printingList?.map((item) => (
+              {printingList?.length > 0 ? (
+                <>
+                  <LVHeader />
+                  {printingList.map((item) => {
+                    const sel = selectedPrinting.find(
+                      (p) => p.processId === item.id,
+                    );
+                    return (
+                      <LVRow
+                        key={item.id}
+                        item={item}
+                        selected={sel}
+                        onMain={() => toggleLV(setSelectedPrinting, item.id)}
+                        onFront={() =>
+                          toggleLVProp(setSelectedPrinting, item.id, "isFront")
+                        }
+                        onFrontBack={() =>
+                          toggleLVProp(
+                            setSelectedPrinting,
+                            item.id,
+                            "isFrontAndBack",
+                          )
+                        }
+                        readOnly={
+                          readOnly ||
+                          isDisabledPermission ||
+                          isPrintingItemLocked(item.id)
+                        }
+                      />
+                    );
+                  })}
+                </>
+              ) : (
+                <p className="text-xs text-slate-400 italic">
+                  No printing options configured.
+                </p>
+              )}
+            </SectionCard>
+            <SectionCard title="Die Details" className="flex-1 flex flex-col">
+              <div className="grid grid-cols-2 gap-y-4 mb-4">
+                {dieProcessList?.map((item) => (
                   <CheckBox
                     key={item.id}
                     name={item.name}
-                    value={selectedPrinting.includes(item.id)}
-                    setValue={() => toggleArr(setSelectedPrinting, item.id)}
+                    value={selectedProcesses.includes(item.id)}
+                    setValue={() => {
+                      setSelectedProcesses((prev) => {
+                        const isAlreadySelected = prev.includes(item.id);
+                        // Remove any other die processes to ensure only one is ticked
+                        const filtered = prev.filter(
+                          (pId) => !dieProcessList.some((dp) => dp.id === pId),
+                        );
+
+                        if (isAlreadySelected) {
+                          // Toggle off
+                          return filtered;
+                        } else {
+                          // Toggle on (replacing any previously selected die process)
+                          return [...filtered, item.id];
+                        }
+                      });
+                    }}
                     readOnly={readOnly}
                     disabled={
-                      isDisabledPermission || isPrintingItemLocked(item.id)
+                      isDisabledPermission || isProcessItemLocked(item.id)
                     }
                   />
                 ))}
               </div>
-            </SectionCard>
-            <SectionCard title="Die Details" className="h-[220px]">
+
               <div className="grid grid-cols-3 gap-x-1 items-center">
-                <div className="col-span-2">
-                  <Field label="Die Details">
-                    <DropdownWithModal
-                      name=""
-                      options={dropDownListObject(
-                        id
-                          ? dieList?.data
-                          : dieList?.data?.filter((i) => i?.active),
-                        "name",
-                        "id",
-                      )}
-                      value={dieId}
-                      setValue={setDieId}
-                      readOnly={readOnly}
-                      addNewLabel="+ Add Die"
-                      childComponent={DieMaster}
-                      addNewModalWidth="w-[30%] h-[45%]"
-                      disabled={isDisabledPermission}
-                    />
-                  </Field>
-                </div>
                 <div className="col-span-1">
                   <Field label="Die Method" required={true}>
                     <DropdownInput
@@ -1702,7 +1786,7 @@ const JobCardForm = ({
                     />
                   </Field>
                 </div>
-                <div className="col-span-3">
+                <div className="col-span-2">
                   <Field label="Description" required={true}>
                     <TextInput
                       name=""
@@ -1711,7 +1795,7 @@ const JobCardForm = ({
                       readOnly={readOnly}
                       type="text"
                       className="w-full text-left"
-                      disabled={isDisabledPermission || isCuttingLocked}
+                      disabled={isDisabledPermission || routeFieldsLocked}
                       required={true}
                     />
                   </Field>
@@ -1739,7 +1823,7 @@ const JobCardForm = ({
       )}
 
       {itemType === "LABEL" && (
-        <div className="grid grid-cols-3 items-start gap-x-2 w-full h-full">
+        <div className="grid grid-cols-3 gap-x-2 w-full h-full">
           <div className="h-full">
             <SectionCard title="Label Details" className=" h-full">
               <div className="flex gap-16">
@@ -1949,18 +2033,18 @@ const JobCardForm = ({
                       beforeChange={() => setBlockDate(null)}
                     />
                   </div>
-                  {block === "OLD" && (
-                    <div>
-                      <DateInputNew
-                        name="Block Date"
-                        value={blockDate}
-                        setValue={setBlockDate}
-                        disabled={readOnly || isDisabledPermission}
-                        required={false}
-                        type="date"
-                      />
-                    </div>
-                  )}
+                  {/* {block === "OLD" && ( */}
+                  <div>
+                    <DateInputNew
+                      name="Block Date"
+                      value={blockDate}
+                      setValue={setBlockDate}
+                      disabled={readOnly || isDisabledPermission}
+                      required={false}
+                      type="date"
+                    />
+                  </div>
+                  {/* )} */}
                 </div>
               </div>
             </SectionCard>
@@ -2065,7 +2149,7 @@ const JobCardForm = ({
             selectedProcesses={selectedProcesses}
             laminations={laminations}
             varnishes={varnishes}
-            defaultList={defaultList}
+            defaultList={[...(defaultList || []), ...(dieProcessList || [])]}
             laminationList={laminationList}
             varnishList={varnishList}
             processRoute={processRoute}
@@ -2083,6 +2167,8 @@ const JobCardForm = ({
             isAmendment={isAmendment}
             setIsAmendment={setIsAmendment}
             dbProcessRoute={dbProcessRoute}
+            dieId={dieId}
+            dieList={dieList?.data || []}
           />
         </div>
         <div className="border border-slate-200 p-1 bg-white rounded-md shadow-sm w-1/4">
@@ -2450,7 +2536,7 @@ const JobCardForm = ({
             machineList={machineList}
             plateList={plateList}
             dieList={dieList}
-            defaultList={defaultList}
+            defaultList={[...(defaultList || []), ...(dieProcessList || [])]}
             laminationList={laminationList}
             varnishList={varnishList}
             branchData={branchData?.data}

@@ -12,6 +12,9 @@ async function get(req) {
       _count: {
         select: {
           machineDetails: true,
+          productionempPunch: true,
+          takenMachines: true,
+          PlateDetails: true,
         },
       },
       Size: true,
@@ -24,7 +27,11 @@ async function get(req) {
     statusCode: 0,
     data: data.map((machine) => ({
       ...machine,
-      childRecord: machine._count.machineDetails,
+      childRecord:
+        machine._count.machineDetails +
+        machine._count.productionempPunch +
+        machine._count.takenMachines +
+        machine._count.PlateDetails,
     })),
   };
 }
@@ -38,12 +45,19 @@ async function getOne(id) {
       _count: {
         select: {
           machineDetails: true,
+          productionempPunch: true,
+          takenMachines: true,
+          PlateDetails: true,
         },
       },
     },
   });
   if (!data) return NoRecordFound("machine");
-  const childRecord = data._count.machineDetails;
+  const childRecord =
+    data._count.machineDetails +
+    data._count.productionempPunch +
+    data._count.takenMachines +
+    data._count.PlateDetails;
 
   return { statusCode: 0, data: { ...data, ...{ childRecord } } };
 }

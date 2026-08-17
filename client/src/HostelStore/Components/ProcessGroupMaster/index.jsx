@@ -125,7 +125,9 @@ export default function Form({
   );
 
   useEffect(() => {
-    syncFormWithDb(singleData?.data);
+    if (id && singleData?.data) {
+      syncFormWithDb(singleData.data);
+    }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
   useEffect(() => {
@@ -164,11 +166,13 @@ export default function Form({
       }
       if (nextProcess === "new") {
         syncFormWithDb(undefined);
+        setId("");
         onNew();
         processNameRef?.current?.focus();
       } else {
         setForm(false);
         syncFormWithDb(undefined);
+        setId("");
       }
 
       Swal.fire({
@@ -328,7 +332,7 @@ export default function Form({
     {
       header: "S.No",
       accessor: (item, index) => parseInt(index) + parseInt(1),
-      className: "font-medium text-gray-900 w-[10px] py-1",
+      className: "font-medium text-center text-gray-900 w-[10px] py-1",
     },
     {
       header: "Process Group Name",
@@ -504,7 +508,7 @@ export default function Form({
         <div className="flex items-center">
           <button
             onClick={handleCreate}
-            className="bg-white border font-segoe text-xs px-2 border-green-600 text-green-600 hover:bg-green-700 hover:text-white rounded-md shadow transition-colors duration-200 flex items-center gap-2"
+            className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
           >
             + Add New Process Group
           </button>
@@ -526,7 +530,7 @@ export default function Form({
         <Modal
           isOpen={form}
           form={form}
-          widthClass={"w-[600px] h-[500px]"}
+          widthClass={"w-[650px] h-[500px]"}
           onClose={() => {
             setForm(false);
             syncFormWithDb(undefined);

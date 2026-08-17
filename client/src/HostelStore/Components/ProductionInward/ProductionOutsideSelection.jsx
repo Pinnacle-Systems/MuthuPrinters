@@ -145,6 +145,7 @@ const ProductionOutwardSelection = ({
 }) => {
   const groups = groupByOutward(tempItems);
   const allSelected = isAllSelected(inwardDetails, tempItems);
+  console.log(groups, "groups");
 
   return (
     <div className="h-full flex flex-col bg-[#f1f1f0]">

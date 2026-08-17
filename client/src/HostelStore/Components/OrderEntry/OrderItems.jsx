@@ -4,34 +4,18 @@ import { ItemGroup, Size, StyleItemMaster } from "..";
 import { findFromList } from "../../../Utils/helper";
 import { Plus } from "lucide-react";
 import { ItemSubGroupMaster } from "../../../Basic/components";
+import TaxDetailsFullTemplate from "../TaxDetailsCompleteTemplate";
+import Swal from "sweetalert2";
+import { formatCurrencyAmount } from "../../../Utils/helper";
+import Modal from "../../../UiComponents/Modal";
+import { VIEW } from "../../../icons";
 
-export const DEFAULT_ROW_COUNT = 10;
-
-export const EMPTY_SIZE_ROW = () => ({ sizeId: null, qty: "" });
-
-export const makeEmptyRow = () => ({
-  styleItemId: "",
-  uomId: "",
-  hsnId: "",
-  orderQty: "",
-  itemGroupId: "",
-  type: "",
-  sizeBreakup: [EMPTY_SIZE_ROW()], // 1 size row by default
-  trackingType: "None",
-});
-
-// Call this in parent wherever you build orderItems before setOrderItems
-export const padRows = (items = [], total = DEFAULT_ROW_COUNT) => {
-  const result = items.map((row) => ({
-    ...row,
-    sizeBreakup:
-      Array.isArray(row.sizeBreakup) && row.sizeBreakup.length > 0
-        ? row.sizeBreakup
-        : [EMPTY_SIZE_ROW()],
-  }));
-  while (result.length < total) result.push(makeEmptyRow());
-  return result;
-};
+import {
+  DEFAULT_ROW_COUNT,
+  EMPTY_SIZE_ROW,
+  makeEmptyRow,
+  padRows,
+} from "./OrderItemsUtils";
 
 const OrderItems = ({
   orderItems,
@@ -46,8 +30,18 @@ const OrderItems = ({
   hsnList,
   childRecord,
   itemSubGroupList,
+  enrichedItems,
+  taxTemplateId,
+  conversionType,
+  isSupplierOutside,
+  orderType,
+  isCustomerExport,
+  currencyCode,
+  isCurrencySymbol,
 }) => {
   const [contextMenu, setContextMenu] = useState(null);
+  const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
+  const [focusedField, setFocusedField] = useState(null);
 
   /* ── Pad rows whenever orderItems arrives with fewer than DEFAULT_ROW_COUNT ── */
   useEffect(() => {
@@ -77,16 +71,34 @@ const OrderItems = ({
       if (field === "styleItemId" && value) {
         const found = styleItemList?.data?.find((i) => i.id === value);
         if (found) {
+          const hsnId = found.hsnId || "";
+          const hsnObj = hsnList?.data?.find((h) => h.id === hsnId);
           row = {
             ...row,
             // itemGroupId: found.itemGroupId || "",
             uomId: found.uomId || "",
-            hsnId: found.hsnId || "",
+            hsnId: hsnId,
+            taxPercent: hsnObj ? hsnObj.tax : "",
             sizeBreakup: id ? [...(row.sizeBreakup || [])] : [EMPTY_SIZE_ROW()],
             orderQty: row.orderQty,
           };
         }
       }
+
+      if (field === "price" || field === "orderQty" || field === "dozen") {
+        const qty = field === "orderQty" ? value : row.orderQty;
+        const price = field === "price" ? value : row.price;
+        const dozen = field === "dozen" ? value : qty / 12;
+        if (field !== "dozen") {
+          row.dozen = dozen ? Number(dozen).toFixed(2) : "";
+        }
+        if (conversionType === "DOZEN") {
+          row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
+        } else {
+          row.amount = qty && price ? (qty * price).toFixed(2) : "";
+        }
+      }
+
       rows[index] = row;
       return rows;
     });
@@ -98,10 +110,58 @@ const OrderItems = ({
       const rows = [...prev];
       const row = { ...rows[rowIndex] };
       const breakup = [...(row.sizeBreakup || [])];
+
+      if (field === "sizeId" && value) {
+        const isDuplicate = breakup.some(
+          (item, idx) => idx !== sizeIndex && item.sizeId === value,
+        );
+        if (isDuplicate) {
+          Swal.fire({
+            icon: "warning",
+            title: "Duplicate Size",
+            text: "This size is already selected for this item. Please select a different size.",
+          });
+          return prev;
+        }
+      }
+
+      if (field === "qty") {
+        const newValue = Number(value) || 0;
+        const currentSum = breakup.reduce(
+          (s, i, idx) =>
+            s + (idx === sizeIndex ? newValue : Number(i.qty) || 0),
+          0,
+        );
+
+        if (
+          orderType === "AGAINSTPI" &&
+          row.piQty !== undefined &&
+          currentSum > row.piQty
+        ) {
+          Swal.fire({
+            icon: "warning",
+            title: "Quantity Exceeded",
+            text: `Sum of size quantities (${currentSum}) cannot exceed PI quantity (${row.piQty}).`,
+          });
+          return prev;
+        }
+      }
+
       breakup[sizeIndex] = { ...breakup[sizeIndex], [field]: value };
       row.sizeBreakup = breakup;
       if (field === "qty") {
-        row.orderQty = breakup.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+        if (orderType !== "AGAINSTPI") {
+          const orderQty = breakup.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+          row.orderQty = orderQty;
+          const price = row.price;
+          const dozen = orderQty / 12;
+          row.dozen = dozen ? dozen.toFixed(2) : "";
+          if (conversionType === "DOZEN") {
+            row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
+          } else {
+            row.amount = orderQty && price ? (orderQty * price).toFixed(2) : "";
+          }
+        }
       }
       rows[rowIndex] = row;
       return rows;
@@ -124,10 +184,12 @@ const OrderItems = ({
       const row = { ...rows[rowIndex] };
       const breakup = row.sizeBreakup.filter((_, i) => i !== sizeIndex);
       row.sizeBreakup = breakup.length > 0 ? breakup : [EMPTY_SIZE_ROW()];
-      row.orderQty = row.sizeBreakup.reduce(
-        (s, i) => s + (Number(i.qty) || 0),
-        0,
-      );
+      if (orderType !== "AGAINSTPI") {
+        row.orderQty = row.sizeBreakup.reduce(
+          (s, i) => s + (Number(i.qty) || 0),
+          0,
+        );
+      }
       rows[rowIndex] = row;
       return rows;
     });
@@ -141,6 +203,25 @@ const OrderItems = ({
   /* ── render ── */
   return (
     <>
+      <Modal
+        isOpen={Number.isInteger(currentSelectedIndex)}
+        onClose={() => {
+          setCurrentSelectedIndex("");
+        }}
+      >
+        <TaxDetailsFullTemplate
+          readOnly={readOnly || orderType === "AGAINSTPI"}
+          taxTypeId={taxTemplateId}
+          currentIndex={currentSelectedIndex}
+          setCurrentSelectedIndex={setCurrentSelectedIndex}
+          poItems={enrichedItems?.items || orderItems}
+          handleInputChange={handleInputChange}
+          id={id}
+          isNewVersion={false}
+          isSupplierOutside={isSupplierOutside}
+          currencyCode={currencyCode || isCurrencySymbol}
+        />
+      </Modal>
       <div className="w-full h-full overflow-y-auto bg-white">
         <table className="table-fixed min-h-full bg-white border-collapse">
           <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10 text-[12px]">
@@ -169,6 +250,24 @@ const OrderItems = ({
               <th className="w-32 px-2 py-2 text-center font-medium border border-gray-300 ">
                 Label Width
               </th>
+              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                Dozen
+              </th>
+              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                Price {isCurrencySymbol && `(${isCurrencySymbol})`}
+                <span className="text-red-500">*</span>
+              </th>
+              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                Gross
+              </th>
+              {/* <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                  Net Amount
+              </th> */}
+              {!isCustomerExport && (
+                <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
+                  Tax
+                </th>
+              )}
               {/* Actions column — header label only, no button */}
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
                 Actions
@@ -201,10 +300,14 @@ const OrderItems = ({
 
               return sizeRows.map((sizeRow, sizeIndex) => (
                 <tr
-                  key={`${index}-${sizeIndex}`}
+                  key={`${row.rowId || index}-${sizeRow.rowId || sizeIndex}`}
                   className={`${rowBg} border-b border-gray-200 h-7 cursor-pointer`}
                   onContextMenu={(e) => {
-                    if (!readOnly && sizeIndex === 0)
+                    if (
+                      !readOnly &&
+                      orderType !== "AGAINSTPI" &&
+                      sizeIndex === 0
+                    )
                       handleRightClick(e, index);
                   }}
                 >
@@ -229,7 +332,11 @@ const OrderItems = ({
                           options={(itemGroupList?.data || [])
                             .filter((i) => (id ? true : i.active))
                             .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly || childRecord?.current > 0}
+                          readOnly={
+                            readOnly ||
+                            childRecord?.current > 0 ||
+                            orderType === "AGAINSTPI"
+                          }
                           placeholder=""
                           onBlur={() =>
                             handleInputChange(
@@ -261,10 +368,14 @@ const OrderItems = ({
                             .filter(
                               (i) =>
                                 (id ? true : i.active) &&
-                                i.itemGroupId === row.itemGroupId
+                                i.itemGroupId === row.itemGroupId,
                             )
                             .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly || childRecord?.current > 0}
+                          readOnly={
+                            readOnly ||
+                            childRecord?.current > 0 ||
+                            orderType === "AGAINSTPI"
+                          }
                           placeholder=""
                           onBlur={() =>
                             handleInputChange(
@@ -302,7 +413,11 @@ const OrderItems = ({
                                   : true),
                             )
                             .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly || childRecord?.current > 0}
+                          readOnly={
+                            readOnly ||
+                            childRecord?.current > 0 ||
+                            orderType === "AGAINSTPI"
+                          }
                           placeholder=""
                           onBlur={() =>
                             handleInputChange(
@@ -318,7 +433,7 @@ const OrderItems = ({
                           addNew={true}
                           childComponent={StyleItemMaster}
                           addNewModalWidth="w-[50%] h-[57%]"
-                          // nextRef={requirementRef}
+                        // nextRef={requirementRef}
                         />
                       </td>
 
@@ -359,14 +474,141 @@ const OrderItems = ({
                             )
                           }
                           className="w-full text-left px-1 bg-transparent text-[11px] outline-none focus:bg-white"
+                          readOnly={readOnly || orderType === "AGAINSTPI"}
                         />
                       </td>
+                      <td
+                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium"
+                        rowSpan={rowSpan}
+                      >
+                        <input
+                          type="number"
+                          className="text-right px-1 w-full table-data-input outline-none bg-transparent focus:bg-white"
+                          value={
+                            focusedField === `dozen-${index}`
+                              ? (row?.dozen ?? "")
+                              : row?.dozen
+                                ? Number(row.dozen).toFixed(2)
+                                : ""
+                          }
+                          onChange={(e) =>
+                            handleInputChange(e.target.value, index, "dozen")
+                          }
+                          onFocus={(e) => {
+                            e.target.select();
+                            setFocusedField(`dozen-${index}`);
+                          }}
+                          onBlur={(e) => {
+                            const val = e.target.value;
+                            handleInputChange(
+                              val ? Number(val).toFixed(2) : "",
+                              index,
+                              "dozen",
+                            );
+                            setFocusedField(null);
+                          }}
+                          disabled={true}
+                        />
+                      </td>
+                      <td
+                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium"
+                        rowSpan={rowSpan}
+                      >
+                        <input
+                          type={
+                            focusedField === `price-${index}`
+                              ? "number"
+                              : "text"
+                          }
+                          step="0.01"
+                          className="text-right px-1 w-full table-data-input outline-none bg-transparent focus:bg-white"
+                          value={
+                            focusedField === `price-${index}`
+                              ? (row.price ?? "")
+                              : row.price
+                                ? formatCurrencyAmount(
+                                  row.price,
+                                  currencyCode || isCurrencySymbol,
+                                )
+                                : ""
+                          }
+                          onChange={(e) => {
+                            handleInputChange(
+                              e.target.value === "" ? "" : e.target.value,
+                              index,
+                              "price",
+                            );
+                          }}
+                          readOnly={readOnly || orderType === "AGAINSTPI"}
+                          onFocus={(e) => {
+                            e.target.select();
+                            setFocusedField(`price-${index}`);
+                          }}
+                          onBlur={(e) => {
+                            const num = parseFloat(e.target.value);
+                            handleInputChange(
+                              num ? Number(num).toFixed(2) : "",
+                              index,
+                              "price",
+                            );
+                            setFocusedField(null);
+                          }}
+                        />
+                      </td>
+                      <td
+                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium text-black"
+                        rowSpan={rowSpan}
+                      >
+                        <span className="pr-1">
+                          {isCurrencySymbol && row.styleItemId
+                            ? ` ${isCurrencySymbol}`
+                            : ""}
+                        </span>
+                        {row.styleItemId
+                          ? formatCurrencyAmount(
+                            row.amount || 0,
+                            currencyCode || isCurrencySymbol,
+                          )
+                          : ""}
+                      </td>
+                      {/* <td
+                        className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium text-black"
+                        rowSpan={rowSpan}
+                      >
+                        <span className="pr-1">{isCurrencySymbol && row.styleItemId ? ` ${isCurrencySymbol}` : ""}</span>
+                        {row.styleItemId ? formatCurrencyAmount(enrichedItems?.items?.[index]?.totals?.net || 0, currencyCode || isCurrencySymbol) : ""}
+                      </td> */}
+                      {!isCustomerExport && (
+                        <td
+                          className="text-[11px] border border-gray-300 text-center items-center pt-2 font-medium"
+                          rowSpan={rowSpan}
+                        >
+                          <button
+                            disabled={!row.styleItemId}
+                            className="text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
+                            onClick={() => {
+                              if (!taxTemplateId) {
+                                return Swal.fire({
+                                  title: "Information",
+                                  text: "Please select Tax Type",
+                                  icon: "info",
+                                  confirmButtonColor: "#3085d6",
+                                });
+                              }
+                              setCurrentSelectedIndex(index);
+                            }}
+                            type="button"
+                          >
+                            {VIEW}
+                          </button>
+                        </td>
+                      )}
                       {/* Per-row: Add only (no delete in cell) */}
                       <td
                         className="w-12 border border-gray-300 align-top pt-1 bg-gray-50"
                         rowSpan={rowSpan}
                       >
-                        {!readOnly && (
+                        {!readOnly && orderType !== "AGAINSTPI" && (
                           <div className="flex items-center justify-center">
                             <button
                               onClick={addMainRow}
@@ -395,7 +637,11 @@ const OrderItems = ({
                       options={(sizeList?.data || [])
                         .filter((i) => (id ? true : i.active))
                         .map((i) => ({ label: i.name, value: i.id }))}
-                      readOnly={readOnly || childRecord?.current > 0}
+                      readOnly={
+                        readOnly ||
+                        childRecord?.current > 0 ||
+                        orderType === "AGAINSTPI"
+                      }
                       placeholder=""
                       addNew={true}
                       childComponent={Size}
@@ -426,7 +672,9 @@ const OrderItems = ({
                         )
                       }
                       onFocus={(e) => e.target.select()}
-                      disabled={readOnly || childRecord?.current > 0}
+                      disabled={readOnly ||
+                        childRecord?.current > 0 ||
+                        orderType === "AGAINSTPI"}
                       placeholder="0"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -445,44 +693,45 @@ const OrderItems = ({
                     />
                   </td>
                   <td className="border border-gray-200 text-[11px] bg-indigo-50/20">
-                    {!readOnly && (
-                      <div className="flex items-center justify-center gap-0.5 px-0.5">
-                        <button
-                          onClick={() => addSizeRow(index)}
-                          className="flex items-center justify-center p-0.5 bg-blue-50 hover:bg-blue-100 rounded"
-                          title="Add size row"
-                          tabIndex={-1}
-                        >
-                          <Plus size={13} className="text-blue-700" />
-                        </button>
-                        <button
-                          onClick={() => deleteSizeRow(index, sizeIndex)}
-                          className="flex items-center justify-center p-0.5 bg-red-50 hover:bg-red-100 rounded"
-                          title="Delete size row"
-                          tabIndex={-1}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-3 w-3 text-red-700"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
+                    {!readOnly && !childRecord?.current > 0 &&
+                      orderType !== "AGAINSTPI" && (
+                        <div className="flex items-center justify-center gap-0.5 px-0.5">
+                          <button
+                            onClick={() => addSizeRow(index)}
+                            className="flex items-center justify-center p-0.5 bg-blue-50 hover:bg-blue-100 rounded"
+                            title="Add size row"
+                            tabIndex={-1}
                           >
-                            <path
-                              fillRule="evenodd"
-                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
+                            <Plus size={13} className="text-blue-700" />
+                          </button>
+                          <button
+                            onClick={() => deleteSizeRow(index, sizeIndex)}
+                            className="flex items-center justify-center p-0.5 bg-red-50 hover:bg-red-100 rounded"
+                            title="Delete size row"
+                            tabIndex={-1}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-3 w-3 text-red-700"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                   </td>
                 </tr>
               ));
             })}
           </tbody>
 
-          <tfoot>
+          <tfoot className="sticky bottom-0 z-10 shadow-[0_-1px_2px_rgba(0,0,0,0.1)]">
             <tr className="bg-gray-100 h-7 font-medium text-gray-800 text-[12px]">
               <td
                 className="text-right px-2 border border-gray-300 font-medium"
@@ -493,7 +742,34 @@ const OrderItems = ({
               <td className="text-right border border-gray-300 px-1 font-medium">
                 {orderItems?.reduce((s, r) => s + (Number(r.orderQty) || 0), 0)}
               </td>
-              <td className="border border-gray-300 bg-gray-50" />
+              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+              <td className="text-right border border-gray-300 px-1 font-medium">
+                {orderItems
+                  ?.reduce((s, r) => s + (Number(r.dozen) || 0), 0)
+                  .toFixed(2)}
+              </td>
+              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+              <td className="text-right border border-gray-300 px-1 font-medium text-black">
+                {isCurrencySymbol ? `${isCurrencySymbol} ` : ""}
+                {formatCurrencyAmount(
+                  orderItems?.reduce((s, r) => s + (Number(r.amount) || 0), 0),
+                  currencyCode || isCurrencySymbol,
+                )}
+              </td>
+              {/* <td className="text-right border border-gray-300 px-1 font-medium text-black">
+                {isCurrencySymbol ? `${isCurrencySymbol} ` : ""}
+                {formatCurrencyAmount(
+                  enrichedItems?.items?.reduce(
+                    (s, r) => s + (Number(r.totals?.net) || 0),
+                    0,
+                  ),
+                  currencyCode || isCurrencySymbol,
+                )}
+              </td> */}
+              {!isCustomerExport && (
+                <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+              )}
+              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
               <td
                 colSpan={2}
                 className="border border-gray-300 bg-indigo-50/30 text-right px-2 text-[11px] text-indigo-600"
@@ -515,7 +791,7 @@ const OrderItems = ({
                 )}
               </td>
               <td
-                colSpan={1}
+                colSpan={2}
                 className="border border-gray-300 bg-indigo-50/30 text-right px-2 text-[11px] text-indigo-600"
               ></td>
             </tr>
