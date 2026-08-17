@@ -1392,23 +1392,132 @@ const PurchaseOrderForm = ({
             templateText: item?.description || "",
           })) || []
         }
+        hasSummaryTitle={
+          <span className="block text-center w-full">Summary</span>
+        }
+        sectionColClass="md:col-span-4"
+        summaryColClass="md:col-span-4"
         totalsRows={[
           {
-            key: "taxableAmount",
-            label: "Taxable Amount",
-            value: `Rs.${parseFloat(totals?.taxable || 0).toFixed(2)}`,
-            summaryColumn: "right",
-          },
-          {
-            key: "netAmount",
-            label: "Net Amount",
-            value: `Rs.${parseFloat(totals?.net || 0).toFixed(2)}`,
-            summaryColumn: "right",
-            emphasized: true,
+            key: "summary_grid",
+            label: "",
+            valueContainerClassName: "w-full",
+            renderValue: () => {
+              const taxTotals = (totals?.slabBreakup || []).reduce(
+                (acc, curr) => {
+                  const type = curr?.tax?.split(" ")[0] || curr?.tax;
+                  acc[type] = (acc[type] || 0) + (curr.amount || 0);
+                  return acc;
+                },
+                {},
+              );
+
+              return (
+                <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1 text-[11px]">
+                  {/* Left Column */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between w-full max-w-[280px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Total Gross</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[110px]">
+                        {`Rs. ${parseFloat(totals?.gross || 0).toFixed(2)}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[280px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Total Discount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[110px]">
+                        {`Rs. ${parseFloat(
+                          (totals?.itemDiscount || 0) +
+                            (totals?.overallDiscount || 0) >
+                            0
+                            ? (totals?.itemDiscount || 0) +
+                                (totals?.overallDiscount || 0)
+                            : 0,
+                        ).toFixed(2)}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[280px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Taxable Amount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[110px]">
+                        {`Rs. ${parseFloat(totals?.taxable || 0).toFixed(2)}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="flex flex-col gap-1">
+                    {taxTotals.CGST !== undefined &&
+                    taxTotals.SGST !== undefined ? (
+                      <div className="flex items-center justify-between w-full max-w-[280px]">
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-800 w-[32px]">CGST</span>
+                          <span className="text-slate-800">:</span>
+                          <span className="font-medium text-slate-800">
+                            {`Rs. ${parseFloat(taxTotals.CGST || 0).toFixed(2)}`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-800 w-[32px]">SGST</span>
+                          <span className="text-slate-800">:</span>
+                          <span className="font-medium text-slate-800 text-right">
+                            {`Rs. ${parseFloat(taxTotals.SGST || 0).toFixed(2)}`}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      Object.keys(taxTotals).map((type) => (
+                        <div
+                          key={type}
+                          className="flex items-center justify-between w-full max-w-[280px]"
+                        >
+                          <div className="flex justify-between w-[130px] text-slate-800">
+                            <span>{type}</span>
+                            <span>:</span>
+                          </div>
+                          <span className="font-medium text-slate-800 text-right w-[110px]">
+                            {`Rs. ${parseFloat(taxTotals[type] || 0).toFixed(2)}`}
+                          </span>
+                        </div>
+                      ))
+                    )}
+
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Round Off</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[72px]">
+                        {`Rs. ${parseFloat(totals?.roundOff || 0).toFixed(2)}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                        <span>Net Amount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-bold text-indigo-700 text-right w-[72px]">
+                        {`Rs. ${parseFloat(totals?.net || 0).toFixed(2)}`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            },
+            summaryColumn: "left",
+            emphasized: false,
           },
         ]}
-        extraTotalsContent={taxBreakdownContent}
-        extraTotalsContentColumn="right"
       />
       <TransactionActions
         leftActions={leftActions}
@@ -1440,23 +1549,132 @@ const PurchaseOrderForm = ({
             templateText: item?.description || "",
           })) || []
         }
+        hasSummaryTitle={
+          <span className="block text-center w-full">Summary</span>
+        }
+        sectionColClass="md:col-span-4"
+        summaryColClass="md:col-span-4"
         totalsRows={[
           {
-            key: "taxableAmount",
-            label: "Taxable Amount",
-            value: `Rs.${parseFloat(totals?.taxable || 0).toFixed(2)}`,
-            summaryColumn: "right",
-          },
-          {
-            key: "netAmount",
-            label: "Net Amount",
-            value: `Rs.${parseFloat(totals?.net || 0).toFixed(2)}`,
-            summaryColumn: "right",
-            emphasized: true,
+            key: "summary_grid",
+            label: "",
+            valueContainerClassName: "w-full",
+            renderValue: () => {
+              const taxTotals = (totals?.slabBreakup || []).reduce(
+                (acc, curr) => {
+                  const type = curr?.tax?.split(" ")[0] || curr?.tax;
+                  acc[type] = (acc[type] || 0) + (curr.amount || 0);
+                  return acc;
+                },
+                {},
+              );
+
+              return (
+                <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1 text-[11px]">
+                  {/* Left Column */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between w-full max-w-[280px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Total Gross</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[110px]">
+                        {`Rs. ${parseFloat(totals?.gross || 0).toFixed(2)}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[280px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Total Discount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[110px]">
+                        {`Rs. ${parseFloat(
+                          (totals?.itemDiscount || 0) +
+                            (totals?.overallDiscount || 0) >
+                            0
+                            ? (totals?.itemDiscount || 0) +
+                                (totals?.overallDiscount || 0)
+                            : 0,
+                        ).toFixed(2)}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[280px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Taxable Amount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[110px]">
+                        {`Rs. ${parseFloat(totals?.taxable || 0).toFixed(2)}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="flex flex-col gap-1">
+                    {taxTotals.CGST !== undefined &&
+                    taxTotals.SGST !== undefined ? (
+                      <div className="flex items-center justify-between w-full max-w-[280px]">
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-800 w-[32px]">CGST</span>
+                          <span className="text-slate-800">:</span>
+                          <span className="font-medium text-slate-800">
+                            {`Rs. ${parseFloat(taxTotals.CGST || 0).toFixed(2)}`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-800 w-[32px]">SGST</span>
+                          <span className="text-slate-800">:</span>
+                          <span className="font-medium text-slate-800 text-right">
+                            {`Rs. ${parseFloat(taxTotals.SGST || 0).toFixed(2)}`}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      Object.keys(taxTotals).map((type) => (
+                        <div
+                          key={type}
+                          className="flex items-center justify-between w-full max-w-[280px]"
+                        >
+                          <div className="flex justify-between w-[130px] text-slate-800">
+                            <span>{type}</span>
+                            <span>:</span>
+                          </div>
+                          <span className="font-medium text-slate-800 text-right w-[110px]">
+                            {`Rs. ${parseFloat(taxTotals[type] || 0).toFixed(2)}`}
+                          </span>
+                        </div>
+                      ))
+                    )}
+
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Round Off</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                        {`Rs. ${parseFloat(totals?.roundOff || 0).toFixed(2)}`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                        <span>Net Amount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-bold text-indigo-700 text-right w-[65px]">
+                        {`Rs. ${parseFloat(totals?.net || 0).toFixed(2)}`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            },
+            summaryColumn: "left",
+            emphasized: false,
           },
         ]}
-        extraTotalsContent={taxBreakdownContent}
-        extraTotalsContentColumn="right"
         stacked={true}
       />
       <TransactionActions
@@ -1765,15 +1983,6 @@ const PurchaseOrderForm = ({
         onClose={onClose}
         onKeyDown={handleKeyDown}
         header={headerContent}
-        detailsContent={headerContent}
-        detailsTitle="Transaction Details"
-        detailsLayout="compact"
-        detailsLayouts={["compact", "sidebar"]}
-        detailsSummary={transactionDetailsSummary}
-        sidebarDetailsSections={sidebarDetailsSections}
-        sidebarWidthClass="w-[300px]"
-        sidebarFooter={sidebarFooterContent}
-        defaultDetailsCollapsed={true}
         gridItems={
           <PoItems
             id={id}
