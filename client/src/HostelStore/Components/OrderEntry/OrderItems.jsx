@@ -433,7 +433,7 @@ const OrderItems = ({
                           addNew={true}
                           childComponent={StyleItemMaster}
                           addNewModalWidth="w-[50%] h-[57%]"
-                          // nextRef={requirementRef}
+                        // nextRef={requirementRef}
                         />
                       </td>
 
@@ -527,9 +527,9 @@ const OrderItems = ({
                               ? (row.price ?? "")
                               : row.price
                                 ? formatCurrencyAmount(
-                                    row.price,
-                                    currencyCode || isCurrencySymbol,
-                                  )
+                                  row.price,
+                                  currencyCode || isCurrencySymbol,
+                                )
                                 : ""
                           }
                           onChange={(e) => {
@@ -566,9 +566,9 @@ const OrderItems = ({
                         </span>
                         {row.styleItemId
                           ? formatCurrencyAmount(
-                              row.amount || 0,
-                              currencyCode || isCurrencySymbol,
-                            )
+                            row.amount || 0,
+                            currencyCode || isCurrencySymbol,
+                          )
                           : ""}
                       </td>
                       {/* <td
@@ -637,7 +637,11 @@ const OrderItems = ({
                       options={(sizeList?.data || [])
                         .filter((i) => (id ? true : i.active))
                         .map((i) => ({ label: i.name, value: i.id }))}
-                      readOnly={readOnly || childRecord?.current > 0}
+                      readOnly={
+                        readOnly ||
+                        childRecord?.current > 0 ||
+                        orderType === "AGAINSTPI"
+                      }
                       placeholder=""
                       addNew={true}
                       childComponent={Size}
@@ -668,7 +672,9 @@ const OrderItems = ({
                         )
                       }
                       onFocus={(e) => e.target.select()}
-                      disabled={readOnly || childRecord?.current > 0}
+                      disabled={readOnly ||
+                        childRecord?.current > 0 ||
+                        orderType === "AGAINSTPI"}
                       placeholder="0"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -687,37 +693,38 @@ const OrderItems = ({
                     />
                   </td>
                   <td className="border border-gray-200 text-[11px] bg-indigo-50/20">
-                    {!readOnly && (
-                      <div className="flex items-center justify-center gap-0.5 px-0.5">
-                        <button
-                          onClick={() => addSizeRow(index)}
-                          className="flex items-center justify-center p-0.5 bg-blue-50 hover:bg-blue-100 rounded"
-                          title="Add size row"
-                          tabIndex={-1}
-                        >
-                          <Plus size={13} className="text-blue-700" />
-                        </button>
-                        <button
-                          onClick={() => deleteSizeRow(index, sizeIndex)}
-                          className="flex items-center justify-center p-0.5 bg-red-50 hover:bg-red-100 rounded"
-                          title="Delete size row"
-                          tabIndex={-1}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-3 w-3 text-red-700"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
+                    {!readOnly && !childRecord?.current > 0 &&
+                      orderType !== "AGAINSTPI" && (
+                        <div className="flex items-center justify-center gap-0.5 px-0.5">
+                          <button
+                            onClick={() => addSizeRow(index)}
+                            className="flex items-center justify-center p-0.5 bg-blue-50 hover:bg-blue-100 rounded"
+                            title="Add size row"
+                            tabIndex={-1}
                           >
-                            <path
-                              fillRule="evenodd"
-                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
+                            <Plus size={13} className="text-blue-700" />
+                          </button>
+                          <button
+                            onClick={() => deleteSizeRow(index, sizeIndex)}
+                            className="flex items-center justify-center p-0.5 bg-red-50 hover:bg-red-100 rounded"
+                            title="Delete size row"
+                            tabIndex={-1}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-3 w-3 text-red-700"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                   </td>
                 </tr>
               ));

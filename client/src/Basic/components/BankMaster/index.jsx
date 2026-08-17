@@ -48,6 +48,7 @@ export default function Form({
   const [accNo, setAccNo] = useState("");
   const [ifsc, setIfsc] = useState("");
   const [swiftCode, setSwiftCode] = useState("");
+  const [bankHolderName, setBankHolderName] = useState("")
   const [branchId, setBranchId] = useState("");
   const [active, setActive] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -93,6 +94,7 @@ export default function Form({
   const syncFormWithDb = useCallback(
     (data) => {
       setName(data?.name || "");
+      setBankHolderName(data?.bankHolderName || "")
       setAccNo(data?.accNo || "");
       setIfsc(data?.ifsc || "");
       setSwiftCode(data?.swiftCode || "");
@@ -110,7 +112,7 @@ export default function Form({
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
   const data = {
-    name,
+    name, bankHolderName,
     accNo,
     ifsc,
     swiftCode,
@@ -123,7 +125,7 @@ export default function Form({
   };
 
   const validateData = (data) => {
-    if (data.name && data.accNo && data.ifsc && data.branchId) {
+    if (data.name && data.bankHolderName && data.accNo && data.ifsc && data.branchId) {
       return true;
     }
     return false;
@@ -339,6 +341,18 @@ export default function Form({
                 required={true}
                 readOnly={readOnly}
                 ref={bankNameRef}
+                disabled={childRecord.current > 0}
+              />
+            </div>
+            <div className="mb-3 w-3/4">
+              <TextInputNew1
+                name="Bank Holder Name"
+                type="text"
+                value={bankHolderName}
+                setValue={setBankHolderName}
+                required={true}
+                readOnly={readOnly}
+
                 disabled={childRecord.current > 0}
               />
             </div>

@@ -330,11 +330,13 @@ const styles = StyleSheet.create({
 // For domestic: include Tax% and Net Amount
 const getColumns = (isExport) => [
   { label: "S.No", flex: 0.4 },
-  { label: "Description of Goods", flex: 3 },
+  { label: "Description of Goods", flex: 3.8 },
+  { label: "Item Sub Group", flex: 1.6 },
+  { label: "Item Group", flex: 1.6 },
   { label: "HSN", flex: 1.2 },
-  { label: "UOM", flex: 0.8 },
+  // { label: "UOM", flex: 0.8 },
   { label: "Qty", flex: 0.8 },
-  { label: "Dozen", flex: 0.8 },
+  // { label: "Dozen", flex: 0.8 },
   { label: "Price", flex: 1 },
   ...(!isExport ? [{ label: "Tax %", flex: 0.7 }] : []),
   { label: "Gross Amount", flex: 1.2 },
@@ -402,13 +404,16 @@ const ProformaInvoicePrintFormat = ({
   cityList,
   currencyList,
   payTermList,
+  carriageFinalAmt,
 }) => {
   if (!data) return null;
+  console.log(data, "data");
 
   const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
   let currencySymbol =
     findFromList(data?.currencyId, currencyList?.data, "symbol") || "Rs.";
-  if (currencySymbol.includes("₹")) currencySymbol = currencySymbol.replace("₹", "Rs.");
+  if (currencySymbol.includes("₹"))
+    currencySymbol = currencySymbol.replace("₹", "Rs.");
   const currencyCode =
     findFromList(data?.currencyId, currencyList?.data, "code") || "INR";
 
@@ -429,7 +434,22 @@ const ProformaInvoicePrintFormat = ({
 
   // Filter only real items
   const allItems = (data?.items || []).filter((i) => i.styleItemId);
+  const getSizeBreakupText = (row) => {
+    const breakup = row?.pisizeBreakups?.filter(
+      (sb) => (Number(sb.qty) || 0) > 0,
+    );
+    if (!breakup || breakup.length === 0) return null;
 
+    return breakup
+      .map((sb) => {
+        const size = sb?.Size?.name;
+        const qty = Number(sb.qty);
+
+        return `${size || "All"}: ${qty}`;
+      })
+      .filter(Boolean)
+      .join("  |  ");
+  };
   // Totals
   const totalQty = allItems?.reduce((s, i) => s + (parseFloat(i?.qty) || 0), 0);
   const totalDozen = allItems?.reduce(
@@ -437,18 +457,18 @@ const ProformaInvoicePrintFormat = ({
     0,
   );
   const totalGross = allItems?.reduce(
-    (s, i) => s + (parseFloat(i.amount) || 0),
+    (s, i) => s + (parseFloat(i?.amount) || 0),
     0,
   );
-  const totalPrice = allItems.reduce(
-    (s, i) => s + (parseFloat(i.price) || 0),
+  const totalPrice = allItems?.reduce(
+    (s, i) => s + (parseFloat(i?.price) || 0),
     0,
   );
   // ── DOMESTIC TAX: per-slab breakup (mirrors PurchaseOrderPrintFormat taxBox) ──
   // Each item carries taxPercent; group by slab, sum taxable + tax amounts
   const taxableTotal = parseFloat(taxDetails?.taxable || 0);
 
-  const carriageCharge = parseFloat(data?.carriageCharge) || 0;
+  const carriageCharge = parseFloat(carriageFinalAmt) || 0;
   const grandTotal = isExport ? taxableTotal + carriageCharge : totalGross;
 
   const totalTaxAmt = parseFloat(taxDetails?.net || 0) - taxableTotal;
@@ -807,34 +827,69 @@ const ProformaInvoicePrintFormat = ({
                   const gross = parseFloat(row.amount) || 0;
                   const taxPct = parseFloat(row.taxPercent) || 0;
                   const netAmt = gross + (gross * taxPct) / 100;
+                  const breakupText = getSizeBreakupText(row);
+
                   return (
                     <View key={globalOffset + index} style={rowStyle}>
                       <Text style={[styles.td, { flex: 0.4 }]}>
                         {globalOffset + index + 1}
                       </Text>
-                      <Text style={[styles.td, { flex: 3, textAlign: "left" }]}>
-                        {row?.StyleItem?.name || ""}
+                      <View
+                        style={[
+                          styles.td,
+                          {
+                            flex: 3.8,
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                            justifyContent: "center",
+                          },
+                        ]}
+                      >
+                        <Text style={{ textAlign: "left" }}>
+                          {row?.StyleItem?.name || ""}
+                        </Text>
+                        {breakupText ? (
+                          <Text
+                            style={{
+                              fontSize: 6.5,
+                              color: "#555",
+                              marginTop: 2,
+                            }}
+                          >
+                            {breakupText}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Text
+                        style={[styles.td, { flex: 1.6, textAlign: "left" }]}
+                      >
+                        {row?.ItemSubGroup?.name || ""}
+                      </Text>
+                      <Text
+                        style={[styles.td, { flex: 1.6, textAlign: "left" }]}
+                      >
+                        {row?.ItemGroup?.name || ""}
                       </Text>
                       <Text
                         style={[styles.td, { flex: 1.2, textAlign: "left" }]}
                       >
                         {row?.Hsn?.name || ""}
                       </Text>
-                      <Text
+                      {/* <Text
                         style={[styles.td, { flex: 0.8, textAlign: "left" }]}
                       >
                         {row?.Uom?.name || ""}
-                      </Text>
+                      </Text> */}
                       <Text
                         style={[styles.td, { flex: 0.8, textAlign: "right" }]}
                       >
                         {row.qty ? parseFloat(row.qty).toFixed(3) : ""}
                       </Text>
-                      <Text
+                      {/* <Text
                         style={[styles.td, { flex: 0.8, textAlign: "right" }]}
                       >
                         {row.dozen ? parseFloat(row.dozen).toFixed(2) : ""}
-                      </Text>
+                      </Text> */}
                       <Text
                         style={[styles.td, { flex: 1, textAlign: "right" }]}
                       >
@@ -909,7 +964,7 @@ const ProformaInvoicePrintFormat = ({
                       style={[
                         styles.td,
                         {
-                          flex: 3,
+                          flex: 3.8,
                           fontFamily: "Helvetica-Bold",
                           color: DARK,
                           textAlign: "right",
@@ -919,15 +974,25 @@ const ProformaInvoicePrintFormat = ({
                       TOTAL
                     </Text>
                     <Text
-                      style={[styles.td, { flex: 1.2, color: "transparent" }]}
+                      style={[styles.td, { flex: 1.6, color: "transparent" }]}
                     >
                       {" "}
                     </Text>
                     <Text
-                      style={[styles.td, { flex: 0.8, color: "transparent" }]}
+                      style={[styles.td, { flex: 1.6, color: "transparent" }]}
                     >
                       {" "}
                     </Text>
+                    <Text
+                      style={[styles.td, { flex: 1.2, color: "transparent" }]}
+                    >
+                      {" "}
+                    </Text>
+                    {/* <Text
+                      style={[styles.td, { flex: 0.8, color: "transparent" }]}
+                    >
+                      {" "}
+                    </Text> */}
                     <Text
                       style={[
                         styles.td,
@@ -941,7 +1006,7 @@ const ProformaInvoicePrintFormat = ({
                     >
                       {totalQty.toFixed(3)}
                     </Text>
-                    <Text
+                    {/* <Text
                       style={[
                         styles.td,
                         {
@@ -953,7 +1018,7 @@ const ProformaInvoicePrintFormat = ({
                       ]}
                     >
                       {totalDozen.toFixed(2)}
-                    </Text>
+                    </Text> */}
                     <Text
                       style={[
                         styles.td,
@@ -1183,6 +1248,98 @@ const ProformaInvoicePrintFormat = ({
                       Amount in Words ({(currencyCode || currencySymbol).trim()}
                       ): <Text style={styles.wordsValue}>{amountWords}</Text>
                     </Text>
+                  </View>
+
+                  {/* ── BANK DETAILS ── */}
+                  <View
+                    style={{
+                      marginHorizontal: 20,
+                      marginTop: 8,
+                      border: `1 solid ${BORDER_LIGHT}`,
+                      borderRadius: 3,
+                      padding: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 8,
+                        fontFamily: "Helvetica-Bold",
+                        color: DARK,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Bank Details
+                    </Text>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Account Name
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.bankHolderName || data?.bankHolderName || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Bank Name
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.name || data?.name || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Account No.
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.accNo || data?.accNo || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Branch Name
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.Branch?.name || data?.Branch?.name || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row" }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        IFSC Code
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.ifsc || data?.ifsc || "-"}
+                      </Text>
+                    </View>
                   </View>
 
                   {/* Spacer to reserve space for the fixed absolute signature block at the bottom */}
