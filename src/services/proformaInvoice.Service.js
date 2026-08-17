@@ -55,9 +55,9 @@ async function get(req) {
       branchId: branchId ? parseInt(branchId) : undefined,
       AND: finYearDate
         ? [
-          { createdAt: { gte: finYearDate.startTime } },
-          { createdAt: { lte: finYearDate.endTime } },
-        ]
+            { createdAt: { gte: finYearDate.startTime } },
+            { createdAt: { lte: finYearDate.endTime } },
+          ]
         : undefined,
       docId: serachDocNo ? { contains: serachDocNo } : undefined,
       customer: searchCustomer
@@ -183,7 +183,11 @@ async function getOne(id) {
           company: true,
         },
       },
-      Bank: true,
+      Bank: {
+        include: {
+          Branch: true,
+        },
+      },
       customer: true,
       _count: {
         select: {
@@ -238,9 +242,9 @@ async function create(body) {
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-      finYearDate?.startDateStartTime,
-      finYearDate?.endDateEndTime,
-    )
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
     : "";
 
   let newDocId = await getNextDocId(
@@ -299,25 +303,25 @@ async function create(body) {
           pisizeBreakups:
             item?.sizeBreakup?.length > 0
               ? {
-                create: item.sizeBreakup.map((s) => ({
-                  sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                  qty: s.qty ? parseInt(s.qty) : null,
-                })),
-              }
+                  create: item.sizeBreakup.map((s) => ({
+                    sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                    qty: s.qty ? parseInt(s.qty) : null,
+                  })),
+                }
               : undefined,
         })),
       },
       attachments:
         attachments && JSON.parse(attachments)?.length > 0
           ? {
-            createMany: {
-              data: JSON.parse(attachments).map((sub) => ({
-                date: sub?.date ? new Date(sub?.date) : undefined,
-                filePath: sub?.filePath ? sub?.filePath : undefined,
-                name: sub?.name ? sub?.name : undefined,
-              })),
-            },
-          }
+              createMany: {
+                data: JSON.parse(attachments).map((sub) => ({
+                  date: sub?.date ? new Date(sub?.date) : undefined,
+                  filePath: sub?.filePath ? sub?.filePath : undefined,
+                  name: sub?.name ? sub?.name : undefined,
+                })),
+              },
+            }
           : undefined,
       payTermId: payTermId ? parseInt(payTermId) : null,
     },
@@ -446,18 +450,18 @@ async function update(id, body, files) {
 
       return (
         parseInt(newItem.styleItemId || 0) !==
-        parseInt(oldItem.styleItemId || 0) ||
+          parseInt(oldItem.styleItemId || 0) ||
         parseInt(newItem.itemGroupId || 0) !==
-        parseInt(oldItem.itemGroupId || 0) ||
+          parseInt(oldItem.itemGroupId || 0) ||
         parseInt(newItem.itemSubGroupId || 0) !==
-        parseInt(oldItem.itemSubGroupId || 0) ||
+          parseInt(oldItem.itemSubGroupId || 0) ||
         parseFloat(newItem.qty || 0) !== parseFloat(oldItem.qty || 0) ||
         parseFloat(newItem.price || 0) !== parseFloat(oldItem.price || 0) ||
         parseFloat(newItem.taxPercent || 0) !==
-        parseFloat(oldItem.taxPercent || 0) ||
+          parseFloat(oldItem.taxPercent || 0) ||
         (newItem.discountType || null) !== (oldItem.discountType || null) ||
         parseFloat(newItem.discountValue || 0) !==
-        parseFloat(oldItem.discountValue || 0) ||
+          parseFloat(oldItem.discountValue || 0) ||
         parseInt(newItem.sizeId || 0) !== parseInt(oldItem.sizeId || 0) ||
         parseInt(newItem.uomId || 0) !== parseInt(oldItem.uomId || 0) ||
         parseInt(newItem.gsmId || 0) !== parseInt(oldItem.gsmId || 0) ||
@@ -506,40 +510,40 @@ async function update(id, body, files) {
 
       items: isTableChanged
         ? {
-          create: parseItems.map((item) => ({
-            styleItemId: item?.styleItemId
-              ? parseInt(item.styleItemId)
-              : null,
-            itemGroupId: item?.itemGroupId
-              ? parseInt(item.itemGroupId)
-              : null,
-            itemSubGroupId: item?.itemSubGroupId
-              ? parseInt(item?.itemSubGroupId)
-              : null,
-            sizeId: item.sizeId ? parseInt(item.sizeId) : null,
-            uomId: item.uomId ? parseInt(item.uomId) : null,
-            gsmId: item.gsmId ? parseInt(item.gsmId) : null,
-            hsnId: item.hsnId ? parseInt(item.hsnId) : null,
-            qty: parseFloat(item.qty || 0),
-            labelWidth: item?.labelWidth ?? "",
-            price: parseFloat(item.price || 0),
-            taxPercent: parseFloat(item.taxPercent || 0),
-            discountType: item.discountType,
-            discountValue: parseFloat(item.discountValue || 0),
-            amount: parseFloat(item.amount || 0),
-            quoteVersion: nextQuoteVersion,
-            dozen: parseFloat(item.dozen || 0),
-            pisizeBreakups:
-              item?.sizeBreakup?.length > 0
-                ? {
-                  create: item.sizeBreakup.map((s) => ({
-                    sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                    qty: s.qty ? parseInt(s.qty) : null,
-                  })),
-                }
-                : undefined,
-          })),
-        }
+            create: parseItems.map((item) => ({
+              styleItemId: item?.styleItemId
+                ? parseInt(item.styleItemId)
+                : null,
+              itemGroupId: item?.itemGroupId
+                ? parseInt(item.itemGroupId)
+                : null,
+              itemSubGroupId: item?.itemSubGroupId
+                ? parseInt(item?.itemSubGroupId)
+                : null,
+              sizeId: item.sizeId ? parseInt(item.sizeId) : null,
+              uomId: item.uomId ? parseInt(item.uomId) : null,
+              gsmId: item.gsmId ? parseInt(item.gsmId) : null,
+              hsnId: item.hsnId ? parseInt(item.hsnId) : null,
+              qty: parseFloat(item.qty || 0),
+              labelWidth: item?.labelWidth ?? "",
+              price: parseFloat(item.price || 0),
+              taxPercent: parseFloat(item.taxPercent || 0),
+              discountType: item.discountType,
+              discountValue: parseFloat(item.discountValue || 0),
+              amount: parseFloat(item.amount || 0),
+              quoteVersion: nextQuoteVersion,
+              dozen: parseFloat(item.dozen || 0),
+              pisizeBreakups:
+                item?.sizeBreakup?.length > 0
+                  ? {
+                      create: item.sizeBreakup.map((s) => ({
+                        sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                        qty: s.qty ? parseInt(s.qty) : null,
+                      })),
+                    }
+                  : undefined,
+            })),
+          }
         : undefined,
       attachments: {
         deleteMany: {

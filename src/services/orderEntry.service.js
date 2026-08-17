@@ -52,8 +52,9 @@ async function getNextDocId(
     )}/ORD/1`;
 
     if (lastObject) {
-      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/ORD/${parseInt(lastObject.docId.split("/").at(-1)) + 1
-        }`;
+      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/ORD/${
+        parseInt(lastObject.docId.split("/").at(-1)) + 1
+      }`;
     }
 
     return newDocId;
@@ -109,11 +110,13 @@ async function getNextDocId(
 
           return currentNo > maxNo ? current.docId : max;
         }, null);
-        newDocId = `${branchObj.branchCode}/${shortCode}/ORD/${parseInt(maxDocId.split("/").at(-1)) + 1
-          }`;
+        newDocId = `${branchObj.branchCode}/${shortCode}/ORD/${
+          parseInt(maxDocId.split("/").at(-1)) + 1
+        }`;
       } else {
-        newDocId = `${branchObj.branchCode}/${shortCode}/ORD/${parseInt(lastObject.docId.split("/").at(-1)) + 1
-          }`;
+        newDocId = `${branchObj.branchCode}/${shortCode}/ORD/${
+          parseInt(lastObject.docId.split("/").at(-1)) + 1
+        }`;
       }
     }
     return newDocId;
@@ -150,22 +153,22 @@ async function get(req) {
       branchId: branchId ? parseInt(branchId) : undefined,
       AND: finYearDate
         ? [
-          {
-            createdAt: {
-              gte: finYearDate.startTime,
+            {
+              createdAt: {
+                gte: finYearDate.startTime,
+              },
             },
-          },
-          {
-            createdAt: {
-              lte: finYearDate.endTime,
+            {
+              createdAt: {
+                lte: finYearDate.endTime,
+              },
             },
-          },
-        ]
+          ]
         : undefined,
       docId: Boolean(serachDocNo)
         ? {
-          contains: serachDocNo,
-        }
+            contains: serachDocNo,
+          }
         : undefined,
       orderType: Boolean(searchOrderType)
         ? { contains: searchOrderType }
@@ -244,21 +247,21 @@ async function get(req) {
   const activeConfigs =
     hasApproval && module
       ? await prisma.approvalConfig.findMany({
-        where: {
-          moduleId: module.id,
-          branchId: parseInt(branchId),
-          active: true,
-        },
-        include: {
-          ConfigConditions: {
-            include: { Field: true, Operator: true, CompareField: true },
+          where: {
+            moduleId: module.id,
+            branchId: parseInt(branchId),
+            active: true,
           },
-          approvalLevels: {
-            include: { LevelUsers: true },
-            orderBy: { levelNo: "asc" },
+          include: {
+            ConfigConditions: {
+              include: { Field: true, Operator: true, CompareField: true },
+            },
+            approvalLevels: {
+              include: { LevelUsers: true },
+              orderBy: { levelNo: "asc" },
+            },
           },
-        },
-      })
+        })
       : [];
 
   // ── resolve approval status per record ───────────────────────────────────
@@ -375,29 +378,29 @@ async function getRefList(req) {
     const activeConfigs =
       hasApproval && module
         ? await prisma.approvalConfig.findMany({
-          where: {
-            moduleId: module.id,
-            branchId: parseInt(branchId),
-            active: true,
-          },
-          include: {
-            ConfigConditions: {
-              include: {
-                Field: true,
-                Operator: true,
-                CompareField: true,
+            where: {
+              moduleId: module.id,
+              branchId: parseInt(branchId),
+              active: true,
+            },
+            include: {
+              ConfigConditions: {
+                include: {
+                  Field: true,
+                  Operator: true,
+                  CompareField: true,
+                },
+              },
+              approvalLevels: {
+                include: {
+                  LevelUsers: true,
+                },
+                orderBy: {
+                  levelNo: "asc",
+                },
               },
             },
-            approvalLevels: {
-              include: {
-                LevelUsers: true,
-              },
-              orderBy: {
-                levelNo: "asc",
-              },
-            },
-          },
-        })
+          })
         : [];
 
     data = data.map((order) => {
@@ -514,7 +517,11 @@ async function getOne(id) {
           name: true,
         },
       },
-      Bank: true,
+      Bank: {
+        include: {
+          Branch: true,
+        },
+      },
       _count: {
         select: {
           JobCard: true,
@@ -621,15 +628,15 @@ async function create(body) {
     weightInKg,
     carriageCharge,
     loadingId,
-    deliveryId, carriageTax,
-
+    deliveryId,
+    carriageTax,
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-      finYearDate?.startDateStartTime,
-      finYearDate?.endDateEndTime,
-    )
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
     : "";
   let newDocId = await getNextDocId(
     branchId,
@@ -651,47 +658,47 @@ async function create(body) {
   const safeOrderItems =
     parsedOrderItems?.length > 0
       ? parsedOrderItems.map((item) => ({
-        styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
-        itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
-        itemSubGroupId: item?.itemSubGroupId
-          ? parseInt(item?.itemSubGroupId)
-          : null,
-        labelWidth: item?.labelWidth ?? "",
-        trackingType: item?.trackingType,
-        price: item?.price ? parseFloat(item.price) : null,
-        amount: item?.amount ? parseFloat(item.amount) : null,
-        dozen: item?.dozen ? parseFloat(item.dozen) : null,
-        taxPercent:
-          item?.taxPercent && !isNaN(Number(item.taxPercent))
-            ? parseFloat(item.taxPercent)
+          styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
+          itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+          itemSubGroupId: item?.itemSubGroupId
+            ? parseInt(item?.itemSubGroupId)
             : null,
-        discountType: item?.discountType || null,
-        discountValue:
-          item?.discountValue && !isNaN(Number(item.discountValue))
-            ? parseFloat(item.discountValue)
+          labelWidth: item?.labelWidth ?? "",
+          trackingType: item?.trackingType,
+          price: item?.price ? parseFloat(item.price) : null,
+          amount: item?.amount ? parseFloat(item.amount) : null,
+          dozen: item?.dozen ? parseFloat(item.dozen) : null,
+          taxPercent:
+            item?.taxPercent && !isNaN(Number(item.taxPercent))
+              ? parseFloat(item.taxPercent)
+              : null,
+          discountType: item?.discountType || null,
+          discountValue:
+            item?.discountValue && !isNaN(Number(item.discountValue))
+              ? parseFloat(item.discountValue)
+              : null,
+          orderQty:
+            item?.orderQty && !isNaN(Number(item.orderQty))
+              ? parseInt(item.orderQty)
+              : null,
+          uomId: item?.uomId ? parseInt(item.uomId) : null,
+          hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
+          sizeTemplateId: item?.sizeTemplateId
+            ? parseInt(item.sizeTemplateId)
             : null,
-        orderQty:
-          item?.orderQty && !isNaN(Number(item.orderQty))
-            ? parseInt(item.orderQty)
-            : null,
-        uomId: item?.uomId ? parseInt(item.uomId) : null,
-        hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
-        sizeTemplateId: item?.sizeTemplateId
-          ? parseInt(item.sizeTemplateId)
-          : null,
-        sizeBreakup:
-          item?.sizeBreakup?.length > 0
-            ? {
-              create: item.sizeBreakup.map((s) => ({
-                sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                qty: s.qty ? parseInt(s.qty) : null,
-                barcodeFrom: s.barcodeFrom,
-                barcodeTo: s.barcodeTo,
-              })),
-            }
-            : undefined,
-        // sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
-      }))
+          sizeBreakup:
+            item?.sizeBreakup?.length > 0
+              ? {
+                  create: item.sizeBreakup.map((s) => ({
+                    sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                    qty: s.qty ? parseInt(s.qty) : null,
+                    barcodeFrom: s.barcodeFrom,
+                    barcodeTo: s.barcodeTo,
+                  })),
+                }
+              : undefined,
+          // sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
+        }))
       : [];
   let finalRefNo = refNo || null;
   if (productionType === "SAMPLE" && newDocId) {
@@ -742,20 +749,20 @@ async function create(body) {
         orderItems:
           safeOrderItems.length > 0
             ? {
-              create: safeOrderItems,
-            }
+                create: safeOrderItems,
+              }
             : undefined,
         attachments:
           JSON.parse(attachments)?.length > 0
             ? {
-              createMany: {
-                data: JSON.parse(attachments).map((sub) => ({
-                  date: sub?.date ? new Date(sub?.date) : undefined,
-                  filePath: sub?.filePath ? sub?.filePath : undefined,
-                  name: sub?.name ? sub?.name : undefined,
-                })),
-              },
-            }
+                createMany: {
+                  data: JSON.parse(attachments).map((sub) => ({
+                    date: sub?.date ? new Date(sub?.date) : undefined,
+                    filePath: sub?.filePath ? sub?.filePath : undefined,
+                    name: sub?.name ? sub?.name : undefined,
+                  })),
+                },
+              }
             : undefined,
       },
     });
@@ -816,8 +823,8 @@ async function update(id, body, files) {
     weightInKg,
     carriageCharge,
     loadingId,
-    deliveryId, carriageTax,
-
+    deliveryId,
+    carriageTax,
   } = await body;
 
   const safeorderQty =
@@ -983,11 +990,11 @@ async function update(id, body, files) {
                   create:
                     item.sizeBreakup?.length > 0
                       ? item.sizeBreakup.map((s) => ({
-                        sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                        qty: s.qty ? parseInt(s.qty) : null,
-                        barcodeFrom: s.barcodeFrom,
-                        barcodeTo: s.barcodeTo,
-                      }))
+                          sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                          qty: s.qty ? parseInt(s.qty) : null,
+                          barcodeFrom: s.barcodeFrom,
+                          barcodeTo: s.barcodeTo,
+                        }))
                       : [],
                 },
               },
@@ -1026,13 +1033,13 @@ async function update(id, body, files) {
               sizeBreakup:
                 item.sizeBreakup?.length > 0
                   ? {
-                    create: item.sizeBreakup.map((s) => ({
-                      sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                      qty: s.qty ? parseInt(s.qty) : null,
-                      barcodeFrom: s.barcodeFrom,
-                      barcodeTo: s.barcodeTo,
-                    })),
-                  }
+                      create: item.sizeBreakup.map((s) => ({
+                        sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                        qty: s.qty ? parseInt(s.qty) : null,
+                        barcodeFrom: s.barcodeFrom,
+                        barcodeTo: s.barcodeTo,
+                      })),
+                    }
                   : undefined,
             })),
         },

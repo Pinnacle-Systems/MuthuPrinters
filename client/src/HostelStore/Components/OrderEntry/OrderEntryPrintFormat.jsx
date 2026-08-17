@@ -370,13 +370,16 @@ const OrderEntryPrintFormat = ({
   currencyCode,
   isCurrencySymbol,
   isCustomerExport: isExportProp,
-  cityList, carriageFinalAmt
+  cityList,
+  carriageFinalAmt,
 }) => {
   if (!data) return null;
+  console.log("data", data);
 
   const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
   let currencySymbol = isCurrencySymbol || currencyCode || "";
-  if (currencySymbol.includes("₹")) currencySymbol = currencySymbol.replace("₹", "Rs.");
+  if (currencySymbol.includes("₹"))
+    currencySymbol = currencySymbol.replace("₹", "Rs.");
   const loadingPort =
     findFromList(data?.loadingId, cityList?.data, "name") || "";
   const deliveryPort =
@@ -462,7 +465,7 @@ const OrderEntryPrintFormat = ({
       .filter(Boolean)
       .join("  |  ");
   };
-
+  const bank = data?.Bank;
   return (
     <Document>
       {renderChunks.map((chunkRows, pageIndex) => {
@@ -682,11 +685,11 @@ const OrderEntryPrintFormat = ({
                         >
                           {forceWrap(
                             row?.StyleItem?.name ||
-                            findFromList(
-                              row.styleItemId,
-                              styleItemList?.data,
-                              "name",
-                            ),
+                              findFromList(
+                                row.styleItemId,
+                                styleItemList?.data,
+                                "name",
+                              ),
                           )}
                         </Text>
                         {breakupText ? (
@@ -708,11 +711,11 @@ const OrderEntryPrintFormat = ({
                       >
                         {forceWrap(
                           row?.ItemSubGroup?.name ||
-                          findFromList(
-                            row.itemSubGroupId,
-                            itemSubGroupList?.data,
-                            "name",
-                          ),
+                            findFromList(
+                              row.itemSubGroupId,
+                              itemSubGroupList?.data,
+                              "name",
+                            ),
                         )}
                       </Text>
                       {/* Item Group */}
@@ -721,11 +724,11 @@ const OrderEntryPrintFormat = ({
                       >
                         {forceWrap(
                           row?.ItemGroup?.name ||
-                          findFromList(
-                            row.itemGroupId,
-                            itemGroupList?.data,
-                            "name",
-                          ),
+                            findFromList(
+                              row.itemGroupId,
+                              itemGroupList?.data,
+                              "name",
+                            ),
                         )}
                       </Text>
 
@@ -1011,37 +1014,36 @@ const OrderEntryPrintFormat = ({
                         SUMMARY
                       </Text>
                       <View style={{ padding: 8 }}>
-
                         {(totals?.itemDiscount > 0 ||
                           totals?.overallDiscount > 0) && (
-                            <View style={styles.summaryRow}>
-                              <Text style={styles.summaryLabel}>
-                                Total Discount
-                              </Text>
-                              <Text style={styles.summaryColon}>:</Text>
-                              <Text style={styles.summaryValue}>
-                                {currencySymbol}{" "}
-                                {formatCurrencyAmount(
-                                  (totals?.itemDiscount || 0) +
+                          <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>
+                              Total Discount
+                            </Text>
+                            <Text style={styles.summaryColon}>:</Text>
+                            <Text style={styles.summaryValue}>
+                              {currencySymbol}{" "}
+                              {formatCurrencyAmount(
+                                (totals?.itemDiscount || 0) +
                                   (totals?.overallDiscount || 0),
-                                  currencyCode,
-                                )}
-                              </Text>
-                            </View>
-                          )}
+                                currencyCode,
+                              )}
+                            </Text>
+                          </View>
+                        )}
                         {((!isExport && totals?.discountValue > 0) ||
                           isExport) && (
-                            <View style={styles.summaryRow}>
-                              <Text style={styles.summaryLabel}>
-                                {isExport ? "Net Amount" : "Taxable Amount"}
-                              </Text>
-                              <Text style={styles.summaryColon}>:</Text>
-                              <Text style={styles.summaryValue}>
-                                {currencySymbol}{" "}
-                                {formatCurrencyAmount(taxableTotal, currencyCode)}
-                              </Text>
-                            </View>
-                          )}
+                          <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>
+                              {isExport ? "Net Amount" : "Taxable Amount"}
+                            </Text>
+                            <Text style={styles.summaryColon}>:</Text>
+                            <Text style={styles.summaryValue}>
+                              {currencySymbol}{" "}
+                              {formatCurrencyAmount(taxableTotal, currencyCode)}
+                            </Text>
+                          </View>
+                        )}
                         {!isExport &&
                           consolidatedTaxSlabs.map((slab) => (
                             <View key={slab.tax} style={styles.summaryRow}>
@@ -1154,7 +1156,96 @@ const OrderEntryPrintFormat = ({
                       </Text>
                     </View>
                   )}
-
+                  <View
+                    style={{
+                      marginHorizontal: 20,
+                      marginTop: 8,
+                      border: `1 solid ${BORDER_LIGHT}`,
+                      borderRadius: 3,
+                      padding: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 8,
+                        fontFamily: "Helvetica-Bold",
+                        color: DARK,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Bank Details
+                    </Text>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Account Name
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.bankHolderName || data?.bankHolderName || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Bank Name
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.name || data?.name || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Account No.
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.accNo || data?.accNo || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Branch Name
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.Branch?.name || data?.Branch?.name || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row" }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        IFSC Code
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.ifsc || data?.ifsc || "-"}
+                      </Text>
+                    </View>
+                  </View>
                   {/* Spacer to reserve space for the fixed absolute signature block at the bottom */}
                   <View style={{ height: 80 }} />
                 </>

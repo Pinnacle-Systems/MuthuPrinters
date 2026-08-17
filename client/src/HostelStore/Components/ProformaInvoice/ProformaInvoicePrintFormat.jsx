@@ -407,6 +407,7 @@ const ProformaInvoicePrintFormat = ({
   carriageFinalAmt,
 }) => {
   if (!data) return null;
+  console.log(data, "data");
 
   const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
   let currencySymbol =
@@ -1247,6 +1248,98 @@ const ProformaInvoicePrintFormat = ({
                       Amount in Words ({(currencyCode || currencySymbol).trim()}
                       ): <Text style={styles.wordsValue}>{amountWords}</Text>
                     </Text>
+                  </View>
+
+                  {/* ── BANK DETAILS ── */}
+                  <View
+                    style={{
+                      marginHorizontal: 20,
+                      marginTop: 8,
+                      border: `1 solid ${BORDER_LIGHT}`,
+                      borderRadius: 3,
+                      padding: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 8,
+                        fontFamily: "Helvetica-Bold",
+                        color: DARK,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Bank Details
+                    </Text>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Account Name
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.bankHolderName || data?.bankHolderName || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Bank Name
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.name || data?.name || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Account No.
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.accNo || data?.accNo || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row", marginBottom: 2 }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        Branch Name
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.Branch?.name || data?.Branch?.name || "-"}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: "row" }}>
+                      <Text style={{ width: 80, fontSize: 7.5, color: "#555" }}>
+                        IFSC Code
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 7.5,
+                          color: "#333",
+                          fontFamily: "Helvetica-Bold",
+                        }}
+                      >
+                        : {bank?.ifsc || data?.ifsc || "-"}
+                      </Text>
+                    </View>
                   </View>
 
                   {/* Spacer to reserve space for the fixed absolute signature block at the bottom */}
