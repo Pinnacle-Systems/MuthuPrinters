@@ -39,6 +39,12 @@ export const createPurchaseOrderRow = (quoteVersion = "") => ({
   sizeId: "",
   colorId: "",
   gsmId: "",
+  sheetsPerPacket: "",
+  weightPerPacket: "",
+  totalPackets: "",
+  totalKgs: "",
+  pricePerKg: "",
+  totalPrice: "",
 });
 
 export const createPurchaseOrderRows = (

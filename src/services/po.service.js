@@ -123,7 +123,7 @@ function getPOStatus(po) {
 }
 
 // ── Approval Status ───────────────────────────────────────────────────────────
-// purchaseOrder.service.js
+
 function getPOApprovalStatus(log, isApprovalConfigured = false) {
   if (!log) {
     return isApprovalConfigured
@@ -711,6 +711,10 @@ async function createPoItems(tx, poItems, po) {
           sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
           colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
           gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
+          sheetsPerPacket: itemDetails?.sheetsPerPacket ? parseInt(itemDetails.sheetsPerPacket) : null,
+          weightPerPacket: itemDetails?.weightPerPacket ? parseFloat(itemDetails.weightPerPacket) : null,
+          totalPackets: itemDetails?.totalPackets ? parseInt(itemDetails.totalPackets) : null,
+          pricePerKg: itemDetails?.pricePerKg ? parseInt(itemDetails.pricePerKg) : null,
         },
       });
     }),
@@ -1061,6 +1065,10 @@ async function updatePoItems(
               ? parseInt(itemDetails.colorId)
               : null,
             gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
+            sheetsPerPacket: itemDetails?.sheetsPerPacket ? parseInt(itemDetails.sheetsPerPacket) : null,
+            weightPerPacket: itemDetails?.weightPerPacket ? parseFloat(itemDetails.weightPerPacket) : null,
+            totalPackets: itemDetails?.totalPackets ? parseInt(itemDetails.totalPackets) : null,
+            pricePerKg: itemDetails?.pricePerKg ? parseInt(itemDetails.pricePerKg) : null,
             quoteVersion: isNewVersion
               ? currentQuoteVersion + 1
               : parseInt(quoteVersion),
@@ -1095,6 +1103,10 @@ async function updatePoItems(
               ? parseInt(itemDetails.colorId)
               : null,
             gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
+            sheetsPerPacket: itemDetails?.sheetsPerPacket ? parseInt(itemDetails.sheetsPerPacket) : null,
+            weightPerPacket: itemDetails?.weightPerPacket ? parseFloat(itemDetails.weightPerPacket) : null,
+            totalPackets: itemDetails?.totalPackets ? parseInt(itemDetails.totalPackets) : null,
+            pricePerKg: itemDetails?.pricePerKg ? parseInt(itemDetails.pricePerKg) : null,
           },
         });
       }
@@ -1127,6 +1139,10 @@ async function createNewVersionItems(
         sizeId: temp.sizeId ? parseInt(temp.sizeId) : null,
         colorId: temp.colorId ? parseInt(temp.colorId) : null,
         gsmId: temp.gsmId ? parseInt(temp.gsmId) : null,
+        sheetsPerPacket: temp.sheetsPerPacket ? parseInt(temp.sheetsPerPacket) : null,
+        weightPerPacket: temp.weightPerPacket ? parseFloat(temp.weightPerPacket) : null,
+        totalPackets: temp.totalPackets ? parseInt(temp.totalPackets) : null,
+        pricePerKg: temp.pricePerKg ? parseInt(temp.pricePerKg) : null,
       })),
   });
 }
