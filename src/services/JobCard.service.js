@@ -19,7 +19,7 @@ const REFERENCE_PAGE = "JOB CARD";
 async function getNextDocId(branchId, shortCode, startTime, endTime) {
   const lastObject = await prisma.jobCard.findFirst({
     where: {
-      branchId: parseInt(branchId),
+      branchId: branchId ? parseInt(branchId) : undefined,
       AND: [{ createdAt: { gte: startTime } }, { createdAt: { lte: endTime } }],
     },
     orderBy: { id: "desc" },
@@ -150,7 +150,7 @@ async function get(req) {
       ? await prisma.approvalConfig.findMany({
           where: {
             moduleId: module.id,
-            branchId: parseInt(branchId),
+            branchId: branchId ? parseInt(branchId) : undefined,
             active: true,
           },
           include: {
@@ -433,7 +433,8 @@ async function get_mob_jobcard(req) {
       Sorted_Sequence?.find(
         (last_taken) =>
           last_taken?.status === "NOT_STARTED" ||
-          last_taken?.status === "IN_PROGRESS",
+          last_taken?.status === "IN_PROGRESS" ||
+          last_taken?.status === "PARTIALLY_COMPLETED",
       ) ?? null;
 
     return {
@@ -603,7 +604,7 @@ async function get_mob_compl_jobcard(req) {
       ? await prisma.approvalConfig.findMany({
           where: {
             moduleId: module.id,
-            branchId: parseInt(branchId),
+            branchId: branchId ? parseInt(branchId) : undefined,
             active: true,
           },
           include: {
@@ -648,7 +649,8 @@ async function get_mob_compl_jobcard(req) {
       const lastNotStarted = Sorted_Sequence?.find(
         (last_taken) =>
           last_taken?.status === "NOT_STARTED" ||
-          last_taken?.status === "IN_PROGRESS",
+          last_taken?.status === "IN_PROGRESS" ||
+          last_taken?.status === "PARTIALLY_COMPLETED",
       );
       return {
         id: routes?.id,
@@ -716,6 +718,15 @@ async function get_mob_joblist(req) {
       customer: {
         name: searchCustomer ? { contains: searchCustomer } : undefined,
       },
+   productionAllocations: {
+  some: {                        
+    allocationDetails: {
+      some: {                    
+        isInHouse: true
+      }
+    }
+  }
+}
     },
     include: {
       productionAllocations: true,
@@ -727,6 +738,13 @@ async function get_mob_joblist(req) {
         },
       },
       processRoute: {
+        where: {
+          productionAllocationDtls: {
+            some: {
+              isInHouse: true
+            }
+          }
+        },
         include: {
           productionAllocationDtls: true,
           Process: {
@@ -794,7 +812,7 @@ async function get_mob_joblist(req) {
       ? await prisma.approvalConfig.findMany({
           where: {
             moduleId: module.id,
-            branchId: parseInt(branchId),
+            branchId: branchId ? parseInt(branchId) : undefined,
             active: true,
           },
           include: {
@@ -830,7 +848,7 @@ async function get_mob_joblist(req) {
     ?.filter((resolved_) => {
       const status = resolved_?.approvalStatus?.status;
       const Complted = resolved_?.processRoute?.some(
-        (fe) => fe.status == "IN_PROGRESS" || fe.status == "NOT_STARTED",
+        (fe) => fe.status == "IN_PROGRESS" || fe.status == "NOT_STARTED" || fe.status == "PARTIALLY_COMPLETED",
       );
       return (status === "APPROVED" || status === "NOT_CONFIGURED") && Complted;
     })
@@ -841,7 +859,8 @@ async function get_mob_joblist(req) {
       const lastNotStarted = Sorted_Sequence?.find(
         (last_taken) =>
           last_taken?.status === "NOT_STARTED" ||
-          last_taken?.status === "IN_PROGRESS",
+          last_taken?.status === "IN_PROGRESS" ||
+          last_taken?.status === "PARTIALLY_COMPLETED",
       );
       return {
         id: routes?.id,
@@ -997,7 +1016,7 @@ async function getJobCardList(req) {
         ? await prisma.approvalConfig.findMany({
             where: {
               moduleId: module.id,
-              branchId: parseInt(branchId),
+              branchId: branchId ? parseInt(branchId) : undefined,
               active: true,
             },
             include: {
@@ -1343,8 +1362,8 @@ async function create(body) {
           docId: newDocId,
           docDate: docDate ? new Date(docDate) : null,
 
-          createdById: Number(userId) ?? null,
-          branchId: Number(branchId) ?? null,
+          createdById: userId ? Number(userId) : null,
+          branchId: branchId ? Number(branchId) : null,
 
           orderEntryId: orderEntryId ? Number(orderEntryId) : null,
           orderType: orderType || null,
@@ -1570,7 +1589,7 @@ async function create(body) {
           }
           await tx.stock.create({
             data: {
-              branchId: parseInt(branchId),
+              branchId: branchId ? parseInt(branchId) : undefined,
               storeId: parseInt(storeId),
               styleItemId: parseInt(styleItem.id),
               gsmId: parseInt(boardQuality.gsmId),
@@ -1602,7 +1621,7 @@ async function create(body) {
 
         await tx.stock.create({
           data: {
-            branchId: parseInt(branchId),
+            branchId: branchId ? parseInt(branchId) : undefined,
             storeId: parseInt(storeId),
             styleItemId: parseInt(labelItemId),
             sizeId: parseInt(labelSizeId),
@@ -1943,7 +1962,7 @@ async function update(id, body) {
         data: {
           docDate: docDate ? new Date(docDate) : null,
           updatedById: parseInt(userId),
-          branchId: parseInt(branchId),
+          branchId: branchId ? parseInt(branchId) : undefined,
           orderEntryId: orderEntryId ? parseInt(orderEntryId) : null,
           orderType: orderType || null,
           orderQty: orderQty ? parseInt(orderQty) : null,
@@ -2185,7 +2204,7 @@ async function update(id, body) {
             jobCardId: parseInt(data.id),
           },
           data: {
-            branchId: parseInt(branchId),
+            branchId: branchId ? parseInt(branchId) : undefined,
             storeId: parseInt(storeId),
             styleItemId: parseInt(labelItemId),
             sizeId: parseInt(labelSizeId),

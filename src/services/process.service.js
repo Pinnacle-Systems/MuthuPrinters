@@ -207,12 +207,48 @@ async function UpdateProcess(req) {
       if (Number(completedQty ?? 0) <= 0)
         throw new Error("Completed Qty must be greater than 0");
 
+      const pRoute = await tx.processRoute.findUnique({
+        where: { id: Number(processId || 0) },
+        include: { JobCard: true }
+      });
+
+      let actualQty = pRoute?.actualQty || 0;
+
+      if (pRoute && pRoute.JobCard) {
+        if (pRoute.JobCard.itemType === "LABEL") {
+          actualQty = pRoute.JobCard.rollQty || 0;
+        } else if (pRoute.sequence === 1) {
+          actualQty = pRoute.JobCard.runningQty || 0;
+        } else {
+          const prevRoute = await tx.processRoute.findFirst({
+            where: {
+              jobCardId: pRoute.jobCardId,
+              sequence: pRoute.sequence - 1
+            }
+          });
+          actualQty = prevRoute?.completedQty || 0;
+        }
+      }
+
+      const totalCompleted = Number(pRoute?.completedQty || 0) + Number(completedQty);
+      const totalWastage = Number(pRoute?.wastageQty || 0) + Number(wastageQty || 0);
+      const pendingQty = Math.max(actualQty - (totalCompleted + totalWastage), 0);
+
+      let routeStatus = "COMPLETED";
+      if (pendingQty > 0) {
+        routeStatus = "PARTIALLY_COMPLETED";
+      }
+
       await tx.processRoute.update({
         where: {
           id: Number(processId || 0),
         },
         data: {
-          completedQty: Number(completedQty),
+          completedQty: totalCompleted,
+          wastageQty: totalWastage,
+          actualQty: actualQty,
+          pendingQty: pendingQty,
+          status: routeStatus,
         },
       });
 

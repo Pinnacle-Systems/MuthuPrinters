@@ -234,6 +234,7 @@ model User {
   salesDeliveriesUpdatedBy SalesDelivery[]      @relation(name: "updatedBy")
   ItemSubGroupCreatedBy    ItemSubGroup[]       @relation(name: "createdBy")
   ItemSubGroupUpdatedBy    ItemSubGroup[]       @relation(name: "updatedBy")
+  reworkLogs               ReworkLog[]
 }
 
 model Employee {
@@ -1901,7 +1902,7 @@ model OrderEntry {
   currencyId        Int?
   weightInKg        Float?
   carriageCharge    Float?
-    carriageTax       Float?
+  carriageTax       Float?
   orderItems        OrderItems[]
   Loading           City?               @relation("loading", fields: [loadingId], references: [id])
   loadingId         Int?
@@ -2097,6 +2098,7 @@ model JobCard {
   takenMachines         takenmachines[]
   isOldPlate            Boolean?               @default(false)
   isNewPlate            Boolean?               @default(false)
+  reworkLogs            ReworkLog[]
 }
 
 model BoardQuality {
@@ -2266,6 +2268,7 @@ model ProcessRoute {
   takenMachines            takenmachines[]
   productionAllocationDtls ProductionAllocationDtl[]
   productionempPunch       productionempPunch[]
+  reworkLogs               ReworkLog[]
 }
 
 model productionempPunch {
@@ -2452,17 +2455,17 @@ model Currency {
 }
 
 model Bank {
-  id        Int      @id @default(autoincrement())
-  companyId Int?
-  Company   Company? @relation(fields: [companyId], references: [id])
-  name      String?
-  accNo     String?
-  ifsc      String?
-  swiftCode String?
-  branchId  Int?
-  Branch    City?    @relation(fields: [branchId], references: [id])
-  active    Boolean  @default(true)
-  bankHolderName String? 
+  id               Int               @id @default(autoincrement())
+  companyId        Int?
+  Company          Company?          @relation(fields: [companyId], references: [id])
+  name             String?
+  accNo            String?
+  ifsc             String?
+  swiftCode        String?
+  branchId         Int?
+  Branch           City?             @relation(fields: [branchId], references: [id])
+  active           Boolean           @default(true)
+  bankHolderName   String?
   proformaInvoices ProformaInvoice[]
   salesDeliveries  SalesDelivery[]
   orderEntries     OrderEntry[]
@@ -2794,4 +2797,20 @@ model ItemSubGroup {
   StyleItem            StyleItem[]
   OrderItems           OrderItems[]
   proformaInvoiceItems ProformaInvoiceItem[]
+}
+
+model ReworkLog {
+  id             Int           @id @default(autoincrement())
+  jobCardId      Int?
+  JobCard        JobCard?      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processRouteId Int?
+  ProcessRoute   ProcessRoute? @relation(fields: [processRouteId], references: [id])
+  actualQty      Int?
+  completedQty   Int?
+  wastageQty     Int?
+  pendingQty     Int?
+  reason         String?
+  createdAt      DateTime      @default(now())
+  Userid         Int?
+  User           User?         @relation(fields: [Userid], references: [id])
 }
