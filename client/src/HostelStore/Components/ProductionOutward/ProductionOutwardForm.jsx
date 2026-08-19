@@ -75,7 +75,10 @@ const getLastCompletedQty = (processRoute) => {
 const isPrevProcessCompleted = (route, sequence) => {
   if (sequence <= 1) return true; // no previous process
   const prev = route.find((r) => r.sequence === sequence - 1);
-  return !prev || prev.status?.toUpperCase() === "COMPLETED";
+  return (
+    !prev ||
+    prev.status?.toUpperCase() === "COMPLETED"
+  );
 };
 
 // ─── ProcessTree ──────────────────────────────────────────────────────────────
@@ -167,7 +170,9 @@ const ProcessTree = ({
 
                 if (!prevAlloc?.isOutSide) {
                   // nearest inside process must be completed
-                  return prev.status?.toUpperCase() === "COMPLETED";
+                  return (
+                    prev.status?.toUpperCase() === "COMPLETED" 
+                  );
                 }
               }
 
@@ -182,7 +187,10 @@ const ProcessTree = ({
                 );
                 if (prevAlloc?.isOutSide === true) {
                   // if already completed by another supplier — treat as satisfied, no checkbox needed
-                  if (prev.status?.toUpperCase() === "COMPLETED") return true;
+                  if (
+                    prev.status?.toUpperCase() === "COMPLETED"
+                  )
+                    return true;
                   // otherwise must be checked by user
                   return selectedProcessIds.includes(prev.processId);
                 }
@@ -190,7 +198,7 @@ const ProcessTree = ({
               return true;
             })();
             const isCheckboxDisabled =
-              !isOutside || isPending || !isPrevDone || !isPrevOutsideChecked;
+              !isOutside || !isPrevDone || !isPrevOutsideChecked;
             const isLast = idx === sorted.length - 1;
 
             return (
@@ -314,6 +322,8 @@ const DeliveryPanel = ({
   setDeliveryQty,
   qtyCap,
   branchData, // last completed seq qty — null means no cap
+  runningQty,
+  rollQty,
 }) => {
   const isDisabled = readOnly || childRecord?.current > 0;
 
@@ -323,15 +333,43 @@ const DeliveryPanel = ({
 
     // Validate immediately on change
     const num = Number(val);
-    if (val !== "" && qtyCap !== null && num > qtyCap) {
-      setDeliveryQty(qtyCap);
-      Swal.fire({
-        icon: "warning",
-        title: "Qty Exceeded!",
-        text: `Delivery qty cannot exceed the last completed qty of ${qtyCap}.`,
-        timer: 1800,
-        showConfirmButton: false,
-      });
+    if (val !== "") {
+      if (qtyCap !== null && num > qtyCap) {
+        setDeliveryQty(qtyCap);
+        Swal.fire({
+          icon: "warning",
+          title: "Qty Exceeded!",
+          text: `Delivery qty cannot exceed the last completed qty of ${qtyCap}.`,
+          timer: 1800,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
+      const hasRunningQty =
+        runningQty !== null && runningQty !== undefined && runningQty !== "";
+      const hasRollQty =
+        rollQty !== null && rollQty !== undefined && rollQty !== "";
+
+      if (hasRunningQty && num > Number(runningQty)) {
+        setDeliveryQty(runningQty);
+        Swal.fire({
+          icon: "warning",
+          title: "Qty Exceeded!",
+          text: `Delivery qty cannot exceed running qty of ${runningQty}.`,
+          timer: 1800,
+          showConfirmButton: false,
+        });
+      } else if (!hasRunningQty && hasRollQty && num > Number(rollQty)) {
+        setDeliveryQty(rollQty);
+        Swal.fire({
+          icon: "warning",
+          title: "Qty Exceeded!",
+          text: `Delivery qty cannot exceed roll qty of ${rollQty}.`,
+          timer: 1800,
+          showConfirmButton: false,
+        });
+      }
     }
   };
 
@@ -945,14 +983,28 @@ const ProductionOutwardForm = ({
               disabled
             />
           </div>
-          <div className="w-32">
-            <TextInput
-              name="Order Qty"
-              value={findFromList(jobCardId, jobCardList?.data, "orderQty")}
-              readOnly
-              disabled
-              className="text-right"
-            />
+          <div className="flex gap-x-2 mt-2">
+            <div className="w-32">
+              <TextInput
+                name="Order Qty"
+                value={findFromList(jobCardId, jobCardList?.data, "orderQty")}
+                readOnly
+                disabled
+                className="text-right"
+              />
+            </div>
+            <div className="w-32">
+              <TextInput
+                name="Production Issue Qty"
+                value={
+                  findFromList(jobCardId, jobCardList?.data, "runningQty") ||
+                  findFromList(jobCardId, jobCardList?.data, "rollQty")
+                }
+                readOnly
+                disabled
+                className="text-right"
+              />
+            </div>
           </div>
         </div>
 
@@ -1047,6 +1099,8 @@ const ProductionOutwardForm = ({
           deliveryQty={deliveryQty}
           setDeliveryQty={setDeliveryQty}
           qtyCap={qtyCap}
+          runningQty={findFromList(jobCardId, jobCardList?.data, "runningQty")}
+          rollQty={findFromList(jobCardId, jobCardList?.data, "rollQty")}
         />
       </div>
     </div>

@@ -918,6 +918,8 @@ async function getJobCardList(req) {
       docId: true,
       orderQty: true,
       styleItemId: true,
+      runningQty: true,
+      rollQty: true,
       customer: { select: { name: true } },
       processRoute: {
         orderBy: {
@@ -1026,6 +1028,8 @@ async function getJobCardList(req) {
       id: item.id,
       docId: item.docId,
       orderQty: item.orderQty,
+      runningQty: item.runningQty,
+      rollQty: item.rollQty,
       styleItemId: item.styleItemId,
       styleItemName: item.StyleItem?.name || "",
       customerName: item.customer?.name || "",
