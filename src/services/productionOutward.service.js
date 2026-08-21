@@ -37,10 +37,34 @@ const updateProcessRoutes = async (tx, jobCardId, routes) => {
       });
       const totalSent = sumResult._sum.sentQty || 0;
 
+      const routeData = await tx.processRoute.findFirst({
+        where: {
+          jobCardId: parseInt(jobCardId),
+          processId: pId,
+          sequence: seq,
+        },
+      });
+
+      const currentCompleted = routeData?.completedQty || 0;
+      const currentWastage = routeData?.wastageQty || 0;
+      const currentActualQty = item.actualQty !== undefined && item.actualQty !== null 
+        ? parseInt(item.actualQty) 
+        : (routeData?.actualQty || 0);
+
+      let newStatus = "NOT_STARTED";
+      if (currentCompleted > 0 || currentWastage > 0) {
+         const pendingInward = Math.max(currentActualQty - (currentCompleted + currentWastage), 0);
+         newStatus = pendingInward === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
+      } else if (totalSent > 0) {
+         newStatus = "IN_PROGRESS";
+      }
+
+      const pendingQty = Math.max(currentActualQty - (currentCompleted + currentWastage), 0);
+
       const updateData = {
-        status: totalSent > 0 ? "IN_PROGRESS" : "NOT_STARTED",
+        status: newStatus,
         sendQty: totalSent,
-        pendingQty: totalSent > 0 ? totalSent : null,
+        pendingQty: pendingQty,
       };
 
       if (totalSent === 0) {

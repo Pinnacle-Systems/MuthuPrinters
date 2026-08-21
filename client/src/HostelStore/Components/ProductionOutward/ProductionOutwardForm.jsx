@@ -67,10 +67,7 @@ const getStatus = (s) =>
 const isPrevProcessCompleted = (route, sequence) => {
   if (sequence <= 1) return true; // no previous process
   const prev = route.find((r) => r.sequence === sequence - 1);
-  return (
-    !prev ||
-    prev.status?.toUpperCase() === "COMPLETED"
-  );
+  return !prev || prev.status?.toUpperCase() === "COMPLETED";
 };
 
 // ─── ProcessTree ──────────────────────────────────────────────────────────────
@@ -146,6 +143,7 @@ const ProcessTree = ({
             const isCompleted = status === "COMPLETED";
             const isPending = status === "IN_PROGRESS";
             const completedQty = route.completedQty;
+            const wastageQty = route.wastageQty;
             const isChecked = selectedProcessIds.includes(route.processId);
             const isPrevDone = (() => {
               // immediate previous process is pending → block
@@ -166,7 +164,9 @@ const ProcessTree = ({
 
                 if (!prevAlloc?.isOutSide) {
                   // nearest inside process must be completed or partially completed
-                  return ["COMPLETED", "PARTIALLY_COMPLETED"].includes(prev.status?.toUpperCase());
+                  return ["COMPLETED", "PARTIALLY_COMPLETED"].includes(
+                    prev.status?.toUpperCase(),
+                  );
                 }
               }
 
@@ -181,7 +181,11 @@ const ProcessTree = ({
                 );
                 if (prevAlloc?.isOutSide === true) {
                   // if already completed by another supplier — treat as satisfied, no checkbox needed
-                  if (["COMPLETED", "PARTIALLY_COMPLETED"].includes(prev.status?.toUpperCase()))
+                  if (
+                    ["COMPLETED", "PARTIALLY_COMPLETED"].includes(
+                      prev.status?.toUpperCase(),
+                    )
+                  )
                     return true;
                   // otherwise must be checked by user
                   return selectedProcessIds.includes(prev.processId);
@@ -189,11 +193,23 @@ const ProcessTree = ({
               }
               return true;
             })();
-            const processCap = getCapForProcess(route.processId, route.sequence);
-            const isFullySent = !isChecked && processCap !== null && (route.sendQty ?? 0) >= processCap;
-            const isSavedProcess = isEditMode && initialProcessIds?.includes(route.processId);
+            const processCap = getCapForProcess(
+              route.processId,
+              route.sequence,
+            );
+            const isFullySent =
+              !isChecked &&
+              processCap !== null &&
+              (route.sendQty ?? 0) >= processCap;
+            const isSavedProcess =
+              isEditMode && initialProcessIds?.includes(route.processId);
             const isCheckboxDisabled =
-              isFormReadOnly || !isOutside || !isPrevDone || !isPrevOutsideChecked || isFullySent || (isEditMode && !isSavedProcess);
+              isFormReadOnly ||
+              !isOutside ||
+              !isPrevDone ||
+              !isPrevOutsideChecked ||
+              isFullySent ||
+              (isEditMode && !isSavedProcess);
             const isLast = idx === sorted.length - 1;
 
             return (
@@ -247,7 +263,7 @@ const ProcessTree = ({
                                 ? "Select the previous outside process first"
                                 : isFullySent
                                   ? "Full quantity has already been sent"
-                                  : (isEditMode && !isSavedProcess)
+                                  : isEditMode && !isSavedProcess
                                     ? "Cannot add new processes to a saved transaction"
                                     : ""
                         }
@@ -291,6 +307,15 @@ const ProcessTree = ({
                               className={`inline-flex items-center gap-1 px-1.5 py-0 rounded-full text-[9px] font-semibold border ${isCompleted ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-50 text-amber-700 border-amber-300"}`}
                             >
                               Qty : {completedQty}
+                            </span>
+                          )}
+                        {wastageQty !== null &&
+                          wastageQty !== undefined &&
+                          wastageQty > 0 && (
+                            <span
+                              className={`inline-flex items-center gap-1 px-1.5 py-0 rounded-full text-[9px] font-semibold border bg-red-50 text-red-700 border-red-300`}
+                            >
+                              Wastage Qty: {wastageQty}
                             </span>
                           )}
                       </div>
@@ -593,46 +618,78 @@ const ProductionOutwardForm = ({
   );
   const allocationDetails = allocation?.allocationDetails || [];
 
-  const getCapForProcess = useCallback((processId, sequence) => {
-    const sorted = [...processRoute].sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
-    const idx = sorted.findIndex(r => r.processId === processId && r.sequence === sequence);
-    if (idx > 0) {
-      for (let i = idx - 1; i >= 0; i--) {
-        const prev = sorted[i];
-        if (prev.completedQty !== null && prev.completedQty !== undefined && prev.completedQty > 0) {
-          return prev.completedQty;
+  const getCapForProcess = useCallback(
+    (processId, sequence) => {
+      const sorted = [...processRoute].sort(
+        (a, b) => (a.sequence || 0) - (b.sequence || 0),
+      );
+      const idx = sorted.findIndex(
+        (r) => r.processId === processId && r.sequence === sequence,
+      );
+      if (idx > 0) {
+        for (let i = idx - 1; i >= 0; i--) {
+          const prev = sorted[i];
+          if (
+            prev.completedQty !== null &&
+            prev.completedQty !== undefined &&
+            prev.completedQty > 0
+          ) {
+            return prev.completedQty;
+          }
         }
       }
-    }
-    // Fallback to JobCard quantities
-    if (selectedJobCard?.runningQty) return Number(selectedJobCard.runningQty);
-    if (selectedJobCard?.rollQty) return Number(selectedJobCard.rollQty);
-    return null;
-  }, [processRoute, selectedJobCard]);
+      // Fallback to JobCard quantities
+      if (selectedJobCard?.runningQty)
+        return Number(selectedJobCard.runningQty);
+      if (selectedJobCard?.rollQty) return Number(selectedJobCard.rollQty);
+      return null;
+    },
+    [processRoute, selectedJobCard],
+  );
 
   // Derived based on the FIRST selected process
   let activeBaseQtyCap = null;
   if (selectedProcesses.length > 0) {
-    const sortedSelected = [...selectedProcesses].sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
+    const sortedSelected = [...selectedProcesses].sort(
+      (a, b) => (a.sequence || 0) - (b.sequence || 0),
+    );
     const firstSelected = sortedSelected[0];
-    activeBaseQtyCap = getCapForProcess(firstSelected.processId, firstSelected.sequence);
+    activeBaseQtyCap = getCapForProcess(
+      firstSelected.processId,
+      firstSelected.sequence,
+    );
   } else {
-    if (selectedJobCard?.runningQty) activeBaseQtyCap = Number(selectedJobCard.runningQty);
-    else if (selectedJobCard?.rollQty) activeBaseQtyCap = Number(selectedJobCard.rollQty);
+    if (selectedJobCard?.runningQty)
+      activeBaseQtyCap = Number(selectedJobCard.runningQty);
+    else if (selectedJobCard?.rollQty)
+      activeBaseQtyCap = Number(selectedJobCard.rollQty);
   }
 
-  const maxSentQty = selectedProcesses.length > 0
-    ? Math.max(...selectedProcesses.map(sp => {
-        const route = processRoute.find(r => Number(r.processId) === Number(sp.processId) && Number(r.sequence) === Number(sp.sequence));
-        const totalSent = route?.sendQty ?? 0;
-        const thisDocSent = singleData?.data?.productionOutwardDetails?.find(
-          d => Number(d.processId) === Number(sp.processId) && Number(d.sequence) === Number(sp.sequence)
-        )?.sentQty || 0;
-        return Math.max(totalSent - thisDocSent, 0);
-      }))
-    : 0;
+  const maxSentQty =
+    selectedProcesses.length > 0
+      ? Math.max(
+          ...selectedProcesses.map((sp) => {
+            const route = processRoute.find(
+              (r) =>
+                Number(r.processId) === Number(sp.processId) &&
+                Number(r.sequence) === Number(sp.sequence),
+            );
+            const totalSent = route?.sendQty ?? 0;
+            const thisDocSent =
+              singleData?.data?.productionOutwardDetails?.find(
+                (d) =>
+                  Number(d.processId) === Number(sp.processId) &&
+                  Number(d.sequence) === Number(sp.sequence),
+              )?.sentQty || 0;
+            return Math.max(totalSent - thisDocSent, 0);
+          }),
+        )
+      : 0;
 
-  const qtyCap = activeBaseQtyCap !== null ? Math.max(activeBaseQtyCap - maxSentQty, 0) : null;
+  const qtyCap =
+    activeBaseQtyCap !== null
+      ? Math.max(activeBaseQtyCap - maxSentQty, 0)
+      : null;
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -881,10 +938,14 @@ const ProductionOutwardForm = ({
 
   const handleToggleProcess = (route, alloc) => {
     setSelectedProcesses((prev) => {
-      const exists = prev.find((p) => Number(p.processId) === Number(route.processId));
+      const exists = prev.find(
+        (p) => Number(p.processId) === Number(route.processId),
+      );
       if (exists) {
         // Deselecting — remove this process AND all subsequent processes
-        const newSelected = prev.filter((p) => Number(p.sequence) < Number(route.sequence));
+        const newSelected = prev.filter(
+          (p) => Number(p.sequence) < Number(route.sequence),
+        );
         if (newSelected.length === 0) setDeliveryQty("");
         return newSelected;
       }
@@ -900,9 +961,10 @@ const ProductionOutwardForm = ({
       ].sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
 
       // Auto-fill deliveryQty with remaining qty when first item is added
-      if (prev.length === 0 && baseQtyCap !== null) {
+      const processCap = getCapForProcess(route.processId, route.sequence);
+      if (prev.length === 0 && processCap !== null) {
         const routeSendQty = route.sendQty ?? 0;
-        const remaining = Math.max(baseQtyCap - routeSendQty, 0);
+        const remaining = Math.max(processCap - routeSendQty, 0);
         setDeliveryQty(String(remaining));
       }
 
@@ -1102,7 +1164,9 @@ const ProductionOutwardForm = ({
           processList={processList}
           allocationDetails={allocationDetails}
           selectedProcessIds={selectedProcesses.map((s) => s.processId)}
-          initialProcessIds={(singleData?.data?.productionOutwardDetails || []).map(d => d.processId)}
+          initialProcessIds={(
+            singleData?.data?.productionOutwardDetails || []
+          ).map((d) => d.processId)}
           onToggle={handleToggleProcess}
           getCapForProcess={getCapForProcess}
           isEditMode={docId !== "New"}
