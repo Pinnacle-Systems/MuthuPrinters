@@ -303,6 +303,9 @@ async function get_mob_jobcard(req) {
             status: true,
             sequence: true,
             completedQty: true,
+            sendQty: true,
+            actualQty: true,
+            pendingQty: true,
             Process: { select: { id: true, name: true } },
             productionAllocationDtls: {
               select: {

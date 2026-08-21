@@ -594,7 +594,7 @@ async function create(body) {
 
           const totalWastageQty = (route.wastageQty || 0) + wastageQty;
 
-          const actualQty = route.actualQty || 0;
+          const actualQty = route.actualQty || route.sendQty || 0;
 
           const pendingQty = Math.max(
             actualQty - (totalCompletedQty + totalWastageQty),
@@ -902,7 +902,7 @@ async function update(id, body) {
         0,
       );
 
-      const actualQty = route.actualQty || 0;
+      const actualQty = route.actualQty || route.sendQty || 0;
 
       const pendingQty = Math.max(actualQty - (completedQty + wastageQty), 0);
 
@@ -1006,7 +1006,7 @@ async function remove(id) {
         0,
       );
 
-      const actualQty = route.actualQty || 0;
+      const actualQty = route.actualQty || route.sendQty || 0;
 
       const pendingQty = Math.max(actualQty - (completedQty + wastageQty), 0);
 
