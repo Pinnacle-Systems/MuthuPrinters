@@ -2268,6 +2268,7 @@ model ProcessRoute {
   actualQty                Int?
   pendingQty               Int?
   wastageQty               Int?
+  sendQty                   Int?
   takenMachines            takenmachines[]
   productionAllocationDtls ProductionAllocationDtl[]
   productionempPunch       productionempPunch[]

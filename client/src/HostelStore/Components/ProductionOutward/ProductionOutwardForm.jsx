@@ -42,6 +42,11 @@ const statusMeta = {
     badge: "bg-blue-50 text-blue-700 border-blue-300",
     label: "In Progress",
   },
+  PARTIALLY_COMPLETED: {
+    dot: "bg-orange-500",
+    badge: "bg-orange-50 text-orange-700 border-orange-300",
+    label: "Partially Completed",
+  },
   PENDING: {
     dot: "bg-amber-500",
     badge: "bg-amber-50 text-amber-700 border-amber-300",
@@ -56,20 +61,7 @@ const statusMeta = {
 const getStatus = (s) =>
   statusMeta[(s || "NOT_STARTED").toUpperCase()] || statusMeta.NOT_STARTED;
 
-// Returns the completedQty of the highest-sequence COMPLETED process in the route.
-// Returns null if no process is completed → no cap.
-const getLastCompletedQty = (processRoute) => {
-  if (!processRoute?.length) return null;
-  const completed = processRoute
-    .filter(
-      (r) =>
-        r.status?.toUpperCase() === "COMPLETED" &&
-        r.completedQty !== null &&
-        r.completedQty !== undefined,
-    )
-    .sort((a, b) => (b.sequence || 0) - (a.sequence || 0)); // highest sequence first
-  return completed.length > 0 ? completed[0].completedQty : null;
-};
+// No longer needed, using getCapForProcess locally
 
 // Returns true if the process at (sequence - 1) is COMPLETED
 const isPrevProcessCompleted = (route, sequence) => {
@@ -85,7 +77,11 @@ const ProcessTree = ({
   processList,
   allocationDetails,
   selectedProcessIds,
+  initialProcessIds,
   onToggle,
+  getCapForProcess,
+  isEditMode,
+  isFormReadOnly,
 }) => {
   if (!processRoute?.length) {
     return (
@@ -147,6 +143,7 @@ const ProcessTree = ({
             const isCompleted = status === "COMPLETED";
             const isPending = status === "IN_PROGRESS";
             const completedQty = route.completedQty;
+            const wastageQty = route.wastageQty;
             const isChecked = selectedProcessIds.includes(route.processId);
             const isPrevDone = (() => {
               // immediate previous process is pending → block
@@ -166,8 +163,10 @@ const ProcessTree = ({
                 );
 
                 if (!prevAlloc?.isOutSide) {
-                  // nearest inside process must be completed
-                  return prev.status?.toUpperCase() === "COMPLETED";
+                  // nearest inside process must be completed or partially completed
+                  return ["COMPLETED", "PARTIALLY_COMPLETED"].includes(
+                    prev.status?.toUpperCase(),
+                  );
                 }
               }
 
@@ -182,15 +181,35 @@ const ProcessTree = ({
                 );
                 if (prevAlloc?.isOutSide === true) {
                   // if already completed by another supplier — treat as satisfied, no checkbox needed
-                  if (prev.status?.toUpperCase() === "COMPLETED") return true;
+                  if (
+                    ["COMPLETED", "PARTIALLY_COMPLETED"].includes(
+                      prev.status?.toUpperCase(),
+                    )
+                  )
+                    return true;
                   // otherwise must be checked by user
                   return selectedProcessIds.includes(prev.processId);
                 }
               }
               return true;
             })();
+            const processCap = getCapForProcess(
+              route.processId,
+              route.sequence,
+            );
+            const isFullySent =
+              !isChecked &&
+              processCap !== null &&
+              (route.sendQty ?? 0) >= processCap;
+            const isSavedProcess =
+              isEditMode && initialProcessIds?.includes(route.processId);
             const isCheckboxDisabled =
-              !isOutside || isPending || !isPrevDone || !isPrevOutsideChecked;
+              isFormReadOnly ||
+              !isOutside ||
+              !isPrevDone ||
+              !isPrevOutsideChecked ||
+              isFullySent ||
+              (isEditMode && !isSavedProcess);
             const isLast = idx === sorted.length - 1;
 
             return (
@@ -236,11 +255,17 @@ const ProcessTree = ({
                         }
                         disabled={isCheckboxDisabled}
                         title={
-                          !isPrevDone
-                            ? "Previous process not completed"
-                            : !isPrevOutsideChecked
-                              ? "Select the previous outside process first"
-                              : ""
+                          isFormReadOnly
+                            ? "Form is locked"
+                            : !isPrevDone
+                              ? "Previous process not completed"
+                              : !isPrevOutsideChecked
+                                ? "Select the previous outside process first"
+                                : isFullySent
+                                  ? "Full quantity has already been sent"
+                                  : isEditMode && !isSavedProcess
+                                    ? "Cannot add new processes to a saved transaction"
+                                    : ""
                         }
                       />
                     )}
@@ -276,11 +301,21 @@ const ProcessTree = ({
                           {meta.label}
                         </span>
                         {completedQty !== null &&
-                          completedQty !== undefined && (
+                          completedQty !== undefined &&
+                          completedQty > 0 && (
                             <span
                               className={`inline-flex items-center gap-1 px-1.5 py-0 rounded-full text-[9px] font-semibold border ${isCompleted ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-amber-50 text-amber-700 border-amber-300"}`}
                             >
                               Qty : {completedQty}
+                            </span>
+                          )}
+                        {wastageQty !== null &&
+                          wastageQty !== undefined &&
+                          wastageQty > 0 && (
+                            <span
+                              className={`inline-flex items-center gap-1 px-1.5 py-0 rounded-full text-[9px] font-semibold border bg-red-50 text-red-700 border-red-300`}
+                            >
+                              Wastage Qty: {wastageQty}
                             </span>
                           )}
                       </div>
@@ -314,6 +349,8 @@ const DeliveryPanel = ({
   setDeliveryQty,
   qtyCap,
   branchData, // last completed seq qty — null means no cap
+  runningQty,
+  rollQty,
 }) => {
   const isDisabled = readOnly || childRecord?.current > 0;
 
@@ -323,15 +360,43 @@ const DeliveryPanel = ({
 
     // Validate immediately on change
     const num = Number(val);
-    if (val !== "" && qtyCap !== null && num > qtyCap) {
-      setDeliveryQty(qtyCap);
-      Swal.fire({
-        icon: "warning",
-        title: "Qty Exceeded!",
-        text: `Delivery qty cannot exceed the last completed qty of ${qtyCap}.`,
-        timer: 1800,
-        showConfirmButton: false,
-      });
+    if (val !== "") {
+      if (qtyCap !== null && num > qtyCap) {
+        setDeliveryQty(qtyCap);
+        Swal.fire({
+          icon: "warning",
+          title: "Qty Exceeded!",
+          text: `Delivery qty cannot exceed the last completed qty of ${qtyCap}.`,
+          timer: 1800,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
+      const hasRunningQty =
+        runningQty !== null && runningQty !== undefined && runningQty !== "";
+      const hasRollQty =
+        rollQty !== null && rollQty !== undefined && rollQty !== "";
+
+      if (hasRunningQty && num > Number(runningQty)) {
+        setDeliveryQty(runningQty);
+        Swal.fire({
+          icon: "warning",
+          title: "Qty Exceeded!",
+          text: `Delivery qty cannot exceed running qty of ${runningQty}.`,
+          timer: 1800,
+          showConfirmButton: false,
+        });
+      } else if (!hasRunningQty && hasRollQty && num > Number(rollQty)) {
+        setDeliveryQty(rollQty);
+        Swal.fire({
+          icon: "warning",
+          title: "Qty Exceeded!",
+          text: `Delivery qty cannot exceed roll qty of ${rollQty}.`,
+          timer: 1800,
+          showConfirmButton: false,
+        });
+      }
     }
   };
 
@@ -553,8 +618,78 @@ const ProductionOutwardForm = ({
   );
   const allocationDetails = allocation?.allocationDetails || [];
 
-  // Derived once from the full processRoute of the selected job card
-  const qtyCap = getLastCompletedQty(processRoute);
+  const getCapForProcess = useCallback(
+    (processId, sequence) => {
+      const sorted = [...processRoute].sort(
+        (a, b) => (a.sequence || 0) - (b.sequence || 0),
+      );
+      const idx = sorted.findIndex(
+        (r) => r.processId === processId && r.sequence === sequence,
+      );
+      if (idx > 0) {
+        for (let i = idx - 1; i >= 0; i--) {
+          const prev = sorted[i];
+          if (
+            prev.completedQty !== null &&
+            prev.completedQty !== undefined &&
+            prev.completedQty > 0
+          ) {
+            return prev.completedQty;
+          }
+        }
+      }
+      // Fallback to JobCard quantities
+      if (selectedJobCard?.runningQty)
+        return Number(selectedJobCard.runningQty);
+      if (selectedJobCard?.rollQty) return Number(selectedJobCard.rollQty);
+      return null;
+    },
+    [processRoute, selectedJobCard],
+  );
+
+  // Derived based on the FIRST selected process
+  let activeBaseQtyCap = null;
+  if (selectedProcesses.length > 0) {
+    const sortedSelected = [...selectedProcesses].sort(
+      (a, b) => (a.sequence || 0) - (b.sequence || 0),
+    );
+    const firstSelected = sortedSelected[0];
+    activeBaseQtyCap = getCapForProcess(
+      firstSelected.processId,
+      firstSelected.sequence,
+    );
+  } else {
+    if (selectedJobCard?.runningQty)
+      activeBaseQtyCap = Number(selectedJobCard.runningQty);
+    else if (selectedJobCard?.rollQty)
+      activeBaseQtyCap = Number(selectedJobCard.rollQty);
+  }
+
+  const maxSentQty =
+    selectedProcesses.length > 0
+      ? Math.max(
+          ...selectedProcesses.map((sp) => {
+            const route = processRoute.find(
+              (r) =>
+                Number(r.processId) === Number(sp.processId) &&
+                Number(r.sequence) === Number(sp.sequence),
+            );
+            const totalSent = route?.sendQty ?? 0;
+            const thisDocSent =
+              singleData?.data?.productionOutwardDetails?.find(
+                (d) =>
+                  Number(d.processId) === Number(sp.processId) &&
+                  Number(d.sequence) === Number(sp.sequence),
+              )?.sentQty || 0;
+            return Math.max(totalSent - thisDocSent, 0);
+          }),
+        )
+      : 0;
+
+  const qtyCap =
+    activeBaseQtyCap !== null
+      ? Math.max(activeBaseQtyCap - maxSentQty, 0)
+      : null;
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -607,6 +742,8 @@ const ProductionOutwardForm = ({
     else syncFormWithDb(undefined);
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
+  const isFormReadOnly = readOnly || childRecord?.current > 0;
+
   const buildOutwardDetails = () =>
     selectedProcesses.map((sp) => ({
       processId: sp.processId,
@@ -617,6 +754,7 @@ const ProductionOutwardForm = ({
       completedQty: sp.completedQty,
       receivedQty: 0,
       pendingQty: Number(deliveryQty) || 0,
+      actualQty: activeBaseQtyCap,
     }));
 
   const data = {
@@ -800,11 +938,16 @@ const ProductionOutwardForm = ({
 
   const handleToggleProcess = (route, alloc) => {
     setSelectedProcesses((prev) => {
-      const exists = prev.find((p) => p.processId === route.processId);
+      const exists = prev.find(
+        (p) => Number(p.processId) === Number(route.processId),
+      );
       if (exists) {
-        // Deselecting — clear qty if nothing will remain
-        if (prev.length === 1) setDeliveryQty("");
-        return prev.filter((p) => p.processId !== route.processId);
+        // Deselecting — remove this process AND all subsequent processes
+        const newSelected = prev.filter(
+          (p) => Number(p.sequence) < Number(route.sequence),
+        );
+        if (newSelected.length === 0) setDeliveryQty("");
+        return newSelected;
       }
       const updated = [
         ...prev,
@@ -817,9 +960,12 @@ const ProductionOutwardForm = ({
         },
       ].sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
 
-      // Auto-fill deliveryQty with last completed seq qty when first item is added
-      if (prev.length === 0 && qtyCap !== null) {
-        setDeliveryQty(String(qtyCap));
+      // Auto-fill deliveryQty with remaining qty when first item is added
+      const processCap = getCapForProcess(route.processId, route.sequence);
+      if (prev.length === 0 && processCap !== null) {
+        const routeSendQty = route.sendQty ?? 0;
+        const remaining = Math.max(processCap - routeSendQty, 0);
+        setDeliveryQty(String(remaining));
       }
 
       return updated;
@@ -913,8 +1059,8 @@ const ProductionOutwardForm = ({
                   value={jobCardId}
                   setValue={setJobCardId}
                   required
-                  readOnly={readOnly}
-                  disabled={readOnly}
+                  readOnly={isFormReadOnly}
+                  disabled={isFormReadOnly}
                   otherField="docId"
                   beforeChange={handleJobCardChange}
                   ref={supplierRef}
@@ -928,7 +1074,7 @@ const ProductionOutwardForm = ({
               value={productionAllocationId}
               setValue={setProductionAllocationId}
               required
-              readOnly
+              readOnly={isFormReadOnly}
               disabled
               otherField="docId"
             />
@@ -941,18 +1087,32 @@ const ProductionOutwardForm = ({
                 jobCardList?.data,
                 "styleItemName",
               )}
-              readOnly
+              readOnly={isFormReadOnly}
               disabled
             />
           </div>
-          <div className="w-32">
-            <TextInput
-              name="Order Qty"
-              value={findFromList(jobCardId, jobCardList?.data, "orderQty")}
-              readOnly
-              disabled
-              className="text-right"
-            />
+          <div className="flex gap-x-2 mt-2">
+            <div className="w-32">
+              <TextInput
+                name="Order Qty"
+                value={findFromList(jobCardId, jobCardList?.data, "orderQty")}
+                readOnly={isFormReadOnly}
+                disabled
+                className="text-right"
+              />
+            </div>
+            <div className="w-32">
+              <TextInput
+                name="Production Issue Qty"
+                value={
+                  findFromList(jobCardId, jobCardList?.data, "runningQty") ||
+                  findFromList(jobCardId, jobCardList?.data, "rollQty")
+                }
+                readOnly={isFormReadOnly}
+                disabled
+                className="text-right"
+              />
+            </div>
           </div>
         </div>
 
@@ -965,7 +1125,7 @@ const ProductionOutwardForm = ({
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
             placeholder="Additional notes..."
-            readOnly={readOnly}
+            readOnly={isFormReadOnly}
           />
         </div>
       </div>
@@ -1004,7 +1164,13 @@ const ProductionOutwardForm = ({
           processList={processList}
           allocationDetails={allocationDetails}
           selectedProcessIds={selectedProcesses.map((s) => s.processId)}
+          initialProcessIds={(
+            singleData?.data?.productionOutwardDetails || []
+          ).map((d) => d.processId)}
           onToggle={handleToggleProcess}
+          getCapForProcess={getCapForProcess}
+          isEditMode={docId !== "New"}
+          isFormReadOnly={isFormReadOnly}
         />
       </div>
 
@@ -1038,7 +1204,7 @@ const ProductionOutwardForm = ({
           supplierId={supplierId}
           setSupplierId={setSupplierId}
           supplierList={supplierList}
-          readOnly={readOnly}
+          readOnly={isFormReadOnly}
           childRecord={childRecord}
           dcNo={dcNo}
           setDcNo={setDcNo}
@@ -1047,6 +1213,8 @@ const ProductionOutwardForm = ({
           deliveryQty={deliveryQty}
           setDeliveryQty={setDeliveryQty}
           qtyCap={qtyCap}
+          runningQty={findFromList(jobCardId, jobCardList?.data, "runningQty")}
+          rollQty={findFromList(jobCardId, jobCardList?.data, "rollQty")}
         />
       </div>
     </div>
@@ -1086,7 +1254,7 @@ const ProductionOutwardForm = ({
       )}
       <TransactionLayout
         title="Process Issue"
-        badge={<ModeChip id={id} readOnly={readOnly} />}
+        badge={<ModeChip id={id} readOnly={isFormReadOnly} />}
         closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
         onClose={onClose}
         onKeyDown={handleKeyDown}
@@ -1096,44 +1264,48 @@ const ProductionOutwardForm = ({
         footer={
           <div className="flex flex-col md:flex-row gap-2 justify-between">
             <div className="flex gap-2 flex-wrap">
-              {!readOnly && (
-                <button
-                  onClick={() => saveData("close")}
-                  disabled={readOnly}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      saveData("close");
-                      e.stopPropagation();
-                    }
-                  }}
-                  className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                >
-                  <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                  Save & Close
-                </button>
-              )}
-              {!readOnly && (
-                <button
-                  onClick={() => saveData("new")}
-                  disabled={readOnly}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      saveData("new");
-                    }
-                  }}
-                  className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                >
-                  <FiSave className="w-4 h-4 mr-2" />
-                  Save & New
-                </button>
-              )}
+              <button
+                onClick={() => saveData("close")}
+                disabled={isFormReadOnly}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !isFormReadOnly) {
+                    e.preventDefault();
+                    saveData("close");
+                    e.stopPropagation();
+                  }
+                }}
+                className={`px-2 py-1 rounded flex items-center text-xs ${
+                  isFormReadOnly
+                    ? "bg-indigo-300 text-white cursor-not-allowed"
+                    : "bg-indigo-500 text-white hover:bg-indigo-600"
+                }`}
+              >
+                <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                Save & Close
+              </button>
+              <button
+                onClick={() => saveData("new")}
+                disabled={isFormReadOnly}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !isFormReadOnly) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    saveData("new");
+                  }
+                }}
+                className={`px-2 py-1 rounded flex items-center text-xs ${
+                  isFormReadOnly
+                    ? "bg-indigo-300 text-white cursor-not-allowed"
+                    : "bg-indigo-500 text-white hover:bg-indigo-600"
+                }`}
+              >
+                <FiSave className="w-4 h-4 mr-2" />
+                Save & New
+              </button>
             </div>
             <div className="flex gap-2 flex-wrap">
               {!id ||
-                (readOnly && (
+                (readOnly && childRecord?.current === 0 && (
                   <button
                     className="bg-yellow-600 text-white px-4 py-1 rounded hover:bg-yellow-700 flex items-center text-xs"
                     onClick={() =>
