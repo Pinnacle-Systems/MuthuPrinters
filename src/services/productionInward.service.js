@@ -607,6 +607,79 @@ async function create(body) {
             status = "COMPLETED";
           }
 
+          const getIncomingExist = await tx?.incomingQty?.findFirst({
+            where: {
+              jobCardId: Number(route.jobCardId),
+              sendRoute: Number(route.id),
+              pendingQty: { gt: 0 },
+              outwardId : item?.outwardDetailId
+            },
+            orderBy: { id: 'asc' }
+          });
+
+
+          
+
+          if (getIncomingExist?.id) {
+            const totalCompleted_Incoming = Number(getIncomingExist.completedQty || 0) + Number(acceptedQty);
+            const totalWastage_Incoming = Number(getIncomingExist.wastageQty || 0) + Number(wastageQty);
+            const pendingQty_Incoming = Math.max(Number(getIncomingExist.qty || 0) - (totalCompleted_Incoming + totalWastage_Incoming), 0);
+            const isCompleted = pendingQty_Incoming === 0;
+
+            await tx?.incomingQty?.update({
+              where: { id: getIncomingExist.id },
+              data: {
+                isCompleted: isCompleted,
+                pendingQty: pendingQty_Incoming,
+                wastageQty: totalWastage_Incoming, 
+                completedQty: totalCompleted_Incoming
+              }
+            });
+
+
+
+
+          }
+
+          const seqRoute = await tx?.processRoute?.findFirst({
+          where:{
+          jobCardId: route?.jobCardId,
+          sequence : Number(route?.sequence)+1 }
+          })
+
+
+        if(seqRoute?.id){
+            //  const existingNextSeq = await tx?.IncomingQty?.findFirst({
+            //    where: {
+            //      jobCardId: Number(route?.jobCardId),
+            //      processRouteId: Number(route?.id || 0),
+            //      sendRoute: seqRoute?.id,
+            //      isCompleted:false
+            //    }
+            //  });
+
+            //  if (existingNextSeq?.id) {
+            //    await tx?.IncomingQty?.update({
+            //      where: { id: existingNextSeq.id },
+            //      data: {
+            //        qty: Number(existingNextSeq.qty || 0) + Number(acceptedQty),
+            //        pendingQty: Number(existingNextSeq.pendingQty || 0) + Number(acceptedQty)
+            //      }
+            //    });
+            //  } else {
+               await tx?.incomingQty?.create({
+                 data: {
+                   jobCardId: Number(route?.jobCardId),
+                   processRouteId: Number(route?.id || 0),
+                   sendRoute: seqRoute?.id,
+                   qty: Number(acceptedQty),
+                   pendingQty: Number(acceptedQty),
+                   completedQty: 0,
+                   wastageQty: 0
+                 }
+               });
+            //  }
+        }
           await tx.processRoute.update({
             where: {
               id: route.id,

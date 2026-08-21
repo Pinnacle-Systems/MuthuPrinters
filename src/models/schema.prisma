@@ -235,6 +235,7 @@ model User {
   ItemSubGroupCreatedBy    ItemSubGroup[]       @relation(name: "createdBy")
   ItemSubGroupUpdatedBy    ItemSubGroup[]       @relation(name: "updatedBy")
   reworkLogs               ReworkLog[]
+  reworkBatchTrackers      ReworkBatchTracker[]
 }
 
 model Employee {
@@ -1321,6 +1322,11 @@ model PoItems {
   colorId       Int?
   Gsm           Gsm?       @relation(fields: [gsmId], references: [id])
   gsmId         Int?
+  sheetsPerPacket Int?
+  weightPerPacket Float?
+  totalPackets  Int?
+  pricePerKg    Int?
+
 }
 
 model TermsAndConditions {
@@ -2099,6 +2105,8 @@ model JobCard {
   isOldPlate            Boolean?               @default(false)
   isNewPlate            Boolean?               @default(false)
   reworkLogs            ReworkLog[]
+  reworkBatchTrackers   ReworkBatchTracker[]
+  IncomingQty           IncomingQty[]
 }
 
 model BoardQuality {
@@ -2265,10 +2273,14 @@ model ProcessRoute {
   actualQty                Int?
   pendingQty               Int?
   wastageQty               Int?
+  reworkSetId              String?
   takenMachines            takenmachines[]
   productionAllocationDtls ProductionAllocationDtl[]
   productionempPunch       productionempPunch[]
   reworkLogs               ReworkLog[]
+  reworkBatchTrackers      ReworkBatchTracker[]
+  IncomingQty               IncomingQty[]
+  IncomingSendQty               IncomingQty[] @relation("sendProcessRoute")
 }
 
 model productionempPunch {
@@ -2572,6 +2584,7 @@ model ProductionOutward {
   dcNo                     String?
   vehicleNo                String?
   productionOutwardDetails ProductionOutwardDtl[]
+  IncomingQty              IncomingQty[]
 
   productionInwards    ProductionInward[]
   productionInwardDtls ProductionInwardDtl[]
@@ -2801,6 +2814,7 @@ model ItemSubGroup {
 
 model ReworkLog {
   id             Int           @id @default(autoincrement())
+  uniqueId       String        @default(uuid())
   jobCardId      Int?
   JobCard        JobCard?      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
   processRouteId Int?
@@ -2813,4 +2827,39 @@ model ReworkLog {
   createdAt      DateTime      @default(now())
   Userid         Int?
   User           User?         @relation(fields: [Userid], references: [id])
+}
+
+
+model ReworkBatchTracker {
+  id             Int          @id @default(autoincrement())
+  uniqueId       String       @unique @default(uuid())
+  jobCardId      Int
+  JobCard        JobCard      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processRouteId Int
+  ProcessRoute   ProcessRoute @relation(fields: [processRouteId], references: [id], onDelete: Cascade)
+  userId         Int?
+  User           User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isExpired      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model IncomingQty {
+  id             Int          @id @default(autoincrement())
+  uniqueId       String       @unique @default(uuid())
+  jobCardId      Int
+  JobCard        JobCard      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processRouteId Int
+  ProcessRoute   ProcessRoute @relation(fields: [processRouteId], references: [id], onDelete: Cascade)
+  isCompleted      Boolean      @default(false)
+  qty              Int
+  pendingQty       Int?
+  completedQty     Int?
+   wastageQty     Int?
+  sendRoute        Int
+  sendProcessRoute   ProcessRoute @relation(name: "sendProcessRoute",fields: [sendRoute], references: [id], onDelete: Cascade)
+  outwardId        Int?
+  productionoutward   ProductionOutward? @relation(fields:[outwardId],references: [id])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 }

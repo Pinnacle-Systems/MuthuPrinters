@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma.js";
+import crypto from "crypto";
 
 async function ReworkPendingProcess(req) {
   const { jobCardId, processRouteId, reason, completedQty, wastageQty, userId } = req.body;
@@ -28,9 +29,12 @@ async function ReworkPendingProcess(req) {
         throw new Error("No pending quantity available for rework. Quantities meet or exceed actual quantity.");
       }
 
+      const reworkSetId = crypto.randomUUID();
+
       // 2. Log to the new ReworkLog table
       await tx.reworkLog.create({
         data: {
+          uniqueId: reworkSetId,
           jobCardId: Number(jobCardId),
           processRouteId: Number(processRouteId),
           actualQty: actualQty,
@@ -42,17 +46,17 @@ async function ReworkPendingProcess(req) {
         }
       });
 
-      // 3. Update all existing pending processes for the "good" batch to match the completed qty
-      // We only update sequences > the current sequence, because previous sequences are already done.
-      await tx.processRoute.updateMany({
-        where: {
-          jobCardId: Number(jobCardId),
-          sequence: { gt: currentRoute.sequence },
-        },
+      await tx.reworkBatchTracker.create({
         data: {
-          actualQty: completed,
+          uniqueId: reworkSetId,
+          jobCardId: Number(jobCardId),
+          processRouteId: Number(processRouteId),
+          userId: userId ? Number(userId) : 0,
+          isExpired: false
         }
       });
+
+      // Note: We no longer shrink actualQty of subsequent sequences.
 
       // 4. Clone all processes from Seq 1 up to the current sequence for the pending amount
       const initialRoutes = await tx.processRoute.findMany({
@@ -84,6 +88,7 @@ async function ReworkPendingProcess(req) {
           pendingQty: null,
           wastageQty: null,
           status: "NOT_STARTED",
+          reworkSetId: reworkSetId
         };
       });
 

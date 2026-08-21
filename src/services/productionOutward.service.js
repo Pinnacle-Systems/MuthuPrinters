@@ -347,20 +347,65 @@ async function create(body) {
     });
 
     await Promise.all(
-      outwardDetails.map((item) =>
-        tx.processRoute.updateMany({
-          where: {
-            jobCardId: parseInt(jobCardId),
-            processId: item.processId ? parseInt(item.processId) : null,
-            sequence: item.sequence ? parseInt(item.sequence) : null,
-          },
+      outwardDetails.map(async (item) =>{
+        const processId = item.processId ? parseInt(item.processId) : null;
+       const sequence = item.sequence ? parseInt(item.sequence) : null;
 
-          data: {
-            status: "IN_PROGRESS",
-            pendingQty: item.sentQty ? parseInt(item.sentQty) : 0,
-            actualQty: item.sentQty ? parseInt(item.sentQty) : 0,
+       const processRoute = await tx.processRoute.findFirst({
+        where: {
+        jobCardId: parseInt(jobCardId),
+        processId,
+        sequence,
+       },
+        });
+
+
+       const processRouteSeq = await tx.processRoute.findFirst({
+        where: {
+        jobCardId: parseInt(jobCardId),
+        sequence:sequence + 1,
           },
-        }),
+        });
+
+     if (!processRoute) return; // guard: nothing matched, decide how to handle
+
+         await tx.processRoute.update({
+      where: { id: processRoute.id },
+      data: {
+        status: "IN_PROGRESS",
+        pendingQty: item.sentQty ? parseInt(item.sentQty) : 0,
+        actualQty: item.sentQty ? parseInt(item.sentQty) : 0,
+      },
+         });
+
+        // const processRoute = await  tx.processRoute.updateMany({
+        //   where: {
+        //     jobCardId: parseInt(jobCardId),
+        //     processId: item.processId ? parseInt(item.processId) : null,
+        //     sequence: item.sequence ? parseInt(item.sequence) : null,
+        //   },
+
+        //   data: {
+        //     status: "IN_PROGRESS",
+        //     pendingQty: item.sentQty ? parseInt(item.sentQty) : 0,
+        //     actualQty: item.sentQty ? parseInt(item.sentQty) : 0,
+        //   },
+        // })
+       await  tx?.incomingQty?.create({
+                 data: {
+                   jobCardId: parseInt(jobCardId),
+                   processRouteId: Number(processRoute?.id || 0),
+                   sendRoute: Number(processRouteSeq?.id),
+                   qty: Number(item?.sentQty || 0),
+                   pendingQty: Number(item?.sentQty || 0),
+                   completedQty: 0,
+                   wastageQty: 0,
+                   outwardId : outward?.id
+                 }
+             });
+      
+               
+      }
       ),
     );
 
