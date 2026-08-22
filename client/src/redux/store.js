@@ -70,6 +70,7 @@ import {
   ProductionInwardApi,
   ProcessBillApi,
   SalesDeliveryApi,
+  SaleOrderApi,
 } from "./uniformService";
 import OrderEntryApi from "./uniformService/OrderEntryService";
 import BoardMasterApi from "./services/boardService";
@@ -145,6 +146,7 @@ const commonReducers = {
   processBill: ProcessBillApi.reducer,
   salesDelivery: SalesDeliveryApi.reducer,
   [ItemSubGroupMasterApi.reducerPath]: ItemSubGroupMasterApi.reducer,
+  SalesOrder: SaleOrderApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -216,6 +218,7 @@ const commonMiddleware = [
   ProcessBillApi.middleware,
   SalesDeliveryApi.middleware,
   ItemSubGroupMasterApi.middleware,
+  SaleOrderApi.middleware
 ];
 
 const store = configureStore({
