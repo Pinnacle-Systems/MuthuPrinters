@@ -2274,6 +2274,7 @@ model ProcessRoute {
   pendingQty               Int?
   wastageQty               Int?
   reworkSetId              String?
+  sendQty                   Int?
   takenMachines            takenmachines[]
   productionAllocationDtls ProductionAllocationDtl[]
   productionempPunch       productionempPunch[]

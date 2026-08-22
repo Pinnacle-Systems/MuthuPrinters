@@ -572,56 +572,143 @@ async function create(body) {
         inwardDetails: true,
       },
     });
-    await Promise.all(
-      inwardDetails.flatMap((item) =>
-        (item.processes || []).map(async (processId) => {
-          const route = await tx.processRoute.findFirst({
-            where: {
-              jobCardId: item.jobCardId ? parseInt(item.jobCardId) : null,
-              processId: processId ? parseInt(processId) : null,
+    const affectedProcesses = new Set();
+    for (const item of inwardDetails) {
+      for (const processId of item.processes || []) {
+        if (item.jobCardId && processId) {
+          affectedProcesses.add(`${item.jobCardId}_${processId}`);
+        }
+      }
+    }
+
+    for (const key of affectedProcesses) {
+      const [jobCardId, processId] = key.split("_");
+
+      const route = await tx.processRoute.findFirst({
+        where: {
+          jobCardId: parseInt(jobCardId),
+          processId: parseInt(processId),
+        },
+      });
+
+      if (!route) continue;
+
+      const inwards = await tx.productionInwardDtl.findMany({
+        where: {
+          jobCardId: parseInt(jobCardId),
+          inwardProcessDtls: {
+            some: {
+              processId: parseInt(processId),
             },
-          });
+          },
+        },
+        select: {
+          acceptedQty: true,
+          wastageQty: true,
+        },
+      });
 
-          if (!route) return;
+      const completedQty = inwards.reduce(
+        (sum, row) => sum + (row.acceptedQty || 0),
+        0,
+      );
 
-          const receivedQty = parseFloat(item.receivedQty || 0);
-          const wastageQty = parseFloat(item.wastageQty || 0);
-          const acceptedQty = parseFloat(item.acceptedQty || 0);
-          // Total processed quantity
-          const processedQty = receivedQty + wastageQty;
+      const wastageQty = inwards.reduce(
+        (sum, row) => sum + (row.wastageQty || 0),
+        0,
+      );
 
-          const totalCompletedQty = (route.completedQty || 0) + acceptedQty;
+      const actualQty = route.actualQty || route.sendQty || 0;
+      const pendingQty = Math.max(actualQty - (completedQty + wastageQty), 0);
 
-          const totalWastageQty = (route.wastageQty || 0) + wastageQty;
-
-          const actualQty = route.actualQty || 0;
-
-          const pendingQty = Math.max(
-            actualQty - (totalCompletedQty + totalWastageQty),
-            0,
-          );
-
-          let status = "PARTIALLY_COMPLETED";
-
-          if (pendingQty === 0) {
-            status = "COMPLETED";
-          }
-
-          const getIncomingExist = await tx?.incomingQty?.findFirst({
-            where: {
-              jobCardId: Number(route.jobCardId),
-              sendRoute: Number(route.id),
-              pendingQty: { gt: 0 },
-              outwardId : item?.outwardDetailId
-            },
-            orderBy: { id: 'asc' }
-          });
+      let status = "NOT_STARTED";
+      if (completedQty > 0 || wastageQty > 0) {
+        status = pendingQty === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
+      } else if (route.sendQty > 0) {
+        status = "IN_PROGRESS";
+      }
 
 
-          
+      const item = inwardDetails.find(
+        (i) =>
+          String(i.jobCardId) === String(jobCardId) &&
+          (i.processes || []).map(String).includes(String(processId))
+      );
+      const acceptedQty = item
+        ? parseFloat(item.receivedQty || 0) - parseFloat(item.wastageQty || 0)
+        : 0;
 
-          if (getIncomingExist?.id) {
-            const totalCompleted_Incoming = Number(getIncomingExist.completedQty || 0) + Number(acceptedQty);
+        let outwardId=null;
+        if(item?.productionOutwardId){
+          outwardId = item?.productionOutwardId
+        }
+     let getIncomingExist = null; 
+
+     if(outwardId){
+     getIncomingExist = await tx?.incomingQty?.findFirst({
+     where: {
+    jobCardId: Number(route.jobCardId),
+    processRouteId: Number(route.id),
+    outwardId: outwardId,
+    pendingQty: { gt: 0 },
+     },
+     orderBy: { id: "asc" },
+   });
+
+
+  //   getIncomingExist = await tx?.incomingQty?.findFirst({
+  //    where: {
+  //   jobCardId: Number(route.jobCardId),
+  //   processRouteId: Number(route.id),
+  //   outwardId: null,
+  //   pendingQty: { gt: 0 },
+  //    },
+  //    orderBy: { id: "asc" },
+  //  });
+
+    let getIncomingExist_ = await tx?.incomingQty?.findFirst({
+     where: {
+    jobCardId: Number(route.jobCardId),
+    sendRoute: Number(route.id),
+    outwardId: null,
+    pendingQty: { gt: 0 },
+      },
+      orderBy: { id: "asc" },
+        });
+
+       const totalCompleted_Incoming = Number(getIncomingExist_.completedQty || 0) + Number(acceptedQty);
+            const totalWastage_Incoming = Number(getIncomingExist_.wastageQty || 0) + Number(wastageQty);
+            const pendingQty_Incoming = Math.max(Number(getIncomingExist_.qty || 0) - (totalCompleted_Incoming + totalWastage_Incoming), 0);
+            const isCompleted = pendingQty_Incoming === 0;
+
+            await tx?.incomingQty?.update({
+              where: { id: getIncomingExist_.id },
+              data: {
+                isCompleted: isCompleted,
+                pendingQty: pendingQty_Incoming,
+                wastageQty: totalWastage_Incoming, 
+                completedQty: totalCompleted_Incoming
+              }
+              });
+
+
+      }
+
+if (!getIncomingExist && !outwardId) {
+  getIncomingExist = await tx?.incomingQty?.findFirst({
+    where: {
+      jobCardId: Number(route.jobCardId),
+      sendRoute: Number(route.id),
+      outwardId: null,
+      pendingQty: { gt: 0 },
+    },
+    orderBy: { id: "asc" },
+  });
+}
+
+
+  if (getIncomingExist?.id) {
+             const totalCompleted_Incoming = Number(getIncomingExist.completedQty || 0) + Number(acceptedQty);
             const totalWastage_Incoming = Number(getIncomingExist.wastageQty || 0) + Number(wastageQty);
             const pendingQty_Incoming = Math.max(Number(getIncomingExist.qty || 0) - (totalCompleted_Incoming + totalWastage_Incoming), 0);
             const isCompleted = pendingQty_Incoming === 0;
@@ -634,12 +721,12 @@ async function create(body) {
                 wastageQty: totalWastage_Incoming, 
                 completedQty: totalCompleted_Incoming
               }
-            });
+              });
 
 
 
 
-          }
+     }
 
           const seqRoute = await tx?.processRoute?.findFirst({
           where:{
@@ -671,7 +758,7 @@ async function create(body) {
                  data: {
                    jobCardId: Number(route?.jobCardId),
                    processRouteId: Number(route?.id || 0),
-                   sendRoute: seqRoute?.id,
+                   sendRoute: seqRoute?.id ?? route?.id, // this will fallback when last process outside same route
                    qty: Number(acceptedQty),
                    pendingQty: Number(acceptedQty),
                    completedQty: 0,
@@ -680,21 +767,18 @@ async function create(body) {
                });
             //  }
         }
-          await tx.processRoute.update({
-            where: {
-              id: route.id,
-            },
 
-            data: {
-              status,
-              completedQty: totalCompletedQty,
-              wastageQty: totalWastageQty,
-              pendingQty,
-            },
-          });
-        }),
-      ),
-    );
+      await tx.processRoute.update({
+        where: { id: route.id },
+        data: {
+          completedQty,
+          wastageQty,
+          pendingQty,
+          status,
+        },
+      });
+    }
+
 
     return inward;
   });
@@ -757,6 +841,8 @@ async function update(id, body) {
   let data;
 
   await prisma.$transaction(async (tx) => {
+    const affectedProcesses = new Set();
+
     for (const removedItem of removedItems) {
       const processDtl = await tx.inwardProcessDtl.findMany({
         where: {
@@ -765,19 +851,9 @@ async function update(id, body) {
       });
 
       for (const proc of processDtl) {
-        await tx.processRoute.updateMany({
-          where: {
-            jobCardId: removedItem.jobCardId
-              ? parseInt(removedItem.jobCardId)
-              : null,
-
-            processId: proc.processId ? parseInt(proc.processId) : null,
-          },
-
-          data: {
-            status: "PENDING",
-          },
-        });
+        if (removedItem.jobCardId && proc.processId) {
+          affectedProcesses.add(`${removedItem.jobCardId}_${proc.processId}`);
+        }
       }
     }
     if (removedIds.length > 0) {
@@ -929,7 +1005,7 @@ async function update(id, body) {
         });
       }
     }
-    const affectedProcesses = new Set();
+    // affectedProcesses already defined above
 
     for (const item of inwardDetails) {
       for (const processId of item.processes || []) {
@@ -975,7 +1051,7 @@ async function update(id, body) {
         0,
       );
 
-      const actualQty = route.actualQty || 0;
+      const actualQty = route.actualQty || route.sendQty || 0;
 
       const pendingQty = Math.max(actualQty - (completedQty + wastageQty), 0);
 
@@ -983,6 +1059,8 @@ async function update(id, body) {
 
       if (completedQty > 0 || wastageQty > 0) {
         status = pendingQty === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
+      } else if (route.sendQty > 0) {
+        status = "IN_PROGRESS";
       }
 
       await tx.processRoute.update({
@@ -1079,7 +1157,7 @@ async function remove(id) {
         0,
       );
 
-      const actualQty = route.actualQty || 0;
+      const actualQty = route.actualQty || route.sendQty || 0;
 
       const pendingQty = Math.max(actualQty - (completedQty + wastageQty), 0);
 
@@ -1087,6 +1165,8 @@ async function remove(id) {
 
       if (completedQty > 0 || wastageQty > 0) {
         status = pendingQty === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
+      } else if (route.sendQty > 0) {
+        status = "IN_PROGRESS";
       }
 
       await tx.processRoute.update({

@@ -67,7 +67,7 @@ const ProductionOutwardApi = createApi({
           "Content-type": "application/json; charset=UTF-8",
         },
       }),
-      invalidatesTags: ["productionOutward"],
+      invalidatesTags: ["productionOutward", "jobCard"],
     }),
     updateProductionOutward: builder.mutation({
       query: (payload) => {
@@ -78,14 +78,14 @@ const ProductionOutwardApi = createApi({
           body,
         };
       },
-      invalidatesTags: ["productionOutward"],
+      invalidatesTags: ["productionOutward", "jobCard"],
     }),
     deleteProductionOutward: builder.mutation({
       query: (id) => ({
         url: `${PRODUCTION_OUTWARD_API}/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["productionOutward"],
+      invalidatesTags: ["productionOutward", "jobCard"],
     }),
   }),
 });

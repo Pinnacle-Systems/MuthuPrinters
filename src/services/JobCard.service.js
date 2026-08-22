@@ -303,6 +303,9 @@ async function get_mob_jobcard(req) {
             status: true,
             sequence: true,
             completedQty: true,
+            sendQty: true,
+            actualQty: true,
+            pendingQty: true,
             Process: { select: { id: true, name: true } },
             productionAllocationDtls: {
               select: {
@@ -354,12 +357,13 @@ async function get_mob_jobcard(req) {
       },
     });
      const initialProcessStatus  = data?.processRoute[0]?.status
+     const initialpendingQty =   data?.processRoute[0]?.pendingQty
      const checkProcessNew = data?.processRoute?.slice(1)?.every((checkall) =>  checkall?.status === 'NOT_STARTED' )
-
-     
-
        var incomingData = {};
        //&& (initialProcessStatus === 'NOT_STARTED' || initialProcessStatus === 'IN_PROGRESS' )
+
+        
+
        if(checkProcessNew){
         incomingData= {
           qty:data?.runningQty,
@@ -374,10 +378,22 @@ async function get_mob_jobcard(req) {
          pendingQty: {
           gt: 0
            },
+           AND:{
+           outwardId:null
+           }
            
             }
           })
         }
+
+
+        if(!incomingData && initialProcessStatus === "PARTIALLY_COMPLETED" && !checkProcessNew){
+           incomingData= { qty:initialpendingQty,
+          id:null }
+        }
+
+
+       
 
 
     if (!data) return NoRecordFound("Job Card");
@@ -981,6 +997,8 @@ async function getJobCardList(req) {
       docId: true,
       orderQty: true,
       styleItemId: true,
+      runningQty: true,
+      rollQty: true,
       customer: { select: { name: true } },
       processRoute: {
         orderBy: {
@@ -1089,6 +1107,8 @@ async function getJobCardList(req) {
       id: item.id,
       docId: item.docId,
       orderQty: item.orderQty,
+      runningQty: item.runningQty,
+      rollQty: item.rollQty,
       styleItemId: item.styleItemId,
       styleItemName: item.StyleItem?.name || "",
       customerName: item.customer?.name || "",
