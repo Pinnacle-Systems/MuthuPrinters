@@ -77,7 +77,8 @@ function getProductionInwardStatus(inward) {
   );
 
   const totalAccepted = inwardDetails.reduce(
-    (sum, item) => sum + (item.acceptedQty || 0),
+    // (sum, item) => sum + (item.acceptedQty || 0),
+    (sum, item) => sum + (item.receivedQty || 0),
     0,
   );
 
@@ -263,6 +264,7 @@ async function getOne(id) {
                   id: true,
                   acceptedQty: true,
                   wastageQty: true,
+                  receivedQty: true,
                 },
               },
             },
@@ -282,7 +284,8 @@ async function getOne(id) {
     const alreadyReceivedQty =
       item.ProductionOutwardDtl?.productionInwardDtls.reduce(
         (sum, inward) =>
-          sum + (inward.acceptedQty || 0) + (inward.wastageQty || 0),
+          // sum + (inward.acceptedQty || 0) + (inward.wastageQty || 0),
+          sum + (inward.receivedQty || 0) + (inward.wastageQty || 0),
         0,
       ) || 0;
 
@@ -291,8 +294,10 @@ async function getOne(id) {
     return {
       ...item,
       sentQty,
-      alreadyReceivedQty: alreadyReceivedQty - item.receivedQty,
-      pendingQty: pendingQty + item.receivedQty,
+      // alreadyReceivedQty: alreadyReceivedQty - item.receivedQty,
+      alreadyReceivedQty: alreadyReceivedQty,
+      // pendingQty: pendingQty + item.receivedQty,
+      pendingQty: pendingQty,
     };
   });
 
@@ -537,10 +542,10 @@ async function create(body) {
 
             wastageQty: parseFloat(item.wastageQty || 0),
 
-            acceptedQty:
-              parseFloat(item.receivedQty || 0) -
-              parseFloat(item.wastageQty || 0),
-
+            // acceptedQty:
+            //   parseFloat(item.receivedQty || 0) -
+            //   parseFloat(item.wastageQty || 0),
+            acceptedQty: parseFloat(item.receivedQty || 0),
             // processId: item.processId ? parseInt(item.processId) : null,
 
             price: item.price ? parseFloat(item.price) : null,
@@ -605,11 +610,13 @@ async function create(body) {
         select: {
           acceptedQty: true,
           wastageQty: true,
+          receivedQty: true,
         },
       });
 
       const completedQty = inwards.reduce(
-        (sum, row) => sum + (row.acceptedQty || 0),
+        // (sum, row) => sum + (row.acceptedQty || 0),
+        (sum, row) => sum + (row.receivedQty || 0),
         0,
       );
 
@@ -633,9 +640,10 @@ async function create(body) {
           String(i.jobCardId) === String(jobCardId) &&
           (i.processes || []).map(String).includes(String(processId)),
       );
-      const acceptedQty = item
-        ? parseFloat(item.receivedQty || 0) - parseFloat(item.wastageQty || 0)
-        : 0;
+      // const acceptedQty = item
+      //   ? parseFloat(item.receivedQty || 0) - parseFloat(item.wastageQty || 0)
+      //   : 0;
+      const acceptedQty = item ? parseFloat(item.receivedQty || 0) : 0;
 
       let outwardId = null;
       if (item?.productionOutwardId) {
@@ -674,7 +682,7 @@ async function create(body) {
           orderBy: { id: "asc" },
         });
 
-        if (getIncomingExist_.id) {
+        if (getIncomingExist_?.id) {
           const totalCompleted_Incoming =
             Number(getIncomingExist_.completedQty || 0) + Number(acceptedQty);
           const totalWastage_Incoming =
@@ -932,9 +940,10 @@ async function update(id, body) {
 
             wastageQty: parseFloat(item.wastageQty || 0),
 
-            acceptedQty:
-              parseFloat(item.receivedQty || 0) -
-              parseFloat(item.wastageQty || 0),
+            // acceptedQty:
+            //   parseFloat(item.receivedQty || 0) -
+            //   parseFloat(item.wastageQty || 0),
+            acceptedQty: parseFloat(item.receivedQty || 0),
 
             // processId: item.processId ? parseInt(item.processId) : null,
 
@@ -979,9 +988,10 @@ async function update(id, body) {
 
             wastageQty: parseFloat(item.wastageQty || 0),
 
-            acceptedQty:
-              parseFloat(item.receivedQty || 0) -
-              parseFloat(item.wastageQty || 0),
+            // acceptedQty:
+            //   parseFloat(item.receivedQty || 0) -
+            //   parseFloat(item.wastageQty || 0),
+            acceptedQty: parseFloat(item.receivedQty || 0),
 
             // processId: item.processId ? parseInt(item.processId) : null,
 
@@ -1042,11 +1052,13 @@ async function update(id, body) {
         select: {
           acceptedQty: true,
           wastageQty: true,
+          receivedQty: true,
         },
       });
 
       const completedQty = inwards.reduce(
-        (sum, row) => sum + (row.acceptedQty || 0),
+        // (sum, row) => sum + (row.acceptedQty || 0),
+        (sum, row) => sum + (row.receivedQty || 0),
         0,
       );
 
@@ -1148,11 +1160,13 @@ async function remove(id) {
         select: {
           acceptedQty: true,
           wastageQty: true,
+          receivedQty: true,
         },
       });
 
       const completedQty = inwards.reduce(
-        (sum, row) => sum + (row.acceptedQty || 0),
+        // (sum, row) => sum + (row.acceptedQty || 0),
+        (sum, row) => sum + (row.receivedQty || 0),
         0,
       );
 

@@ -10,7 +10,13 @@ import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import moment from "moment";
 
-const updateProcessRoutes = async (tx, jobCardId, routes,outward,productionQty) => {
+const updateProcessRoutes = async (
+  tx,
+  jobCardId,
+  routes,
+  outward,
+  productionQty,
+) => {
   // deduplicate routes based on processId + sequence
   const uniqueRoutes = [];
   const seen = new Set();
@@ -47,19 +53,26 @@ const updateProcessRoutes = async (tx, jobCardId, routes,outward,productionQty) 
 
       const currentCompleted = routeData?.completedQty || 0;
       const currentWastage = routeData?.wastageQty || 0;
-      const currentActualQty = item.actualQty !== undefined && item.actualQty !== null 
-        ? parseInt(item.actualQty) 
-        : (routeData?.actualQty || 0);
+      const currentActualQty =
+        item.actualQty !== undefined && item.actualQty !== null
+          ? parseInt(item.actualQty)
+          : routeData?.actualQty || 0;
 
       let newStatus = "NOT_STARTED";
       if (currentCompleted > 0 || currentWastage > 0) {
-         const pendingInward = Math.max(currentActualQty - (currentCompleted + currentWastage), 0);
-         newStatus = pendingInward === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
+        const pendingInward = Math.max(
+          currentActualQty - (currentCompleted + currentWastage),
+          0,
+        );
+        newStatus = pendingInward === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
       } else if (totalSent > 0) {
-         newStatus = "IN_PROGRESS";
+        newStatus = "IN_PROGRESS";
       }
 
-      const pendingQty = Math.max(currentActualQty - (currentCompleted + currentWastage), 0);
+      const pendingQty = Math.max(
+        currentActualQty - (currentCompleted + currentWastage),
+        0,
+      );
 
       const updateData = {
         status: newStatus,
@@ -71,26 +84,25 @@ const updateProcessRoutes = async (tx, jobCardId, routes,outward,productionQty) 
         updateData.actualQty = parseInt(productionQty);
       }
 
-       const processId = item.processId ? parseInt(item.processId) : null;
-       const sequence = item.sequence ? parseInt(item.sequence) : null;
+      const processId = item.processId ? parseInt(item.processId) : null;
+      const sequence = item.sequence ? parseInt(item.sequence) : null;
 
-       const processRoute = await tx.processRoute.findFirst({
+      const processRoute = await tx.processRoute.findFirst({
         where: {
-        jobCardId: parseInt(jobCardId),
-        processId,
-        sequence,
-       },
-        });
+          jobCardId: parseInt(jobCardId),
+          processId,
+          sequence,
+        },
+      });
 
-
-       const processRouteSeq = await tx.processRoute.findFirst({
+      const processRouteSeq = await tx.processRoute.findFirst({
         where: {
-        jobCardId: parseInt(jobCardId),
-        sequence:sequence + 1,
-          },
-        });
+          jobCardId: parseInt(jobCardId),
+          sequence: sequence + 1,
+        },
+      });
 
-     if (!processRoute) return; // guard: nothing matched, decide how to handle
+      if (!processRoute) return; // guard: nothing matched, decide how to handle
 
       //    await tx.processRoute.update({
       // where: { id: processRoute.id },
@@ -101,8 +113,7 @@ const updateProcessRoutes = async (tx, jobCardId, routes,outward,productionQty) 
       // },
       //    });
 
-
-       await tx.processRoute.updateMany({
+      await tx.processRoute.updateMany({
         where: {
           jobCardId: parseInt(jobCardId),
           processId: pId,
@@ -111,19 +122,19 @@ const updateProcessRoutes = async (tx, jobCardId, routes,outward,productionQty) 
         data: updateData,
       });
 
-        // const processRoute = await  tx.processRoute.updateMany({
-        //   where: {
-        //     jobCardId: parseInt(jobCardId),
-        //     processId: item.processId ? parseInt(item.processId) : null,
-        //     sequence: item.sequence ? parseInt(item.sequence) : null,
-        //   },
+      // const processRoute = await  tx.processRoute.updateMany({
+      //   where: {
+      //     jobCardId: parseInt(jobCardId),
+      //     processId: item.processId ? parseInt(item.processId) : null,
+      //     sequence: item.sequence ? parseInt(item.sequence) : null,
+      //   },
 
-        //   data: {
-        //     status: "IN_PROGRESS",
-        //     pendingQty: item.sentQty ? parseInt(item.sentQty) : 0,
-        //     actualQty: item.sentQty ? parseInt(item.sentQty) : 0,
-        //   },
-        // })
+      //   data: {
+      //     status: "IN_PROGRESS",
+      //     pendingQty: item.sentQty ? parseInt(item.sentQty) : 0,
+      //     actualQty: item.sentQty ? parseInt(item.sentQty) : 0,
+      //   },
+      // })
 
       // var    getIncomingExist = await tx?.incomingQty?.findFirst({
       //       where: {
@@ -135,22 +146,18 @@ const updateProcessRoutes = async (tx, jobCardId, routes,outward,productionQty) 
       //    orderBy: { id: "asc" },
       //       });
 
-
-
-       await  tx?.incomingQty?.create({
-                 data: {
-                   jobCardId: parseInt(jobCardId),
-                   processRouteId: Number(processRoute?.id || 0),
-                   sendRoute: Number(processRouteSeq?.id ?? processRoute?.id),
-                   qty: Number(item?.sentQty || 0),
-                   pendingQty: Number(item?.sentQty || 0),
-                   completedQty: 0,
-                   wastageQty: 0,
-                   outwardId : outward?.id
-                 }
-             });
-
-     
+      await tx?.incomingQty?.create({
+        data: {
+          jobCardId: parseInt(jobCardId),
+          processRouteId: Number(processRoute?.id || 0),
+          sendRoute: Number(processRouteSeq?.id ?? processRoute?.id),
+          qty: Number(item?.sentQty || 0),
+          pendingQty: Number(item?.sentQty || 0),
+          completedQty: 0,
+          wastageQty: 0,
+          outwardId: outward?.id,
+        },
+      });
     }),
   );
 };
@@ -438,7 +445,8 @@ async function create(body) {
     supplierId,
     outwardDetails,
     dcNo,
-    vehicleNo,productionQty
+    vehicleNo,
+    productionQty,
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -497,12 +505,15 @@ async function create(body) {
         productionOutwardDetails: true,
       },
     });
-console.log();
+    console.log();
 
-   
-
-    await updateProcessRoutes(tx, jobCardId, outwardDetails,outward,productionQty);
-
+    await updateProcessRoutes(
+      tx,
+      jobCardId,
+      outwardDetails,
+      outward,
+      productionQty,
+    );
 
     return outward;
   });
@@ -601,7 +612,11 @@ async function update(id, body) {
       },
     });
 
-    if (body.productionQty !== undefined && body.productionQty !== null && body.productionQty !== "") {
+    if (
+      body.productionQty !== undefined &&
+      body.productionQty !== null &&
+      body.productionQty !== ""
+    ) {
       await tx.processRoute.updateMany({
         where: { jobCardId: parseInt(jobCardId) },
         data: { actualQty: parseInt(body.productionQty) },
@@ -609,7 +624,7 @@ async function update(id, body) {
     }
 
     const allAffectedRoutes = [...outwardDetails, ...removedRows];
-    await updateProcessRoutes(tx, jobCardId, allAffectedRoutes,productionQty);
+    await updateProcessRoutes(tx, jobCardId, allAffectedRoutes, productionQty);
 
     return updated;
   });
@@ -637,7 +652,11 @@ async function remove(id) {
     });
 
     // Recalculate process route status based on remaining outwards
-    await updateProcessRoutes(tx, found.jobCardId, found.productionOutwardDetails,productionQty);
+    await updateProcessRoutes(
+      tx,
+      found.jobCardId,
+      found.productionOutwardDetails,
+    );
 
     return deleted;
   });
