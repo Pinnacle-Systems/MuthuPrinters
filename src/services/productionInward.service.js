@@ -674,7 +674,7 @@ async function create(body) {
           orderBy: { id: "asc" },
         });
 
-        if (getIncomingExist_.id) {
+        if (getIncomingExist_?.id) {
           const totalCompleted_Incoming =
             Number(getIncomingExist_.completedQty || 0) + Number(acceptedQty);
           const totalWastage_Incoming =
