@@ -356,8 +356,6 @@ async function get_mob_jobcard(req) {
         createAt: "desc", // latest record first
       },
     });
-     const initialProcessStatus  = data?.processRoute[0]?.status
-     const initialpendingQty =   data?.processRoute[0]?.pendingQty
      //const checkProcessNew = data?.processRoute?.slice(1)?.every((checkall) =>  checkall?.status === 'NOT_STARTED' )
      const checkProcessSeq = data?.processRoute?.find((checkall) =>  checkall?.id === processRouteId )
    //  const checkProcessSeq_inHose = data?.processRoute?.find((checkall) =>  checkall?.id === processRouteId )?.productionAllocationDtl?.[0]
@@ -376,7 +374,6 @@ async function get_mob_jobcard(req) {
             }
           })
        if(!incomingData && checkProcessSeq?.status === "NOT_STARTED"){
-        console.log("FIRST")
         incomingData= {
           qty:data?.runningQty,
           id:null
