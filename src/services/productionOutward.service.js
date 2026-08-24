@@ -10,7 +10,7 @@ import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import moment from "moment";
 
-const updateProcessRoutes = async (tx, jobCardId, routes,outward) => {
+const updateProcessRoutes = async (tx, jobCardId, routes,outward,productionQty) => {
   // deduplicate routes based on processId + sequence
   const uniqueRoutes = [];
   const seen = new Set();
@@ -68,7 +68,7 @@ const updateProcessRoutes = async (tx, jobCardId, routes,outward) => {
       };
 
       if (item.actualQty !== undefined && item.actualQty !== null) {
-        updateData.actualQty = parseInt(item.actualQty);
+        updateData.actualQty = parseInt(productionQty);
       }
 
        const processId = item.processId ? parseInt(item.processId) : null;
@@ -438,7 +438,7 @@ async function create(body) {
     supplierId,
     outwardDetails,
     dcNo,
-    vehicleNo,
+    vehicleNo,productionQty
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -497,15 +497,11 @@ async function create(body) {
         productionOutwardDetails: true,
       },
     });
+console.log();
 
-    if (body.productionQty !== undefined && body.productionQty !== null && body.productionQty !== "") {
-      await tx.processRoute.updateMany({
-        where: { jobCardId: parseInt(jobCardId) },
-        data: { actualQty: parseInt(body.productionQty) },
-      });
-    }
+   
 
-    await updateProcessRoutes(tx, jobCardId, outwardDetails,outward);
+    await updateProcessRoutes(tx, jobCardId, outwardDetails,outward,productionQty);
 
 
     return outward;
@@ -613,7 +609,7 @@ async function update(id, body) {
     }
 
     const allAffectedRoutes = [...outwardDetails, ...removedRows];
-    await updateProcessRoutes(tx, jobCardId, allAffectedRoutes);
+    await updateProcessRoutes(tx, jobCardId, allAffectedRoutes,productionQty);
 
     return updated;
   });
@@ -641,7 +637,7 @@ async function remove(id) {
     });
 
     // Recalculate process route status based on remaining outwards
-    await updateProcessRoutes(tx, found.jobCardId, found.productionOutwardDetails);
+    await updateProcessRoutes(tx, found.jobCardId, found.productionOutwardDetails,productionQty);
 
     return deleted;
   });

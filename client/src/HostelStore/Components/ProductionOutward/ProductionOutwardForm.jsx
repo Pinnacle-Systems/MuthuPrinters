@@ -766,7 +766,6 @@ const ProductionOutwardForm = ({
       pendingQty: Number(deliveryQty) || 0,
       actualQty: activeBaseQtyCap,
     }));
-let productionQty;
   const data = {
     id,
     docDate,

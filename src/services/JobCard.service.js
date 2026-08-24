@@ -388,13 +388,12 @@ async function get_mob_jobcard(req) {
 
 
         if(!incomingData && initialProcessStatus === "PARTIALLY_COMPLETED" && !checkProcessNew){
-           incomingData= { qty:initialpendingQty,
+          incomingData= { qty:initialpendingQty,
           id:null }
         }
 
 
-       
-
+        
 
     if (!data) return NoRecordFound("Job Card");
     if (!incomingData?.qty)  return NoRecordFound("No quantity has been transferred to this process yet.")
