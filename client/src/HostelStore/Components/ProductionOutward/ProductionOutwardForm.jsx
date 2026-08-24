@@ -590,6 +590,7 @@ const ProductionOutwardForm = ({
   const supplierRef = useRef(null);
   const childRecord = useRef(0);
   const { userId, finYearId, branchId, companyId } = getCommonParams();
+  const [productionQty, setProductionQty] = useState(0);
 
   const {
     data: singleData,
@@ -742,6 +743,15 @@ const ProductionOutwardForm = ({
     else syncFormWithDb(undefined);
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
+  useEffect(() => {
+    if (jobCardId && jobCardList?.data) {
+      const jc = jobCardList.data.find((j) => j.id === jobCardId);
+      if (jc) {
+        setProductionQty(Number(jc.runningQty || jc.rollQty || 0));
+      }
+    }
+  }, [jobCardId, jobCardList]);
+
   const isFormReadOnly = readOnly || childRecord?.current > 0;
 
   const buildOutwardDetails = () =>
@@ -769,8 +779,8 @@ let productionQty;
     vehicleNo,
     jobCardId,
     productionAllocationId,
+    productionQty: Number(productionQty) || 0,
     outwardDetails: buildOutwardDetails() || [],
-
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -1054,7 +1064,9 @@ let productionQty;
                   name="Job Card No"
                   dataList={jobCardList?.data?.filter((item) =>
                     item.processRoute?.some(
-                      (route) => route.status === "NOT_STARTED" ||  route.status === "PARTIALLY_COMPLETED" ,
+                      (route) =>
+                        route.status === "NOT_STARTED" ||
+                        route.status === "PARTIALLY_COMPLETED",
                     ),
                   )}
                   value={jobCardId}

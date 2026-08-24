@@ -67,9 +67,7 @@ const updateProcessRoutes = async (tx, jobCardId, routes,outward) => {
         pendingQty: pendingQty,
       };
 
-      if (totalSent === 0) {
-        updateData.actualQty = null;
-      } else if (item.actualQty !== undefined && item.actualQty !== null) {
+      if (item.actualQty !== undefined && item.actualQty !== null) {
         updateData.actualQty = parseInt(item.actualQty);
       }
 
@@ -500,6 +498,12 @@ async function create(body) {
       },
     });
 
+    if (body.productionQty !== undefined && body.productionQty !== null && body.productionQty !== "") {
+      await tx.processRoute.updateMany({
+        where: { jobCardId: parseInt(jobCardId) },
+        data: { actualQty: parseInt(body.productionQty) },
+      });
+    }
 
     await updateProcessRoutes(tx, jobCardId, outwardDetails,outward);
 
@@ -600,6 +604,13 @@ async function update(id, body) {
         productionOutwardDetails: true,
       },
     });
+
+    if (body.productionQty !== undefined && body.productionQty !== null && body.productionQty !== "") {
+      await tx.processRoute.updateMany({
+        where: { jobCardId: parseInt(jobCardId) },
+        data: { actualQty: parseInt(body.productionQty) },
+      });
+    }
 
     const allAffectedRoutes = [...outwardDetails, ...removedRows];
     await updateProcessRoutes(tx, jobCardId, allAffectedRoutes);
