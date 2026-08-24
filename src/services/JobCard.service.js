@@ -356,22 +356,11 @@ async function get_mob_jobcard(req) {
         createAt: "desc", // latest record first
       },
     });
-     const initialProcessStatus  = data?.processRoute[0]?.status
-     const initialpendingQty =   data?.processRoute[0]?.pendingQty
-     const checkProcessNew = data?.processRoute?.slice(1)?.every((checkall) =>  checkall?.status === 'NOT_STARTED' )
-       var incomingData = {};
-       //&& (initialProcessStatus === 'NOT_STARTED' || initialProcessStatus === 'IN_PROGRESS' )
-
-        
-
-       if(checkProcessNew){
-        incomingData= {
-          qty:data?.runningQty,
-          id:null
-        }
-
-       }else{
-       incomingData = await prisma.incomingQty?.findFirst({
+     //const checkProcessNew = data?.processRoute?.slice(1)?.every((checkall) =>  checkall?.status === 'NOT_STARTED' )
+     const checkProcessSeq = data?.processRoute?.find((checkall) =>  checkall?.id === processRouteId )
+   //  const checkProcessSeq_inHose = data?.processRoute?.find((checkall) =>  checkall?.id === processRouteId )?.productionAllocationDtl?.[0]
+   //  let isWaitingQty = false;
+     var incomingData =  await prisma.incomingQty?.findFirst({
       where:{
         jobCardId : data?.id,
         sendRoute:processRouteId,
@@ -384,11 +373,18 @@ async function get_mob_jobcard(req) {
            
             }
           })
+       if(!incomingData && checkProcessSeq?.status === "NOT_STARTED"){
+        incomingData= {
+          qty:data?.runningQty,
+          id:null
+        }
         }
 
 
-        if(!incomingData && initialProcessStatus === "PARTIALLY_COMPLETED" && !checkProcessNew){
-          incomingData= { qty:initialpendingQty,
+        const prevCheck = data?.processRoute?.find((seq)=> (Number(checkProcessSeq?.sequence) - 1)  === seq?.sequence) 
+
+        if((!incomingData && checkProcessSeq?.status === "PARTIALLY_COMPLETED")  &&  (prevCheck?.pendingQty === 0  || prevCheck?.status === "COMPLETED" || !prevCheck )){
+          incomingData= { qty:Number(checkProcessSeq?.pendingQty || 0),
           id:null }
         }
 

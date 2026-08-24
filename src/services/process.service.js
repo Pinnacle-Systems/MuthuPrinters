@@ -134,10 +134,6 @@ async function UpdateProcess(req) {
 
   const isTakenmachinechk = await prisma?.takenmachines?.findFirst({
     where: {
-      stDatetime: {
-        gte: startDate,
-        lt: endDate,
-      },
       Machineid: machineId,
     },
     select: {
@@ -198,10 +194,6 @@ async function UpdateProcess(req) {
           where: {
             isAvailable: true,
             Machineid: machineId,
-            stDatetime: {
-              gte: startDate,
-              lt: endDate,
-            },
           },
         });
       }
@@ -392,10 +384,6 @@ async function UpdateProcess(req) {
           isAvailable: true,
         },
         where: {
-          stDatetime: {
-            gte: startDate,
-            lt: endDate,
-          },
           Machineid: machineId,
           isAvailable: false,
         },
@@ -490,10 +478,6 @@ async function UpdatePushProcess(req) {
             isAvailable: true,
           },
           where: {
-            stDatetime: {
-              gte: startDate,
-              lt: endDate,
-            },
             Machineid: machineId,
           },
         });
@@ -501,10 +485,6 @@ async function UpdatePushProcess(req) {
     } else if (flag === "RESUME") {
       var checkTaken_M = await tx?.takenmachines?.findFirst({
         where: {
-          stDatetime: {
-            gte: startDate,
-            lt: endDate,
-          },
           Userid: { not: userId },
           isAvailable: false,
           Machineid: machineId,
@@ -544,10 +524,6 @@ async function UpdatePushProcess(req) {
           isAvailable: false,
         },
         where: {
-          stDatetime: {
-            gte: startDate,
-            lt: endDate,
-          },
           Machineid: machineId,
         },
       });
