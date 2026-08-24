@@ -28,7 +28,7 @@ async function getEmployeeTakenJobcard(req, res, next) {
     res.json(await _getEmployeeTakenJobcard(req));
   } catch (err) {
     console.error(`Error `, err.message);
-     res.statusCode(500).json({ statusCode: 0,
+     res.status(500).json({ statusCode: 0,
   data: null,
   message: err.message,})
   }

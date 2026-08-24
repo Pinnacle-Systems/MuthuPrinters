@@ -77,6 +77,7 @@ import {
   salesDelivery,
   itemSubGroup,
   avilableMachine,
+  processMob,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -102,6 +103,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 app.use(express.json());
+
+app.use((req, res, next) => {
+  if (req.query) {
+    for (const key in req.query) {
+      if (req.query[key] === "undefined") {
+        delete req.query[key];
+      } else if (req.query[key] === "null") {
+        req.query[key] = null;
+      }
+    }
+  }
+  next();
+});
 
 const path = __dirname + "/client/dist/";
 
@@ -185,7 +199,8 @@ app.use("/productionInward", productionInward);
 app.use("/processBill", processBill);
 app.use("/salesDelivery", salesDelivery);
 app.use("/itemSubGroup", itemSubGroup);
-app.use("/availableMachine",avilableMachine)
+app.use("/availableMachine",avilableMachine);
+app.use("/process_mob", processMob);
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;

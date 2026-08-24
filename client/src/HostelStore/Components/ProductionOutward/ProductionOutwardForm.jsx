@@ -590,6 +590,7 @@ const ProductionOutwardForm = ({
   const supplierRef = useRef(null);
   const childRecord = useRef(0);
   const { userId, finYearId, branchId, companyId } = getCommonParams();
+  const [productionQty, setProductionQty] = useState(0);
 
   const {
     data: singleData,
@@ -665,31 +666,40 @@ const ProductionOutwardForm = ({
       activeBaseQtyCap = Number(selectedJobCard.rollQty);
   }
 
-  const maxSentQty =
-    selectedProcesses.length > 0
-      ? Math.max(
-          ...selectedProcesses.map((sp) => {
-            const route = processRoute.find(
-              (r) =>
-                Number(r.processId) === Number(sp.processId) &&
-                Number(r.sequence) === Number(sp.sequence),
-            );
-            const totalSent = route?.sendQty ?? 0;
-            const thisDocSent =
-              singleData?.data?.productionOutwardDetails?.find(
-                (d) =>
-                  Number(d.processId) === Number(sp.processId) &&
-                  Number(d.sequence) === Number(sp.sequence),
-              )?.sentQty || 0;
-            return Math.max(totalSent - thisDocSent, 0);
-          }),
-        )
-      : 0;
+  let qtyCap = null;
+  if (selectedProcesses.length > 0) {
+    let minAvailable = Infinity;
+    selectedProcesses.forEach((sp) => {
+      const cap = getCapForProcess(sp.processId, sp.sequence);
+      if (cap !== null) {
+        const route = processRoute.find(
+          (r) =>
+            Number(r.processId) === Number(sp.processId) &&
+            Number(r.sequence) === Number(sp.sequence),
+        );
+        const totalSent = route?.sendQty ?? 0;
+        const thisDocSent =
+          singleData?.data?.productionOutwardDetails?.find(
+            (d) =>
+              Number(d.processId) === Number(sp.processId) &&
+              Number(d.sequence) === Number(sp.sequence),
+          )?.sentQty || 0;
+        
+        const sent = Math.max(totalSent - thisDocSent, 0);
+        const available = Math.max(cap - sent, 0);
+        
+        if (available < minAvailable) {
+          minAvailable = available;
+        }
+      }
+    });
 
-  const qtyCap =
-    activeBaseQtyCap !== null
-      ? Math.max(activeBaseQtyCap - maxSentQty, 0)
-      : null;
+    if (minAvailable !== Infinity) {
+      qtyCap = minAvailable;
+    }
+  } else if (activeBaseQtyCap !== null) {
+    qtyCap = Math.max(activeBaseQtyCap, 0);
+  }
 
   const syncFormWithDb = useCallback(
     (data) => {
@@ -742,6 +752,24 @@ const ProductionOutwardForm = ({
     else syncFormWithDb(undefined);
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
 
+  useEffect(() => {
+    if (jobCardId && jobCardList?.data) {
+      const jc = jobCardList.data.find((j) => j.id === jobCardId);
+      if (jc) {
+        setProductionQty(Number(jc.runningQty || jc.rollQty || 0));
+      }
+    }
+  }, [jobCardId, jobCardList]);
+
+  useEffect(() => {
+    if (qtyCap !== null && deliveryQty !== "") {
+      const currentQty = Number(deliveryQty);
+      if (currentQty > qtyCap) {
+        setDeliveryQty(String(qtyCap));
+      }
+    }
+  }, [qtyCap, deliveryQty]);
+
   const isFormReadOnly = readOnly || childRecord?.current > 0;
 
   const buildOutwardDetails = () =>
@@ -756,7 +784,6 @@ const ProductionOutwardForm = ({
       pendingQty: Number(deliveryQty) || 0,
       actualQty: activeBaseQtyCap,
     }));
-
   const data = {
     id,
     docDate,
@@ -769,6 +796,7 @@ const ProductionOutwardForm = ({
     vehicleNo,
     jobCardId,
     productionAllocationId,
+    productionQty: Number(productionQty) || 0,
     outwardDetails: buildOutwardDetails() || [],
   };
 
@@ -1053,7 +1081,9 @@ const ProductionOutwardForm = ({
                   name="Job Card No"
                   dataList={jobCardList?.data?.filter((item) =>
                     item.processRoute?.some(
-                      (route) => route.status === "NOT_STARTED",
+                      (route) =>
+                        route.status === "NOT_STARTED" ||
+                        route.status === "PARTIALLY_COMPLETED",
                     ),
                   )}
                   value={jobCardId}

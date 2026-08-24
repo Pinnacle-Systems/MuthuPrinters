@@ -234,6 +234,8 @@ model User {
   salesDeliveriesUpdatedBy SalesDelivery[]      @relation(name: "updatedBy")
   ItemSubGroupCreatedBy    ItemSubGroup[]       @relation(name: "createdBy")
   ItemSubGroupUpdatedBy    ItemSubGroup[]       @relation(name: "updatedBy")
+  reworkLogs               ReworkLog[]
+  reworkBatchTrackers      ReworkBatchTracker[]
 }
 
 model Employee {
@@ -1906,7 +1908,7 @@ model OrderEntry {
   currencyId        Int?
   weightInKg        Float?
   carriageCharge    Float?
-    carriageTax       Float?
+  carriageTax       Float?
   orderItems        OrderItems[]
   Loading           City?               @relation("loading", fields: [loadingId], references: [id])
   loadingId         Int?
@@ -2102,6 +2104,9 @@ model JobCard {
   takenMachines         takenmachines[]
   isOldPlate            Boolean?               @default(false)
   isNewPlate            Boolean?               @default(false)
+  reworkLogs            ReworkLog[]
+  reworkBatchTrackers   ReworkBatchTracker[]
+  IncomingQty           IncomingQty[]
 }
 
 model BoardQuality {
@@ -2268,10 +2273,15 @@ model ProcessRoute {
   actualQty                Int?
   pendingQty               Int?
   wastageQty               Int?
+  reworkSetId              String?
   sendQty                   Int?
   takenMachines            takenmachines[]
   productionAllocationDtls ProductionAllocationDtl[]
   productionempPunch       productionempPunch[]
+  reworkLogs               ReworkLog[]
+  reworkBatchTrackers      ReworkBatchTracker[]
+  IncomingQty               IncomingQty[]
+  IncomingSendQty               IncomingQty[] @relation("sendProcessRoute")
 }
 
 model productionempPunch {
@@ -2458,17 +2468,17 @@ model Currency {
 }
 
 model Bank {
-  id        Int      @id @default(autoincrement())
-  companyId Int?
-  Company   Company? @relation(fields: [companyId], references: [id])
-  name      String?
-  accNo     String?
-  ifsc      String?
-  swiftCode String?
-  branchId  Int?
-  Branch    City?    @relation(fields: [branchId], references: [id])
-  active    Boolean  @default(true)
-  bankHolderName String? 
+  id               Int               @id @default(autoincrement())
+  companyId        Int?
+  Company          Company?          @relation(fields: [companyId], references: [id])
+  name             String?
+  accNo            String?
+  ifsc             String?
+  swiftCode        String?
+  branchId         Int?
+  Branch           City?             @relation(fields: [branchId], references: [id])
+  active           Boolean           @default(true)
+  bankHolderName   String?
   proformaInvoices ProformaInvoice[]
   salesDeliveries  SalesDelivery[]
   orderEntries     OrderEntry[]
@@ -2575,6 +2585,7 @@ model ProductionOutward {
   dcNo                     String?
   vehicleNo                String?
   productionOutwardDetails ProductionOutwardDtl[]
+  IncomingQty              IncomingQty[]
 
   productionInwards    ProductionInward[]
   productionInwardDtls ProductionInwardDtl[]
@@ -2800,4 +2811,56 @@ model ItemSubGroup {
   StyleItem            StyleItem[]
   OrderItems           OrderItems[]
   proformaInvoiceItems ProformaInvoiceItem[]
+}
+
+model ReworkLog {
+  id             Int           @id @default(autoincrement())
+  uniqueId       String        @default(uuid())
+  jobCardId      Int?
+  JobCard        JobCard?      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processRouteId Int?
+  ProcessRoute   ProcessRoute? @relation(fields: [processRouteId], references: [id])
+  actualQty      Int?
+  completedQty   Int?
+  wastageQty     Int?
+  pendingQty     Int?
+  reason         String?
+  createdAt      DateTime      @default(now())
+  Userid         Int?
+  User           User?         @relation(fields: [Userid], references: [id])
+}
+
+
+model ReworkBatchTracker {
+  id             Int          @id @default(autoincrement())
+  uniqueId       String       @unique @default(uuid())
+  jobCardId      Int
+  JobCard        JobCard      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processRouteId Int
+  ProcessRoute   ProcessRoute @relation(fields: [processRouteId], references: [id], onDelete: Cascade)
+  userId         Int?
+  User           User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isExpired      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model IncomingQty {
+  id             Int          @id @default(autoincrement())
+  uniqueId       String       @unique @default(uuid())
+  jobCardId      Int
+  JobCard        JobCard      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processRouteId Int
+  ProcessRoute   ProcessRoute @relation(fields: [processRouteId], references: [id], onDelete: Cascade)
+  isCompleted      Boolean      @default(false)
+  qty              Int
+  pendingQty       Int?
+  completedQty     Int?
+   wastageQty     Int?
+  sendRoute        Int
+  sendProcessRoute   ProcessRoute @relation(name: "sendProcessRoute",fields: [sendRoute], references: [id], onDelete: Cascade)
+  outwardId        Int?
+  productionoutward   ProductionOutward? @relation(fields:[outwardId],references: [id])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 }
