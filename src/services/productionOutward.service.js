@@ -10,6 +10,81 @@ import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
 import moment from "moment";
 
+const updateProcessRoutes = async (tx, jobCardId, routes) => {
+  // deduplicate routes based on processId + sequence
+  const uniqueRoutes = [];
+  const seen = new Set();
+  for (const r of routes) {
+    const key = `${r.processId}_${r.sequence}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueRoutes.push(r);
+    }
+  }
+
+  await Promise.all(
+    uniqueRoutes.map(async (item) => {
+      const pId = item.processId ? parseInt(item.processId) : null;
+      const seq = item.sequence ? parseInt(item.sequence) : null;
+
+      const sumResult = await tx.productionOutwardDtl.aggregate({
+        _sum: { sentQty: true },
+        where: {
+          ProductionOutward: { jobCardId: parseInt(jobCardId) },
+          processId: pId,
+          sequence: seq,
+        },
+      });
+      const totalSent = sumResult._sum.sentQty || 0;
+
+      const routeData = await tx.processRoute.findFirst({
+        where: {
+          jobCardId: parseInt(jobCardId),
+          processId: pId,
+          sequence: seq,
+        },
+      });
+
+      const currentCompleted = routeData?.completedQty || 0;
+      const currentWastage = routeData?.wastageQty || 0;
+      const currentActualQty = item.actualQty !== undefined && item.actualQty !== null 
+        ? parseInt(item.actualQty) 
+        : (routeData?.actualQty || 0);
+
+      let newStatus = "NOT_STARTED";
+      if (currentCompleted > 0 || currentWastage > 0) {
+         const pendingInward = Math.max(currentActualQty - (currentCompleted + currentWastage), 0);
+         newStatus = pendingInward === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
+      } else if (totalSent > 0) {
+         newStatus = "IN_PROGRESS";
+      }
+
+      const pendingQty = Math.max(currentActualQty - (currentCompleted + currentWastage), 0);
+
+      const updateData = {
+        status: newStatus,
+        sendQty: totalSent,
+        pendingQty: pendingQty,
+      };
+
+      if (totalSent === 0) {
+        updateData.actualQty = null;
+      } else if (item.actualQty !== undefined && item.actualQty !== null) {
+        updateData.actualQty = parseInt(item.actualQty);
+      }
+
+      await tx.processRoute.updateMany({
+        where: {
+          jobCardId: parseInt(jobCardId),
+          processId: pId,
+          sequence: seq,
+        },
+        data: updateData,
+      });
+    }),
+  );
+};
+
 async function getNextDocId(branchId, shortCode, startTime, endTime) {
   let lastObject = await prisma.productionOutward.findFirst({
     where: {
@@ -121,12 +196,19 @@ async function getOne(id) {
         },
         orderBy: { sequence: "asc" },
       },
+      _count: {
+        select: {
+          productionInwardDtls: true,
+        },
+      },
     },
   });
 
   if (!data) return NoRecordFound("Production Outward");
 
-  return { statusCode: 0, data };
+  const childRecord = data._count?.productionInwardDtls || 0;
+
+  return { statusCode: 0, data: { ...data, childRecord } };
 }
 
 async function getOutwardJobCardDtls(req) {
@@ -346,23 +428,7 @@ async function create(body) {
       },
     });
 
-    await Promise.all(
-      outwardDetails.map((item) =>
-        tx.processRoute.updateMany({
-          where: {
-            jobCardId: parseInt(jobCardId),
-            processId: item.processId ? parseInt(item.processId) : null,
-            sequence: item.sequence ? parseInt(item.sequence) : null,
-          },
-
-          data: {
-            status: "IN_PROGRESS",
-            pendingQty: item.sentQty ? parseInt(item.sentQty) : 0,
-            actualQty: item.sentQty ? parseInt(item.sentQty) : 0,
-          },
-        }),
-      ),
-    );
+    await updateProcessRoutes(tx, jobCardId, outwardDetails);
 
     return outward;
   });
@@ -461,55 +527,8 @@ async function update(id, body) {
       },
     });
 
-    // =========================================
-    // COMPLETE CURRENT ROUTES
-    // =========================================
-
-    await Promise.all(
-      outwardDetails.map((item) =>
-        tx.processRoute.updateMany({
-          where: {
-            jobCardId: parseInt(jobCardId),
-
-            processId: item.processId ? parseInt(item.processId) : null,
-
-            sequence: item.sequence ? parseInt(item.sequence) : null,
-          },
-
-          data: {
-            status: "IN_PROGRESS",
-
-            pendingQty: item.sentQty ? parseInt(item.sentQty) : 0,
-
-            actualQty: item.sentQty ? parseInt(item.sentQty) : 0,
-          },
-        }),
-      ),
-    );
-
-    // =========================================
-    // RESET REMOVED ROUTES
-    // =========================================
-
-    await Promise.all(
-      removedRows.map((item) =>
-        tx.processRoute.updateMany({
-          where: {
-            jobCardId: parseInt(jobCardId),
-
-            processId: item.processId,
-
-            sequence: item.sequence,
-          },
-
-          data: {
-            status: "NOT_STARTED",
-            pendingQty: null,
-            actualQty: null,
-          },
-        }),
-      ),
-    );
+    const allAffectedRoutes = [...outwardDetails, ...removedRows];
+    await updateProcessRoutes(tx, jobCardId, allAffectedRoutes);
 
     return updated;
   });
@@ -531,30 +550,13 @@ async function remove(id) {
   if (!found) return NoRecordFound("Production Outward");
 
   const data = await prisma.$transaction(async (tx) => {
-    // Reset process route status
-    await Promise.all(
-      found.productionOutwardDetails.map((item) =>
-        tx.processRoute.updateMany({
-          where: {
-            jobCardId: found.jobCardId,
-            processId: item.processId,
-            sequence: item.sequence,
-          },
-          data: {
-            status: "NOT_STARTED",
-            pendingQty: null,
-            actualQty: null,
-            completedQty: null,
-            wastageQty: null,
-          },
-        }),
-      ),
-    );
-
-    // Delete outward
+    // Delete outward first so the sum doesn't include it
     const deleted = await tx.productionOutward.delete({
       where: { id: parseInt(id) },
     });
+
+    // Recalculate process route status based on remaining outwards
+    await updateProcessRoutes(tx, found.jobCardId, found.productionOutwardDetails);
 
     return deleted;
   });
