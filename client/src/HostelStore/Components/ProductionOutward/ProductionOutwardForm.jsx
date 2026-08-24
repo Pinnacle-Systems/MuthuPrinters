@@ -590,6 +590,7 @@ const ProductionOutwardForm = ({
   const supplierRef = useRef(null);
   const childRecord = useRef(0);
   const { userId, finYearId, branchId, companyId } = getCommonParams();
+  const [productionQty,setProductionQty] = useState(0)
 
   const {
     data: singleData,
@@ -770,6 +771,7 @@ const ProductionOutwardForm = ({
     jobCardId,
     productionAllocationId,
     outwardDetails: buildOutwardDetails() || [],
+    productionQty : 
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
