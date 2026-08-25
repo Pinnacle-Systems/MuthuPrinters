@@ -236,10 +236,15 @@ model User {
   salesDeliveriesUpdatedBy SalesDelivery[]      @relation(name: "updatedBy")
   ItemSubGroupCreatedBy    ItemSubGroup[]       @relation(name: "createdBy")
   ItemSubGroupUpdatedBy    ItemSubGroup[]       @relation(name: "updatedBy")
+<<<<<<< HEAD
   SalesOrderCreatedBy      SalesOrder[]         @relation(name: "createdBy")
   SalesOrderUpdatedBy      SalesOrder[]         @relation(name: "updatedBy")
   PackingCreatedBy         Packing[]            @relation(name: "createdBy")
   PackingUpdatedBy         Packing[]            @relation(name: "updatedBy")
+=======
+  reworkLogs               ReworkLog[]
+  reworkBatchTrackers      ReworkBatchTracker[]
+>>>>>>> 0e6f5431465df6ad011731f0dd72d93d802784a3
 }
 
 model Employee {
@@ -2130,6 +2135,9 @@ model JobCard {
   takenMachines         takenmachines[]
   isOldPlate            Boolean?               @default(false)
   isNewPlate            Boolean?               @default(false)
+  reworkLogs            ReworkLog[]
+  reworkBatchTrackers   ReworkBatchTracker[]
+  IncomingQty           IncomingQty[]
 }
 
 model BoardQuality {
@@ -2296,10 +2304,19 @@ model ProcessRoute {
   actualQty                Int?
   pendingQty               Int?
   wastageQty               Int?
+<<<<<<< HEAD
   sendQty                  Int?
+=======
+  reworkSetId              String?
+  sendQty                   Int?
+>>>>>>> 0e6f5431465df6ad011731f0dd72d93d802784a3
   takenMachines            takenmachines[]
   productionAllocationDtls ProductionAllocationDtl[]
   productionempPunch       productionempPunch[]
+  reworkLogs               ReworkLog[]
+  reworkBatchTrackers      ReworkBatchTracker[]
+  IncomingQty               IncomingQty[]
+  IncomingSendQty               IncomingQty[] @relation("sendProcessRoute")
 }
 
 model productionempPunch {
@@ -2615,6 +2632,7 @@ model ProductionOutward {
   dcNo                     String?
   vehicleNo                String?
   productionOutwardDetails ProductionOutwardDtl[]
+  IncomingQty              IncomingQty[]
 
   productionInwards    ProductionInward[]
   productionInwardDtls ProductionInwardDtl[]
@@ -2996,4 +3014,56 @@ model PackingSizeBreakup {
   sizeId                Int?
   Size                  Size?               @relation(fields: [sizeId], references: [id])
   qty                   Int?
+}
+
+model ReworkLog {
+  id             Int           @id @default(autoincrement())
+  uniqueId       String        @default(uuid())
+  jobCardId      Int?
+  JobCard        JobCard?      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processRouteId Int?
+  ProcessRoute   ProcessRoute? @relation(fields: [processRouteId], references: [id])
+  actualQty      Int?
+  completedQty   Int?
+  wastageQty     Int?
+  pendingQty     Int?
+  reason         String?
+  createdAt      DateTime      @default(now())
+  Userid         Int?
+  User           User?         @relation(fields: [Userid], references: [id])
+}
+
+
+model ReworkBatchTracker {
+  id             Int          @id @default(autoincrement())
+  uniqueId       String       @unique @default(uuid())
+  jobCardId      Int
+  JobCard        JobCard      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processRouteId Int
+  ProcessRoute   ProcessRoute @relation(fields: [processRouteId], references: [id], onDelete: Cascade)
+  userId         Int?
+  User           User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isExpired      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model IncomingQty {
+  id             Int          @id @default(autoincrement())
+  uniqueId       String       @unique @default(uuid())
+  jobCardId      Int
+  JobCard        JobCard      @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  processRouteId Int
+  ProcessRoute   ProcessRoute @relation(fields: [processRouteId], references: [id], onDelete: Cascade)
+  isCompleted      Boolean      @default(false)
+  qty              Int
+  pendingQty       Int?
+  completedQty     Int?
+   wastageQty     Int?
+  sendRoute        Int
+  sendProcessRoute   ProcessRoute @relation(name: "sendProcessRoute",fields: [sendRoute], references: [id], onDelete: Cascade)
+  outwardId        Int?
+  productionoutward   ProductionOutward? @relation(fields:[outwardId],references: [id])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 }

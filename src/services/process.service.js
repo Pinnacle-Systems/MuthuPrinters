@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js";
 import { NoRecordFound } from "../configs/Responses.js";
 import { current_dateOnly, endDate, startDate } from "../utils/helper.js";
+import crypto from "crypto";
 
 async function get(req) {
   const { companyId, active } = req.query;
@@ -99,6 +100,8 @@ async function UpdateProcess(req) {
     id,
     completedQty,
     wastageQty,
+    processIncomingId,
+    processIncomingQty,
     remarks,
     splitSizes,
   } = req?.body;
@@ -131,10 +134,6 @@ async function UpdateProcess(req) {
 
   const isTakenmachinechk = await prisma?.takenmachines?.findFirst({
     where: {
-      stDatetime: {
-        gte: startDate,
-        lt: endDate,
-      },
       Machineid: machineId,
     },
     select: {
@@ -195,26 +194,181 @@ async function UpdateProcess(req) {
           where: {
             isAvailable: true,
             Machineid: machineId,
-            stDatetime: {
-              gte: startDate,
-              lt: endDate,
-            },
           },
         });
       }
     } else if (flag === "STOP") {
       if (!completedQty) throw new Error("Completed Qty Must Be Entered");
-      if (Number(completedQty ?? 0) <= 0)
+      if (Number(completedQty ?? 0) <= 0) 
         throw new Error("Completed Qty must be greater than 0");
+
+      const pRoute = await tx.processRoute.findUnique({
+        where: { id: Number(processId || 0) },
+        include: { JobCard: true },
+      });
+
+     
+
+      let actualQty;
+      if (pRoute.JobCard.itemType === "LABEL") {
+        actualQty = pRoute.JobCard.rollQty || 0;
+      } else {
+        actualQty = pRoute.JobCard.runningQty || 0;
+      }
+
+
+
+      const getIncomingExist = processIncomingId ? await tx?.incomingQty?.findUnique({
+        where: {
+          id: Number(processIncomingId)
+        }
+      }) : null;
+
+      // Validation for Max Allowed Quantity
+      let maxAllowed = actualQty;
+      if (pRoute.sequence > 1) {  
+          maxAllowed = Number(processIncomingQty || 0)   }
+
+      const totalCompleted =
+        Number(pRoute?.completedQty || 0) + Number(completedQty);
+
+      const totalWastage =
+        Number(pRoute?.wastageQty || 0) + Number(wastageQty || 0);
+
+         const totalCompleted_Incoming =
+        Number(getIncomingExist?.completedQty || 0) + Number(completedQty);
+
+      const totalWastage_Incoming =
+        Number(getIncomingExist?.wastageQty || 0) + Number(wastageQty || 0);
+
+      if ((totalCompleted_Incoming + totalWastage_Incoming) > maxAllowed) {
+        throw new Error(`Cannot process ${totalCompleted_Incoming + totalWastage_Incoming} pieces. The previous process only completed ${maxAllowed} pieces.`);
+      }
+
+
+      if ((totalCompleted + totalWastage) > actualQty) {
+        throw new Error(`Cannot process ${totalCompleted + totalWastage} pieces. The  process only production below to ${actualQty}.`);
+      }
+
+      const pendingQty = Math.max(
+        actualQty - (totalCompleted + totalWastage),
+        0,
+      );
+
+      const pendingQty_Incoming = Math.max(
+        processIncomingQty - (totalCompleted_Incoming + totalWastage_Incoming),
+        0,
+      );
+
+        let routeStatus = "COMPLETED";
+        if (pendingQty > 0) {
+        routeStatus = "PARTIALLY_COMPLETED";
+         }
+
+
+        const seqRoute = await tx?.processRoute?.findFirst({
+        where:{
+          jobCardId: jobcardId,
+          sequence : Number(pRoute?.sequence)+1 }
+          })
+
+
+          var isCompleted = false;
+          if(pendingQty === 0){
+            isCompleted = true ;
+          }
+
+          if(getIncomingExist?.id && pRoute?.sequence > 1){
+
+              await tx?.incomingQty?.update({
+             data:{
+              jobCardId:jobcardId,
+              isCompleted:isCompleted,
+              pendingQty:pendingQty_Incoming,
+              wastageQty:totalWastage_Incoming,
+              completedQty:totalCompleted_Incoming
+                },
+              where:{
+              id:getIncomingExist?.id
+              }
+           })
+          }
+
+          if (seqRoute?.id) {
+            //  const existingNextSeq = await tx?.IncomingQty?.findFirst({
+            //    where: {
+            //      jobCardId: Number(jobcardId),
+            //      processRouteId: Number(processId || 0),
+            //      sendRoute: seqRoute?.id
+            //    }
+            //  });
+
+            //  if (existingNextSeq?.id) {
+            //    await tx?.IncomingQty?.update({
+            //      where: { id: existingNextSeq.id },
+            //      data: {
+            //        qty: Number(existingNextSeq.qty || 0) + Number(completedQty),
+            //        pendingQty: Number(existingNextSeq.pendingQty || 0) + Number(completedQty)
+            //      }
+            //    });
+            //  } else {
+               await tx?.incomingQty?.create({
+                 data: {
+                   jobCardId: Number(jobcardId),
+                   processRouteId: Number(processId || 0),
+                   sendRoute: seqRoute?.id,
+                   qty: Number(completedQty),
+                   pendingQty: Number(completedQty),
+                   completedQty: 0,
+                   wastageQty: 0
+                 }
+               });
+            //  }
+          }
+
 
       await tx.processRoute.update({
         where: {
           id: Number(processId || 0),
         },
         data: {
-          completedQty: Number(completedQty),
+          completedQty: totalCompleted,
+          wastageQty: totalWastage,
+          actualQty: actualQty,
+          pendingQty: pendingQty,
+          status: routeStatus,
         },
       });
+
+      if (pendingQty > 0) {
+        const reworkSetId = crypto.randomUUID();
+
+        // Log to ReworkLog for partially delivered
+        await tx.reworkLog.create({
+          data: {
+            uniqueId: reworkSetId,
+            jobCardId: pRoute.jobCardId,
+            processRouteId: pRoute.id,
+            actualQty: actualQty,
+            completedQty: totalCompleted,
+            wastageQty: totalWastage,
+            pendingQty: pendingQty,
+            reason: "Partially Delivered",
+            Userid: Number(userId) || null,
+          },
+        });
+
+        // Add to active tracking table
+        await tx.reworkBatchTracker.create({
+          data: {
+            uniqueId: reworkSetId,
+            jobCardId: pRoute.jobCardId,
+            processRouteId: pRoute.id,
+            userId: Number(userId),
+            isExpired: false
+          }
+        });
+      }
 
       addMain_punch_log = await tx.productionempPunch.update({
         where: { id: Number(id) }, // ← real punchId from frontend
@@ -230,16 +384,31 @@ async function UpdateProcess(req) {
           isAvailable: true,
         },
         where: {
-          stDatetime: {
-            gte: startDate,
-            lt: endDate,
-          },
           Machineid: machineId,
           isAvailable: false,
         },
       });
-    }
+      // Check if this is the final process and it is fully completed
+      if (routeStatus === "COMPLETED") {
+        const maxSequenceRoute = await tx.processRoute.findFirst({
+          where: { jobCardId: pRoute.jobCardId },
+          orderBy: { sequence: "desc" },
+        });
 
+        if (maxSequenceRoute && pRoute.sequence === maxSequenceRoute.sequence) {
+          // Expire active trackers for this jobcard
+          await tx.reworkBatchTracker.updateMany({
+            where: {
+              jobCardId: pRoute.jobCardId,
+              isExpired: false
+            },
+            data: {
+              isExpired: true
+            }
+          });
+        }
+      }
+    }
     data = { process_start, addMain_punch_log };
   });
 
@@ -309,32 +478,24 @@ async function UpdatePushProcess(req) {
             isAvailable: true,
           },
           where: {
-            stDatetime: {
-              gte: startDate,
-              lt: endDate,
-            },
             Machineid: machineId,
           },
         });
       }
-    
     } else if (flag === "RESUME") {
-     
-      var checkTaken_M =  await tx?.takenmachines?.findFirst({
-        where:{
-             stDatetime: {
-            gte: startDate,
-            lt: endDate,
-            },
-            Userid:{not:userId},
-            isAvailable: false,
-            Machineid:machineId
-        }
-      })
+      var checkTaken_M = await tx?.takenmachines?.findFirst({
+        where: {
+          Userid: { not: userId },
+          isAvailable: false,
+          Machineid: machineId,
+        },
+      });
 
-      
-      if(checkTaken_M?.id){
-        addMain_punch_log = { statusCode: 1, message:"Machine have taken by another employee.!!!!" }
+      if (checkTaken_M?.id) {
+        addMain_punch_log = {
+          statusCode: 1,
+          message: "Machine have taken by another employee.!!!!",
+        };
         data = addMain_punch_log;
         return;
       }
@@ -363,10 +524,6 @@ async function UpdatePushProcess(req) {
           isAvailable: false,
         },
         where: {
-          stDatetime: {
-            gte: startDate,
-            lt: endDate,
-          },
           Machineid: machineId,
         },
       });

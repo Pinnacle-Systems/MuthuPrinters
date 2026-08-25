@@ -77,7 +77,8 @@ function getProductionInwardStatus(inward) {
   );
 
   const totalAccepted = inwardDetails.reduce(
-    (sum, item) => sum + (item.acceptedQty || 0),
+    // (sum, item) => sum + (item.acceptedQty || 0),
+    (sum, item) => sum + (item.receivedQty || 0),
     0,
   );
 
@@ -263,6 +264,7 @@ async function getOne(id) {
                   id: true,
                   acceptedQty: true,
                   wastageQty: true,
+                  receivedQty: true,
                 },
               },
             },
@@ -282,7 +284,8 @@ async function getOne(id) {
     const alreadyReceivedQty =
       item.ProductionOutwardDtl?.productionInwardDtls.reduce(
         (sum, inward) =>
-          sum + (inward.acceptedQty || 0) + (inward.wastageQty || 0),
+          // sum + (inward.acceptedQty || 0) + (inward.wastageQty || 0),
+          sum + (inward.receivedQty || 0) + (inward.wastageQty || 0),
         0,
       ) || 0;
 
@@ -291,8 +294,10 @@ async function getOne(id) {
     return {
       ...item,
       sentQty,
-      alreadyReceivedQty: alreadyReceivedQty - item.receivedQty,
-      pendingQty: pendingQty + item.receivedQty,
+      // alreadyReceivedQty: alreadyReceivedQty - item.receivedQty,
+      alreadyReceivedQty: alreadyReceivedQty,
+      // pendingQty: pendingQty + item.receivedQty,
+      pendingQty: pendingQty,
     };
   });
 
@@ -537,10 +542,10 @@ async function create(body) {
 
             wastageQty: parseFloat(item.wastageQty || 0),
 
-            acceptedQty:
-              parseFloat(item.receivedQty || 0) -
-              parseFloat(item.wastageQty || 0),
-
+            // acceptedQty:
+            //   parseFloat(item.receivedQty || 0) -
+            //   parseFloat(item.wastageQty || 0),
+            acceptedQty: parseFloat(item.receivedQty || 0),
             // processId: item.processId ? parseInt(item.processId) : null,
 
             price: item.price ? parseFloat(item.price) : null,
@@ -605,11 +610,13 @@ async function create(body) {
         select: {
           acceptedQty: true,
           wastageQty: true,
+          receivedQty: true,
         },
       });
 
       const completedQty = inwards.reduce(
-        (sum, row) => sum + (row.acceptedQty || 0),
+        // (sum, row) => sum + (row.acceptedQty || 0),
+        (sum, row) => sum + (row.receivedQty || 0),
         0,
       );
 
@@ -626,6 +633,152 @@ async function create(body) {
         status = pendingQty === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
       } else if (route.sendQty > 0) {
         status = "IN_PROGRESS";
+      }
+
+      const item = inwardDetails.find(
+        (i) =>
+          String(i.jobCardId) === String(jobCardId) &&
+          (i.processes || []).map(String).includes(String(processId)),
+      );
+      // const acceptedQty = item
+      //   ? parseFloat(item.receivedQty || 0) - parseFloat(item.wastageQty || 0)
+      //   : 0;
+      const acceptedQty = item ? parseFloat(item.receivedQty || 0) : 0;
+
+      let outwardId = null;
+      if (item?.productionOutwardId) {
+        outwardId = item?.productionOutwardId;
+      }
+      let getIncomingExist = null;
+      console.log("Outward-id", outwardId);
+      if (outwardId) {
+        getIncomingExist = await tx?.incomingQty?.findFirst({
+          where: {
+            jobCardId: Number(route.jobCardId),
+            processRouteId: Number(route.id),
+            outwardId: outwardId,
+            pendingQty: { gt: 0 },
+          },
+          orderBy: { id: "asc" },
+        });
+
+        //   getIncomingExist = await tx?.incomingQty?.findFirst({
+        //    where: {
+        //   jobCardId: Number(route.jobCardId),
+        //   processRouteId: Number(route.id),
+        //   outwardId: null,
+        //   pendingQty: { gt: 0 },
+        //    },
+        //    orderBy: { id: "asc" },
+        //  });
+
+        let getIncomingExist_ = await tx?.incomingQty?.findFirst({
+          where: {
+            jobCardId: Number(route.jobCardId),
+            sendRoute: Number(route.id),
+            outwardId: null,
+            pendingQty: { gt: 0 },
+          },
+          orderBy: { id: "asc" },
+        });
+
+        if (getIncomingExist_?.id) {
+          const totalCompleted_Incoming =
+            Number(getIncomingExist_.completedQty || 0) + Number(acceptedQty);
+          const totalWastage_Incoming =
+            Number(getIncomingExist_.wastageQty || 0) + Number(wastageQty);
+          const pendingQty_Incoming = Math.max(
+            Number(getIncomingExist_.qty || 0) -
+              (totalCompleted_Incoming + totalWastage_Incoming),
+            0,
+          );
+          const isCompleted = pendingQty_Incoming === 0;
+
+          await tx?.incomingQty?.update({
+            where: { id: getIncomingExist_.id },
+            data: {
+              isCompleted: isCompleted,
+              pendingQty: pendingQty_Incoming,
+              wastageQty: totalWastage_Incoming,
+              completedQty: totalCompleted_Incoming,
+            },
+          });
+        }
+      }
+
+      if (!getIncomingExist && !outwardId) {
+        getIncomingExist = await tx?.incomingQty?.findFirst({
+          where: {
+            jobCardId: Number(route.jobCardId),
+            sendRoute: Number(route.id),
+            outwardId: null,
+            pendingQty: { gt: 0 },
+          },
+          orderBy: { id: "asc" },
+        });
+      }
+
+      if (getIncomingExist?.id) {
+        const totalCompleted_Incoming =
+          Number(getIncomingExist.completedQty || 0) + Number(acceptedQty);
+        const totalWastage_Incoming =
+          Number(getIncomingExist.wastageQty || 0) + Number(wastageQty);
+        const pendingQty_Incoming = Math.max(
+          Number(getIncomingExist.qty || 0) -
+            (totalCompleted_Incoming + totalWastage_Incoming),
+          0,
+        );
+        const isCompleted = pendingQty_Incoming === 0;
+
+        await tx?.incomingQty?.update({
+          where: { id: getIncomingExist.id },
+          data: {
+            isCompleted: isCompleted,
+            pendingQty: pendingQty_Incoming,
+            wastageQty: totalWastage_Incoming,
+            completedQty: totalCompleted_Incoming,
+          },
+        });
+      }
+
+      const seqRoute = await tx?.processRoute?.findFirst({
+        where: {
+          jobCardId: route?.jobCardId,
+          sequence: Number(route?.sequence) + 1,
+        },
+      });
+
+      if (seqRoute?.id) {
+        //  const existingNextSeq = await tx?.IncomingQty?.findFirst({
+        //    where: {
+        //      jobCardId: Number(route?.jobCardId),
+        //      processRouteId: Number(route?.id || 0),
+        //      sendRoute: seqRoute?.id,
+        //      isCompleted:false
+        //    }
+        //  });
+
+        //  if (existingNextSeq?.id) {
+        //    await tx?.IncomingQty?.update({
+        //      where: { id: existingNextSeq.id },
+        //      data: {
+        //        qty: Number(existingNextSeq.qty || 0) + Number(acceptedQty),
+        //        pendingQty: Number(existingNextSeq.pendingQty || 0) + Number(acceptedQty)
+        //      }
+        //    });
+        //  } else {
+        await tx?.incomingQty?.create({
+          data: {
+            jobCardId: Number(route?.jobCardId),
+            processRouteId: Number(route?.id || 0),
+            sendRoute: seqRoute?.id ?? route?.id, // this will fallback when last process outside same route
+            qty: Number(acceptedQty),
+            pendingQty: Number(acceptedQty),
+            completedQty: 0,
+            wastageQty: 0,
+          },
+        });
+        //  }
       }
 
       await tx.processRoute.update({
@@ -787,9 +940,10 @@ async function update(id, body) {
 
             wastageQty: parseFloat(item.wastageQty || 0),
 
-            acceptedQty:
-              parseFloat(item.receivedQty || 0) -
-              parseFloat(item.wastageQty || 0),
+            // acceptedQty:
+            //   parseFloat(item.receivedQty || 0) -
+            //   parseFloat(item.wastageQty || 0),
+            acceptedQty: parseFloat(item.receivedQty || 0),
 
             // processId: item.processId ? parseInt(item.processId) : null,
 
@@ -834,9 +988,10 @@ async function update(id, body) {
 
             wastageQty: parseFloat(item.wastageQty || 0),
 
-            acceptedQty:
-              parseFloat(item.receivedQty || 0) -
-              parseFloat(item.wastageQty || 0),
+            // acceptedQty:
+            //   parseFloat(item.receivedQty || 0) -
+            //   parseFloat(item.wastageQty || 0),
+            acceptedQty: parseFloat(item.receivedQty || 0),
 
             // processId: item.processId ? parseInt(item.processId) : null,
 
@@ -897,11 +1052,13 @@ async function update(id, body) {
         select: {
           acceptedQty: true,
           wastageQty: true,
+          receivedQty: true,
         },
       });
 
       const completedQty = inwards.reduce(
-        (sum, row) => sum + (row.acceptedQty || 0),
+        // (sum, row) => sum + (row.acceptedQty || 0),
+        (sum, row) => sum + (row.receivedQty || 0),
         0,
       );
 
@@ -1003,11 +1160,13 @@ async function remove(id) {
         select: {
           acceptedQty: true,
           wastageQty: true,
+          receivedQty: true,
         },
       });
 
       const completedQty = inwards.reduce(
-        (sum, row) => sum + (row.acceptedQty || 0),
+        // (sum, row) => sum + (row.acceptedQty || 0),
+        (sum, row) => sum + (row.receivedQty || 0),
         0,
       );
 

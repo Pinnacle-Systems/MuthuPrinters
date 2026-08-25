@@ -73,6 +73,11 @@ export { default as productionInward } from "./productionInward.route.js";
 export { default as processBill } from "./processBill.route.js";
 export { default as salesDelivery } from "./salesDelivery.route.js";
 export { default as itemSubGroup } from "./itemSubGroup.route.js";
+<<<<<<< HEAD
 export { default as avilableMachine } from "./availableMachine.route.js"
 export { default as packing } from "./packing.route.js"
 export { default as salesOrder } from "./saleOrder.route.js"
+=======
+export { default as avilableMachine } from "./availableMachine.route.js";
+export { default as processMob } from "./process_mob.route.js";
+>>>>>>> 0e6f5431465df6ad011731f0dd72d93d802784a3

@@ -78,7 +78,26 @@ const InwardDetails = ({
 
       const pending = Number(row.pendingQty) || 0;
 
-      // Received Qty validation
+      // Sum of Received and Wastage validation
+      if (received + wastage > pending) {
+        Swal.fire({
+          icon: "warning",
+          title: "Invalid Quantity",
+          text: "Sum of Received Qty and Wastage Qty cannot exceed Pending Qty",
+          confirmButtonColor: "#3085d6",
+        });
+
+        if (field === "receivedQty") {
+          row.receivedQty = "";
+        } else if (field === "wastageQty") {
+          row.wastageQty = "";
+        }
+        row.acceptedQty = Math.max(Number(row.receivedQty) || 0, 0);
+        rows[index] = row;
+        return rows;
+      }
+
+      // Received Qty validation (fallback in case wastage is 0)
       if (field === "receivedQty" && received > pending) {
         Swal.fire({
           icon: "warning",
@@ -109,7 +128,8 @@ const InwardDetails = ({
       }
 
       // Accepted Qty = Received Qty - Wastage Qty
-      row.acceptedQty = Math.max(received - wastage, 0);
+      // row.acceptedQty = Math.max(received - wastage, 0);
+      row.acceptedQty = Math.max(received, 0);
 
       rows[index] = row;
       return rows;
@@ -248,9 +268,9 @@ const InwardDetails = ({
                 <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
                   Wastage Qty
                 </th>
-                <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
+                {/* <th className="w-28 px-2 py-2 text-center font-medium border border-gray-300">
                   Accepted Qty
-                </th>
+                </th> */}
                 {receiptType === "AGAINST_INVOICE" && (
                   <th
                     className={`w-20 px-4 py-2 text-center font-medium border border-gray-300`}
@@ -391,14 +411,14 @@ const InwardDetails = ({
                       />
                     </td>
 
-                    <td className="border border-gray-300 text-[11px] text-right px-1 bg-gray-50 bg-transparent">
+                    {/* <td className="border border-gray-300 text-[11px] text-right px-1 bg-gray-50 bg-transparent">
                       {isEmpty
                         ? ""
                         : row.acceptedQty !== "" &&
                             row.acceptedQty !== undefined
                           ? row.acceptedQty
                           : ""}
-                    </td>
+                    </td> */}
 
                     {receiptType === "AGAINST_INVOICE" && (
                       <td className="border-blue-gray-200 text-[11px] border border-gray-300 text-right">
@@ -530,12 +550,12 @@ const InwardDetails = ({
                     0,
                   ) || ""}
                 </td>
-                <td className="text-right border border-gray-300 px-1">
+                {/* <td className="text-right border border-gray-300 px-1">
                   {inwardDetails?.reduce(
                     (s, r) => s + (Number(r.acceptedQty) || 0),
                     0,
                   ) || ""}
-                </td>
+                </td> */}
                 {receiptType === "AGAINST_INVOICE" && (
                   <td className="text-right border border-gray-300 px-1 font-medium ">
                     {inwardDetails
