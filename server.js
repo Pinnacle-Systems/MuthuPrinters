@@ -77,12 +77,9 @@ import {
   salesDelivery,
   itemSubGroup,
   avilableMachine,
-<<<<<<< HEAD
+  processMob,
   salesOrder,
   packing,
-=======
-  processMob,
->>>>>>> 0e6f5431465df6ad011731f0dd72d93d802784a3
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -204,15 +201,11 @@ app.use("/productionInward", productionInward);
 app.use("/processBill", processBill);
 app.use("/salesDelivery", salesDelivery);
 app.use("/itemSubGroup", itemSubGroup);
-<<<<<<< HEAD
-app.use("/availableMachine", avilableMachine)
+app.use("/availableMachine", avilableMachine);
+app.use("/process_mob", processMob);
 app.use("/packing", packing);
 app.use("/salesOrder", salesOrder);
 
-=======
-app.use("/availableMachine",avilableMachine);
-app.use("/process_mob", processMob);
->>>>>>> 0e6f5431465df6ad011731f0dd72d93d802784a3
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;
