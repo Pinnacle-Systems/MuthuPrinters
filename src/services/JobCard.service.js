@@ -373,17 +373,15 @@ async function get_mob_jobcard(req) {
            
             }
           })
-       if(!incomingData && checkProcessSeq?.status === "NOT_STARTED"){
+       if(!incomingData && checkProcessSeq?.status === "NOT_STARTED" || (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) === 0 )){
         incomingData= {
           qty:data?.runningQty,
           id:null
         }
         }
-
-
         const prevCheck = data?.processRoute?.find((seq)=> (Number(checkProcessSeq?.sequence) - 1)  === seq?.sequence) 
 
-        if((!incomingData && checkProcessSeq?.status === "PARTIALLY_COMPLETED")  &&  (prevCheck?.pendingQty === 0  || prevCheck?.status === "COMPLETED" || !prevCheck )){
+        if((!incomingData && checkProcessSeq?.status === "PARTIALLY_COMPLETED" && Number(checkProcessSeq?.pendingQty || 0) > 0)  &&  (prevCheck?.pendingQty === 0  || prevCheck?.status === "COMPLETED" || !prevCheck )){
           incomingData= { qty:Number(checkProcessSeq?.pendingQty || 0),
           id:null }
         }
@@ -776,13 +774,11 @@ async function get_mob_joblist(req) {
     },
     include: {
       productionAllocations: true,
-      machineDetails: {
-        select: {
-          id: true,
-          Machine: { select: { id: true, name: true } },
-          Mac: true,
-        },
-      },
+      plateDetails : {
+      select: {
+         Machine: true
+      }
+    },
       processRoute: {
         where: {
           productionAllocationDtls: {
@@ -803,6 +799,8 @@ async function get_mob_joblist(req) {
     },
     orderBy: { id: "desc" },
   });
+
+
   if (searchDocDate) {
     data = data.filter((item) =>
       String(getDateFromDateTime(item.createdAt)).includes(searchDocDate),
@@ -822,6 +820,7 @@ async function get_mob_joblist(req) {
     REFERENCE_PAGE,
     branchId,
   );
+
 
   // ── fetch all relevant approval logs in one query ─────────────────────────
   const jobCardIds = data.map((o) => o.id);
@@ -917,10 +916,12 @@ async function get_mob_joblist(req) {
         }
       }
 
+     var machineList  = routes?.plateDetails?.map((machineMap)=>({...machineMap?.Machine}))
+
       return availableRoutes.map((route) => ({
         id: routes?.id,
         processRoute: route,
-        machineDetails: routes?.machineDetails,
+        machineDetails: machineList,
         docId: routes?.docId,
         approvalStatus: routes?.status,
         process: route?.Process,
