@@ -434,6 +434,8 @@ async function UpdatePushProcess(req) {
 
   var splitSizes__ = splitSizes?.length > 0 ? splitSizes : [];
 
+  console.log("PAUSE",req?.body)
+
   const now = new Date();
   const istOffset = 5.5 * 60 * 60 * 1000;
   const istTime = new Date(now.getTime() + istOffset);
