@@ -53,6 +53,7 @@ import { useDispatch } from "react-redux";
 //need to work
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
+import { useGetStyleMasterQuery } from "../../../redux/services/StyleMasterService.js";
 
 const EMPTY_ROW = {
   styleItemId: "",
@@ -161,6 +162,9 @@ const ProformaInvoiceForm = ({
 
   const { data: itemGroupList } = useGetItemGroupMasterQuery({});
   const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({});
+  const { data: styleList } = useGetStyleMasterQuery({
+    params: { companyId },
+  });
   const [dispatchInvalidate] = useInvalidateTags();
 
   const [addData] = useAddProformaInvoiceMutation();
@@ -292,15 +296,18 @@ const ProformaInvoiceForm = ({
         gsmId: item?.Gsm?.id || "",
         hsnId: item?.Hsn?.id || "",
 
-        sizeBreakup:
-          item?.pisizeBreakups?.length > 0
-            ? item.pisizeBreakups.map((val) => {
-                return {
-                  ...val,
-                  sizeId: val.sizeId || "",
-                };
-              })
-            : [{ sizeId: "", qty: "" }],
+        styleBreakup:
+          item?.PIStyleBreakup?.length > 0
+            ? item.PIStyleBreakup.map((st) => ({
+                styleId: st.styleId || "",
+                sizeBreakup: st.PISizeBreakup?.length > 0
+                  ? st.PISizeBreakup.map(sz => ({
+                      sizeId: sz.sizeId || "",
+                      qty: sz.qty || ""
+                    }))
+                  : [{ sizeId: "", qty: "" }]
+              }))
+            : [{ styleId: "", sizeBreakup: [{ sizeId: "", qty: "" }] }],
       }));
 
       setItems(padItems(mappedItems));
@@ -1467,6 +1474,7 @@ const ProformaInvoiceForm = ({
             isSupplierOutside={isSupplierOutside}
             itemGroupList={itemGroupList}
             itemSubGroupList={itemSubGroupList}
+            styleList={styleList}
           />
         }
         footer={footerContent}

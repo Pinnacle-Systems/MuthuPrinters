@@ -78,6 +78,7 @@ import {
   itemSubGroup,
   avilableMachine,
   salesOrder,
+  packing,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -187,6 +188,7 @@ app.use("/processBill", processBill);
 app.use("/salesDelivery", salesDelivery);
 app.use("/itemSubGroup", itemSubGroup);
 app.use("/availableMachine", avilableMachine)
+app.use("/packing", packing);
 app.use("/salesOrder", salesOrder);
 
 

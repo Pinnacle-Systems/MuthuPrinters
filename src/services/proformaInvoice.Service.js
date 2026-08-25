@@ -170,9 +170,13 @@ async function getOne(id) {
           Uom: true,
           Gsm: true,
           Hsn: true,
-          pisizeBreakups: {
+          PIStyleBreakup: {
             include: {
-              Size: true,
+              PISizeBreakup: {
+                include: {
+                  Size: true,
+                },
+              },
             },
           },
         },
@@ -300,12 +304,19 @@ async function create(body) {
           discountType: item.discountType,
           discountValue: parseFloat(item.discountValue || 0),
           amount: parseFloat(item.amount || 0),
-          pisizeBreakups:
-            item?.sizeBreakup?.length > 0
+          PIStyleBreakup:
+            item?.styleBreakup?.length > 0
               ? {
-                  create: item.sizeBreakup.map((s) => ({
-                    sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                    qty: s.qty ? parseInt(s.qty) : null,
+                  create: item.styleBreakup.map((st) => ({
+                    styleId: st.styleId ? parseInt(st.styleId) : null,
+                    PISizeBreakup: st?.sizeBreakup?.length > 0
+                      ? {
+                          create: st.sizeBreakup.map((s) => ({
+                            sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                            qty: s.qty ? parseInt(s.qty) : null,
+                          }))
+                        }
+                      : undefined
                   })),
                 }
               : undefined,
@@ -434,19 +445,28 @@ async function update(id, body, files) {
       // Since ProformaInvoiceForm sets/gets the entire array in order, index matching works fine.
       const oldItem = latestItems[index];
       if (!oldItem) return true;
-      const newSizes = newItem.sizeBreakup || [];
-      const oldSizes = oldItem.pisizeBreakups || [];
-
-      const isSizesChanged =
-        newSizes.length !== oldSizes.length ||
-        newSizes.some((ns, sIndex) => {
-          const os = oldSizes[sIndex];
-          if (!os) return true;
-          return (
-            parseInt(ns.sizeId || 0) !== parseInt(os.sizeId || 0) ||
-            parseFloat(ns.qty || 0) !== parseFloat(os.qty || 0)
-          );
+      const newStyles = newItem.styleBreakup || [];
+      const oldStyles = oldItem.PIStyleBreakup || [];
+      
+      let isSizesChanged = newStyles.length !== oldStyles.length;
+      if (!isSizesChanged) {
+        isSizesChanged = newStyles.some((nst, stIndex) => {
+          const ost = oldStyles[stIndex];
+          if (!ost) return true;
+          if (parseInt(nst.styleId || 0) !== parseInt(ost.styleId || 0)) return true;
+          const newSizes = nst.sizeBreakup || [];
+          const oldSizes = ost.PISizeBreakup || [];
+          if (newSizes.length !== oldSizes.length) return true;
+          return newSizes.some((ns, sIndex) => {
+            const os = oldSizes[sIndex];
+            if (!os) return true;
+            return (
+              parseInt(ns.sizeId || 0) !== parseInt(os.sizeId || 0) ||
+              parseFloat(ns.qty || 0) !== parseFloat(os.qty || 0)
+            );
+          });
         });
+      }
 
       return (
         parseInt(newItem.styleItemId || 0) !==
@@ -533,12 +553,19 @@ async function update(id, body, files) {
               amount: parseFloat(item.amount || 0),
               quoteVersion: nextQuoteVersion,
               dozen: parseFloat(item.dozen || 0),
-              pisizeBreakups:
-                item?.sizeBreakup?.length > 0
+              PIStyleBreakup:
+                item?.styleBreakup?.length > 0
                   ? {
-                      create: item.sizeBreakup.map((s) => ({
-                        sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                        qty: s.qty ? parseInt(s.qty) : null,
+                      create: item.styleBreakup.map((st) => ({
+                        styleId: st.styleId ? parseInt(st.styleId) : null,
+                        PISizeBreakup: st?.sizeBreakup?.length > 0
+                          ? {
+                              create: st.sizeBreakup.map((s) => ({
+                                sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                                qty: s.qty ? parseInt(s.qty) : null,
+                              }))
+                            }
+                          : undefined
                       })),
                     }
                   : undefined,

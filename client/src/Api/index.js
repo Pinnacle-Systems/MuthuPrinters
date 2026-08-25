@@ -73,3 +73,5 @@ export const PRODUCTION_INWARD_API = "productionInward";
 export const PROCESS_BILL_API = "processBill";
 export const SALES_DELIVERY_API = "salesDelivery";
 export const SALES_ORDER_API = "salesOrder";
+export const PACKING_API = "packing";
+

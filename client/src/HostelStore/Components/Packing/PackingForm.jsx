@@ -50,9 +50,10 @@ import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFoot
 import { PDFViewer } from "@react-pdf/renderer";
 import OrderEntryPrintFormat from "./OrderEntryPrintFormat.jsx";
 import { FiFileText, FiPrinter, FiEye } from "react-icons/fi";
-import SaleOrderItems from "./SaleOrderItems.jsx";
+import PackingItems from "./PackingItems.jsx";
 import { padRows } from "./OrderItemsUtils.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
+import { useGetStyleMasterQuery } from "../../../redux/services/StyleMasterService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
@@ -67,7 +68,7 @@ import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMas
 import { useGetSizeTemplateQuery } from "../../../redux/services/SizeTemplateMaster.js";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
 import { useDispatch } from "react-redux";
-import JobCardApi from "../../../redux/uniformService/JobCardService.js";
+import JobCardApi, { useGetJobCardByIdQuery } from "../../../redux/uniformService/JobCardService.js";
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService.js";
 import PoSummary from "../PurchaseOrder/PoSummary.js";
 import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary.js";
@@ -146,6 +147,12 @@ const PackingForm = ({
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
 
   const [orderId, setOrderId] = useState("")
+  const [jobCardId, setJobCardId] = useState("")
+  const [actualQty, setActualQty] = useState("")
+  const [completedQty, setCompletedQty] = useState("")
+  const [pendingQty, setPendingQty] = useState("")
+  const [alreadyPackedQty, setAlreadyPackedQty] = useState("")
+  // const [isJobCard,setIsJobCard] = useState("")
 
   const dispatch = useDispatch();
   const qrRef = useRef(null);
@@ -161,8 +168,6 @@ const PackingForm = ({
     finYearId,
   };
 
-  const { data: payTermList } = useGetPaytermMasterQuery({ params });
-  const { data: termsList } = useGetTermsandCondtionsQuery({ params });
   const { data: currencyList } = useGetCurrenciesQuery({ params });
 
   const {
@@ -179,12 +184,17 @@ const PackingForm = ({
     isLoading: isSingleorderLoading,
   } = useGetOrderEntryByIdQuery(orderId, { params, skip: !orderId, });
 
+  const {
+    data: singlejobCardData,
+    isFetching: isSinglejobCardFetching,
+    isLoading: isSinglejobCardLoading,
+  } = useGetJobCardByIdQuery(jobCardId, { params, skip: !jobCardId, });
 
-
-
+  console.log(singlejobCardData, "singlejobCardData")
 
 
   const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { ...params }, });
+  const { data: styleList } = useGetStyleMasterQuery({ params: { ...params } });
   const { data: uomList } = useGetUomQuery({ params });
   const { data: sizeList } = useGetSizeMasterQuery({ params });
   const { data: gsmList } = useGetGsmMasterQuery({ params });
@@ -283,7 +293,6 @@ const PackingForm = ({
     (data) => {
       setCustomerId(data?.customerId ? data?.customerId : "")
       setPayTermId(data?.payTermId || "");
-      setOrderItems(padRows(data?.orderItems || []));
 
     },
     [id],
@@ -296,6 +305,27 @@ const PackingForm = ({
       syncFormWithDbForOrder(singleorderData.data);
     }
   }, [isSingleorderFetching, isSingleorderLoading, orderId, syncFormWithDb, singleorderData]);
+
+  const syncFormWithDbForJobCard = useCallback(
+    (data) => {
+      setOrderItems(padRows(data?.OrderEntry?.orderItems || []));
+      const lastProcessRoute = data?.processRoute?.[data?.processRoute?.length - 1]
+      setActualQty(lastProcessRoute?.actualQty)
+      setCompletedQty(lastProcessRoute?.completedQty)
+      setPendingQty(lastProcessRoute?.pendingQty)
+      setAlreadyPackedQty(lastProcessRoute?.alreadyPackedQty)
+    },
+    [id],
+  );
+
+
+  useEffect(() => {
+    if (id) return
+    if (jobCardId && singlejobCardData?.data) {
+      syncFormWithDbForJobCard(singlejobCardData?.data);
+
+    }
+  }, [isSinglejobCardFetching, isSinglejobCardLoading, jobCardId, syncFormWithDb, singlejobCardData]);
 
   let data = {
     id,
@@ -1207,7 +1237,7 @@ const PackingForm = ({
         </Modal>
       )}
       <TransactionLayout
-        title="Sales Order"
+        title="Packing"
         badge={<ModeChip id={id} readOnly={readOnly} />}
         closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
         onClose={onClose}
@@ -1223,11 +1253,11 @@ const PackingForm = ({
                 </h2>
                 <div className="flex gap-2">
                   <div className="w-36">
-                    <TextInput name="Sale Order No" value={docId} disabled={true} />
+                    <TextInput name="Packing No" value={docId} disabled={true} />
                   </div>
                   <div className="w-24">
                     <DateInputNew
-                      name="Sale Order Date"
+                      name="Packing Date"
                       value={docDate}
                       setValue={setDocDate}
                       disabled={true}
@@ -1237,72 +1267,11 @@ const PackingForm = ({
                   </div>
                 </div>
               </div>
-              {/* Customer Details */}
 
-              {/* <div className=" w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-                <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                  Order Details
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  <div className="md:col-span-2">
-                    <DropdownWithModal
-                      name="Customer"
-                      options={dropDownListObject(
-                        id
-                          ? customerList?.data?.filter(
-                            (item) => item?.isCustomer,
-                          )
-                          : customerList?.data?.filter(
-                            (item) => item?.active && item?.isCustomer,
-                          ),
-                        "name",
-                        "id",
-                      )}
-                      value={customerId}
-                      setValue={setCustomerId}
-                      required={true}
-                      readOnly={readOnly}
-                      className={`w-full`}
-                      addNewLabel="+ Add New Customer"
-                      childComponent={PartyMaster}
-                      addNewModalWidth="w-[90%] h-[95%]"
-                      disabled={childRecord.current > 0 || readOnly}
-                      ref={customerRef}
-                      openOnFocus={true}
-                    />
-                  </div>
-                  <div className="">
-                    <TextInput
-                      name="Contact Person"
-                      placeholder="Contact name"
-                      value={findFromList(
-                        customerId,
-                        customerList?.data,
-                        "contactPersonName",
-                      )}
-                      disabled={true}
-                    />
-                  </div>
-                  <div className="">
-                    <TextInput
-                      name="Phone"
-                      placeholder="Contact number"
-                      value={findFromList(
-                        customerId,
-                        customerList?.data,
-                        "contactNumber",
-                      )}
-                      disabled={true}
-                      className="w-20"
-                    />
-                  </div>
-                </div>
-              </div> */}
-              {/* Order Details */}
 
               <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                 <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                  Order Details
+                  Job Card Details
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-8 gap-2">
 
@@ -1351,74 +1320,62 @@ const PackingForm = ({
                       className="w-20"
                     />
                   </div>
-                  <div className="col-span-1">
-                    <DropdownWithModal
-                      name="Pay Term"
-                      options={dropDownListObject(
-                        id
-                          ? payTermList?.data
-                          : payTermList?.data?.filter((item) => item?.active),
-                        "name",
-                        "id",
-                      )}
-                      value={payTermId}
-                      setValue={setPayTermId}
-                      required={false}
-                      readOnly={readOnly}
-                      className={`w-full max-w-none`}
-                      dropdownMinWidth={240}
-                      addNewLabel="+ Add New Pay Term"
-                      childComponent={PayTermMaster}
-                      addNewModalWidth="w-[40%] h-[66%]"
-                      disabled={
-                        childRecord.current > 0 ||
-                        readOnly
-                      }
-                    />
-                  </div>
-                  <div className="col-span-1">
-                    <DropdownWithModal
-                      name="Terms & Condtions"
-                      options={dropDownListObject(
-                        id
-                          ? termsList?.data
-                          : termsList?.data?.filter((item) => item?.active),
-                        "name",
-                        "id",
-                      )}
-                      value={termsId}
-                      setValue={setTermsId}
-                      required={false}
-                      readOnly={readOnly}
-                      className={`w-full max-w-none`}
-                      dropdownMinWidth={240}
-                      addNewLabel="+ Add New Terms & Condtions"
-                      // childComponent={TermsAndCondtionMaster}
-                      addNewModalWidth="w-[40%] h-[66%]"
-                      disabled={
-                        childRecord.current > 0 ||
-                        readOnly
-                      }
-                    />
-                  </div>
-                  <div className="w-28">
-                    <DropdownInput
-                      name="Tax Type"
-                      options={dropDownListObject(
-                        taxTypeList ? taxTypeList?.data : [],
-                        "name",
-                        "id",
-                      )}
-                      value={taxTemplateId}
-                      setValue={setTaxTemplateId}
-                      required={!isCustomerExport}
-                      readOnly={
-                        childRecord.current > 0 ||
-                        readOnly ||
-                        orderType === "AGAINSTPI"
-                      }
-                    />
-                  </div>
+                  {id ?
+                    <div className="col-span-1">
+                      <TextInput
+                        name="Job Card No"
+                        value={findFromList(
+                          orderId,
+                          orderData?.data,
+                          "docId",
+                        )}
+                        disabled={true}
+                        className="w-20"
+                      />
+                    </div>
+                    :
+                    <div className="col-span-1">
+                      <DropdownNew
+                        name="Job Card No"
+                        dataList={singleorderData?.data?.JobCard || []}
+                        value={jobCardId}
+                        setValue={setJobCardId}
+                        required={true}
+                        readOnly={
+                          childRecord.current > 0 || readOnly}
+                        otherField={"docId"}
+                        disabled={childRecord.current > 0 || readOnly || id}
+                      />
+
+
+
+                    </div>
+                  }
+
+                  <TextInput
+                    name="Production Qty"
+                    value={actualQty}
+                    disabled={true}
+                    className="w-20"
+                  />
+                  <TextInput
+                    name="Completed Qty"
+                    value={completedQty}
+                    disabled={true}
+                    className="w-20"
+                  />
+                  <TextInput
+                    name="Pending Qty"
+                    value={pendingQty}
+                    disabled={true}
+                    className="w-20"
+                  />
+                  <TextInput
+                    name="Already packed Qty"
+                    value={alreadyPackedQty}
+                    disabled={true}
+                    className="w-20"
+                  />
 
                 </div>
               </div>
@@ -1430,12 +1387,13 @@ const PackingForm = ({
         detailsLayout="default"
         detailsLayouts={["default"]}
         gridItems={
-          <SaleOrderItems
+          <PackingItems
             orderItems={orderItems}
             setOrderItems={setOrderItems}
             readOnly={readOnly || childRecord?.current > 0}
             styleItemList={styleItemList}
             sizeList={sizeList}
+            styleList={styleList}
             uomList={uomList}
             gsmList={gsmList}
             id={id}
