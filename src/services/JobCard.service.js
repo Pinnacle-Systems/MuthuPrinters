@@ -386,8 +386,11 @@ async function get_mob_jobcard(req) {
           id:null }
         }
 
+        if((!incomingData &&  (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) > 0 ))){
+           incomingData= { qty:Number(checkProcessSeq?.pendingQty || 0),
+          id:null }
+        }
 
-        
 
     if (!data) return NoRecordFound("Job Card");
     if (!incomingData?.qty)  return NoRecordFound("No quantity has been transferred to this process yet.")
