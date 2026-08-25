@@ -360,7 +360,7 @@ async function get_mob_jobcard(req) {
      const checkProcessSeq = data?.processRoute?.find((checkall) =>  checkall?.id === processRouteId )
    //  const checkProcessSeq_inHose = data?.processRoute?.find((checkall) =>  checkall?.id === processRouteId )?.productionAllocationDtl?.[0]
    //  let isWaitingQty = false;
-     var incomingData =  await prisma.incomingQty?.findFirst({
+     var incomingData = await prisma.incomingQty?.findFirst({
       where:{
         jobCardId : data?.id,
         sendRoute:processRouteId,
@@ -373,27 +373,32 @@ async function get_mob_jobcard(req) {
            
             }
           })
+
+          
+
        if(!incomingData && checkProcessSeq?.status === "NOT_STARTED" || (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) === 0 )){
         incomingData= {
-          qty:data?.runningQty,
+          pendingQty:data?.runningQty,
           id:null
         }
         }
         const prevCheck = data?.processRoute?.find((seq)=> (Number(checkProcessSeq?.sequence) - 1)  === seq?.sequence) 
 
         if((!incomingData && checkProcessSeq?.status === "PARTIALLY_COMPLETED" && Number(checkProcessSeq?.pendingQty || 0) > 0)  &&  (prevCheck?.pendingQty === 0  || prevCheck?.status === "COMPLETED" || !prevCheck )){
-          incomingData= { qty:Number(checkProcessSeq?.pendingQty || 0),
+          incomingData= { pendingQty:Number(checkProcessSeq?.pendingQty || 0),
           id:null }
         }
+
 
         if((!incomingData &&  (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) > 0 ))){
-           incomingData= { qty:Number(checkProcessSeq?.pendingQty || 0),
+          incomingData= { pendingQty:Number(checkProcessSeq?.pendingQty || 0),
           id:null }
         }
 
+        
 
     if (!data) return NoRecordFound("Job Card");
-    if (!incomingData?.qty)  return NoRecordFound("No quantity has been transferred to this process yet.")
+    if (incomingData?.pendingQty === 0)  return NoRecordFound("No quantity has been transferred to this process yet.")
 
     // ── Approval setup ────────────────────
     const { module, hasApproval } = await getModuleApprovalSetup(
@@ -447,7 +452,7 @@ async function get_mob_jobcard(req) {
       ...data,
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
       approvalLog: log,
-      processIncomingQty : incomingData?.qty,
+      processIncomingQty : incomingData?.pendingQty,
       processIncomingId : incomingData?.id ?? 0,
       childRecord: data._count.productionAllocations,
     };
