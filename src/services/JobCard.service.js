@@ -53,9 +53,9 @@ async function get(req) {
 
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-        finYearDate?.startDateStartTime,
-        finYearDate?.endDateEndTime,
-      )
+      finYearDate?.startDateStartTime,
+      finYearDate?.endDateEndTime,
+    )
     : "";
 
   let newDocId = await getNextDocId(
@@ -70,9 +70,9 @@ async function get(req) {
       branchId: branchId ? parseInt(branchId) : undefined,
       AND: finYearDate
         ? [
-            { createdAt: { gte: finYearDate.startTime } },
-            { createdAt: { lte: finYearDate.endTime } },
-          ]
+          { createdAt: { gte: finYearDate.startTime } },
+          { createdAt: { lte: finYearDate.endTime } },
+        ]
         : undefined,
       docId: searchDocNo ? { contains: searchDocNo } : undefined,
       productionType: searchProductionType
@@ -148,21 +148,21 @@ async function get(req) {
   const activeConfigs =
     hasApproval && module
       ? await prisma.approvalConfig.findMany({
-          where: {
-            moduleId: module.id,
-            branchId: branchId ? parseInt(branchId) : undefined,
-            active: true,
+        where: {
+          moduleId: module.id,
+          branchId: branchId ? parseInt(branchId) : undefined,
+          active: true,
+        },
+        include: {
+          ConfigConditions: {
+            include: { Field: true, Operator: true, CompareField: true },
           },
-          include: {
-            ConfigConditions: {
-              include: { Field: true, Operator: true, CompareField: true },
-            },
-            approvalLevels: {
-              include: { LevelUsers: true },
-              orderBy: { levelNo: "asc" },
-            },
+          approvalLevels: {
+            include: { LevelUsers: true },
+            orderBy: { levelNo: "asc" },
           },
-        })
+        },
+      })
       : [];
 
   // ── resolve approval status per record ───────────────────────────────────
@@ -356,49 +356,53 @@ async function get_mob_jobcard(req) {
         createAt: "desc", // latest record first
       },
     });
-     //const checkProcessNew = data?.processRoute?.slice(1)?.every((checkall) =>  checkall?.status === 'NOT_STARTED' )
-     const checkProcessSeq = data?.processRoute?.find((checkall) =>  checkall?.id === processRouteId )
-   //  const checkProcessSeq_inHose = data?.processRoute?.find((checkall) =>  checkall?.id === processRouteId )?.productionAllocationDtl?.[0]
-   //  let isWaitingQty = false;
-     var incomingData = await prisma.incomingQty?.findFirst({
-      where:{
-        jobCardId : data?.id,
-        sendRoute:processRouteId,
-         pendingQty: {
+    //const checkProcessNew = data?.processRoute?.slice(1)?.every((checkall) =>  checkall?.status === 'NOT_STARTED' )
+    const checkProcessSeq = data?.processRoute?.find((checkall) => checkall?.id === processRouteId)
+    //  const checkProcessSeq_inHose = data?.processRoute?.find((checkall) =>  checkall?.id === processRouteId )?.productionAllocationDtl?.[0]
+    //  let isWaitingQty = false;
+    var incomingData = await prisma.incomingQty?.findFirst({
+      where: {
+        jobCardId: data?.id,
+        sendRoute: processRouteId,
+        pendingQty: {
           gt: 0
-           },
-           AND:{
-           outwardId:null
-           }
-           
-            }
-          })
-
-          
-
-       if(!incomingData && checkProcessSeq?.status === "NOT_STARTED" || (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) === 0 )){
-        incomingData= {
-          pendingQty:data?.runningQty,
-          id:null
-        }
-        }
-        const prevCheck = data?.processRoute?.find((seq)=> (Number(checkProcessSeq?.sequence) - 1)  === seq?.sequence) 
-
-        if((!incomingData && checkProcessSeq?.status === "PARTIALLY_COMPLETED" && Number(checkProcessSeq?.pendingQty || 0) > 0)  &&  (prevCheck?.pendingQty === 0  || prevCheck?.status === "COMPLETED" || !prevCheck )){
-          incomingData= { pendingQty:Number(checkProcessSeq?.pendingQty || 0),
-          id:null }
+        },
+        AND: {
+          outwardId: null
         }
 
+      }
+    })
 
-        if((!incomingData &&  (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) > 0 ))){
-          incomingData= { pendingQty:Number(checkProcessSeq?.pendingQty || 0),
-          id:null }
-        }
 
-        
+
+    if (!incomingData && checkProcessSeq?.status === "NOT_STARTED" || (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) === 0)) {
+      incomingData = {
+        pendingQty: data?.runningQty,
+        id: null
+      }
+    }
+    const prevCheck = data?.processRoute?.find((seq) => (Number(checkProcessSeq?.sequence) - 1) === seq?.sequence)
+
+    if ((!incomingData && checkProcessSeq?.status === "PARTIALLY_COMPLETED" && Number(checkProcessSeq?.pendingQty || 0) > 0) && (prevCheck?.pendingQty === 0 || prevCheck?.status === "COMPLETED" || !prevCheck)) {
+      incomingData = {
+        pendingQty: Number(checkProcessSeq?.pendingQty || 0),
+        id: null
+      }
+    }
+
+
+    if ((!incomingData && (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) > 0))) {
+      incomingData = {
+        pendingQty: Number(checkProcessSeq?.pendingQty || 0),
+        id: null
+      }
+    }
+
+
 
     if (!data) return NoRecordFound("Job Card");
-    if (incomingData?.pendingQty === 0)  return NoRecordFound("No quantity has been transferred to this process yet.")
+    if (incomingData?.pendingQty === 0) return NoRecordFound("No quantity has been transferred to this process yet.")
 
     // ── Approval setup ────────────────────
     const { module, hasApproval } = await getModuleApprovalSetup(
@@ -452,8 +456,8 @@ async function get_mob_jobcard(req) {
       ...data,
       approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
       approvalLog: log,
-      processIncomingQty : incomingData?.pendingQty,
-      processIncomingId : incomingData?.id ?? 0,
+      processIncomingQty: incomingData?.pendingQty,
+      processIncomingId: incomingData?.id ?? 0,
       childRecord: data._count.productionAllocations,
     };
 
@@ -476,7 +480,7 @@ async function get_mob_jobcard(req) {
     if (processRouteId) {
       selectedRoute = Sorted_Sequence?.find(r => r.id === processRouteId) ?? null;
     }
-    
+
     if (!selectedRoute) {
       selectedRoute = Sorted_Sequence?.find(
         (last_taken) =>
@@ -485,7 +489,7 @@ async function get_mob_jobcard(req) {
           last_taken?.status === "PARTIALLY_COMPLETED",
       ) ?? null;
     }
-      
+
 
 
     return {
@@ -508,8 +512,8 @@ async function get_mob_jobcard(req) {
         totalMeter: resolvedData?.totalMeter,
         Color: resolvedData?.Color,
         punch_data: punch_result,
-        processIncomingQty : resolvedData?.processIncomingQty,
-         processIncomingId : resolvedData?.processIncomingId ,
+        processIncomingQty: resolvedData?.processIncomingQty,
+        processIncomingId: resolvedData?.processIncomingId,
         // ─── Approval ──────────────────────
         approvalStatus: resolvedData?.approvalStatus, // ✅ full object not .status
         approvalLog: resolvedData?.approvalLog,
@@ -558,9 +562,9 @@ async function get_mob_compl_jobcard(req) {
 
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-        finYearDate?.startDateStartTime,
-        finYearDate?.endDateEndTime,
-      )
+      finYearDate?.startDateStartTime,
+      finYearDate?.endDateEndTime,
+    )
     : "";
 
   let newDocId = await getNextDocId(
@@ -575,9 +579,9 @@ async function get_mob_compl_jobcard(req) {
       branchId: branchId ? parseInt(branchId) : undefined,
       AND: finYearDate
         ? [
-            { createdAt: { gte: finYearDate.startTime } },
-            { createdAt: { lte: finYearDate.endTime } },
-          ]
+          { createdAt: { gte: finYearDate.startTime } },
+          { createdAt: { lte: finYearDate.endTime } },
+        ]
         : undefined,
       docId: searchDocNo ? { contains: searchDocNo } : undefined,
       productionType: searchProductionType
@@ -654,21 +658,21 @@ async function get_mob_compl_jobcard(req) {
   const activeConfigs =
     hasApproval && module
       ? await prisma.approvalConfig.findMany({
-          where: {
-            moduleId: module.id,
-            branchId: branchId ? parseInt(branchId) : undefined,
-            active: true,
+        where: {
+          moduleId: module.id,
+          branchId: branchId ? parseInt(branchId) : undefined,
+          active: true,
+        },
+        include: {
+          ConfigConditions: {
+            include: { Field: true, Operator: true, CompareField: true },
           },
-          include: {
-            ConfigConditions: {
-              include: { Field: true, Operator: true, CompareField: true },
-            },
-            approvalLevels: {
-              include: { LevelUsers: true },
-              orderBy: { levelNo: "asc" },
-            },
+          approvalLevels: {
+            include: { LevelUsers: true },
+            orderBy: { levelNo: "asc" },
           },
-        })
+        },
+      })
       : [];
 
   // ── resolve approval status per record ───────────────────────────────────
@@ -742,9 +746,9 @@ async function get_mob_joblist(req) {
 
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-        finYearDate?.startDateStartTime,
-        finYearDate?.endDateEndTime,
-      )
+      finYearDate?.startDateStartTime,
+      finYearDate?.endDateEndTime,
+    )
     : "";
 
   let newDocId = await getNextDocId(
@@ -759,9 +763,9 @@ async function get_mob_joblist(req) {
       branchId: branchId ? parseInt(branchId) : undefined,
       AND: finYearDate
         ? [
-            { createdAt: { gte: finYearDate.startTime } },
-            { createdAt: { lte: finYearDate.endTime } },
-          ]
+          { createdAt: { gte: finYearDate.startTime } },
+          { createdAt: { lte: finYearDate.endTime } },
+        ]
         : undefined,
       docId: searchDocNo ? { contains: searchDocNo } : undefined,
       productionType: searchProductionType
@@ -770,23 +774,23 @@ async function get_mob_joblist(req) {
       customer: {
         name: searchCustomer ? { contains: searchCustomer } : undefined,
       },
-   productionAllocations: {
-  some: {                        
-    allocationDetails: {
-      some: {                    
-        isInHouse: true
+      productionAllocations: {
+        some: {
+          allocationDetails: {
+            some: {
+              isInHouse: true
+            }
+          }
+        }
       }
-    }
-  }
-}
     },
     include: {
       productionAllocations: true,
-      plateDetails : {
-      select: {
-         Machine: true
-      }
-    },
+      plateDetails: {
+        select: {
+          Machine: true
+        }
+      },
       processRoute: {
         where: {
           productionAllocationDtls: {
@@ -863,21 +867,21 @@ async function get_mob_joblist(req) {
   const activeConfigs =
     hasApproval && module
       ? await prisma.approvalConfig.findMany({
-          where: {
-            moduleId: module.id,
-            branchId: branchId ? parseInt(branchId) : undefined,
-            active: true,
+        where: {
+          moduleId: module.id,
+          branchId: branchId ? parseInt(branchId) : undefined,
+          active: true,
+        },
+        include: {
+          ConfigConditions: {
+            include: { Field: true, Operator: true, CompareField: true },
           },
-          include: {
-            ConfigConditions: {
-              include: { Field: true, Operator: true, CompareField: true },
-            },
-            approvalLevels: {
-              include: { LevelUsers: true },
-              orderBy: { levelNo: "asc" },
-            },
+          approvalLevels: {
+            include: { LevelUsers: true },
+            orderBy: { levelNo: "asc" },
           },
-        })
+        },
+      })
       : [];
 
   // ── resolve approval status per record ───────────────────────────────────
@@ -909,7 +913,7 @@ async function get_mob_joblist(req) {
       var Sorted_Sequence = routes?.processRoute?.sort(
         (a, b) => a.sequence - b.sequence,
       );
-      
+
       const availableRoutes = [];
       let foundNotStarted = false;
 
@@ -924,7 +928,7 @@ async function get_mob_joblist(req) {
         }
       }
 
-     var machineList  = routes?.plateDetails?.map((machineMap)=>({...machineMap?.Machine}))
+      var machineList = routes?.plateDetails?.map((machineMap) => ({ ...machineMap?.Machine }))
 
       return availableRoutes.map((route) => ({
         id: routes?.id,
@@ -1080,21 +1084,21 @@ async function getJobCardList(req) {
     activeConfigs =
       hasApproval && module
         ? await prisma.approvalConfig.findMany({
-            where: {
-              moduleId: module.id,
-              branchId: branchId ? parseInt(branchId) : undefined,
-              active: true,
+          where: {
+            moduleId: module.id,
+            branchId: branchId ? parseInt(branchId) : undefined,
+            active: true,
+          },
+          include: {
+            ConfigConditions: {
+              include: { Field: true, Operator: true, CompareField: true },
             },
-            include: {
-              ConfigConditions: {
-                include: { Field: true, Operator: true, CompareField: true },
-              },
-              approvalLevels: {
-                include: { LevelUsers: true },
-                orderBy: { levelNo: "asc" },
-              },
+            approvalLevels: {
+              include: { LevelUsers: true },
+              orderBy: { levelNo: "asc" },
             },
-          })
+          },
+        })
         : [];
   }
 
@@ -1162,6 +1166,19 @@ async function getOne(id) {
       finishingProcesses: true,
       labelPrintingDetails: true,
       plateDetails: true,
+      OrderEntry: {
+        include: {
+          orderItems: {
+            include: {
+              OrderStyleBreakup: {
+                include: {
+                  OrderSizeBreakup: true
+                }
+              }
+            }
+          }
+        }
+      },
       _count: {
         select: {
           productionAllocations: true,
@@ -1406,9 +1423,9 @@ async function create(body) {
 
     const shortCode = finYearDate
       ? getYearShortCodeForFinYear(
-          finYearDate.startDateStartTime,
-          finYearDate.endDateEndTime,
-        )
+        finYearDate.startDateStartTime,
+        finYearDate.endDateEndTime,
+      )
       : "";
 
     const newDocId = await getNextDocId(
@@ -1498,133 +1515,133 @@ async function create(body) {
 
           boardQualities: safeBoardItems.length
             ? {
-                createMany: {
-                  data: safeBoardItems.map((item) => ({
-                    processId: Number(item.processId),
-                    gsmId: Number(item.gsmId),
-                    fullBoardId: Number(item.fullBoardId),
-                    noOfSheets: Number(item.noOfSheets),
-                  })),
-                },
-              }
+              createMany: {
+                data: safeBoardItems.map((item) => ({
+                  processId: Number(item.processId),
+                  gsmId: Number(item.gsmId),
+                  fullBoardId: Number(item.fullBoardId),
+                  noOfSheets: Number(item.noOfSheets),
+                })),
+              },
+            }
             : undefined,
 
           printingDetails: safeSelectedPrinting.length
             ? {
-                createMany: {
-                  data: safeSelectedPrinting.map((p) => ({
-                    processId: Number(p.processId),
-                    isFront: !!p.isFront,
-                    isFrontAndBack: !!p.isFrontAndBack,
-                  })),
-                },
-              }
+              createMany: {
+                data: safeSelectedPrinting.map((p) => ({
+                  processId: Number(p.processId),
+                  isFront: !!p.isFront,
+                  isFrontAndBack: !!p.isFrontAndBack,
+                })),
+              },
+            }
             : undefined,
 
           plateDetails: safePlateDetails.length
             ? {
-                createMany: {
-                  data: safePlateDetails.map((p) => ({
-                    plateId: p.plateId ? parseInt(p.plateId) : null,
-                    machineId: p.machineId ? parseInt(p.machineId) : null,
-                    plateName: p.plateName ?? "",
-                    description: p.description ?? "",
-                    qty: p.qty ? Number(p.qty) : null,
-                  })),
-                },
-              }
+              createMany: {
+                data: safePlateDetails.map((p) => ({
+                  plateId: p.plateId ? parseInt(p.plateId) : null,
+                  machineId: p.machineId ? parseInt(p.machineId) : null,
+                  plateName: p.plateName ?? "",
+                  description: p.description ?? "",
+                  qty: p.qty ? Number(p.qty) : null,
+                })),
+              },
+            }
             : undefined,
 
           processDetails: safeProcesses.length
             ? {
-                createMany: {
-                  data: safeProcesses.map((id) => ({
-                    processId: Number(id),
-                  })),
-                },
-              }
+              createMany: {
+                data: safeProcesses.map((id) => ({
+                  processId: Number(id),
+                })),
+              },
+            }
             : undefined,
 
           laminationDetails: safeLaminations.length
             ? {
-                createMany: {
-                  data: safeLaminations.map((l) => ({
-                    laminationId: Number(l.processId),
-                    isFront: !!l.isFront,
-                    isFrontAndBack: !!l.isFrontAndBack,
-                  })),
-                },
-              }
+              createMany: {
+                data: safeLaminations.map((l) => ({
+                  laminationId: Number(l.processId),
+                  isFront: !!l.isFront,
+                  isFrontAndBack: !!l.isFrontAndBack,
+                })),
+              },
+            }
             : undefined,
 
           varnishDetails: safeVarnishes.length
             ? {
-                createMany: {
-                  data: safeVarnishes.map((v) => ({
-                    varnishId: Number(v.processId),
-                    isFront: !!v.isFront,
-                    isFrontAndBack: !!v.isFrontAndBack,
-                  })),
-                },
-              }
+              createMany: {
+                data: safeVarnishes.map((v) => ({
+                  varnishId: Number(v.processId),
+                  isFront: !!v.isFront,
+                  isFrontAndBack: !!v.isFrontAndBack,
+                })),
+              },
+            }
             : undefined,
 
           machineDetails: safeMachines.length
             ? {
-                createMany: {
-                  data: safeMachines.map((id) => ({
-                    macId: Number(id),
-                  })),
-                },
-              }
+              createMany: {
+                data: safeMachines.map((id) => ({
+                  macId: Number(id),
+                })),
+              },
+            }
             : undefined,
 
           processRoute: safeProcessRoute.length
             ? {
-                createMany: {
-                  data: safeProcessRoute.map((r, idx) => ({
-                    processId: r.processId ? Number(r.processId) : null,
-                    type: r.type,
-                    sequence: idx + 1,
-                    isFront: !!r.isFront,
-                    isFrontAndBack: !!r.isFrontAndBack,
-                    status: "NOT_STARTED",
-                  })),
-                },
-              }
+              createMany: {
+                data: safeProcessRoute.map((r, idx) => ({
+                  processId: r.processId ? Number(r.processId) : null,
+                  type: r.type,
+                  sequence: idx + 1,
+                  isFront: !!r.isFront,
+                  isFrontAndBack: !!r.isFrontAndBack,
+                  status: "NOT_STARTED",
+                })),
+              },
+            }
             : undefined,
 
           jobCardSizeDetails: safeJobCardSizeDetails.length
             ? {
-                createMany: {
-                  data: safeJobCardSizeDetails.map((s) => ({
-                    sizeId: s.sizeId ? Number(s.sizeId) : null,
-                    qty: s.qty ? Number(s.qty) : null,
-                    barcodeFrom: s.barcodeFrom || null,
-                    barcodeTo: s.barcodeTo || null,
-                  })),
-                },
-              }
+              createMany: {
+                data: safeJobCardSizeDetails.map((s) => ({
+                  sizeId: s.sizeId ? Number(s.sizeId) : null,
+                  qty: s.qty ? Number(s.qty) : null,
+                  barcodeFrom: s.barcodeFrom || null,
+                  barcodeTo: s.barcodeTo || null,
+                })),
+              },
+            }
             : undefined,
 
           finishingProcesses: safeFinishingDetails.length
             ? {
-                createMany: {
-                  data: safeFinishingDetails.map((id) => ({
-                    processId: Number(id),
-                  })),
-                },
-              }
+              createMany: {
+                data: safeFinishingDetails.map((id) => ({
+                  processId: Number(id),
+                })),
+              },
+            }
             : undefined,
 
           labelPrintingDetails: safeLabelPrintingDetails.length
             ? {
-                createMany: {
-                  data: safeLabelPrintingDetails.map((id) => ({
-                    processId: Number(id),
-                  })),
-                },
-              }
+              createMany: {
+                data: safeLabelPrintingDetails.map((id) => ({
+                  processId: Number(id),
+                })),
+              },
+            }
             : undefined,
         },
       });
@@ -1665,7 +1682,7 @@ async function create(body) {
               inOrOut: "Out",
               qty:
                 boardQuality?.noOfSheets &&
-                !isNaN(parseFloat(boardQuality.noOfSheets))
+                  !isNaN(parseFloat(boardQuality.noOfSheets))
                   ? -Math.abs(parseInt(boardQuality.noOfSheets))
                   : null,
               uomId: parseInt(styleItem.uomId),
@@ -2091,120 +2108,120 @@ async function update(id, body) {
           boardQualities:
             boardQualities.length > 0
               ? {
-                  createMany: {
-                    data: boardQualities.map((item) => ({
-                      processId: Number(item.processId),
-                      gsmId: Number(item.gsmId),
-                      fullBoardId: Number(item.fullBoardId),
-                      noOfSheets: Number(item.noOfSheets),
-                    })),
-                  },
-                }
+                createMany: {
+                  data: boardQualities.map((item) => ({
+                    processId: Number(item.processId),
+                    gsmId: Number(item.gsmId),
+                    fullBoardId: Number(item.fullBoardId),
+                    noOfSheets: Number(item.noOfSheets),
+                  })),
+                },
+              }
               : undefined,
 
           printingDetails: selectedPrinting.length
             ? {
-                createMany: {
-                  data: selectedPrinting.map((p) => ({
-                    processId: Number(p.processId),
-                    isFront: !!p.isFront,
-                    isFrontAndBack: !!p.isFrontAndBack,
-                  })),
-                },
-              }
+              createMany: {
+                data: selectedPrinting.map((p) => ({
+                  processId: Number(p.processId),
+                  isFront: !!p.isFront,
+                  isFrontAndBack: !!p.isFrontAndBack,
+                })),
+              },
+            }
             : undefined,
 
           plateDetails: plateDetails.length
             ? {
-                createMany: {
-                  data: plateDetails.map((p) => ({
-                    plateId: p.plateId ? parseInt(p.plateId) : null,
-                    machineId: p.machineId ? parseInt(p.machineId) : null,
-                    plateName: p.plateName,
-                    description: p.description ?? "",
-                    qty: p.qty ? Number(p.qty) : null,
-                  })),
-                },
-              }
+              createMany: {
+                data: plateDetails.map((p) => ({
+                  plateId: p.plateId ? parseInt(p.plateId) : null,
+                  machineId: p.machineId ? parseInt(p.machineId) : null,
+                  plateName: p.plateName,
+                  description: p.description ?? "",
+                  qty: p.qty ? Number(p.qty) : null,
+                })),
+              },
+            }
             : undefined,
 
           processDetails:
             selectedProcesses.length > 0
               ? {
-                  createMany: {
-                    data: selectedProcesses.map((pId) => ({
-                      processId: parseInt(pId),
-                    })),
-                  },
-                }
+                createMany: {
+                  data: selectedProcesses.map((pId) => ({
+                    processId: parseInt(pId),
+                  })),
+                },
+              }
               : undefined,
 
           laminationDetails:
             laminations.length > 0
               ? {
-                  createMany: {
-                    data: laminations.map((l) => ({
-                      laminationId: parseInt(l.processId),
-                      isFront: Boolean(l.isFront),
-                      isFrontAndBack: Boolean(l.isFrontAndBack),
-                    })),
-                  },
-                }
+                createMany: {
+                  data: laminations.map((l) => ({
+                    laminationId: parseInt(l.processId),
+                    isFront: Boolean(l.isFront),
+                    isFrontAndBack: Boolean(l.isFrontAndBack),
+                  })),
+                },
+              }
               : undefined,
 
           varnishDetails:
             varnishes.length > 0
               ? {
-                  createMany: {
-                    data: varnishes.map((v) => ({
-                      varnishId: parseInt(v.processId),
-                      isFront: Boolean(v.isFront),
-                      isFrontAndBack: Boolean(v.isFrontAndBack),
-                    })),
-                  },
-                }
+                createMany: {
+                  data: varnishes.map((v) => ({
+                    varnishId: parseInt(v.processId),
+                    isFront: Boolean(v.isFront),
+                    isFrontAndBack: Boolean(v.isFrontAndBack),
+                  })),
+                },
+              }
               : undefined,
 
           machineDetails:
             selectedMachines.length > 0
               ? {
-                  createMany: {
-                    data: selectedMachines.map((mId) => ({
-                      macId: parseInt(mId),
-                    })),
-                  },
-                }
+                createMany: {
+                  data: selectedMachines.map((mId) => ({
+                    macId: parseInt(mId),
+                  })),
+                },
+              }
               : undefined,
 
           jobCardSizeDetails: jobCardSizeDetails.length
             ? {
-                createMany: {
-                  data: jobCardSizeDetails.map((s) => ({
-                    sizeId: s.sizeId ? Number(s.sizeId) : null,
-                    qty: s.qty ? Number(s.qty) : null,
-                    barcodeFrom: s.barcodeFrom || null,
-                    barcodeTo: s.barcodeTo || null,
-                  })),
-                },
-              }
+              createMany: {
+                data: jobCardSizeDetails.map((s) => ({
+                  sizeId: s.sizeId ? Number(s.sizeId) : null,
+                  qty: s.qty ? Number(s.qty) : null,
+                  barcodeFrom: s.barcodeFrom || null,
+                  barcodeTo: s.barcodeTo || null,
+                })),
+              },
+            }
             : undefined,
           finishingProcesses: selectedFinishing.length
             ? {
-                createMany: {
-                  data: selectedFinishing.map((id) => ({
-                    processId: Number(id),
-                  })),
-                },
-              }
+              createMany: {
+                data: selectedFinishing.map((id) => ({
+                  processId: Number(id),
+                })),
+              },
+            }
             : undefined,
           labelPrintingDetails: selectedLabelPrinting.length
             ? {
-                createMany: {
-                  data: selectedLabelPrinting.map((id) => ({
-                    processId: Number(id),
-                  })),
-                },
-              }
+              createMany: {
+                data: selectedLabelPrinting.map((id) => ({
+                  processId: Number(id),
+                })),
+              },
+            }
             : undefined,
         },
       });
@@ -2245,7 +2262,7 @@ async function update(id, body) {
               inOrOut: "Out",
               qty:
                 boardQuality?.noOfSheets &&
-                !isNaN(parseFloat(boardQuality.noOfSheets))
+                  !isNaN(parseFloat(boardQuality.noOfSheets))
                   ? -Math.abs(parseInt(boardQuality.noOfSheets))
                   : null,
               uomId: parseInt(styleItem.uomId),

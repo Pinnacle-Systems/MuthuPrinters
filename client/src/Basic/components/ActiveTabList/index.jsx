@@ -88,6 +88,8 @@ import {
   ProductionInward,
   ProcessBill,
   SalesDelivery,
+  SaleOrder,
+  Packing,
 } from "../../../HostelStore/Components";
 
 const ActiveTabList = () => {
@@ -143,7 +145,7 @@ const ActiveTabList = () => {
     "DELIVERY CHALLAN": <DeliveryChallan />,
     "STYLE MASTER": <StyleMaster />,
     "ITEM MASTER": <StyleItemMaster />,
-    INVOICE: <DeliveryInvoice />,
+    "INVOICE": <DeliveryInvoice />,
     "COLOR MASTER": <ColorMaster />,
     "TAX TERM MASTER": <TaxTermMaster />,
     "TAX TEMPLATE": <TaxTemplate />,
@@ -180,6 +182,9 @@ const ActiveTabList = () => {
     "PROCESS BILL": <ProcessBill />,
     "SALES DELIVERY": <SalesDelivery />,
     "ITEM SUB GROUP MASTER": <ItemSubGroupMaster />,
+    "PACKING": <Packing />,
+    "SALES ORDER": <SaleOrder />,
+
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;
@@ -198,11 +203,10 @@ const ActiveTabList = () => {
           {currentShowingTabs.map((tab, index) => (
             <div
               key={index}
-              className={`px-2 rounded-lg text-[11px] d-flex content-center items-center gap-1 hover:bg-gray-500 hover:text-white transition my-1 ${
-                tab.active
-                  ? "bg-gray-500 text-white border border-gray-500"
-                  : "text-gray-500 border border-gray-500"
-              }`}
+              className={`px-2 rounded-lg text-[11px] d-flex content-center items-center gap-1 hover:bg-gray-500 hover:text-white transition my-1 ${tab.active
+                ? "bg-gray-500 text-white border border-gray-500"
+                : "text-gray-500 border border-gray-500"
+                }`}
             >
               <button
                 onClick={() => {
@@ -237,9 +241,8 @@ const ActiveTabList = () => {
             {hiddenTabs.map((tab) => (
               <li
                 key={tab.name}
-                className={`flex justify-between  ${
-                  tab.active ? "bg-[#009688]" : "bg-gray-300"
-                } `}
+                className={`flex justify-between  ${tab.active ? "bg-[#009688]" : "bg-gray-300"
+                  } `}
               >
                 <button
                   onClick={() => {

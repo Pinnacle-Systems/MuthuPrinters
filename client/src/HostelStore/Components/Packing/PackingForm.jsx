@@ -8,12 +8,12 @@ import {
   DropdownNew,
   ReusableInput,
   TextInput,
-} from "../../../Inputs";
+} from "../../../Inputs/index.js";
 import {
   orderTypes,
   productionTypes,
   conversionTypes,
-} from "../../../Utils/DropdownData";
+} from "../../../Utils/DropdownData.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
 import {
@@ -22,16 +22,16 @@ import {
   getCommonParams,
   ModeChip,
   renameFile,
-} from "../../../Utils/helper";
+} from "../../../Utils/helper.js";
 import { toast } from "react-toastify";
 import { FiCheck, FiEdit2, FiSave, FiSend } from "react-icons/fi";
 import { HiOutlineRefresh } from "react-icons/hi";
 import Swal from "sweetalert2";
-import { TransactionLayout } from "../../../Basic/components/Reuseable";
+import { TransactionLayout } from "../../../Basic/components/Reuseable/index.js";
 import {
   dropDownListObject,
   dropDownListObjectMultiple,
-} from "../../../Utils/contructObject";
+} from "../../../Utils/contructObject.js";
 import useInvalidateTags from "../../../CustomHooks/useInvalidateTags.js";
 import { PartyMaster } from "../index.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
@@ -50,10 +50,10 @@ import CommonFormFooter from "../../../Basic/components/Reuseable/CommonFormFoot
 import { PDFViewer } from "@react-pdf/renderer";
 import OrderEntryPrintFormat from "./OrderEntryPrintFormat.jsx";
 import { FiFileText, FiPrinter, FiEye } from "react-icons/fi";
-import OrderItems from "./OrderItems.jsx";
+import PackingItems from "./PackingItems.jsx";
 import { padRows } from "./OrderItemsUtils.js";
-import { useGetStyleMasterQuery } from "../../../redux/services/StyleMasterService.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
+import { useGetStyleMasterQuery } from "../../../redux/services/StyleMasterService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
@@ -68,12 +68,12 @@ import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMas
 import { useGetSizeTemplateQuery } from "../../../redux/services/SizeTemplateMaster.js";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
 import { useDispatch } from "react-redux";
-import JobCardApi from "../../../redux/uniformService/JobCardService.js";
-import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
-import PoSummary from "../PurchaseOrder/PoSummary";
-import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
+import JobCardApi, { useGetJobCardByIdQuery } from "../../../redux/uniformService/JobCardService.js";
+import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService.js";
+import PoSummary from "../PurchaseOrder/PoSummary.js";
+import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary.js";
 import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
-import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
+import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService.js";
 import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterService.js";
 import { useGetbankQuery } from "../../../redux/services/BankMasterService.js";
 import { useGetCurrenciesQuery } from "../../../redux/services/CurrencyMasterService.js";
@@ -81,9 +81,12 @@ import {
   PayTermMaster,
   BankMaster,
   CurrencyMaster,
-} from "../../../Basic/components";
+} from "../../../Basic/components/index.js";
+import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
+import { useAddSalesOrderMutation, useGetSalesOrderByIdQuery, useUpdateSalesOrderMutation } from "../../../redux/uniformService/SalesOrderService.js";
+import { useAddPackingMutation, useGetPackingByIdQuery, useUpdatePackingMutation } from "../../../redux/uniformService/PackingService.js";
 
-const OrderEntryForm = ({
+const PackingForm = ({
   onClose,
   id,
   setId,
@@ -144,6 +147,14 @@ const OrderEntryForm = ({
   const [carriageTax, setCarriageTax] = useState("");
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
 
+  const [orderId, setOrderId] = useState("")
+  const [jobCardId, setJobCardId] = useState("")
+  const [actualQty, setActualQty] = useState("")
+  const [completedQty, setCompletedQty] = useState("")
+  const [pendingQty, setPendingQty] = useState("")
+  const [alreadyPackedQty, setAlreadyPackedQty] = useState("")
+  // const [isJobCard,setIsJobCard] = useState("")
+
   const dispatch = useDispatch();
   const qrRef = useRef(null);
   const customerRef = useRef(null);
@@ -158,8 +169,6 @@ const OrderEntryForm = ({
     finYearId,
   };
 
-  const { data: payTermList } = useGetPaytermMasterQuery({ params });
-  const { data: bankList } = useGetbankQuery({ params });
   const { data: currencyList } = useGetCurrenciesQuery({ params });
 
   const {
@@ -167,14 +176,26 @@ const OrderEntryForm = ({
     status: queryStatus,
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
-  } = useGetOrderEntryByIdQuery(id, {
-    params,
-    skip: !id,
-  });
-  const { data: styleItemList } = useGetStyleItemMasterQuery({
-    params: { ...params },
-  });
-  const { data: styleList } = useGetStyleMasterQuery({ params });
+  } = useGetPackingByIdQuery(id, { params, skip: !id, });
+
+  const { data: orderData, isFetching, isLoading } = useGetOrderEntryQuery({ params: { branchId, }, });
+  const {
+    data: singleorderData,
+    isFetching: isSingleorderFetching,
+    isLoading: isSingleorderLoading,
+  } = useGetOrderEntryByIdQuery(orderId, { params, skip: !orderId, });
+
+  const {
+    data: singlejobCardData,
+    isFetching: isSinglejobCardFetching,
+    isLoading: isSinglejobCardLoading,
+  } = useGetJobCardByIdQuery(jobCardId, { params, skip: !jobCardId, });
+
+  console.log(singlejobCardData, "singlejobCardData")
+
+
+  const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { ...params }, });
+  const { data: styleList } = useGetStyleMasterQuery({ params: { ...params } });
   const { data: uomList } = useGetUomQuery({ params });
   const { data: sizeList } = useGetSizeMasterQuery({ params });
   const { data: gsmList } = useGetGsmMasterQuery({ params });
@@ -207,8 +228,8 @@ const OrderEntryForm = ({
   const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({
     params,
   });
-  const [addData] = useAddOrderEntryMutation();
-  const [updateData] = useUpdateOrderEntryMutation();
+  const [addData] = useAddPackingMutation();
+  const [updateData] = useUpdatePackingMutation();
   const [addApprovalStatus] = useAddApprovalStausMutation();
   const [getPIById] = useLazyGetProformaInvoiceByIdQuery();
 
@@ -219,6 +240,7 @@ const OrderEntryForm = ({
   const syncFormWithDb = useCallback(
     (data) => {
       setDocId(data?.docId ? data?.docId : "New");
+      setOrderId(data?.orderId ? data?.orderId : "");
       setDocDate(
         data?.docDate
           ? moment.utc(data.docDate).format("YYYY-MM-DD")
@@ -238,7 +260,7 @@ const OrderEntryForm = ({
       setTermsAndCondition(data?.termsAndCondition || "");
       setTermsId(data?.termsId || "");
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      setOrderItems(padRows(data?.orderItems || []));
+      setOrderItems(padRows(data?.SalesOrderItems || []));
       setProductionType(data?.productionType || "SAMPLE");
       setProFormaId(data?.proFormaId || "");
       setRefNo(data?.refNo || "");
@@ -267,6 +289,52 @@ const OrderEntryForm = ({
       syncFormWithDb(undefined);
     }
   }, [isSingleFetching, isSingleLoading, id, syncFormWithDb, singleData]);
+
+  const syncFormWithDbForOrder = useCallback(
+    (data) => {
+      setCustomerId(data?.customerId ? data?.customerId : "")
+      setPayTermId(data?.payTermId || "");
+
+    },
+    [id],
+  );
+
+
+  useEffect(() => {
+    if (id) return
+    if (orderId && singleorderData?.data) {
+      syncFormWithDbForOrder(singleorderData.data);
+    }
+  }, [isSingleorderFetching, isSingleorderLoading, orderId, syncFormWithDb, singleorderData]);
+
+  const syncFormWithDbForJobCard = useCallback(
+    (data) => {
+      const orderItemsRaw = data?.OrderEntry?.orderItems || [];
+      const mappedItems = orderItemsRaw.map((item) => ({
+        ...item,
+        styleBreakup: (item.OrderStyleBreakup || []).map((style) => ({
+          ...style,
+          sizeBreakup: style.OrderSizeBreakup || [],
+        })),
+      }));
+      setOrderItems(padRows(mappedItems));
+      const lastProcessRoute = data?.processRoute?.[data?.processRoute?.length - 1]
+      setActualQty(lastProcessRoute?.actualQty)
+      setCompletedQty(lastProcessRoute?.completedQty)
+      setPendingQty(lastProcessRoute?.pendingQty)
+      setAlreadyPackedQty(lastProcessRoute?.alreadyPackedQty)
+    },
+    [id],
+  );
+
+
+  useEffect(() => {
+    if (id) return
+    if (jobCardId && singlejobCardData?.data) {
+      syncFormWithDbForJobCard(singlejobCardData?.data);
+
+    }
+  }, [isSinglejobCardFetching, isSinglejobCardLoading, jobCardId, syncFormWithDb, singlejobCardData]);
 
   let data = {
     id,
@@ -303,6 +371,11 @@ const OrderEntryForm = ({
     deliveryId,
     loadingId,
     carriageTax,
+    orderId,
+    jobCardId
+
+
+
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -376,6 +449,7 @@ const OrderEntryForm = ({
   };
 
   const findDuplicates = (items) => {
+    const seen = new Map();
     const duplicates = [];
 
     items.forEach((item, index) => {
@@ -403,12 +477,14 @@ const OrderEntryForm = ({
     const finalAmt = charge + (charge * tax) / 100;
     setCarriageFinalAmt(finalAmt ? finalAmt.toFixed(2) : "");
   }, [carriageCharge, carriageTax]);
+
+
   const validateRows = (items) => {
     const errors = [];
     const seen = new Set();
     items.forEach((item, index) => {
       if (!item.styleItemId) {
-        errors.push(`Row ${index + 1}: Description of Goods is required`);
+        errors.push(`Row ${index + 1}: Style is required`);
       }
       if (!item.itemGroupId) {
         errors.push(`Row ${index + 1}: Item Group is required`);
@@ -420,9 +496,6 @@ const OrderEntryForm = ({
         errors.push(`Row ${index + 1}: UOM is required`);
       }
 
-      if (!item.orderQty || Number(item.orderQty) <= 0) {
-        errors.push(`Row ${index + 1}: Order Qty must be greater than 0`);
-      }
 
       const key = `${item.styleItemId}_${item.uomId}_${item.itemGroupId}`;
       if (seen.has(key)) {
@@ -430,7 +503,6 @@ const OrderEntryForm = ({
       } else {
         seen.add(key);
       }
-
       if (item.styleBreakup?.length) {
         let sizeSum = 0;
         item.styleBreakup.forEach((style, styleIndex) => {
@@ -465,13 +537,9 @@ const OrderEntryForm = ({
           }
         });
 
-        if (orderType === "AGAINSTPI" && sizeSum !== Number(item.piQty)) {
-          // Relaxing error to match original logic, or strictly checking piQty
-        }
       } else {
         errors.push(`Row ${index + 1}: Style Breakup is required for Order Qty`);
       }
-
       if (isCustomerExport && !loadingId) {
         errors.push(`Loading Port is required`);
       }
@@ -487,27 +555,8 @@ const OrderEntryForm = ({
   const validateData = (data) => {
     const items = data?.orderItems || [];
     const checks = [
-      { condition: !data.customerId, title: "Customer is required!" },
-      { condition: !data.orderType, title: "Order Type is required!" },
-      {
-        condition: data.orderType === "AGAINSTPI" && !data.proFormaId,
-        title: "PI No is required!",
-      },
-      {
-        condition: !data.productionType,
-        title: "Production Type is required!",
-      },
-      {
-        condition:
-          data.productionType === "BULK" &&
-          data.orderType === "AGAINSTPI" &&
-          !data.refNo,
-        title: "RefNo is required!",
-      },
-      { condition: !data.deliveryDate, title: "Delivery Date is required!" },
-      { condition: !data.validDays, title: "Valid To is required!" },
-      { condition: items.length === 0, title: "Order Items are required!" },
-      {},
+      { condition: !data.orderId, title: "Order No is required!" },
+      { condition: !data.jobCardId, title: "Job Card is required!" },
     ];
 
     const failed = checks.find((c) => c.condition);
@@ -1191,7 +1240,7 @@ const OrderEntryForm = ({
         </Modal>
       )}
       <TransactionLayout
-        title="Order Entry"
+        title="Packing"
         badge={<ModeChip id={id} readOnly={readOnly} />}
         closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
         onClose={onClose}
@@ -1207,11 +1256,11 @@ const OrderEntryForm = ({
                 </h2>
                 <div className="flex gap-2">
                   <div className="w-36">
-                    <TextInput name="Order No" value={docId} disabled={true} />
+                    <TextInput name="Packing No" value={docId} disabled={true} />
                   </div>
                   <div className="w-24">
                     <DateInputNew
-                      name="Order Date"
+                      name="Packing Date"
                       value={docDate}
                       setValue={setDocDate}
                       disabled={true}
@@ -1221,564 +1270,133 @@ const OrderEntryForm = ({
                   </div>
                 </div>
               </div>
-              {/* Customer Details */}
 
-              <div className=" w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+
+              <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                 <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                  Customer Details
+                  Job Card Details
                 </h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  <div className="md:col-span-2">
-                    <DropdownWithModal
+                <div className="grid grid-cols-2 md:grid-cols-8 gap-2">
+
+                  {id ?
+                    <div className="col-span-1">
+                      <TextInput
+                        name="Order No"
+                        value={findFromList(
+                          orderId,
+                          orderData?.data,
+                          "docId",
+                        )}
+                        disabled={true}
+                        className="w-20"
+                      />
+                    </div>
+                    :
+                    <div className="col-span-1">
+                      <DropdownNew
+                        name="Order No"
+                        dataList={orderData?.data}
+                        value={orderId}
+                        setValue={setOrderId}
+                        required={true}
+                        readOnly={
+                          childRecord.current > 0 || readOnly}
+                        otherField={"docId"}
+                        disabled={childRecord.current > 0 || readOnly || id}
+                      />
+
+
+
+                    </div>
+                  }
+
+                  <div className="col-span-2">
+                    <TextInput
                       name="Customer"
-                      options={dropDownListObject(
-                        id
-                          ? customerList?.data?.filter(
-                            (item) => item?.isCustomer,
-                          )
-                          : customerList?.data?.filter(
-                            (item) => item?.active && item?.isCustomer,
-                          ),
-                        "name",
-                        "id",
-                      )}
-                      value={customerId}
-                      setValue={setCustomerId}
-                      required={true}
-                      readOnly={readOnly}
-                      className={`w-full`}
-                      addNewLabel="+ Add New Customer"
-                      childComponent={PartyMaster}
-                      addNewModalWidth="w-[90%] h-[95%]"
-                      disabled={childRecord.current > 0 || readOnly}
-                      ref={customerRef}
-                      openOnFocus={true}
-                    />
-                  </div>
-                  <div className="">
-                    <TextInput
-                      name="Contact Person"
-                      placeholder="Contact name"
-                      value={findFromList(
-                        customerId,
-                        customerList?.data,
-                        "contactPersonName",
-                      )}
-                      disabled={true}
-                    />
-                  </div>
-                  <div className="">
-                    <TextInput
-                      name="Phone"
                       placeholder="Contact number"
                       value={findFromList(
                         customerId,
                         customerList?.data,
-                        "contactNumber",
+                        "name",
                       )}
                       disabled={true}
                       className="w-20"
                     />
                   </div>
-                </div>
-              </div>
-              {/* Order Details */}
-
-              <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-                <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                  Order Details
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                  <DropdownInput
-                    name="Order Type"
-                    options={orderTypes}
-                    value={orderType}
-                    setValue={(value) => {
-                      setOrderType(value);
-                      setProFormaId("");
-                      if (value === "GENERAL") {
-                        setOrderItems(fillWithDefaultRows([]));
-                        setTaxTemplateId("");
-                        setDiscountType("Percentage");
-                        setDiscountValue(0);
-                        setConversionType("DOZEN");
-                        setTermsId("");
-                        setTermsAndCondition("");
-                        setDeliveryDate("");
-                        setRemarks("");
-                        setPayTermId("");
-                        setBankId("");
-                        setCurrencyId("");
-                        setWeightInKg("");
-                        setCarriageCharge("");
-                        setLoadingId("");
-                        setDeliveryId("");
-                        setCarriageTax("");
-                      }
-                    }}
-                    required={true}
-                    readOnly={readOnly}
-                    disabled={childRecord.current > 0 || readOnly}
-                  />
-                  <div className="w-32">
-                    <DropdownNew
-                      name="PI No"
-                      dataList={PIList?.data?.filter((item) =>
-                        id
-                          ? item?.customerId === customerId
-                          : isRepeatedPI
-                            ? item?.customerId === customerId && item?.hasBulk
-                            : item?.customerId === customerId && !item?.hasBulk,
-                      )}
-                      value={proFormaId}
-                      setValue={setProFormaId}
-                      required={orderType === "AGAINSTPI"}
-                      readOnly={
-                        childRecord.current > 0 ||
-                        readOnly ||
-                        orderType === "GENERAL"
-                      }
-                      disabled={
-                        childRecord.current > 0 ||
-                        readOnly ||
-                        orderType === "GENERAL"
-                      }
-                      otherField={"docId"}
-                      beforeChange={async (selectedValue) => {
-                        if (!selectedValue) {
-                          setOrderItems(fillWithDefaultRows([]));
-                          return;
-                        }
-
-                        const res = await getPIById(selectedValue?.id).unwrap();
-                        {
-                          console.log("res", res);
-                        }
-
-                        setTaxTemplateId(res?.data?.taxTemplateId || "");
-                        setDiscountType(
-                          res?.data?.discountType || "Percentage",
-                        );
-                        setDiscountValue(res?.data?.discountValue || 0);
-                        setConversionType(res?.data?.conversionType || "DOZEN");
-                        if (res?.data?.termsId) setTermsId(res.data.termsId);
-                        if (res?.data?.termsAndCondition)
-                          setTermsAndCondition(res.data.termsAndCondition);
-                        if (res?.data?.deliveryDate)
-                          setDeliveryDate(
-                            moment
-                              .utc(res.data.deliveryDate)
-                              .format("YYYY-MM-DD"),
-                          );
-                        if (res?.data?.remarks) setRemarks(res.data.remarks);
-
-                        setPayTermId(res?.data?.payTermId || "");
-                        setBankId(res?.data?.bankId || "");
-                        setCurrencyId(res?.data?.currencyId || "");
-                        setWeightInKg(res?.data?.weightInKg || "");
-                        setCarriageCharge(res?.data?.carriageCharge || "");
-                        setLoadingId(res?.data?.loadingId || "");
-                        setDeliveryId(res?.data?.deliveryId || "");
-                        setCarriageTax(res?.data?.carriageTax || "");
-                        const mappedItems =
-                          Object.values(
-                            (res?.data?.items || []).reduce((acc, item) => {
-                              const key = item.styleItemId;
-
-                              if (
-                                !acc[key] ||
-                                acc[key].quoteVersion < item.quoteVersion
-                              ) {
-                                acc[key] = item;
-                              }
-
-                              return acc;
-                            }, {}),
-                          )
-                            .sort((a, b) => a.id - b.id)
-                            .map((item) => ({
-                              styleItemId: item.styleItemId,
-                              orderQty: item.qty || "",
-                              piQty: Number(item.qty) || 0,
-                              sizeId: item.sizeId || "",
-                              uomId: item.uomId || "",
-                              gsmId: item.gsmId || "",
-                              hsnId: item.hsnId || "",
-                              labelWidth: item.labelWidth || "",
-                              price: item.price || "",
-                              amount: item.amount || "",
-                              dozen: item.dozen || "",
-                              discountType: item.discountType || "",
-                              discountValue: item.discountValue || "",
-                              taxPercent: item.taxPercent || "",
-                              taxType: item.taxType || "",
-                              styleBreakup:
-                                item?.PIStyleBreakup?.length > 0
-                                  ? item.PIStyleBreakup.map((st) => ({
-                                    styleId: st.styleId || "",
-                                    sizeBreakup: st.PISizeBreakup?.length > 0
-                                      ? st.PISizeBreakup.map(sz => ({
-                                        sizeId: sz.sizeId || "",
-                                        qty: sz.qty || ""
-                                      }))
-                                      : [{ sizeId: "", qty: "" }]
-                                  }))
-                                  : [],
-                              itemGroupId: item.StyleItem?.itemGroupId,
-                              itemSubGroupId: item.StyleItem?.itemSubGroupId,
-                            })) || [];
-
-                        setOrderItems(fillWithDefaultRows(mappedItems));
-                      }}
-                    />
-                  </div>
-                  <DropdownInput
-                    name="Production Type"
-                    options={productionTypes}
-                    value={productionType}
-                    setValue={(value) => setProductionType(value)}
-                    required={true}
-                    readOnly={readOnly}
-                    disabled={childRecord.current > 0 || readOnly}
-                    beforeChange={() => {
-                      setRefNo("");
-                    }}
-                  />
-                  {productionType === "SAMPLE" ? (
-                    <TextInput
-                      name="Ref No"
-                      value={refNo}
-                      setValue={setRefNo}
-                      disabled={
-                        productionType === "SAMPLE" ||
-                        childRecord.current > 0 ||
-                        readOnly
-                      }
-                      required={productionType === "BULK"}
-                    />
-                  ) : (
-                    <DropdownNew
-                      name="Ref No"
-                      dataList={refList?.data?.filter(
-                        (item) => item?.customerId === customerId,
-                      )}
-                      value={refNo}
-                      setValue={setRefNo}
-                      required={
-                        productionType === "BULK" && orderType === "AGAINSTPI"
-                      }
-                      disabled={childRecord.current > 0 || readOnly}
-                      otherField={"refNo"}
-                      otherValue={"refNo"}
-                    />
-                  )}
-                  <div className="w-24">
-                    <TextInput
-                      name="ValidDays"
-                      value={validDays}
-                      setValue={setValidDays}
-                      disabled={childRecord.current > 0 || readOnly}
-                      type="number"
-                      min="0"
-                      className="text-right"
-                      required={true}
-                      onBlur={(e) =>
-                        setValidDays(
-                          e.target.value ? Number(e.target.value) : "",
-                        )
-                      }
-                      onFocus={(e) => {
-                        e.target.select();
-                      }}
-                    />
-                  </div>
-                  {/* <div className="m-2 p-0 flex items-center">
-                  <CheckBoxNew
-                    name="Repeated PI"
-                    readOnly={readOnly}
-                    value={isRepeatedPI}
-                    setValue={setIsRepeatedPI}
-                    disabled={readOnly || childRecord.current > 0}
-                    className="text-[11px] font-medium"
-                  />
-                </div> */}
-                </div>
-              </div>
-            </div>
-            {/* Other Details */}{console.log(orderItems, "orderItemsorderItems")}
-
-            <div className="border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-              <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-                Other Details
-              </h2>
-              <div className="flex gap-2 gap-x-2">
-                {isCustomerExport && (
-                  <>
-                    <div className="w-52">
-                      <DropdownInput
-                        name="Loading Port"
-                        options={dropDownListObject(
-                          cityList?.data?.filter((item) => item.active),
-                          "name",
-                          "id",
+                  {id ?
+                    <div className="col-span-1">
+                      <TextInput
+                        name="Job Card No"
+                        value={findFromList(
+                          orderId,
+                          orderData?.data,
+                          "docId",
                         )}
-                        value={loadingId}
-                        setValue={setLoadingId}
-                        readOnly={
-                          childRecord.current > 0 ||
-                          readOnly ||
-                          orderType === "AGAINSTPI"
-                        }
-                        required={true}
+                        disabled={true}
+                        className="w-20"
                       />
                     </div>
-                    <div className="w-52">
-                      <DropdownInput
-                        name="Delivery Port"
-                        options={dropDownListObject(
-                          cityList?.data?.filter((item) => item.active),
-                          "name",
-                          "id",
-                        )}
-                        value={deliveryId}
-                        setValue={setDeliveryId}
-                        readOnly={
-                          childRecord.current > 0 ||
-                          readOnly ||
-                          orderType === "AGAINSTPI"
-                        }
+                    :
+                    <div className="col-span-1">
+                      <DropdownNew
+                        name="Job Card No"
+                        dataList={singleorderData?.data?.JobCard || []}
+                        value={jobCardId}
+                        setValue={setJobCardId}
                         required={true}
+                        readOnly={
+                          childRecord.current > 0 || readOnly}
+                        otherField={"docId"}
+                        disabled={childRecord.current > 0 || readOnly || id}
                       />
+
+
+
                     </div>
-                  </>
-                )}
-                <div className="w-28">
-                  <DropdownInput
-                    name="Tax Type"
-                    options={dropDownListObject(
-                      taxTypeList ? taxTypeList?.data : [],
-                      "name",
-                      "id",
-                    )}
-                    value={taxTemplateId}
-                    setValue={setTaxTemplateId}
-                    required={!isCustomerExport}
-                    readOnly={
-                      childRecord.current > 0 ||
-                      readOnly ||
-                      orderType === "AGAINSTPI"
-                    }
-                  />
-                </div>
-                <div className="w-28">
-                  <DropdownWithModal
-                    name="Pay Term"
-                    options={dropDownListObject(
-                      id
-                        ? payTermList?.data
-                        : payTermList?.data?.filter((item) => item?.active),
-                      "name",
-                      "id",
-                    )}
-                    value={payTermId}
-                    setValue={setPayTermId}
-                    required={false}
-                    readOnly={readOnly || orderType === "AGAINSTPI"}
-                    className={`w-full max-w-none`}
-                    dropdownMinWidth={240}
-                    addNewLabel="+ Add New Pay Term"
-                    childComponent={PayTermMaster}
-                    addNewModalWidth="w-[40%] h-[66%]"
-                    disabled={
-                      childRecord.current > 0 ||
-                      readOnly ||
-                      orderType === "AGAINSTPI"
-                    }
-                  />
-                </div>
-                <div className="w-[105px]">
-                  <DateInputNew
-                    name="Delivery Date"
-                    value={deliveryDate}
-                    setValue={setDeliveryDate}
-                    required={true}
-                    readOnly={
-                      childRecord.current > 0 ||
-                      readOnly ||
-                      orderType === "AGAINSTPI"
-                    }
-                    type={"date"}
-                  />
-                </div>
-                <div className="w-28">
-                  <DropdownInput
-                    name="Conversion"
-                    options={conversionTypes}
-                    value={conversionType}
-                    setValue={handleConversionChange}
-                    required={false}
-                    readOnly={
-                      childRecord.current > 0 ||
-                      readOnly ||
-                      orderType === "AGAINSTPI"
-                    }
-                  />
-                </div>
-                <div className="w-28">
+                  }
+
                   <TextInput
-                    name="Weight In Kg(KG)"
-                    value={weightInKg}
-                    setValue={setWeightInKg}
-                    type="number"
-                    min="0"
-                    className="text-right"
-                    disabled={
-                      childRecord.current > 0 ||
-                      readOnly ||
-                      orderType === "AGAINSTPI"
-                    }
-                    onBlur={(e) =>
-                      setWeightInKg(
-                        e.target.value ? Number(e.target.value).toFixed(3) : "",
-                      )
-                    }
-                    onFocus={(e) => {
-                      e.target.select();
-                    }}
-                  />
-                </div>
-                <div className="w-40">
-                  <TextInput
-                    name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
-                    value={carriageCharge}
-                    setValue={setCarriageCharge}
-                    type="number"
-                    min="0"
-                    className="text-right"
-                    disabled={
-                      childRecord.current > 0 ||
-                      readOnly ||
-                      orderType === "AGAINSTPI"
-                    }
-                    onBlur={(e) =>
-                      setCarriageCharge(
-                        e.target.value ? Number(e.target.value).toFixed(2) : "",
-                      )
-                    }
-                    onFocus={(e) => {
-                      e.target.select();
-                    }}
-                  />
-                </div>
-                <div className="w-24">
-                  <TextInput
-                    name="Carriage Tax%"
-                    value={carriageTax}
-                    setValue={setCarriageTax}
-                    disabled={
-                      childRecord.current > 0 ||
-                      readOnly ||
-                      orderType === "AGAINSTPI"
-                    }
-                    type="number"
-                    min="0"
-                    className="text-right"
-                    onBlur={(e) =>
-                      setCarriageTax(
-                        e.target.value ? Number(e.target.value).toFixed(2) : "",
-                      )
-                    }
-                    onFocus={(e) => {
-                      e.target.select();
-                    }}
-                  />
-                </div>
-                <div className="w-32">
-                  <TextInput
-                    name="Carriage Final Amount"
-                    value={carriageFinalAmt}
+                    name="Production Qty"
+                    value={actualQty}
                     disabled={true}
-                    type="number"
-                    min="0"
-                    className="text-right"
-                    onFocus={(e) => {
-                      e.target.select();
-                    }}
+                    className="w-20"
                   />
-                </div>
-                <div className="w-44">
-                  <DropdownWithModal
-                    name="Advising Bank"
-                    options={dropDownListObjectMultiple(
-                      bankList?.data,
-                      ["name", "Branch.name"],
-                      "id",
-                    )}
-                    value={bankId}
-                    setValue={setBankId}
-                    required={false}
-                    readOnly={
-                      childRecord.current > 0 ||
-                      readOnly ||
-                      orderType === "AGAINSTPI"
-                    }
-                    className={`w-[150px]`}
-                    addNewLabel="+ Add New Bank"
-                    childComponent={BankMaster}
-                    addNewModalWidth="w-[45%] h-[64%]"
-                    disabled={
-                      childRecord.current > 0 ||
-                      readOnly ||
-                      orderType === "AGAINSTPI"
-                    }
+                  <TextInput
+                    name="Completed Qty"
+                    value={completedQty}
+                    disabled={true}
+                    className="w-20"
                   />
+                  <TextInput
+                    name="Pending Qty"
+                    value={pendingQty}
+                    disabled={true}
+                    className="w-20"
+                  />
+                  <TextInput
+                    name="Already packed Qty"
+                    value={alreadyPackedQty}
+                    disabled={true}
+                    className="w-20"
+                  />
+
                 </div>
-                {isCustomerExport && (
-                  <div className="w-24">
-                    <DropdownWithModal
-                      name="Currency"
-                      options={dropDownListObject(
-                        id
-                          ? currencyList?.data
-                          : currencyList?.data?.filter((item) => item?.active),
-                        "name",
-                        "id",
-                      )}
-                      value={currencyId}
-                      setValue={setCurrencyId}
-                      required={true}
-                      readOnly={
-                        childRecord.current > 0 ||
-                        readOnly ||
-                        orderType === "AGAINSTPI"
-                      }
-                      className={`w-full max-w-none`}
-                      dropdownMinWidth={240}
-                      addNewLabel="+ Add New Currency"
-                      childComponent={CurrencyMaster}
-                      addNewModalWidth="w-[40%] h-[66%]"
-                      disabled={
-                        childRecord.current > 0 ||
-                        readOnly ||
-                        orderType === "AGAINSTPI"
-                      }
-                    />
-                  </div>
-                )}
               </div>
             </div>
+
+
           </div>
         }
         detailsLayout="default"
         detailsLayouts={["default"]}
         gridItems={
-          <OrderItems
+          <PackingItems
             orderItems={orderItems}
             setOrderItems={setOrderItems}
             readOnly={readOnly || childRecord?.current > 0}
             styleItemList={styleItemList}
-            styleList={styleList}
             sizeList={sizeList}
+            styleList={styleList}
             uomList={uomList}
             gsmList={gsmList}
             id={id}
@@ -1803,10 +1421,10 @@ const OrderEntryForm = ({
             <ReusableFormFooter
               sections={[
                 {
-                  title: "Customer Requirements",
+                  title: "Terms & Condtions",
                   value: requirements,
                   onChange: setRequirements,
-                  placeholder: "Enter requirements...",
+                  placeholder: "Enter Terms & Condtions...",
                   readOnly: readOnly || childRecord.current > 0,
                   ref: requirementRef,
                 },
@@ -2170,4 +1788,4 @@ const OrderEntryForm = ({
     </>
   );
 };
-export default OrderEntryForm;
+export default PackingForm;

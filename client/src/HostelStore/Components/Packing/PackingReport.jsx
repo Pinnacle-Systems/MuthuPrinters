@@ -17,7 +17,8 @@ import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { FiCheck } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { UserPermissions } from "../../../Utils/UserPermissions";
-const OrderEntryReport = ({
+import { useGetSalesOrderQuery } from "../../../redux/uniformService/SalesOrderService";
+const PackingReport = ({
     onClick,
     onView,
     itemsPerPage = 10,
@@ -73,7 +74,7 @@ const OrderEntryReport = ({
         data: allData,
         isFetching,
         isLoading,
-    } = useGetOrderEntryQuery({
+    } = useGetSalesOrderQuery({
         params: {
             branchId,
             ...searchFields,
@@ -360,40 +361,27 @@ const OrderEntryReport = ({
                                         </th>
 
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
-                                            <div>Order No</div>
+                                            <div>Sale Order No</div>
 
                                         </th>
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
-                                            <div>Order Date</div>
+                                            <div>Sale Order Date</div>
                                         </th>
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-40">
-                                            <div>Order Type</div>
+                                            <div>Order No</div>
                                         </th>
 
                                         <th className="w-80  px-3   font-medium text-[13px] text-gray-900  text-center ">
                                             <div>Customer</div>
                                         </th>
-                                        {/* <th
-                                            className=" px-3 w-36  font-medium text-[13px]  text-gray-900  text-center "
-                                            rowSpan={2}
-                                        >
-                                            <div>Approval Status</div>
-                                        </th> */}
+
                                         <th
                                             className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
                                             rowSpan={2}
                                         >
                                             <div> Remarks</div>
                                         </th>
-                                        {
-                                            canApprove && (
-                                                <th
-                                                    className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
-                                                    rowSpan={2}
-                                                >
-                                                    <div>Approval Actions</div>
-                                                </th>
-                                            )}
+
 
                                         <th
                                             className="w-14   px-3  font-medium text-[13px]  text-gray-900  text-center "
@@ -491,18 +479,14 @@ const OrderEntryReport = ({
                                                             {getDateFromDateTimeToDisplay(dataObj.docDate)}
                                                         </td>
                                                         <td className="py-1.5 text-left  ">
-                                                            {dataObj.orderType}{" "}
+                                                            {dataObj.OrderEntry?.docId}{" "}
                                                         </td>
 
                                                         <td className="py-1.5 text-left">
                                                             {" "}
                                                             {dataObj?.customer?.name}
                                                         </td>
-                                                        {/* <td className="py-1.5 text-left">
-                                                            <ApprovalBadge
-                                                                approvalStatus={dataObj?.approvalStatus}
-                                                            />
-                                                        </td> */}
+
                                                         <td className="px-2 py-1">
                                                             <div className="flex items-center justify-center gap-1.5 text-orange-700">
                                                                 {dataObj?.approvalStatus?.remarks || "-"}
@@ -679,4 +663,4 @@ const OrderEntryReport = ({
     );
 };
 
-export default OrderEntryReport;
+export default PackingReport;

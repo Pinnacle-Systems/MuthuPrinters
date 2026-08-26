@@ -2,11 +2,7 @@ export const DEFAULT_ROW_COUNT = 10;
 
 export const EMPTY_SIZE_ROW = () => ({ sizeId: null, qty: "", rowId: Math.random().toString(36).substring(2, 9) });
 
-export const EMPTY_STYLE_ROW = () => ({
-  styleId: "",
-  sizeBreakup: [EMPTY_SIZE_ROW()],
-  rowId: Math.random().toString(36).substring(2, 9),
-});
+export const EMPTY_STYLE_ROW = () => ({ styleId: null, sizeBreakup: [EMPTY_SIZE_ROW()], rowId: Math.random().toString(36).substring(2, 9) });
 
 export const makeEmptyRow = () => ({
   styleItemId: "",
@@ -33,7 +29,7 @@ export const padRows = (items = [], total = DEFAULT_ROW_COUNT) => {
         ? row.styleBreakup.map(style => ({
             ...style, 
             rowId: style.rowId || Math.random().toString(36).substring(2, 9),
-            sizeBreakup: Array.isArray(style.sizeBreakup) && style.sizeBreakup.length > 0
+            sizeBreakup: Array.isArray(style.sizeBreakup) && style.sizeBreakup.length > 0 
               ? style.sizeBreakup.map(size => ({...size, rowId: size.rowId || Math.random().toString(36).substring(2, 9)}))
               : [EMPTY_SIZE_ROW()]
           }))

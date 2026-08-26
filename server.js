@@ -78,6 +78,8 @@ import {
   itemSubGroup,
   avilableMachine,
   processMob,
+  salesOrder,
+  packing,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -199,8 +201,11 @@ app.use("/productionInward", productionInward);
 app.use("/processBill", processBill);
 app.use("/salesDelivery", salesDelivery);
 app.use("/itemSubGroup", itemSubGroup);
-app.use("/availableMachine",avilableMachine);
+app.use("/availableMachine", avilableMachine);
 app.use("/process_mob", processMob);
+app.use("/packing", packing);
+app.use("/salesOrder", salesOrder);
+
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;

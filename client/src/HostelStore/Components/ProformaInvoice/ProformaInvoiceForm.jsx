@@ -53,6 +53,7 @@ import { useDispatch } from "react-redux";
 //need to work
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
+import { useGetStyleMasterQuery } from "../../../redux/services/StyleMasterService.js";
 
 const EMPTY_ROW = {
   styleItemId: "",
@@ -161,6 +162,9 @@ const ProformaInvoiceForm = ({
 
   const { data: itemGroupList } = useGetItemGroupMasterQuery({});
   const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({});
+  const { data: styleList } = useGetStyleMasterQuery({
+    params: { companyId },
+  });
   const [dispatchInvalidate] = useInvalidateTags();
 
   const [addData] = useAddProformaInvoiceMutation();
@@ -245,11 +249,11 @@ const ProformaInvoiceForm = ({
         sizeBreakup:
           item?.pisizeBreakups?.length > 0
             ? item.pisizeBreakups.map((val) => {
-                return {
-                  ...val,
-                  sizeId: val.sizeId || "",
-                };
-              })
+              return {
+                ...val,
+                sizeId: val.sizeId || "",
+              };
+            })
             : [{ sizeId: "", qty: "" }],
       }));
       console.log(mappedItems, "mappedItems");
@@ -292,15 +296,18 @@ const ProformaInvoiceForm = ({
         gsmId: item?.Gsm?.id || "",
         hsnId: item?.Hsn?.id || "",
 
-        sizeBreakup:
-          item?.pisizeBreakups?.length > 0
-            ? item.pisizeBreakups.map((val) => {
-                return {
-                  ...val,
-                  sizeId: val.sizeId || "",
-                };
-              })
-            : [{ sizeId: "", qty: "" }],
+        styleBreakup:
+          item?.PIStyleBreakup?.length > 0
+            ? item.PIStyleBreakup.map((st) => ({
+              styleId: st.styleId || "",
+              sizeBreakup: st.PISizeBreakup?.length > 0
+                ? st.PISizeBreakup.map(sz => ({
+                  sizeId: sz.sizeId || "",
+                  qty: sz.qty || ""
+                }))
+                : [{ sizeId: "", qty: "" }]
+            }))
+            : [{ styleId: "", sizeBreakup: [{ sizeId: "", qty: "" }] }],
       }));
 
       setItems(padItems(mappedItems));
@@ -366,32 +373,49 @@ const ProformaInvoiceForm = ({
         seen.add(key);
       }
 
-      if (item.sizeBreakup?.length) {
+      if (item.styleBreakup?.length) {
         const sizeSeen = new Set();
         let sizeSum = 0;
 
-        item.sizeBreakup.forEach((size, sizeIndex) => {
-          if (!size.sizeId) {
+        item.styleBreakup.forEach((style, styleIndex) => {
+          if (!style.styleId) {
             errors.push(
-              `Row ${index + 1}, Size Row ${sizeIndex + 1}: Size is required`,
+              `Row ${index + 1}, Style Row ${styleIndex + 1}: Style is required`,
             );
           }
 
-          const qty = Number(size.qty || 0);
-          sizeSum += qty;
+          if (style.sizeBreakup?.length) {
+            style.sizeBreakup.forEach((size, sizeIndex) => {
+              if (!size.sizeId) {
+                errors.push(
+                  `Row ${index + 1}, Style Row ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Size is required`,
+                );
+              }
 
-          if (qty <= 0) {
+              const qty = Number(size.qty || 0);
+              sizeSum += qty;
+
+              if (qty <= 0) {
+                errors.push(
+                  `Row ${index + 1}, Style Row ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`,
+                );
+              }
+
+              if (style.styleId && size.sizeId) {
+                const key = `${style.styleId}_${size.sizeId}`;
+                if (sizeSeen.has(key)) {
+                  errors.push(
+                    `Row ${index + 1}: Duplicate style and size combination found`,
+                  );
+                } else {
+                  sizeSeen.add(key);
+                }
+              }
+            });
+          } else {
             errors.push(
-              `Row ${index + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`,
+              `Row ${index + 1}, Style Row ${styleIndex + 1}: Size breakup is required`,
             );
-          }
-
-          if (size.sizeId) {
-            if (sizeSeen.has(size.sizeId)) {
-              errors.push(`Row ${index + 1}: Duplicate size found`);
-            } else {
-              sizeSeen.add(size.sizeId);
-            }
           }
         });
 
@@ -401,7 +425,7 @@ const ProformaInvoiceForm = ({
           );
         }
       } else {
-        errors.push(`Row ${index + 1}: Size breakup is required`);
+        errors.push(`Row ${index + 1}: Style breakup is required`);
       }
     });
 
@@ -690,9 +714,8 @@ const ProformaInvoiceForm = ({
           Other Details
         </span>
         <svg
-          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
-            accordionOpen ? "rotate-180" : ""
-          }`}
+          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${accordionOpen ? "rotate-180" : ""
+            }`}
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
@@ -917,8 +940,8 @@ const ProformaInvoiceForm = ({
                     id
                       ? customerList?.data?.filter((item) => item?.isCustomer)
                       : customerList?.data?.filter(
-                          (item) => item?.active && item?.isCustomer,
-                        ),
+                        (item) => item?.active && item?.isCustomer,
+                      ),
                     "name",
                     "id",
                   )}
@@ -1148,10 +1171,10 @@ const ProformaInvoiceForm = ({
             renderValue: () => {
               const taxTotals = !isCustomerExport
                 ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
-                    const type = curr?.tax?.split(" ")[0];
-                    acc[type] = (acc[type] || 0) + curr.amount;
-                    return acc;
-                  }, {})
+                  const type = curr?.tax?.split(" ")[0];
+                  acc[type] = (acc[type] || 0) + curr.amount;
+                  return acc;
+                }, {})
                 : {};
 
               return (
@@ -1170,7 +1193,7 @@ const ProformaInvoiceForm = ({
                             enrichedData.overallDiscount >
                             0
                             ? enrichedData.itemDiscount +
-                                enrichedData.overallDiscount
+                            enrichedData.overallDiscount
                             : 0,
                           currencyCode || isCurrencySymbol,
                         )}
@@ -1192,7 +1215,7 @@ const ProformaInvoiceForm = ({
                     </div>
 
                     {taxTotals.CGST !== undefined &&
-                    taxTotals.SGST !== undefined ? (
+                      taxTotals.SGST !== undefined ? (
                       <div className="flex items-center justify-between w-full max-w-[210px]">
                         <div className="flex items-center gap-1">
                           <span className="text-slate-800 w-[32px]">CGST</span>
@@ -1247,11 +1270,11 @@ const ProformaInvoiceForm = ({
                       <span className="font-medium text-slate-800 text-right w-[65px]">
                         {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                         {!isNaN(parseFloat(carriageFinalAmt)) &&
-                        carriageFinalAmt !== ""
+                          carriageFinalAmt !== ""
                           ? formatCurrencyAmount(
-                              carriageFinalAmt,
-                              currencyCode || isCurrencySymbol,
-                            )
+                            carriageFinalAmt,
+                            currencyCode || isCurrencySymbol,
+                          )
                           : "0.00"}
                       </span>
                     </div>
@@ -1281,16 +1304,16 @@ const ProformaInvoiceForm = ({
                           (!isCustomerExport
                             ? enrichedData.net
                             : (enrichedData.items?.reduce(
-                                (sum, item) =>
-                                  sum + (parseFloat(item.amount) || 0),
-                                0,
-                              ) || 0) -
-                              (enrichedData.itemDiscount +
-                                enrichedData.overallDiscount >
+                              (sum, item) =>
+                                sum + (parseFloat(item.amount) || 0),
+                              0,
+                            ) || 0) -
+                            (enrichedData.itemDiscount +
+                              enrichedData.overallDiscount >
                               0
-                                ? enrichedData.itemDiscount +
-                                  enrichedData.overallDiscount
-                                : 0)) + (parseFloat(carriageFinalAmt) || 0),
+                              ? enrichedData.itemDiscount +
+                              enrichedData.overallDiscount
+                              : 0)) + (parseFloat(carriageFinalAmt) || 0),
                           currencyCode || isCurrencySymbol,
                         )}
                       </span>
@@ -1401,6 +1424,8 @@ const ProformaInvoiceForm = ({
     </>
   );
 
+  console.log(items, "ITEMS")
+
   return (
     <>
       <Modal isOpen={summary} onClose={() => setSummary(false)} widthClass="">
@@ -1467,6 +1492,7 @@ const ProformaInvoiceForm = ({
             isSupplierOutside={isSupplierOutside}
             itemGroupList={itemGroupList}
             itemSubGroupList={itemSubGroupList}
+            styleList={styleList}
           />
         }
         footer={footerContent}
