@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FxSelectWithAdd } from "../../../Inputs";
-import { ItemGroup, Size, StyleItemMaster } from "..";
+import { ItemGroup, Size, StyleItemMaster, StyleMaster } from "..";
 import { findFromList } from "../../../Utils/helper";
 import { Plus } from "lucide-react";
 import { ItemSubGroupMaster } from "../../../Basic/components";
@@ -361,6 +361,9 @@ const PackingItems = ({
                             .map((i) => ({ label: i.name, value: i.id }))}
                           readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
                           placeholder="Select Style"
+                          addNew={true}
+                          childComponent={StyleMaster}
+                          addNewModalWidth="w-[50%] h-[57%]"
                         />
                       </div>
                     </div>

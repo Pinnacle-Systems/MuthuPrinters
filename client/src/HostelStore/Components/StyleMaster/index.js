@@ -12,13 +12,13 @@ import { push } from '../../../redux/features/opentabs';
 
 const MODEL = "Style Master"
 
-const StyleMaster = ({ dynamicForm, setDynamicForm }) => {
+const StyleMaster = ({ dynamicForm, setDynamicForm, onSuccess, defaultName = "" }) => {
     console.log(dynamicForm, "dyanamicForm")
     const [form, setForm] = useState(false);
 
     const [readOnly, setReadOnly] = useState(false);
     const [id, setId] = useState("");
-    const [name, setName] = useState("");
+    const [name, setName] = useState(defaultName || "");
     const [sku, setSku] = useState("");
     const [code, setCode] = useState("")
     const [active, setActive] = useState(true);
@@ -57,7 +57,7 @@ const StyleMaster = ({ dynamicForm, setDynamicForm }) => {
 
     const syncFormWithDb = useCallback(
         (data) => {
-            setName(data?.name ? data.name : "");
+            setName(data?.name ? data.name : defaultName || "");
             setCode(data?.code ? data?.code : "");
             setActive(id ? (data?.active ? data.active : false) : true);
             childRecord.current = data?.childRecord ? data?.childRecord : 0;
@@ -99,7 +99,16 @@ const StyleMaster = ({ dynamicForm, setDynamicForm }) => {
                 returnData = await callback(data).unwrap();
             }
             setId(returnData.data.id);
-            // toast.success(text + "Successfully");
+
+            if (onSuccess) {
+                await Swal.fire({
+                    title: text + "  " + "Successfully",
+                    icon: "success",
+                });
+                onSuccess(returnData?.data?.id);
+                return;
+            }
+
             Swal.fire({
                 title: text + "  " + "Successfully",
                 icon: "success",
@@ -270,6 +279,51 @@ const StyleMaster = ({ dynamicForm, setDynamicForm }) => {
 
     const dispatch = useDispatch();
 
+    if (onSuccess) {
+        return (
+            <div onKeyDown={handleKeyDown} className="h-full flex flex-col bg-gray-200">
+                <div className="border-b py-2 px-4 mt-4 mx-3 flex justify-between items-center sticky top-0 z-10 bg-white">
+                    <h2 className="text-lg px-2 py-0.5 font-semibold text-gray-800">
+                        Add New Style
+                    </h2>
+                    <button
+                        type="button"
+                        onClick={() => saveData("close")}
+                        className="px-3 py-1 hover:bg-blue-600 hover:text-white rounded text-blue-600 border border-blue-600 flex items-center gap-1 text-xs"
+                    >
+                        <Check size={14} />
+                        Save
+                    </button>
+                </div>
+                <div className="flex-1 p-3">
+                    <div className="grid grid-cols-1 gap-3 h-full">
+                        <div className="lg:col-span- space-y-3">
+                            <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
+                                <fieldset className="rounded mt-2">
+                                    <div className="w-full grid grid-cols-3 gap-3">
+                                        <div className="mb-3">
+                                            <TextInputNew1 name="Style Name" type="text" value={name} setValue={setName} required={true} readOnly={readOnly} ref={countryNameRef}
+                                                disabled={childRecord.current > 0}
+                                            />
+                                        </div>
+                                        <div className="mb-3">
+                                            <TextInputNew1 name="Code" type="text" value={code} setValue={setCode} readOnly={readOnly}
+                                                disabled={childRecord.current > 0}
+                                            />
+                                        </div>
+                                        <div className="mb-3">
+                                            <ToggleButton name="Status" options={statusDropdown} value={active} setActive={setActive} required={true} readOnly={readOnly} />
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (dynamicForm) {
         return (
             <>
@@ -365,22 +419,22 @@ const StyleMaster = ({ dynamicForm, setDynamicForm }) => {
     return (
 
         <div onKeyDown={handleKeyDown} className="p-1">
-            <div className="w-full flex bg-white justify-between  items-center">
-                <h5 className="text-2xl font-bold text-gray-800 p-1">Style Master</h5>
+            <div className="w-full flex bg-white p-1 justify-between  items-center">
+                <h5 className="text-xl font-bold font-segoe text-gray-800 ">Style Master</h5>
                 <div className="flex items-center">
                     <button
                         onClick={() => {
                             setForm(true);
                             onNew();
                         }}
-                        className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-sm px-4 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
+                        className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
                     >
                         + Add New Style
                     </button>
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden mt-4">
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden mt-3">
                 <ReusableTable
                     columns={columns}
                     data={allData?.data}
@@ -396,13 +450,13 @@ const StyleMaster = ({ dynamicForm, setDynamicForm }) => {
                     <Modal
                         isOpen={form}
                         form={form}
-                        widthClass={"w-[36%] h-[50%]"}
+                        widthClass={"w-[800px] max-w-6xl h-[400px]"}
                         onClose={() => {
                             setForm(false);
                         }}
                     >
                         <div className="h-full flex flex-col bg-gray-200 ">
-                            <div className="border-b py-2 px-4 mx-3 flex mt-4 justify-between items-center sticky top-0 z-10 bg-white">
+                            <div className="border-b py-2 px-4 mt-4 mx-3 flex justify-between items-center sticky top-0 z-10 bg-white">
                                 <div className="flex items-center gap-2">
                                     <h2 className="text-lg px-2 py-0.5 font-semibold  text-gray-800">
                                         {id
@@ -462,33 +516,27 @@ const StyleMaster = ({ dynamicForm, setDynamicForm }) => {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-auto p-3 ">
-                                <div className="grid grid-cols-1  gap-3  h-full ">
-                                    <div className="lg:col-span-2 space-y-3">
+                            <div className="flex-1 p-3">
+                                <div className="grid grid-cols-1 gap-3 h-full">
+                                    <div className="lg:col-span- space-y-3">
                                         <div className="bg-white p-3 rounded-md border border-gray-200 h-full">
-                                            <div className="grid grid-cols-2  gap-3  ">
-
-                                                <div className="">
-                                                    <TextInputNew1 name="Style Name" type="text" value={name} setValue={setName} required={true} readOnly={readOnly} ref={countryNameRef}
-                                                        disabled={childRecord.current > 0}
-
-                                                    />
-
+                                            <fieldset className="rounded mt-2">
+                                                <div className="w-full grid grid-cols-3 gap-3">
+                                                    <div className="mb-3">
+                                                        <TextInputNew1 name="Style Name" type="text" value={name} setValue={setName} required={true} readOnly={readOnly} ref={countryNameRef}
+                                                            disabled={childRecord.current > 0}
+                                                        />
+                                                    </div>
+                                                    <div className="mb-3">
+                                                        <TextInputNew1 name="Code" type="text" value={code} setValue={setCode} readOnly={readOnly}
+                                                            disabled={childRecord.current > 0}
+                                                        />
+                                                    </div>
+                                                    <div className="mb-3">
+                                                        <ToggleButton name="Status" options={statusDropdown} value={active} setActive={setActive} required={true} readOnly={readOnly} />
+                                                    </div>
                                                 </div>
-                                                <div className="">
-                                                    <TextInputNew1 name="Code" type="text" value={code} setValue={setCode} readOnly={readOnly}
-                                                        disabled={childRecord.current > 0}
-
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="mt-2">
-                                                <ToggleButton name="Status" options={statusDropdown} value={active} setActive={setActive} required={true} readOnly={readOnly} />
-
-                                            </div>
-
-
-
+                                            </fieldset>
                                         </div>
                                     </div>
                                 </div>

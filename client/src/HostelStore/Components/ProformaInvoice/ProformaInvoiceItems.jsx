@@ -24,10 +24,12 @@ import {
   Size,
   StyleItemMaster,
   UomMaster,
+  StyleMaster
 } from "..";
 import { ItemSubGroupMaster } from "../../../Basic/components";
 import { Plus } from "lucide-react";
 import { FaEye, FaTrash } from "react-icons/fa";
+
 
 // EMPTY DEFINITIONS
 const EMPTY_SIZE_ROW = () => ({ sizeId: "", qty: "" });
@@ -135,17 +137,17 @@ const ProformaInvoiceItems = ({
         const response = await triggerGetStyleItem(value).unwrap();
         const hsnId = response?.data?.hsnId;
         const hsnObj = hsnList?.data?.find((h) => h.id === hsnId);
-        
+
         const updatedItems = items.map((item, i) =>
           i === index
             ? {
-                ...item,
-                styleItemId: value,
-                hsnId: hsnId,
-                uomId: response?.data?.uomId,
-                taxPercent: hsnObj ? hsnObj.tax : "",
-                styleBreakup: item.styleBreakup && item.styleBreakup.length > 0 ? item.styleBreakup : [EMPTY_STYLE_ROW()]
-              }
+              ...item,
+              styleItemId: value,
+              hsnId: hsnId,
+              uomId: response?.data?.uomId,
+              taxPercent: hsnObj ? hsnObj.tax : "",
+              styleBreakup: item.styleBreakup && item.styleBreakup.length > 0 ? item.styleBreakup : [EMPTY_STYLE_ROW()]
+            }
             : item,
         );
         setItems(updatedItems);
@@ -390,11 +392,10 @@ const ProformaInvoiceItems = ({
                     <div
                       key={styleRow.rowId || styleIdx}
                       onClick={() => setActiveStyleIndex(styleIdx)}
-                      className={`p-3 rounded border cursor-pointer transition-colors flex flex-col gap-2 ${
-                        activeStyleIndex === styleIdx
-                          ? "bg-indigo-50 border-indigo-300 shadow-sm"
-                          : "bg-white border-gray-200 hover:bg-gray-100"
-                      }`}
+                      className={`p-3 rounded border cursor-pointer transition-colors flex flex-col gap-2 ${activeStyleIndex === styleIdx
+                        ? "bg-indigo-50 border-indigo-300 shadow-sm"
+                        : "bg-white border-gray-200 hover:bg-gray-100"
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-gray-600 text-xs">Style {styleIdx + 1}</span>
@@ -424,6 +425,9 @@ const ProformaInvoiceItems = ({
                             .map((i) => ({ label: i.name, value: i.id }))}
                           readOnly={readOnly}
                           placeholder="Select Style"
+                          addNew={true}
+                          childComponent={StyleMaster}
+                          addNewModalWidth="w-[50%] h-[57%]"
                         />
                       </div>
                     </div>
@@ -469,6 +473,9 @@ const ProformaInvoiceItems = ({
                                   .map((i) => ({ label: i.name, value: i.id }))}
                                 readOnly={readOnly}
                                 placeholder="Select Size"
+                                addNew={true}
+                                childComponent={Size}
+                                addNewModalWidth="w-[50%] h-[57%]"
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1">
@@ -730,7 +737,7 @@ const ProformaInvoiceItems = ({
                       </button>
                     </td>
                   )}
-                  
+
                   <td className="border border-gray-300 text-center py-2">
                     <button
                       className="text-indigo-600 hover:text-indigo-800"
@@ -791,7 +798,7 @@ const ProformaInvoiceItems = ({
           </tfoot>
         </table>
       </div>
-      
+
       {contextMenu && (
         <div
           style={{

@@ -35,7 +35,7 @@ async function getNextDocId(
   if (saveType) {
     return "Draft Save";
   } else if (isUpdate === "drift") {
-    lastObject = await prisma.SalesOrder.findFirst({
+    lastObject = await prisma.packing.findFirst({
       where: {
         branchId: parseInt(branchId),
         draftSave: false,
@@ -49,16 +49,16 @@ async function getNextDocId(
     const branchObj = await getTableRecordWithId(branchId, "branch");
     let newDocId = `${branchObj.branchCode}${getYearShortCode(
       new Date(),
-    )}/SO/1`;
+    )}/PK/1`;
 
     if (lastObject) {
-      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/SO/${parseInt(lastObject.docId.split("/").at(-1)) + 1
+      newDocId = `${branchObj.branchCode}${getYearShortCode(new Date())}/PK/${parseInt(lastObject.docId.split("/").at(-1)) + 1
         }`;
     }
 
     return newDocId;
   } else {
-    let lastObject = await prisma.SalesOrder.findFirst({
+    let lastObject = await prisma.packing.findFirst({
       where: {
         branchId: parseInt(branchId),
         AND: [
@@ -80,10 +80,10 @@ async function getNextDocId(
     });
 
     const branchObj = await getTableRecordWithId(branchId, "branch");
-    let newDocId = `${branchObj.branchCode}/${shortCode}/SO/1`;
+    let newDocId = `${branchObj.branchCode}/${shortCode}/PK/1`;
     if (lastObject) {
       if (lastObject.docId === "Draft Save") {
-        const records = await prisma.SalesOrder.findMany({
+        const records = await prisma.packing.findMany({
           select: {
             docId: true,
           },
@@ -145,7 +145,7 @@ async function get(req) {
   );
   let data;
   let totalCount;
-  data = await prisma.SalesOrder.findMany({
+  data = await prisma.packing.findMany({
     where: {
       branchId: branchId ? parseInt(branchId) : undefined,
       AND: finYearDate
@@ -167,26 +167,11 @@ async function get(req) {
           contains: serachDocNo,
         }
         : undefined,
-      orderType: Boolean(searchOrderType)
-        ? { contains: searchOrderType }
-        : undefined,
-      customer: {
-        name: searchCustomer ? { contains: searchCustomer } : undefined,
-      },
+
+
     },
     include: {
-      customer: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      OrderEntry: { select: { docId: true } }
-      // _count: {
-      //   select: {
-      //     JobCard: true,
-      //   },
-      // },
+      PackingItems: true,
     },
     orderBy: {
       id: "desc",
@@ -199,80 +184,8 @@ async function get(req) {
   }
   totalCount = data.length;
 
-
-
-  const { module, hasApproval } = await getModuleApprovalSetup(
-    REFERENCE_PAGE,
-    branchId,
-  );
-
-  const orderIds = data.map((o) => o.id);
-
-  const approvalLogs = await prisma.approvalLog.findMany({
-    where: { referencePage: REFERENCE_PAGE, referenceId: { in: orderIds } },
-    select: {
-      id: true,
-      referenceId: true,
-      status: true,
-      remarks: true,
-      currentLevel: true,
-      LevelLogs: {
-        select: {
-          action: true,
-          levelNo: true,
-          userId: true,
-          createdAt: true,
-          User: { select: { id: true, username: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      },
-    },
-  });
-
-  const approvalLogMap = approvalLogs.reduce((acc, log) => {
-    acc[log.referenceId] = log;
-    return acc;
-  }, {});
-
-  // ── fetch active configs only if approval is set up ───────────────────────
-  const activeConfigs =
-    hasApproval && module
-      ? await prisma.approvalConfig.findMany({
-        where: {
-          moduleId: module.id,
-          branchId: parseInt(branchId),
-          active: true,
-        },
-        include: {
-          ConfigConditions: {
-            include: { Field: true, Operator: true, CompareField: true },
-          },
-          approvalLevels: {
-            include: { LevelUsers: true },
-            orderBy: { levelNo: "asc" },
-          },
-        },
-      })
-      : [];
-
-  // ── resolve approval status per record ───────────────────────────────────
-  let resolvedData = data.map((order) => {
-    const log = approvalLogMap[order.id] ?? null;
-
-    let shouldTrigger = false;
-    if (!log && hasApproval && activeConfigs.length > 0) {
-      shouldTrigger = evaluateConfigs(activeConfigs, order);
-    }
-
-    return {
-      ...order,
-      // childRecord: order._count.JobCard,
-      approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
-    };
-  });
-
   if (pagination) {
-    resolvedData = resolvedData.slice(
+    data = data.slice(
       (pageNumber - 1) * parseInt(dataPerPage),
       pageNumber * parseInt(dataPerPage),
     );
@@ -280,7 +193,7 @@ async function get(req) {
 
   return {
     statusCode: 0,
-    data: resolvedData,
+    data: data,
     nextDocId: newDocId,
     totalCount,
   };
@@ -610,7 +523,8 @@ async function create(body) {
     loadingId,
     deliveryId,
     carriageTax,
-    orderId
+    orderId,
+    jobCardId
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
@@ -668,29 +582,64 @@ async function create(body) {
 
 
   const validTo = moment(docDate).add(validDays, "days").endOf("day").toDate();
+
+  let stockEntries = [];
+  if (parsedOrderItems && parsedOrderItems.length > 0) {
+    parsedOrderItems.forEach((item) => {
+      const baseStock = {
+        branchId: branchId ? parseInt(branchId) : null,
+        jobCardId: jobCardId ? parseInt(jobCardId) : null,
+        orderId: orderId ? parseInt(orderId) : null,
+        createdById: userId ? parseInt(userId) : null,
+        inOrOut: "In",
+        processName: "Packing",
+        styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
+        itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+        uomId: item?.uomId ? parseInt(item.uomId) : null,
+        hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
+      };
+
+      if (item?.styleBreakup?.length > 0) {
+        item.styleBreakup.forEach((st) => {
+          if (st?.sizeBreakup?.length > 0) {
+            st.sizeBreakup.forEach((s) => {
+              stockEntries.push({
+                ...baseStock,
+                styleId: st.styleId ? parseInt(st.styleId) : null,
+                sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                qty: item?.packingQty ? parseFloat(item.packingQty) : null,
+              });
+            });
+          } else {
+            stockEntries.push({
+              ...baseStock,
+              styleId: st.styleId ? parseInt(st.styleId) : null,
+              qty: item?.packingQty ? parseFloat(item.packingQty) : null,
+            });
+          }
+        });
+      } else {
+        stockEntries.push({
+          ...baseStock,
+          qty: item?.packingQty ? parseFloat(item.packingQty) : null,
+        });
+      }
+    });
+  }
+
+  console.log(stockEntries, "stockEntries")
+
   await prisma.$transaction(async (tx) => {
     data = await tx.Packing.create({
       data: {
         docId: newDocId,
         docDate: docDate ? new Date(docDate) : null,
         orderId: orderId ? parseInt(orderId) : null,
-        orderId: orderId ? parseInt(orderId) : null,
+        jobCardId: jobCardId ? parseInt(jobCardId) : null,
 
         createdById: parseInt(userId),
         branchId: branchId ? parseInt(branchId) : null,
-        customerId: customerId ? parseInt(customerId) : null,
 
-        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
-        remarks,
-        termsId: termsId ? parseInt(termsId) : null,
-        termsAndCondition,
-        validDays: validDays ? parseInt(validDays) : null,
-        validTo: validTo,
-        taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
-        discountType: discountType || null,
-        discountValue: discountValue ? parseFloat(discountValue) : null,
-        payTermId: payTermId ? parseInt(payTermId) : null,
-        deliveryId: deliveryId ? parseInt(deliveryId) : null,
 
         PackingItems:
           packingItems.length > 0
@@ -702,6 +651,17 @@ async function create(body) {
       },
     });
 
+
+
+    if (stockEntries.length > 0) {
+      const stockEntriesWithPackingId = stockEntries.map(entry => ({
+        ...entry,
+        packingId: data.id,
+      }));
+      await tx.Stock.createMany({
+        data: stockEntriesWithPackingId
+      });
+    }
 
   });
   return { statusCode: 0, data };
@@ -1017,19 +977,18 @@ async function update(id, body, files) {
 }
 
 async function remove(id) {
-  const orderEntryId = parseInt(id);
+  const packingId = parseInt(id);
 
-  const dataFound = await prisma.SalesOrder.findUnique({
-    where: { id: orderEntryId },
+  const dataFound = await prisma.packing.findUnique({
+    where: { id: packingId },
     include: {
-      attachments: { select: { filePath: true } },
-      SalesOrderItems: { select: { id: true } },
+      PackingItems: { select: { id: true } },
     },
   });
 
-  const data = await prisma.SalesOrder.delete({
+  const data = await prisma.packing.delete({
     where: {
-      id: orderEntryId,
+      id: packingId,
     },
   });
 
