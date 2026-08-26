@@ -224,10 +224,11 @@ async function UpdateProcess(req) {
         }
       }) : null;
 
+
       // Validation for Max Allowed Quantity
       let maxAllowed = actualQty;
       if (pRoute.sequence > 1) {  
-          maxAllowed = Number(processIncomingQty || 0)   }
+          maxAllowed = Number(getIncomingExist?.qty || 0)   }
 
       const totalCompleted =
         Number(pRoute?.completedQty || 0) + Number(completedQty);
@@ -433,6 +434,7 @@ async function UpdatePushProcess(req) {
   } = req?.body;
 
   var splitSizes__ = splitSizes?.length > 0 ? splitSizes : [];
+
 
   const now = new Date();
   const istOffset = 5.5 * 60 * 60 * 1000;
