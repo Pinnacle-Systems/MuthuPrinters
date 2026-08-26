@@ -1155,6 +1155,19 @@ async function getOne(id) {
       finishingProcesses: true,
       labelPrintingDetails: true,
       plateDetails: true,
+      OrderEntry: {
+        include: {
+          orderItems: {
+            include: {
+              OrderStyleBreakup: {
+                include: {
+                  OrderSizeBreakup: true
+                }
+              }
+            }
+          }
+        }
+      },
       _count: {
         select: {
           productionAllocations: true,

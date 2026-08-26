@@ -84,6 +84,7 @@ import {
 } from "../../../Basic/components/index.js";
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
 import { useAddSalesOrderMutation, useGetSalesOrderByIdQuery, useUpdateSalesOrderMutation } from "../../../redux/uniformService/SalesOrderService.js";
+import { useAddPackingMutation, useGetPackingByIdQuery, useUpdatePackingMutation } from "../../../redux/uniformService/PackingService.js";
 
 const PackingForm = ({
   onClose,
@@ -175,7 +176,7 @@ const PackingForm = ({
     status: queryStatus,
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
-  } = useGetSalesOrderByIdQuery(id, { params, skip: !id, });
+  } = useGetPackingByIdQuery(id, { params, skip: !id, });
 
   const { data: orderData, isFetching, isLoading } = useGetOrderEntryQuery({ params: { branchId, }, });
   const {
@@ -227,8 +228,8 @@ const PackingForm = ({
   const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({
     params,
   });
-  const [addData] = useAddSalesOrderMutation();
-  const [updateData] = useUpdateSalesOrderMutation();
+  const [addData] = useAddPackingMutation();
+  const [updateData] = useUpdatePackingMutation();
   const [addApprovalStatus] = useAddApprovalStausMutation();
   const [getPIById] = useLazyGetProformaInvoiceByIdQuery();
 
@@ -308,7 +309,15 @@ const PackingForm = ({
 
   const syncFormWithDbForJobCard = useCallback(
     (data) => {
-      setOrderItems(padRows(data?.OrderEntry?.orderItems || []));
+      const orderItemsRaw = data?.OrderEntry?.orderItems || [];
+      const mappedItems = orderItemsRaw.map((item) => ({
+        ...item,
+        styleBreakup: (item.OrderStyleBreakup || []).map((style) => ({
+          ...style,
+          sizeBreakup: style.OrderSizeBreakup || [],
+        })),
+      }));
+      setOrderItems(padRows(mappedItems));
       const lastProcessRoute = data?.processRoute?.[data?.processRoute?.length - 1]
       setActualQty(lastProcessRoute?.actualQty)
       setCompletedQty(lastProcessRoute?.completedQty)
@@ -362,7 +371,8 @@ const PackingForm = ({
     deliveryId,
     loadingId,
     carriageTax,
-    orderId
+    orderId,
+    jobCardId
 
 
 
@@ -443,16 +453,20 @@ const PackingForm = ({
     const duplicates = [];
 
     items.forEach((item, index) => {
-      const key = `${item.styleItemId}-${item.sizeId}-${item.uomId}-${item.gsmId}`;
-
-      if (seen.has(key)) {
-        duplicates.push({
-          firstIndex: seen.get(key),
-          duplicateIndex: index,
-        });
-      } else {
-        seen.set(key, index);
-      }
+      const styleSeen = new Map();
+      (item.styleBreakup || []).forEach((style, styleIdx) => {
+        if (!style.styleId) return;
+        const key = `${style.styleId}`;
+        if (styleSeen.has(key)) {
+          duplicates.push({
+            rowIdx: index,
+            styleIdx: styleIdx,
+            duplicateOf: styleSeen.get(key),
+          });
+        } else {
+          styleSeen.set(key, styleIdx);
+        }
+      });
     });
 
     return duplicates;
@@ -482,55 +496,49 @@ const PackingForm = ({
         errors.push(`Row ${index + 1}: UOM is required`);
       }
 
-      if (!item.orderQty || Number(item.orderQty) <= 0) {
-        errors.push(`Row ${index + 1}: Order Qty must be greater than 0`);
-      }
-      if (item.orderQty > 0 && item.sizeBreakup.length == 0) {
-        errors.push(`Row ${index + 1}: Size Qty is required for Order Qty`);
-      }
+
       const key = `${item.styleItemId}_${item.uomId}_${item.itemGroupId}`;
       if (seen.has(key)) {
         errors.push(`Row ${index + 1}: Duplicate item found`);
       } else {
         seen.add(key);
       }
-      if (item.sizeBreakup?.length) {
-        const sizeSeen = new Set();
+      if (item.styleBreakup?.length) {
         let sizeSum = 0;
-
-        item.sizeBreakup.forEach((size, sizeIndex) => {
-          // size required
-          if (!size.sizeId) {
-            errors.push(
-              `Row ${index + 1}, Size Row ${sizeIndex + 1}: Size is required`,
-            );
+        item.styleBreakup.forEach((style, styleIndex) => {
+          if (!style.styleId) {
+            errors.push(`Row ${index + 1}, Style Row ${styleIndex + 1}: Style is required`);
           }
 
-          // qty validation
-          const qty = Number(size.qty || 0);
-          sizeSum += qty;
+          if (style.sizeBreakup?.length) {
+            const sizeSeen = new Set();
+            style.sizeBreakup.forEach((size, sizeIndex) => {
+              if (!size.sizeId) {
+                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Size is required`);
+              }
 
-          if (qty <= 0) {
-            errors.push(
-              `Row ${index + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`,
-            );
-          }
+              const qty = Number(size.qty || 0);
+              sizeSum += qty;
 
-          // duplicate sizeId check
-          if (size.sizeId) {
-            if (sizeSeen.has(size.sizeId)) {
-              errors.push(`Row ${index + 1}: Duplicate size found`);
-            } else {
-              sizeSeen.add(size.sizeId);
-            }
+              if (qty <= 0) {
+                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`);
+              }
+
+              if (size.sizeId) {
+                if (sizeSeen.has(size.sizeId)) {
+                  errors.push(`Row ${index + 1}, Style ${styleIndex + 1}: Duplicate size found`);
+                } else {
+                  sizeSeen.add(size.sizeId);
+                }
+              }
+            });
+          } else {
+            errors.push(`Row ${index + 1}, Style Row ${styleIndex + 1}: Size Breakup is required`);
           }
         });
 
-        if (orderType === "AGAINSTPI" && sizeSum !== Number(item.orderQty)) {
-          errors.push(
-            `Row ${index + 1}: Sum of size quantities (${sizeSum}) must match the PI quantity (${item.orderQty})`,
-          );
-        }
+      } else {
+        errors.push(`Row ${index + 1}: Style Breakup is required for Order Qty`);
       }
       if (isCustomerExport && !loadingId) {
         errors.push(`Loading Port is required`);
@@ -548,12 +556,7 @@ const PackingForm = ({
     const items = data?.orderItems || [];
     const checks = [
       { condition: !data.orderId, title: "Order No is required!" },
-
-
-
-      { condition: !data.payTermId, title: "Pay Term is required!" },
-      { condition: !data.termsId, title: "Terms & condtions is required!" },
-      { condition: !data.taxTemplateId, title: "Tax Type is required!" },
+      { condition: !data.jobCardId, title: "Job Card is required!" },
     ];
 
     const failed = checks.find((c) => c.condition);
@@ -584,7 +587,7 @@ const PackingForm = ({
       const message = duplicates
         .map(
           (d) =>
-            `Row ${d.duplicateIndex + 1} is duplicate of Row ${d.firstIndex + 1}`,
+            `Row ${d.rowIdx + 1}, Style ${d.styleIdx + 1} is duplicate of Style ${d.duplicateOf + 1}`,
         )
         .join("<br/>");
 

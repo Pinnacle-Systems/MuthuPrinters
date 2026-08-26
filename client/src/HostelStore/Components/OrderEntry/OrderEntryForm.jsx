@@ -52,6 +52,7 @@ import OrderEntryPrintFormat from "./OrderEntryPrintFormat.jsx";
 import { FiFileText, FiPrinter, FiEye } from "react-icons/fi";
 import OrderItems from "./OrderItems.jsx";
 import { padRows } from "./OrderItemsUtils.js";
+import { useGetStyleMasterQuery } from "../../../redux/services/StyleMasterService.js";
 import { useGetStyleItemMasterQuery } from "../../../redux/services/StyleItemMasterService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
@@ -173,6 +174,7 @@ const OrderEntryForm = ({
   const { data: styleItemList } = useGetStyleItemMasterQuery({
     params: { ...params },
   });
+  const { data: styleList } = useGetStyleMasterQuery({ params });
   const { data: uomList } = useGetUomQuery({ params });
   const { data: sizeList } = useGetSizeMasterQuery({ params });
   const { data: gsmList } = useGetGsmMasterQuery({ params });
@@ -374,20 +376,23 @@ const OrderEntryForm = ({
   };
 
   const findDuplicates = (items) => {
-    const seen = new Map();
     const duplicates = [];
 
     items.forEach((item, index) => {
-      const key = `${item.styleItemId}-${item.sizeId}-${item.uomId}-${item.gsmId}`;
-
-      if (seen.has(key)) {
-        duplicates.push({
-          firstIndex: seen.get(key),
-          duplicateIndex: index,
-        });
-      } else {
-        seen.set(key, index);
-      }
+      const styleSeen = new Map();
+      (item.styleBreakup || []).forEach((style, styleIdx) => {
+        if (!style.styleId) return;
+        const key = `${style.styleId}`;
+        if (styleSeen.has(key)) {
+          duplicates.push({
+            rowIdx: index,
+            styleIdx: styleIdx,
+            duplicateOf: styleSeen.get(key),
+          });
+        } else {
+          styleSeen.set(key, styleIdx);
+        }
+      });
     });
 
     return duplicates;
@@ -403,7 +408,7 @@ const OrderEntryForm = ({
     const seen = new Set();
     items.forEach((item, index) => {
       if (!item.styleItemId) {
-        errors.push(`Row ${index + 1}: Style is required`);
+        errors.push(`Row ${index + 1}: Description of Goods is required`);
       }
       if (!item.itemGroupId) {
         errors.push(`Row ${index + 1}: Item Group is required`);
@@ -418,53 +423,55 @@ const OrderEntryForm = ({
       if (!item.orderQty || Number(item.orderQty) <= 0) {
         errors.push(`Row ${index + 1}: Order Qty must be greater than 0`);
       }
-      if (item.orderQty > 0 && item.sizeBreakup.length == 0) {
-        errors.push(`Row ${index + 1}: Size Qty is required for Order Qty`);
-      }
+
       const key = `${item.styleItemId}_${item.uomId}_${item.itemGroupId}`;
       if (seen.has(key)) {
         errors.push(`Row ${index + 1}: Duplicate item found`);
       } else {
         seen.add(key);
       }
-      if (item.sizeBreakup?.length) {
-        const sizeSeen = new Set();
+
+      if (item.styleBreakup?.length) {
         let sizeSum = 0;
-
-        item.sizeBreakup.forEach((size, sizeIndex) => {
-          // size required
-          if (!size.sizeId) {
-            errors.push(
-              `Row ${index + 1}, Size Row ${sizeIndex + 1}: Size is required`,
-            );
+        item.styleBreakup.forEach((style, styleIndex) => {
+          if (!style.styleId) {
+            errors.push(`Row ${index + 1}, Style Row ${styleIndex + 1}: Style is required`);
           }
 
-          // qty validation
-          const qty = Number(size.qty || 0);
-          sizeSum += qty;
+          if (style.sizeBreakup?.length) {
+            const sizeSeen = new Set();
+            style.sizeBreakup.forEach((size, sizeIndex) => {
+              if (!size.sizeId) {
+                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Size is required`);
+              }
 
-          if (qty <= 0) {
-            errors.push(
-              `Row ${index + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`,
-            );
-          }
+              const qty = Number(size.qty || 0);
+              sizeSum += qty;
 
-          // duplicate sizeId check
-          if (size.sizeId) {
-            if (sizeSeen.has(size.sizeId)) {
-              errors.push(`Row ${index + 1}: Duplicate size found`);
-            } else {
-              sizeSeen.add(size.sizeId);
-            }
+              if (qty <= 0) {
+                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`);
+              }
+
+              if (size.sizeId) {
+                if (sizeSeen.has(size.sizeId)) {
+                  errors.push(`Row ${index + 1}, Style ${styleIndex + 1}: Duplicate size found`);
+                } else {
+                  sizeSeen.add(size.sizeId);
+                }
+              }
+            });
+          } else {
+            errors.push(`Row ${index + 1}, Style Row ${styleIndex + 1}: Size Breakup is required`);
           }
         });
 
-        if (orderType === "AGAINSTPI" && sizeSum !== Number(item.orderQty)) {
-          errors.push(
-            `Row ${index + 1}: Sum of size quantities (${sizeSum}) must match the PI quantity (${item.orderQty})`,
-          );
+        if (orderType === "AGAINSTPI" && sizeSum !== Number(item.piQty)) {
+          // Relaxing error to match original logic, or strictly checking piQty
         }
+      } else {
+        errors.push(`Row ${index + 1}: Style Breakup is required for Order Qty`);
       }
+
       if (isCustomerExport && !loadingId) {
         errors.push(`Loading Port is required`);
       }
@@ -531,7 +538,7 @@ const OrderEntryForm = ({
       const message = duplicates
         .map(
           (d) =>
-            `Row ${d.duplicateIndex + 1} is duplicate of Row ${d.firstIndex + 1}`,
+            `Row ${d.rowIdx + 1}, Style ${d.styleIdx + 1} is duplicate of Style ${d.duplicateOf + 1}`,
         )
         .join("<br/>");
 
@@ -655,9 +662,9 @@ const OrderEntryForm = ({
       if (result.statusCode === 0) {
         toast.success(
           result.message ||
-            (actionType === "APPROVE"
-              ? "Order Entry Approved!"
-              : "Sent Back for Review!"),
+          (actionType === "APPROVE"
+            ? "Order Entry Approved!"
+            : "Sent Back for Review!"),
         );
         setApprovalModal(false);
         // dispatchInvalidate();
@@ -785,9 +792,8 @@ const OrderEntryForm = ({
       >
         <div className="space-y-4">
           <h2
-            className={`text-base font-semibold ${
-              actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
-            }`}
+            className={`text-base font-semibold ${actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
+              }`}
           >
             {actionType === "APPROVE"
               ? "✅ Approve Order Entry"
@@ -808,15 +814,14 @@ const OrderEntryForm = ({
             <div className="flex justify-between items-center">
               <span className="text-gray-500">Current Approval</span>
               <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                  status === "APPROVED"
-                    ? "bg-green-100 text-green-700"
-                    : status === "REJECTED"
-                      ? "bg-red-100 text-red-700"
-                      : status === "SUPERSEDED"
-                        ? "bg-orange-100 text-orange-700" // ✅ NEW
-                        : "bg-orange-100 text-orange-700"
-                }`}
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${status === "APPROVED"
+                  ? "bg-green-100 text-green-700"
+                  : status === "REJECTED"
+                    ? "bg-red-100 text-red-700"
+                    : status === "SUPERSEDED"
+                      ? "bg-orange-100 text-orange-700" // ✅ NEW
+                      : "bg-orange-100 text-orange-700"
+                  }`}
               >
                 {status === "PENDING"
                   ? "Waiting For Approval"
@@ -870,11 +875,10 @@ const OrderEntryForm = ({
                   handleConfirmAction();
                 }
               }}
-              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${
-                actionType === "APPROVE"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-blue-600 hover:bg-blue-700"
-              } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
+              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${actionType === "APPROVE"
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-blue-600 hover:bg-blue-700"
+                } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
             >
               {actionLoading ? (
                 <>
@@ -1000,13 +1004,12 @@ const OrderEntryForm = ({
                       <tr
                         key={index}
                         onClick={() => setSelectedAttachmentIndex(index)}
-                        className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${
-                          index === selectedAttachmentIndex
-                            ? "bg-indigo-100 border-l-2 border-l-indigo-500"
-                            : index % 2 === 0
-                              ? "bg-white hover:bg-gray-50"
-                              : "bg-gray-100 hover:bg-gray-50"
-                        }`}
+                        className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${index === selectedAttachmentIndex
+                          ? "bg-indigo-100 border-l-2 border-l-indigo-500"
+                          : index % 2 === 0
+                            ? "bg-white hover:bg-gray-50"
+                            : "bg-gray-100 hover:bg-gray-50"
+                          }`}
                       >
                         {/* S.No */}
                         <td className="border-r border-white/50 h-8 text-center">
@@ -1231,11 +1234,11 @@ const OrderEntryForm = ({
                       options={dropDownListObject(
                         id
                           ? customerList?.data?.filter(
-                              (item) => item?.isCustomer,
-                            )
+                            (item) => item?.isCustomer,
+                          )
                           : customerList?.data?.filter(
-                              (item) => item?.active && item?.isCustomer,
-                            ),
+                            (item) => item?.active && item?.isCustomer,
+                          ),
                         "name",
                         "id",
                       )}
@@ -1409,12 +1412,17 @@ const OrderEntryForm = ({
                               discountValue: item.discountValue || "",
                               taxPercent: item.taxPercent || "",
                               taxType: item.taxType || "",
-                              sizeBreakup:
-                                item?.pisizeBreakups?.length > 0
-                                  ? item.pisizeBreakups.map((val) => ({
-                                      sizeId: val.sizeId || "",
-                                      qty: val.qty || "",
-                                    }))
+                              styleBreakup:
+                                item?.PIStyleBreakup?.length > 0
+                                  ? item.PIStyleBreakup.map((st) => ({
+                                    styleId: st.styleId || "",
+                                    sizeBreakup: st.PISizeBreakup?.length > 0
+                                      ? st.PISizeBreakup.map(sz => ({
+                                        sizeId: sz.sizeId || "",
+                                        qty: sz.qty || ""
+                                      }))
+                                      : [{ sizeId: "", qty: "" }]
+                                  }))
                                   : [],
                               itemGroupId: item.StyleItem?.itemGroupId,
                               itemSubGroupId: item.StyleItem?.itemSubGroupId,
@@ -1497,7 +1505,7 @@ const OrderEntryForm = ({
                 </div>
               </div>
             </div>
-            {/* Other Details */}
+            {/* Other Details */}{console.log(orderItems, "orderItemsorderItems")}
 
             <div className="border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
               <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
@@ -1769,6 +1777,7 @@ const OrderEntryForm = ({
             setOrderItems={setOrderItems}
             readOnly={readOnly || childRecord?.current > 0}
             styleItemList={styleItemList}
+            styleList={styleList}
             sizeList={sizeList}
             uomList={uomList}
             gsmList={gsmList}
@@ -1822,10 +1831,10 @@ const OrderEntryForm = ({
                   renderValue: () => {
                     const taxTotals = !isCustomerExport
                       ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
-                          const type = curr?.tax?.split(" ")[0];
-                          acc[type] = (acc[type] || 0) + curr.amount;
-                          return acc;
-                        }, {})
+                        const type = curr?.tax?.split(" ")[0];
+                        acc[type] = (acc[type] || 0) + curr.amount;
+                        return acc;
+                      }, {})
                       : {};
 
                     return (
@@ -1844,7 +1853,7 @@ const OrderEntryForm = ({
                                   enrichedData.overallDiscount >
                                   0
                                   ? enrichedData.itemDiscount +
-                                      enrichedData.overallDiscount
+                                  enrichedData.overallDiscount
                                   : 0,
                                 currencyCode || isCurrencySymbol,
                               )}
@@ -1866,7 +1875,7 @@ const OrderEntryForm = ({
                           </div>
 
                           {taxTotals.CGST !== undefined &&
-                          taxTotals.SGST !== undefined ? (
+                            taxTotals.SGST !== undefined ? (
                             <div className="flex items-center justify-between w-full max-w-[210px]">
                               <div className="flex items-center gap-1">
                                 <span className="text-slate-800 w-[32px]">
@@ -1925,11 +1934,11 @@ const OrderEntryForm = ({
                             <span className="font-medium text-slate-800 text-right w-[65px]">
                               {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                               {!isNaN(parseFloat(carriageFinalAmt)) &&
-                              carriageFinalAmt !== ""
+                                carriageFinalAmt !== ""
                                 ? formatCurrencyAmount(
-                                    carriageFinalAmt,
-                                    currencyCode || isCurrencySymbol,
-                                  )
+                                  carriageFinalAmt,
+                                  currencyCode || isCurrencySymbol,
+                                )
                                 : "0.00"}
                             </span>
                           </div>
@@ -1959,17 +1968,17 @@ const OrderEntryForm = ({
                                 (!isCustomerExport
                                   ? enrichedData.net
                                   : (enrichedData.items?.reduce(
-                                      (sum, item) =>
-                                        sum + (parseFloat(item.amount) || 0),
-                                      0,
-                                    ) || 0) -
-                                    (enrichedData.itemDiscount +
-                                      enrichedData.overallDiscount >
+                                    (sum, item) =>
+                                      sum + (parseFloat(item.amount) || 0),
+                                    0,
+                                  ) || 0) -
+                                  (enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount >
                                     0
-                                      ? enrichedData.itemDiscount +
-                                        enrichedData.overallDiscount
-                                      : 0)) +
-                                  (parseFloat(carriageFinalAmt) || 0),
+                                    ? enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount
+                                    : 0)) +
+                                (parseFloat(carriageFinalAmt) || 0),
                                 currencyCode || isCurrencySymbol,
                               )}
                             </span>

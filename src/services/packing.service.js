@@ -642,10 +642,7 @@ async function create(body) {
         item?.discountValue && !isNaN(Number(item.discountValue))
           ? parseFloat(item.discountValue)
           : null,
-      orderQty:
-        item?.orderQty && !isNaN(Number(item.orderQty))
-          ? parseInt(item.orderQty)
-          : null,
+
       uomId: item?.uomId ? parseInt(item.uomId) : null,
       hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
 
@@ -677,6 +674,8 @@ async function create(body) {
         docId: newDocId,
         docDate: docDate ? new Date(docDate) : null,
         orderId: orderId ? parseInt(orderId) : null,
+        orderId: orderId ? parseInt(orderId) : null,
+
         createdById: parseInt(userId),
         branchId: branchId ? parseInt(branchId) : null,
         customerId: customerId ? parseInt(customerId) : null,
@@ -931,20 +930,20 @@ async function update(id, body, files) {
               uomId: item.uomId ? parseInt(item.uomId) : null,
               gsmId: item.gsmId ? parseInt(item.gsmId) : null,
               PackingStyleBreakup:
-        item?.styleBreakup?.length > 0
-          ? {
-            create: item.styleBreakup.map((st) => ({
-              styleId: st.styleId ? parseInt(st.styleId) : null,
-              PackingSizeBreakup: st?.sizeBreakup?.length > 0
-                ? {
-                  create: st.sizeBreakup.map((s) => ({
-                    sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                    qty: s.qty ? parseInt(s.qty) : null,
-                  }))
-                } : undefined
-            })),
-          }
-          : undefined,
+                item?.styleBreakup?.length > 0
+                  ? {
+                    create: item.styleBreakup.map((st) => ({
+                      styleId: st.styleId ? parseInt(st.styleId) : null,
+                      PackingSizeBreakup: st?.sizeBreakup?.length > 0
+                        ? {
+                          create: st.sizeBreakup.map((s) => ({
+                            sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                            qty: s.qty ? parseInt(s.qty) : null,
+                          }))
+                        } : undefined
+                    })),
+                  }
+                  : undefined,
             })),
         },
         attachments: {

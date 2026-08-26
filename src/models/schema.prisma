@@ -979,6 +979,7 @@ model Style {
   DeliveryInvoiceItems DeliveryInvoiceItems[]
   PIStyleBreakup       PIStyleBreakup[]
   PackingStyleBreakup  PackingStyleBreakup[]
+  OrderStyleBreakup    OrderStyleBreakup[]
 }
 
 model StyleItem {
@@ -2135,6 +2136,7 @@ model JobCard {
   reworkLogs            ReworkLog[]
   reworkBatchTrackers   ReworkBatchTracker[]
   IncomingQty           IncomingQty[]
+  Packing               Packing[]
 }
 
 model BoardQuality {
@@ -2249,29 +2251,38 @@ model OrderItems {
   sizeTemplateId Int?
   SizeTemplate   SizeTemplate? @relation(fields: [sizeTemplateId], references: [id])
 
-  trackingType   String?
-  sizeBreakup    OrderSizeBreakup[]
-  jobCards       JobCard[]
-  itemSubGroupId Int?
-  ItemSubGroup   ItemSubGroup?      @relation(fields: [itemSubGroupId], references: [id])
-  labelWidth     String?
-  price          Float?
-  amount         Float?
-  dozen          Float?
-  taxPercent     Float?
-  discountType   String?
-  discountValue  Float?
+  trackingType      String?
+  jobCards          JobCard[]
+  itemSubGroupId    Int?
+  ItemSubGroup      ItemSubGroup?       @relation(fields: [itemSubGroupId], references: [id])
+  labelWidth        String?
+  price             Float?
+  amount            Float?
+  dozen             Float?
+  taxPercent        Float?
+  discountType      String?
+  discountValue     Float?
+  OrderStyleBreakup OrderStyleBreakup[]
+}
+
+model OrderStyleBreakup {
+  id               Int                @id @default(autoincrement())
+  OrderItem        OrderItems?        @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  orderItemId      Int?
+  styleId          Int?
+  Style            Style?             @relation(fields: [styleId], references: [id], onDelete: Cascade)
+  OrderSizeBreakup OrderSizeBreakup[]
 }
 
 model OrderSizeBreakup {
-  id          Int        @id @default(autoincrement())
-  orderItemId Int
-  OrderItem   OrderItems @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
-  sizeId      Int?
-  Size        Size?      @relation(fields: [sizeId], references: [id])
-  qty         Int?
-  barcodeFrom String?
-  barcodeTo   String?
+  id                  Int                @id @default(autoincrement())
+  orderStyleBreakupId Int?
+  OrderStyleBreakup   OrderStyleBreakup? @relation(fields: [orderStyleBreakupId], references: [id], onDelete: Cascade)
+  sizeId              Int?
+  Size                Size?              @relation(fields: [sizeId], references: [id])
+  qty                 Int?
+  barcodeFrom         String?
+  barcodeTo           String?
 }
 
 model JobCardSizeBreakup {
@@ -2457,7 +2468,6 @@ model ProformaInvoiceItem {
   quoteVersion      Int              @default(1)
   dozen             Float?
   labelWidth        String?
-  pisizeBreakups    PISizeBreakup[]
   PIStyleBreakup    PIStyleBreakup[]
 }
 
@@ -2471,14 +2481,12 @@ model PIStyleBreakup {
 }
 
 model PISizeBreakup {
-  id                    Int                 @id @default(autoincrement())
-  ProformaInvoiceItemId Int
-  ProformaInvoiceItem   ProformaInvoiceItem @relation(fields: [ProformaInvoiceItemId], references: [id], onDelete: Cascade)
-  PIStyleBreakupId      Int?
-  PIStyleBreakup        PIStyleBreakup?     @relation(fields: [PIStyleBreakupId], references: [id], onDelete: Cascade)
-  sizeId                Int?
-  Size                  Size?               @relation(fields: [sizeId], references: [id])
-  qty                   Int?
+  id               Int             @id @default(autoincrement())
+  PIStyleBreakupId Int?
+  PIStyleBreakup   PIStyleBreakup? @relation(fields: [PIStyleBreakupId], references: [id], onDelete: Cascade)
+  sizeId           Int?
+  Size             Size?           @relation(fields: [sizeId], references: [id])
+  qty              Int?
 }
 
 model ProformaAttachments {
@@ -2950,6 +2958,8 @@ model Packing {
   branchId         Int?
   OrderEntry       OrderEntry?    @relation(fields: [orderId], references: [id])
   orderId          Int?
+  jobCardId        Int?
+  JobCard          JobCard?       @relation(fields: [jobCardId], references: [id])
   orderType        String?
   orderQty         Int?
   remarks          String?

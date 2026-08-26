@@ -486,7 +486,11 @@ async function getOne(id) {
       attachments: true,
       orderItems: {
         include: {
-          sizeBreakup: true,
+          OrderStyleBreakup: {
+            include: {
+              OrderSizeBreakup: true,
+            },
+          },
           ItemGroup: {
             select: {
               name: true,
@@ -584,6 +588,11 @@ async function getOne(id) {
       ...data,
       orderItems: data.orderItems.map((item) => ({
         ...item,
+        styleBreakup: item.OrderStyleBreakup?.length > 0 ? item.OrderStyleBreakup.map(style => ({
+          ...style,
+          sizeBreakup: style.OrderSizeBreakup
+        })) : [],
+        OrderStyleBreakup: undefined,
         childRecord: item._count.jobCards,
         _count: undefined,
       })),
@@ -684,14 +693,20 @@ async function create(body) {
         sizeTemplateId: item?.sizeTemplateId
           ? parseInt(item.sizeTemplateId)
           : null,
-        sizeBreakup:
-          item?.sizeBreakup?.length > 0
+        OrderStyleBreakup:
+          item?.styleBreakup?.length > 0
             ? {
-              create: item.sizeBreakup.map((s) => ({
-                sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                qty: s.qty ? parseInt(s.qty) : null,
-                barcodeFrom: s.barcodeFrom,
-                barcodeTo: s.barcodeTo,
+              create: item.styleBreakup.map((style) => ({
+                styleId: style.styleId ? parseInt(style.styleId) : null,
+                OrderSizeBreakup: style.sizeBreakup?.length > 0
+                  ? {
+                    create: style.sizeBreakup.map((s) => ({
+                      sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                      qty: s.qty ? parseInt(s.qty) : null,
+                      barcodeFrom: s.barcodeFrom,
+                      barcodeTo: s.barcodeTo,
+                    })),
+                  } : undefined
               })),
             }
             : undefined,
@@ -983,15 +998,21 @@ async function update(id, body, files) {
                 sizeId: item.sizeId ? parseInt(item.sizeId) : null,
                 uomId: item.uomId ? parseInt(item.uomId) : null,
                 gsmId: item.gsmId ? parseInt(item.gsmId) : null,
-                sizeBreakup: {
+                OrderStyleBreakup: {
                   deleteMany: {},
                   create:
-                    item.sizeBreakup?.length > 0
-                      ? item.sizeBreakup.map((s) => ({
-                        sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                        qty: s.qty ? parseInt(s.qty) : null,
-                        barcodeFrom: s.barcodeFrom,
-                        barcodeTo: s.barcodeTo,
+                    item.styleBreakup?.length > 0
+                      ? item.styleBreakup.map((st) => ({
+                        styleId: st.styleId ? parseInt(st.styleId) : null,
+                        OrderSizeBreakup: st.sizeBreakup?.length > 0
+                          ? {
+                            create: st.sizeBreakup.map((s) => ({
+                              sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                              qty: s.qty ? parseInt(s.qty) : null,
+                              barcodeFrom: s.barcodeFrom,
+                              barcodeTo: s.barcodeTo,
+                            }))
+                          } : undefined
                       }))
                       : [],
                 },
@@ -1028,15 +1049,21 @@ async function update(id, body, files) {
               sizeId: item.sizeId ? parseInt(item.sizeId) : null,
               uomId: item.uomId ? parseInt(item.uomId) : null,
               gsmId: item.gsmId ? parseInt(item.gsmId) : null,
-              sizeBreakup:
-                item.sizeBreakup?.length > 0
+              OrderStyleBreakup:
+                item.styleBreakup?.length > 0
                   ? {
-                    create: item.sizeBreakup.map((s) => ({
-                      sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                      qty: s.qty ? parseInt(s.qty) : null,
-                      barcodeFrom: s.barcodeFrom,
-                      barcodeTo: s.barcodeTo,
-                    })),
+                    create: item.styleBreakup.map((st) => ({
+                      styleId: st.styleId ? parseInt(st.styleId) : null,
+                      OrderSizeBreakup: st.sizeBreakup?.length > 0
+                        ? {
+                          create: st.sizeBreakup.map((s) => ({
+                            sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                            qty: s.qty ? parseInt(s.qty) : null,
+                            barcodeFrom: s.barcodeFrom,
+                            barcodeTo: s.barcodeTo,
+                          }))
+                        } : undefined
+                    }))
                   }
                   : undefined,
             })),

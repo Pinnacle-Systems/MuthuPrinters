@@ -21,6 +21,7 @@ import Swal from "sweetalert2";
 import { useGetCityQuery } from "../../../redux/services/CityMasterService.js";
 import PackingReport from "./PackingReport.jsx";
 import { useDeleteSalesOrderMutation } from "../../../redux/uniformService/SalesOrderService.js";
+import { useDeletePackingMutation } from "../../../redux/uniformService/PackingService.js";
 
 const index = () => {
   const [showForm, setShowForm] = useState(false);
@@ -65,7 +66,7 @@ const index = () => {
     setShowForm(true);
     setReadOnly(false);
   };
-  const [removeData] = useDeleteSalesOrderMutation();
+  const [removeData] = useDeletePackingMutation();
   const handleDelete = async (id) => {
     setId(id);
     if (id) {

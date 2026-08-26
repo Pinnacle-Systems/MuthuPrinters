@@ -373,12 +373,12 @@ const OrderEntryReport = ({
                                         <th className="w-80  px-3   font-medium text-[13px] text-gray-900  text-center ">
                                             <div>Customer</div>
                                         </th>
-                                        <th
+                                        {/* <th
                                             className=" px-3 w-36  font-medium text-[13px]  text-gray-900  text-center "
                                             rowSpan={2}
                                         >
                                             <div>Approval Status</div>
-                                        </th>
+                                        </th> */}
                                         <th
                                             className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
                                             rowSpan={2}
@@ -498,11 +498,11 @@ const OrderEntryReport = ({
                                                             {" "}
                                                             {dataObj?.customer?.name}
                                                         </td>
-                                                        <td className="py-1.5 text-left">
+                                                        {/* <td className="py-1.5 text-left">
                                                             <ApprovalBadge
                                                                 approvalStatus={dataObj?.approvalStatus}
                                                             />
-                                                        </td>
+                                                        </td> */}
                                                         <td className="px-2 py-1">
                                                             <div className="flex items-center justify-center gap-1.5 text-orange-700">
                                                                 {dataObj?.approvalStatus?.remarks || "-"}
