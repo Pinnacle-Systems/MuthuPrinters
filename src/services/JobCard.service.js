@@ -382,7 +382,11 @@ async function get_mob_jobcard(req) {
         id: null
       }
     }
+
+
     const prevCheck = data?.processRoute?.find((seq) => (Number(checkProcessSeq?.sequence) - 1) === seq?.sequence)
+
+   
 
     if ((!incomingData && checkProcessSeq?.status === "PARTIALLY_COMPLETED" && Number(checkProcessSeq?.pendingQty || 0) > 0) && (prevCheck?.pendingQty === 0 || prevCheck?.status === "COMPLETED" || !prevCheck)) {
       incomingData = {
@@ -390,6 +394,8 @@ async function get_mob_jobcard(req) {
         id: null
       }
     }
+
+   
 
 
     if ((!incomingData && (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) > 0))) {
@@ -400,9 +406,18 @@ async function get_mob_jobcard(req) {
     }
 
 
+    if((prevCheck?.pendingQty === 0 || prevCheck?.status === "COMPLETED" || !prevCheck) && checkProcessSeq?.sequence !== 1){
+     incomingData = {
+        pendingQty: Number(checkProcessSeq?.pendingQty || 0),
+        id: null
+      }
+    }
 
+
+    console.log("LL",incomingData)
+    
     if (!data) return NoRecordFound("Job Card");
-    if (incomingData?.pendingQty === 0) return NoRecordFound("No quantity has been transferred to this process yet.")
+    if (incomingData?.pendingQty === 0  || !incomingData) return NoRecordFound("No quantity has been transferred to this process yet.")
 
     // ── Approval setup ────────────────────
     const { module, hasApproval } = await getModuleApprovalSetup(
