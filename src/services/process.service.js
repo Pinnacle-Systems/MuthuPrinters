@@ -227,7 +227,7 @@ async function UpdateProcess(req) {
 
       // Validation for Max Allowed Quantity
       let maxAllowed = actualQty;
-      if (pRoute.sequence > 1) {  
+      if (pRoute.sequence > 1 && getIncomingExist?.qty > 0) {  
           maxAllowed = Number(getIncomingExist?.qty || 0)   }
 
       const totalCompleted =
