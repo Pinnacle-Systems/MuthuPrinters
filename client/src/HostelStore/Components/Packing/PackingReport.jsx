@@ -18,6 +18,7 @@ import { FiCheck } from "react-icons/fi";
 import { toast } from "react-toastify";
 import { UserPermissions } from "../../../Utils/UserPermissions";
 import { useGetSalesOrderQuery } from "../../../redux/uniformService/SalesOrderService";
+import { useGetPackingQuery } from "../../../redux/uniformService/PackingService";
 const PackingReport = ({
     onClick,
     onView,
@@ -74,7 +75,7 @@ const PackingReport = ({
         data: allData,
         isFetching,
         isLoading,
-    } = useGetSalesOrderQuery({
+    } = useGetPackingQuery({
         params: {
             branchId,
             ...searchFields,
