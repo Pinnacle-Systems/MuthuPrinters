@@ -312,7 +312,7 @@ const PackingItems = ({
           setActiveModalRowIndex(null);
           setActiveStyleIndex(0);
         }}
-        widthClass="w-[65vw]"
+        widthClass="w-[85vw]"
       >
         <div className="p-4 bg-white rounded-lg h-[75vh] flex flex-col">
           <h2 className="text-lg font-bold mb-4">Style & Size Breakup</h2>
@@ -395,8 +395,14 @@ const PackingItems = ({
                       <thead className="bg-gray-100">
                         <tr>
                           <th className="border border-gray-300 px-2 py-1.5">Size</th>
-                          <th className="border border-gray-300 px-2 py-1.5 w-24">Qty</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-24">Order Qty</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-24">Already Packing Qty</th>
+
                           <th className="border border-gray-300 px-2 py-1.5 w-24">Packing Qty</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-24">Gross Weight</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-24">Net Weight</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-24">Dimensions</th>
+
                           <th className="border border-gray-300 px-2 py-1.5 w-16 text-center">Actions</th>
                         </tr>
                       </thead>
@@ -429,9 +435,48 @@ const PackingItems = ({
                                 type="number"
                                 min="0"
                                 className="w-full text-right outline-none bg-transparent"
+                                value={sizeRow.alreadyPackingQty}
+                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "alreadyPackingQty", e.target.value)}
+                                disabled={true}
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1">
+                              <input
+                                type="number"
+                                min="0"
+                                className="w-full text-right outline-none bg-transparent"
                                 value={sizeRow.packingQty}
                                 onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "packingQty", e.target.value)}
                                 disabled={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1">
+                              <input
+                                type="number"
+                                min="0"
+                                className="w-full text-right outline-none bg-transparent"
+                                value={sizeRow.grossWeight}
+                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "grossWeight", e.target.value)}
+                                disabled={readOnly}
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1">
+                              <input
+                                type="number"
+                                min="0"
+                                className="w-full text-right outline-none bg-transparent"
+                                value={sizeRow.netWeight}
+                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "netWeight", e.target.value)}
+                                disabled={readOnly}
+                              />
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1">
+                              <input
+                                type="text"
+                                className="w-full text-right outline-none bg-transparent"
+                                value={sizeRow.dimensions}
+                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "dimensions", e.target.value)}
+                                disabled={readOnly}
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1 text-center">

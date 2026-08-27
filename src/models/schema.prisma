@@ -2282,14 +2282,15 @@ model OrderStyleBreakup {
 }
 
 model OrderSizeBreakup {
-  id                  Int                @id @default(autoincrement())
+  id                  Int                  @id @default(autoincrement())
   orderStyleBreakupId Int?
-  OrderStyleBreakup   OrderStyleBreakup? @relation(fields: [orderStyleBreakupId], references: [id], onDelete: Cascade)
+  OrderStyleBreakup   OrderStyleBreakup?   @relation(fields: [orderStyleBreakupId], references: [id], onDelete: Cascade)
   sizeId              Int?
-  Size                Size?              @relation(fields: [sizeId], references: [id])
+  Size                Size?                @relation(fields: [sizeId], references: [id])
   qty                 Int?
   barcodeFrom         String?
   barcodeTo           String?
+  PackingSizeBreakup  PackingSizeBreakup[]
 }
 
 model JobCardSizeBreakup {
@@ -3022,9 +3023,15 @@ model PackingSizeBreakup {
   id                    Int                 @id @default(autoincrement())
   PackingStyleBreakupId Int
   PackingStyleBreakup   PackingStyleBreakup @relation(fields: [PackingStyleBreakupId], references: [id], onDelete: Cascade)
+  OrderSizeBreakup      OrderSizeBreakup?   @relation(fields: [orderSizeBreakupId], references: [id], onDelete: Cascade)
+  orderSizeBreakupId    Int?
   sizeId                Int?
   Size                  Size?               @relation(fields: [sizeId], references: [id])
   qty                   Int?
+  packingQty            Int?
+  netWeight             String?
+  grossWeight           String?
+  dimensions            String?
 }
 
 model ReworkLog {

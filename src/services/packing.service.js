@@ -171,7 +171,15 @@ async function get(req) {
 
     },
     include: {
-      PackingItems: true,
+      PackingItems: {
+        include: {
+          PackingStyleBreakup: {
+            include: {
+              PackingSizeBreakup: true,
+            }
+          }
+        }
+      },
     },
     orderBy: {
       id: "desc",
@@ -385,106 +393,51 @@ async function geOrderItemsList(req) {
 }
 
 async function getOne(id) {
-  const data = await prisma.SalesOrder.findUnique({
+  const data = await prisma.Packing.findUnique({
     where: {
       id: parseInt(id),
     },
     include: {
-      attachments: true,
-      SalesOrderItems: {
+      PackingItems: {
         include: {
-          SaleOrderSizeBreakup: true,
-          ItemGroup: {
-            select: {
-              name: true,
-            },
-          },
-          Hsn: {
-            select: {
-              name: true,
-            },
-          },
-
-        },
+          PackingStyleBreakup: {
+            include: {
+              PackingSizeBreakup: {
+                include: {
+                  OrderSizeBreakup: {
+                    include: {
+                      PackingSizeBreakup: true
+                    }
+                  }
+                }
+              },
+            }
+          }
+        }
       },
-      Branch: {
-        select: {
-          branchName: true,
-        },
-      },
-      customer: {
-        select: {
-          name: true,
-        },
-      },
-
-
     },
   });
 
   if (!data) return NoRecordFound("Purchase Inward");
-  const { module, hasApproval } = await getModuleApprovalSetup(
-    REFERENCE_PAGE,
-    data.branchId,
-  );
-  let log = null;
-  let shouldTrigger = false;
 
-  if (hasApproval && module) {
-    // 🔹 get approval log for this record
-    log = await prisma.approvalLog.findFirst({
-      where: {
-        referencePage: REFERENCE_PAGE,
-        referenceId: data.id,
-      },
-      include: {
-        LevelLogs: {
-          include: {
-            User: { select: { id: true, username: true } },
-          },
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    });
-
-    // 🔹 if no log → check config condition
-    if (!log) {
-      const activeConfigs = await prisma.approvalConfig.findMany({
-        where: {
-          moduleId: module.id,
-          branchId: parseInt(data.branchId),
-          active: true,
-        },
-        include: {
-          ConfigConditions: {
-            include: {
-              Field: true,
-              Operator: true,
-              CompareField: true,
-            },
-          },
-        },
-      });
-
-      if (activeConfigs.length > 0) {
-        shouldTrigger = evaluateConfigs(activeConfigs, data);
-      }
-    }
-  }
 
   return {
     statusCode: 0,
     data: {
       ...data,
-      SalesOrderItems: data.SalesOrderItems.map((item) => ({
+      PackingItems: data.PackingItems.map((item) => ({
         ...item,
-        sizeBreakup: item.SaleOrderSizeBreakup.map((size) => ({
+        styleBreakup: item.PackingStyleBreakup.map((size) => ({
           ...size,
-          id: size.id.toString(),
+          sizeBreakup: size.PackingSizeBreakup?.map((breakup) => ({
+            ...breakup,
+            alreadyPackingQty: breakup.OrderSizeBreakup?.PackingSizeBreakup
+              ?.filter((i) => i?.id !== breakup?.id)
+              ?.reduce((acc, size) => acc + (size.packingQty || 0), 0)
+          })),
         })),
       })),
-      approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
-      approvalLog: log,
+
     },
   };
 }
@@ -534,7 +487,10 @@ async function create(body) {
 
   let data;
 
+
   const parsedOrderItems = typeof orderItems === "string" ? JSON.parse(orderItems) : orderItems;
+
+  console.log(parsedOrderItems, "parsedOrderItems")
   const packingItems = parsedOrderItems?.length > 0
     ? parsedOrderItems.map((item) => ({
       styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
@@ -569,7 +525,12 @@ async function create(body) {
                 ? {
                   create: st.sizeBreakup.map((s) => ({
                     sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                    packingQty: s.packingQty ? parseInt(s.packingQty) : null,
                     qty: s.qty ? parseInt(s.qty) : null,
+                    grossWeight: s.grossWeight ? String(s.grossWeight) : null,
+                    netWeight: s.netWeight ? String(s.netWeight) : null,
+                    dimensions: s.dimensions ?? "",
+                    orderSizeBreakupId: s.id ? parseInt(s.id) : null
                   }))
                 } : undefined
             })),
@@ -607,21 +568,21 @@ async function create(body) {
                 ...baseStock,
                 styleId: st.styleId ? parseInt(st.styleId) : null,
                 sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                qty: item?.packingQty ? parseFloat(item.packingQty) : null,
+                qty: s?.packingQty ? parseFloat(s.packingQty) : null,
               });
             });
           } else {
             stockEntries.push({
               ...baseStock,
               styleId: st.styleId ? parseInt(st.styleId) : null,
-              qty: item?.packingQty ? parseFloat(item.packingQty) : null,
+              qty: s?.packingQty ? parseFloat(s.packingQty) : null,
             });
           }
         });
       } else {
         stockEntries.push({
           ...baseStock,
-          qty: item?.packingQty ? parseFloat(item.packingQty) : null,
+          qty: s?.packingQty ? parseFloat(s.packingQty) : null,
         });
       }
     });
@@ -668,42 +629,14 @@ async function create(body) {
 }
 async function update(id, body, files) {
   const {
-    userId,
-    branchId,
-    docDate,
-    customerId,
-    orderType,
-    deliveryDate,
-    remarks,
-    requirements,
-    orderQty,
+
     attachments,
-    termsId,
-    termsAndCondition,
+
     orderItems,
-    submitApproval,
-    productionType,
-    proFormaId,
-    refNo,
-    isRepeatedPI,
-    validDays,
-    taxTemplateId,
-    discountType,
-    discountValue,
-    conversionType,
-    payTermId,
-    bankId,
-    currencyId,
-    weightInKg,
-    carriageCharge,
-    loadingId,
-    deliveryId,
-    carriageTax,
-    orderId
+
   } = await body;
 
-  const safeorderQty =
-    orderQty && !isNaN(Number(orderQty)) ? parseFloat(orderQty) : null;
+
 
   const parseAttachments = JSON.parse(attachments || "[]");
   const incomingIds = parseAttachments
@@ -714,104 +647,45 @@ async function update(id, body, files) {
   const incomingItemIds = parsedItems
     ?.filter((i) => i.id)
     .map((i) => parseInt(i.id));
-  const { module, hasApproval } = await getModuleApprovalSetup(
-    REFERENCE_PAGE,
-    branchId,
-  );
+
+
+
   let data;
-  const dataFound = await prisma.salesOrder.findUnique({
+
+  const dataFound = await prisma.packing.findUnique({
     where: {
       id: parseInt(id),
     },
     include: {
-      attachments: { select: { id: true, filePath: true } },
-      SalesOrderItems: true,
+      PackingItems: true,
     },
   });
-  if (!dataFound) return NoRecordFound("Purchase Inward");
-  const removedItemIds = dataFound.SalesOrderItems
+  if (!dataFound) return NoRecordFound("Packing");
+
+  const removedItemIds = dataFound.PackingItems
     .filter((item) => !incomingItemIds.includes(item.id))
     .map((item) => item.id);
-  const removedAttachments = dataFound.attachments.filter(
-    (existing) => !incomingIds.includes(existing.id),
-  );
-  const updatedAttachmentsWithNewFile = dataFound.attachments.filter(
-    (existing) => {
-      const incoming = parseAttachments.find(
-        (i) => parseInt(i.id) === existing.id,
-      );
-      // If incoming filePath is empty/changed and old had a file
-      return (
-        incoming &&
-        existing.filePath &&
-        (!incoming.filePath || incoming.filePath !== existing.filePath)
-      );
-    },
-  );
 
-  // ✅ Unlink removed attachment files
-  const unlinkFile = (filePath) => {
-    if (!filePath) return;
-    const fullPath = path.join("./uploads", filePath);
-    fs.unlink(fullPath, (err) => {
-      if (err) console.warn(`Could not delete file: ${fullPath}`, err.message);
-      else console.log(`Deleted file: ${fullPath}`);
-    });
-  };
 
-  // Delete files for removed attachments
-  removedAttachments.forEach((att) => unlinkFile(att.filePath));
 
-  // Delete old files for attachments where file was replaced
-  updatedAttachmentsWithNewFile.forEach((att) => unlinkFile(att.filePath));
-  let finalRefNo = refNo || null;
-  if (productionType === "SAMPLE" && dataFound.docId) {
-    const parts = dataFound.docId.split("/");
-    if (parts.length >= 4) {
-      const finYear = parts[1];
-      const number = parts[3];
 
-      finalRefNo = `${finYear}/SAM/${number}`;
-    }
-  }
-  const validTo = moment(docDate).add(validDays, "days").endOf("day").toDate();
+
+
   await prisma.$transaction(async (tx) => {
-    await tx.notification.deleteMany({
-      where: {
-        referencePage: REFERENCE_PAGE,
-        referenceId: {
-          in: removedItemIds,
-        },
-      },
-    });
-    data = await tx.SalesOrder.update({
+
+    data = await tx.packing.update({
       where: {
         id: parseInt(id),
       },
       data: {
-        docDate: docDate ? new Date(docDate) : null,
-        orderId: orderId ? parseInt(orderId) : null,
-        createdById: parseInt(userId),
-        branchId: branchId ? parseInt(branchId) : null,
-        customerId: customerId ? parseInt(customerId) : null,
-
-        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
-        remarks,
-        termsId: termsId ? parseInt(termsId) : null,
-        termsAndCondition,
-        validDays: validDays ? parseInt(validDays) : null,
-        validTo: validTo,
-        taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
-        discountType: discountType || null,
-        discountValue: discountValue ? parseFloat(discountValue) : null,
-        payTermId: payTermId ? parseInt(payTermId) : null,
-        deliveryId: deliveryId ? parseInt(deliveryId) : null,
 
 
-        SalesOrderItems: {
+
+
+        PackingItems: {
           deleteMany: incomingItemIds.length
             ? { id: { notIn: incomingItemIds } }
-            : {}, // delete all if no items sent
+            : {},
           update: parsedItems
             .filter((item) => item.id)
             .map((item) => ({
@@ -847,16 +721,25 @@ async function update(id, body, files) {
                 sizeId: item.sizeId ? parseInt(item.sizeId) : null,
                 uomId: item.uomId ? parseInt(item.uomId) : null,
                 gsmId: item.gsmId ? parseInt(item.gsmId) : null,
-                SaleOrderSizeBreakup: {
+                PackingStyleBreakup: {
                   deleteMany: {},
-                  create:
-                    item.sizeBreakup?.length > 0
-                      ? item.sizeBreakup.map((s) => ({
-                        sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                        qty: s.qty ? parseInt(s.qty) : null,
-
-                      }))
-                      : [],
+                  create: item?.styleBreakup?.length > 0
+                    ? item.styleBreakup.map((st) => ({
+                      styleId: st.styleId ? parseInt(st.styleId) : null,
+                      PackingSizeBreakup: st?.sizeBreakup?.length > 0
+                        ? {
+                          create: st.sizeBreakup.map((s) => ({
+                            sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                            packingQty: s.packingQty ? parseInt(s.packingQty) : null,
+                            qty: s.qty ? parseInt(s.qty) : null,
+                            grossWeight: s.grossWeight ? String(s.grossWeight) : null,
+                            netWeight: s.netWeight ? String(s.netWeight) : null,
+                            dimensions: s.dimensions ?? "",
+                            orderSizeBreakupId: s.id ? parseInt(s.id) : null
+                          }))
+                        } : undefined
+                    }))
+                    : []
                 },
               },
             })),
@@ -898,7 +781,12 @@ async function update(id, body, files) {
                         ? {
                           create: st.sizeBreakup.map((s) => ({
                             sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                            packingQty: s.packingQty ? parseInt(s.packingQty) : null,
                             qty: s.qty ? parseInt(s.qty) : null,
+                            grossWeight: s.grossWeight ? String(s.grossWeight) : null,
+                            netWeight: s.netWeight ? String(s.netWeight) : null,
+                            dimensions: s.dimensions ?? "",
+                            orderSizeBreakupId: s.id ? parseInt(s.id) : null
                           }))
                         } : undefined
                     })),
@@ -946,31 +834,7 @@ async function update(id, body, files) {
         },
       },
     });
-    if (submitApproval && hasApproval && module) {
-      await tx.approvalLog.deleteMany({
-        where: {
-          referenceId: parseInt(id),
-          referencePage: REFERENCE_PAGE,
-          status: { in: ["REJECTED", "NOTAPPROVED"] },
-        },
-      });
 
-      const fullRecord = await tx.orderEntry.findUnique({
-        where: { id: parseInt(id) },
-        include: await buildIncludeForModule(module.id),
-      });
-
-      await createApprovalLog(
-        tx,
-        branchId,
-        module.id,
-        data.id,
-        REFERENCE_PAGE,
-        fullRecord,
-        data.docId,
-        userId,
-      );
-    }
   });
 
   return { statusCode: 0, data };

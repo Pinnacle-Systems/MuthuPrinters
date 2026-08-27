@@ -240,44 +240,17 @@ const PackingForm = ({
   const syncFormWithDb = useCallback(
     (data) => {
       setDocId(data?.docId ? data?.docId : "New");
-      setOrderId(data?.orderId ? data?.orderId : "");
       setDocDate(
         data?.docDate
           ? moment.utc(data.docDate).format("YYYY-MM-DD")
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
-      setOrderType(data?.orderType || "GENERAL");
-      setCustomerId(data?.customerId || "");
-      setRemarks(data?.remarks || "");
-      setAttachments(data?.attachments ? data?.attachments : []);
-      setOrderQty(data?.orderQty || "");
-      setRequirements(data?.requirements || "");
-      setDeliveryDate(
-        data?.deliveryDate
-          ? moment.utc(data.deliveryDate).format("YYYY-MM-DD")
-          : "",
-      );
-      setTermsAndCondition(data?.termsAndCondition || "");
-      setTermsId(data?.termsId || "");
+      setOrderId(data?.orderId ? data?.orderId : "");
+      setJobCardId(data?.jobCardId ? data?.jobCardId : "");
+      setOrderItems(padRows(data?.PackingItems || []));
+
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      setOrderItems(padRows(data?.SalesOrderItems || []));
-      setProductionType(data?.productionType || "SAMPLE");
-      setProFormaId(data?.proFormaId || "");
-      setRefNo(data?.refNo || "");
-      setIsRepeatedPI(data?.isRepeatedPI || false);
-      setValidDays(data?.validDays ? data?.validDays : "");
-      setTaxTemplateId(data?.taxTemplateId || "");
-      setDiscountType(data?.discountType || "Percentage");
-      setDiscountValue(data?.discountValue || 0);
-      setConversionType(data?.conversionType || "DOZEN");
-      setPayTermId(data?.payTermId || "");
-      setBankId(data?.bankId || "");
-      setCurrencyId(data?.currencyId || "");
-      setWeightInKg(data?.weightInKg?.toFixed(3) || "");
-      setCarriageCharge(data?.carriageCharge?.toFixed(2) || "");
-      setCarriageTax(data?.carriageTax?.toFixed(2) || "");
-      setLoadingId(data?.loadingId || "");
-      setDeliveryId(data?.deliveryId || "");
+
     },
     [id],
   );
@@ -314,7 +287,10 @@ const PackingForm = ({
         ...item,
         styleBreakup: (item.OrderStyleBreakup || []).map((style) => ({
           ...style,
-          sizeBreakup: style.OrderSizeBreakup || [],
+          sizeBreakup: (style.OrderSizeBreakup || []).map((size) => ({
+            ...size,
+            alreadyPackingQty: size.PackingSizeBreakup?.reduce((acc, size) => acc + size.packingQty, 0),
+          })),
         })),
       }));
       setOrderItems(padRows(mappedItems));
