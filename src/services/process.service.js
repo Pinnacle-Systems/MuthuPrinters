@@ -216,6 +216,21 @@ async function UpdateProcess(req) {
         actualQty = pRoute.JobCard.runningQty || 0;
       }
 
+      let effectiveQty = actualQty;
+      if (pRoute.sequence > 1) {
+        const previousRoutes = await tx.processRoute.findMany({
+          where: {
+            jobCardId: pRoute.jobCardId,
+            sequence: { lt: pRoute.sequence },
+          },
+        });
+        const previousWastages = previousRoutes.reduce(
+          (acc, curr) => acc + Number(curr.wastageQty || 0),
+          0
+        );
+        effectiveQty = Math.max(actualQty - previousWastages, 0);
+      }
+
 
 
       const getIncomingExist = processIncomingId ? await tx?.incomingQty?.findUnique({
@@ -252,12 +267,12 @@ async function UpdateProcess(req) {
       }
 
 
-      if ((totalCompleted + totalWastage) > actualQty) {
-        throw new Error(`Cannot process ${totalCompleted + totalWastage} pieces. The  process only production below to ${actualQty}.`);
+      if ((totalCompleted + totalWastage) > effectiveQty) {
+        throw new Error(`Cannot process ${totalCompleted + totalWastage} pieces. The  process only production below to ${effectiveQty}.`);
       }
 
       const pendingQty = Math.max(
-        actualQty - (totalCompleted + totalWastage),
+        effectiveQty - (totalCompleted + totalWastage),
         0,
       );
 
@@ -538,14 +553,29 @@ async function UpdatePushProcess(req) {
             actualQty = pRoute.JobCard.runningQty || 0;
           }
 
+          let effectiveQty = actualQty;
+          if (pRoute.sequence > 1) {
+            const previousRoutes = await tx.processRoute.findMany({
+              where: {
+                jobCardId: jobcardId,
+                sequence: { lt: pRoute.sequence },
+              },
+            });
+            const previousWastages = previousRoutes.reduce(
+              (acc, curr) => acc + Number(curr.wastageQty || 0),
+              0
+            );
+            effectiveQty = Math.max(actualQty - previousWastages, 0);
+          }
+
           const totalCompleted = Number(pRoute.completedQty || 0) + Number(completedQty || 0);
           const totalWastage = Number(pRoute.wastageQty || 0) + Number(wastageQty || 0);
 
-          if ((totalCompleted + totalWastage) > actualQty) {
-            throw new Error(`Cannot process ${totalCompleted + totalWastage} pieces. The process only production below to ${actualQty}.`);
+          if ((totalCompleted + totalWastage) > effectiveQty) {
+            throw new Error(`Cannot process ${totalCompleted + totalWastage} pieces. The process only production below to ${effectiveQty}.`);
           }
 
-          const pendingQty = Math.max(actualQty - (totalCompleted + totalWastage), 0);
+          const pendingQty = Math.max(effectiveQty - (totalCompleted + totalWastage), 0);
 
           let routeStatus = pRoute.status;
           if (reason === "Partially Completed") {
