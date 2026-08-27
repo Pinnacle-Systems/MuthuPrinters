@@ -5,7 +5,7 @@ import secureLocalStorage from "react-secure-storage";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Tooltip } from "@mui/material";
 import { useDispatch } from "react-redux";
-import { useGetJobCardQuery } from "../../../redux/uniformService/JobCardService";
+import JobCardApi, { useGetJobCardQuery } from "../../../redux/uniformService/JobCardService";
 import { ApprovalBadge } from "../../../Utils/ApprovalHelper";
 import Modal from "../../../UiComponents/Modal";
 import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoServices";
@@ -207,6 +207,7 @@ const JobCardReport = ({
               ? "Job Card Approved!"
               : "Job Card Sent Back for Review!",
         );
+        dispatch(JobCardApi.util.invalidateTags(["jobCard"]));
         setApprovalModal(false);
       } else {
         toast.error(result.message || "Action failed");

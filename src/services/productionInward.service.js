@@ -626,7 +626,21 @@ async function create(body) {
       );
 
       const actualQty = route.actualQty || route.sendQty || 0;
-      const pendingQty = Math.max(actualQty - (completedQty + wastageQty), 0);
+      let effectiveQty = actualQty;
+      if (route.sequence > 1) {
+        const previousRoutes = await tx.processRoute.findMany({
+          where: {
+            jobCardId: parseInt(jobCardId),
+            sequence: { lt: route.sequence },
+          },
+        });
+        const previousWastages = previousRoutes.reduce(
+          (acc, curr) => acc + Number(curr.wastageQty || 0),
+          0
+        );
+        effectiveQty = Math.max(actualQty - previousWastages, 0);
+      }
+      const pendingQty = Math.max(effectiveQty - (completedQty + wastageQty), 0);
 
       let status = "NOT_STARTED";
       if (completedQty > 0 || wastageQty > 0) {
@@ -1068,8 +1082,21 @@ async function update(id, body) {
       );
 
       const actualQty = route.actualQty || route.sendQty || 0;
-
-      const pendingQty = Math.max(actualQty - (completedQty + wastageQty), 0);
+      let effectiveQty = actualQty;
+      if (route.sequence > 1) {
+        const previousRoutes = await tx.processRoute.findMany({
+          where: {
+            jobCardId: parseInt(jobCardId),
+            sequence: { lt: route.sequence },
+          },
+        });
+        const previousWastages = previousRoutes.reduce(
+          (acc, curr) => acc + Number(curr.wastageQty || 0),
+          0
+        );
+        effectiveQty = Math.max(actualQty - previousWastages, 0);
+      }
+      const pendingQty = Math.max(effectiveQty - (completedQty + wastageQty), 0);
 
       let status = "NOT_STARTED";
 
@@ -1176,8 +1203,21 @@ async function remove(id) {
       );
 
       const actualQty = route.actualQty || route.sendQty || 0;
-
-      const pendingQty = Math.max(actualQty - (completedQty + wastageQty), 0);
+      let effectiveQty = actualQty;
+      if (route.sequence > 1) {
+        const previousRoutes = await tx.processRoute.findMany({
+          where: {
+            jobCardId: parseInt(jobCardId),
+            sequence: { lt: route.sequence },
+          },
+        });
+        const previousWastages = previousRoutes.reduce(
+          (acc, curr) => acc + Number(curr.wastageQty || 0),
+          0
+        );
+        effectiveQty = Math.max(actualQty - previousWastages, 0);
+      }
+      const pendingQty = Math.max(effectiveQty - (completedQty + wastageQty), 0);
 
       let status = "NOT_STARTED";
 
