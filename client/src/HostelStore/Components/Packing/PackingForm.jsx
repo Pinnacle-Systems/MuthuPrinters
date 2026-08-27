@@ -191,7 +191,7 @@ const PackingForm = ({
     isLoading: isSinglejobCardLoading,
   } = useGetJobCardByIdQuery(jobCardId, { params, skip: !jobCardId, });
 
-  console.log(singlejobCardData, "singlejobCardData")
+  console.log(orderItems, "orderItems")
 
 
   const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { ...params }, });

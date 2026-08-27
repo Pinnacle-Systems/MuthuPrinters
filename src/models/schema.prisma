@@ -825,6 +825,12 @@ model Stock {
   gsmId                 Int?
   JobCard               JobCard?             @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
   jobCardId             Int?
+  Style                 Style?               @relation(fields: [styleId], references: [id], onDelete: Cascade)
+  styleId               Int?
+  OrderEntry            OrderEntry?          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId               Int?
+  Packing               Packing?             @relation(fields: [packingId], references: [id], onDelete: Cascade)
+  packingId             Int?
 }
 
 model SalesBill {
@@ -961,11 +967,10 @@ model Payment {
 }
 
 model Style {
-  id        Int     @id @default(autoincrement())
-  name      String?
-  aliasName String?
-  code      String?
-
+  id                   Int                    @id @default(autoincrement())
+  name                 String?
+  aliasName            String?
+  code                 String?
   active               Boolean?               @default(false)
   SizeTemplate         SizeTemplate?          @relation(fields: [sizeTemplateId], references: [id])
   sizeTemplateId       Int?
@@ -980,6 +985,7 @@ model Style {
   PIStyleBreakup       PIStyleBreakup[]
   PackingStyleBreakup  PackingStyleBreakup[]
   OrderStyleBreakup    OrderStyleBreakup[]
+  Stock                Stock[]
 }
 
 model StyleItem {
@@ -1943,6 +1949,7 @@ model OrderEntry {
   deliveryId        Int?
   SalesOrder        SalesOrder[]
   Packing           Packing[]
+  Stock             Stock[]
 }
 
 model Process {
@@ -2971,6 +2978,7 @@ model Packing {
   pendingQty       String?
   alreadyPackedQty String?
   PackingItems     PackingItems[]
+  Stock            Stock[]
 }
 
 model PackingItems {
