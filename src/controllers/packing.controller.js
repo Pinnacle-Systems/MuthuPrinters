@@ -5,8 +5,6 @@ import {
   create as _create,
   update as _update,
   remove as _remove,
-  getRefList as _getRefList,
-  geOrderItemsList as _geOrderItemsList
 } from "../services/packing.service.js";
 
 async function get(req, res, next) {

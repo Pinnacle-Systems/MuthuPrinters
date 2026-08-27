@@ -85,6 +85,7 @@ import {
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
 import { useAddSalesOrderMutation, useGetSalesOrderByIdQuery, useUpdateSalesOrderMutation } from "../../../redux/uniformService/SalesOrderService.js";
 import { useAddPackingMutation, useGetPackingByIdQuery, useUpdatePackingMutation } from "../../../redux/uniformService/PackingService.js";
+import ReusableFormFooterNew from "../../../Basic/components/Reuseable/ReuseableFormFooterNew.jsx";
 
 const PackingForm = ({
   onClose,
@@ -183,13 +184,13 @@ const PackingForm = ({
     data: singleorderData,
     isFetching: isSingleorderFetching,
     isLoading: isSingleorderLoading,
-  } = useGetOrderEntryByIdQuery(orderId, { params, skip: !orderId, });
+  } = useGetOrderEntryByIdQuery(orderId, { params, skip: !orderId || id, });
 
   const {
     data: singlejobCardData,
     isFetching: isSinglejobCardFetching,
     isLoading: isSinglejobCardLoading,
-  } = useGetJobCardByIdQuery(jobCardId, { params, skip: !jobCardId, });
+  } = useGetJobCardByIdQuery(jobCardId, { params, skip: !jobCardId || id, });
 
   console.log(orderItems, "orderItems")
 
@@ -248,6 +249,7 @@ const PackingForm = ({
       setOrderId(data?.orderId ? data?.orderId : "");
       setJobCardId(data?.jobCardId ? data?.jobCardId : "");
       setOrderItems(padRows(data?.PackingItems || []));
+      setCustomerId(data?.OrderEntry?.customerId ? data?.OrderEntry?.customerId : "")
 
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
 
@@ -289,7 +291,7 @@ const PackingForm = ({
           ...style,
           sizeBreakup: (style.OrderSizeBreakup || []).map((size) => ({
             ...size,
-            alreadyPackingQty: size.PackingSizeBreakup?.reduce((acc, size) => acc + size.packingQty, 0),
+            alreadyPackingQty: size?.PackingSizeBreakup?.reduce((acc, size) => acc + size.packingQty, 0),
           })),
         })),
       }));
@@ -1331,7 +1333,7 @@ const PackingForm = ({
                     </div>
                   }
 
-                  <TextInput
+                  {/* <TextInput
                     name="Production Qty"
                     value={actualQty}
                     disabled={true}
@@ -1354,7 +1356,7 @@ const PackingForm = ({
                     value={alreadyPackedQty}
                     disabled={true}
                     className="w-20"
-                  />
+                  /> */}
 
                 </div>
               </div>
@@ -1394,7 +1396,7 @@ const PackingForm = ({
         }
         footer={
           <>
-            <ReusableFormFooter
+            <ReusableFormFooterNew
               sections={[
                 {
                   title: "Terms & Condtions",
@@ -1412,179 +1414,7 @@ const PackingForm = ({
                   readOnly: readOnly || childRecord.current > 0,
                 },
               ]}
-              hasSummaryTitle={
-                <span className="block text-center w-full">Summary</span>
-              }
-              sectionColClass="md:col-span-4"
-              summaryColClass="md:col-span-4"
-              totalsRows={[
-                {
-                  key: "summary_grid",
-                  label: "",
-                  valueContainerClassName: "w-full",
-                  renderValue: () => {
-                    const taxTotals = !isCustomerExport
-                      ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
-                        const type = curr?.tax?.split(" ")[0];
-                        acc[type] = (acc[type] || 0) + curr.amount;
-                        return acc;
-                      }, {})
-                      : {};
 
-                    return (
-                      <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1">
-                        {/* Left Column */}
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between w-full max-w-[210px]">
-                            <div className="flex justify-between w-[130px] text-slate-800">
-                              <span>Total Discount</span>
-                              <span>:</span>
-                            </div>
-                            <span className="font-medium text-slate-800 text-right w-[65px]">
-                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                              {formatCurrencyAmount(
-                                enrichedData.itemDiscount +
-                                  enrichedData.overallDiscount >
-                                  0
-                                  ? enrichedData.itemDiscount +
-                                  enrichedData.overallDiscount
-                                  : 0,
-                                currencyCode || isCurrencySymbol,
-                              )}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between w-full max-w-[210px]">
-                            <div className="flex justify-between w-[130px] text-slate-800">
-                              <span>Taxable Amount</span>
-                              <span>:</span>
-                            </div>
-                            <span className="font-medium text-slate-800 text-right w-[65px]">
-                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                              {formatCurrencyAmount(
-                                enrichedData.taxable || 0,
-                                currencyCode || isCurrencySymbol,
-                              )}
-                            </span>
-                          </div>
-
-                          {taxTotals.CGST !== undefined &&
-                            taxTotals.SGST !== undefined ? (
-                            <div className="flex items-center justify-between w-full max-w-[210px]">
-                              <div className="flex items-center gap-1">
-                                <span className="text-slate-800 w-[32px]">
-                                  CGST
-                                </span>
-                                <span className="text-slate-800">:</span>
-                                <span className="font-medium text-slate-800">
-                                  {formatCurrencyAmount(
-                                    taxTotals.CGST,
-                                    currencyCode || isCurrencySymbol,
-                                  )}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="text-slate-800 w-[32px]">
-                                  SGST
-                                </span>
-                                <span className="text-slate-800">:</span>
-                                <span className="font-medium text-slate-800 text-right">
-                                  {formatCurrencyAmount(
-                                    taxTotals.SGST,
-                                    currencyCode || isCurrencySymbol,
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            Object.keys(taxTotals).map((type) => (
-                              <div
-                                key={type}
-                                className="flex items-center justify-between w-full max-w-[210px]"
-                              >
-                                <div className="flex justify-between w-[130px] text-slate-800">
-                                  <span>{type}</span>
-                                  <span>:</span>
-                                </div>
-                                <span className="font-medium text-slate-800 text-right w-[65px]">
-                                  {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                                  {formatCurrencyAmount(
-                                    taxTotals[type],
-                                    currencyCode || isCurrencySymbol,
-                                  )}
-                                </span>
-                              </div>
-                            ))
-                          )}
-                        </div>
-
-                        {/* Right Column */}
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between w-full max-w-[210px]">
-                            <div className="flex justify-between w-[130px] text-slate-800">
-                              <span>Carriage Charges</span>
-                              <span>:</span>
-                            </div>
-                            <span className="font-medium text-slate-800 text-right w-[65px]">
-                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                              {!isNaN(parseFloat(carriageFinalAmt)) &&
-                                carriageFinalAmt !== ""
-                                ? formatCurrencyAmount(
-                                  carriageFinalAmt,
-                                  currencyCode || isCurrencySymbol,
-                                )
-                                : "0.00"}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between w-full max-w-[210px]">
-                            <div className="flex justify-between w-[130px] text-slate-800">
-                              <span>Round Off</span>
-                              <span>:</span>
-                            </div>
-                            <span className="font-medium text-slate-800 text-right w-[65px]">
-                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                              {formatCurrencyAmount(
-                                enrichedData.roundOff || 0,
-                                currencyCode || isCurrencySymbol,
-                              )}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between w-full max-w-[210px]">
-                            <div className="flex justify-between w-[130px] text-slate-800 font-bold">
-                              <span>Net Amount</span>
-                              <span>:</span>
-                            </div>
-                            <span className="font-bold text-indigo-700 text-right w-[65px]">
-                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                              {formatCurrencyAmount(
-                                (!isCustomerExport
-                                  ? enrichedData.net
-                                  : (enrichedData.items?.reduce(
-                                    (sum, item) =>
-                                      sum + (parseFloat(item.amount) || 0),
-                                    0,
-                                  ) || 0) -
-                                  (enrichedData.itemDiscount +
-                                    enrichedData.overallDiscount >
-                                    0
-                                    ? enrichedData.itemDiscount +
-                                    enrichedData.overallDiscount
-                                    : 0)) +
-                                (parseFloat(carriageFinalAmt) || 0),
-                                currencyCode || isCurrencySymbol,
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  },
-                  summaryColumn: "left",
-                  emphasized: false,
-                },
-              ]}
             />
             <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
               {/* Left Buttons */}
@@ -1623,39 +1453,7 @@ const PackingForm = ({
                     </button>
                   </>
                 )}
-                <button
-                  onClick={() => {
-                    if (!taxTemplateId) {
-                      Swal.fire({
-                        title: "Information",
-                        text: "Please Select Tax Template !",
-                        icon: "info",
-                        confirmButtonColor: "#3085d6",
-                      });
-                      return;
-                    }
-                    setSummary(true);
-                  }}
-                  onKeyDown={(e) => {
-                    if (!taxTemplateId) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toast.info("Please Select Tax Template !", {
-                        position: "top-center",
-                      });
-                      return;
-                    }
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSummary(true);
-                    }
-                  }}
-                  className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center text-xs"
-                >
-                  <FiEye className="w-4 h-4 mr-2" />
-                  View Summary
-                </button>
+
                 {status === "REJECTED" && (
                   <button
                     onClick={() => saveData("close", { submitApproval: true })}
@@ -1744,18 +1542,7 @@ const PackingForm = ({
                       PDF Export
                     </button>
                   )}
-                {
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedAttachmentIndex(null);
-                      setAttachmentModal(true);
-                    }}
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
-                  >
-                    📎 Upload
-                  </button>
-                }
+
               </div>
             </div>
           </>

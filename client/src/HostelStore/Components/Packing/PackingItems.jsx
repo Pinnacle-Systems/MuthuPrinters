@@ -18,6 +18,7 @@ import {
   makeEmptyRow,
   padRows,
 } from "./OrderItemsUtils";
+import { useGetPackingControlQuery } from "../../../redux/uniformService/PackingControl";
 
 const PackingItems = ({
   orderItems,
@@ -47,6 +48,11 @@ const PackingItems = ({
   const [activeModalRowIndex, setActiveModalRowIndex] = useState(null);
   const [activeStyleIndex, setActiveStyleIndex] = useState(0);
   const [focusedField, setFocusedField] = useState(null);
+
+  const { data: packingControlData, isLoading, isFetching } = useGetPackingControlQuery({});
+
+  const packingPercentage = packingControlData?.data?.[0]?.packingPercentage;
+
 
   useEffect(() => {
     if (!Array.isArray(orderItems)) return;
@@ -191,6 +197,24 @@ const PackingItems = ({
         }
       }
 
+      if (field === "packingQty") {
+        const currentSize = sizeBreakup[sizeIndex] || {};
+        const currentQty = Number(currentSize.qty) || 0;
+        const currentAlreadyPackingQty = Number(currentSize.alreadyPackingQty) || 0;
+        const enteredPackingQty = Number(value) || 0;
+        
+        const maxAllowed = (currentQty * (Number(packingPercentage) || 0)) / 100 + currentQty - currentAlreadyPackingQty;
+        
+        if (enteredPackingQty > maxAllowed) {
+          Swal.fire({
+            icon: "warning",
+            title: "Invalid Packing Quantity",
+            text: `Packing quantity cannot exceed ${maxAllowed}`,
+          });
+          return prev;
+        }
+      }
+
       if (field === "qty" || field === "packingQty") {
         const newValue = Number(value) || 0;
         let currentTotal = 0;
@@ -205,18 +229,7 @@ const PackingItems = ({
           });
         });
 
-        if (
-          orderType === "AGAINSTPI" &&
-          row.piQty !== undefined &&
-          currentTotal > row.piQty
-        ) {
-          Swal.fire({
-            icon: "warning",
-            title: "Quantity Exceeded",
-            text: `Sum of size quantities (${currentTotal}) cannot exceed PI quantity (${row.piQty}).`,
-          });
-          return prev;
-        }
+
       }
 
       sizeBreakup[sizeIndex] = { ...sizeBreakup[sizeIndex], [field]: value };
@@ -224,20 +237,7 @@ const PackingItems = ({
       styleBreakup[styleIndex] = styleObj;
       row.styleBreakup = styleBreakup;
 
-      if (field === "qty") {
-        if (orderType !== "AGAINSTPI") {
-          const orderQty = recalculateOrderQty(styleBreakup);
-          row.orderQty = orderQty;
-          const price = row.price;
-          const dozen = orderQty / 12;
-          row.dozen = dozen ? dozen.toFixed(2) : "";
-          if (conversionType === "DOZEN") {
-            row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
-          } else {
-            row.amount = orderQty && price ? (orderQty * price).toFixed(2) : "";
-          }
-        }
-      }
+
       rows[rowIndex] = row;
       return rows;
     });
@@ -346,6 +346,8 @@ const PackingItems = ({
                                 setActiveStyleIndex(activeStyleIndex - 1);
                               }
                             }}
+                            disabled={true}
+
                             className="text-red-500 hover:bg-red-100 p-1 rounded"
                           >
                             <FaTrash size={10} />
@@ -364,6 +366,8 @@ const PackingItems = ({
                           addNew={true}
                           childComponent={StyleMaster}
                           addNewModalWidth="w-[50%] h-[57%]"
+                          disabled={true}
+
                         />
                       </div>
                     </div>
@@ -376,6 +380,8 @@ const PackingItems = ({
                         const newIndex = (orderItems[activeModalRowIndex]?.styleBreakup || []).length;
                         setActiveStyleIndex(newIndex);
                       }}
+                      disabled={true}
+
                       className="w-full mt-2 bg-indigo-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-indigo-700 text-sm flex items-center justify-center gap-1"
                     >
                       <Plus size={14} /> Add Style
@@ -417,6 +423,7 @@ const PackingItems = ({
                                   .filter((i) => (id ? true : i.active))
                                   .map((i) => ({ label: i.name, value: i.id }))}
                                 readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                                disabled={true}
                                 placeholder="Select Size"
                               />
                             </td>
@@ -427,7 +434,8 @@ const PackingItems = ({
                                 className="w-full text-right outline-none bg-transparent"
                                 value={sizeRow.qty}
                                 onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "qty", e.target.value)}
-                                disabled={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                                disabled={true}
+
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1">
@@ -482,10 +490,15 @@ const PackingItems = ({
                             <td className="border border-gray-300 px-2 py-1 text-center">
                               {!readOnly && !childRecord?.current > 0 && orderType !== "AGAINSTPI" && (
                                 <div className="flex items-center justify-center gap-1">
-                                  <button onClick={() => addNestedSizeRow(activeModalRowIndex, activeStyleIndex)} className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200">
+                                  <button onClick={() => addNestedSizeRow(activeModalRowIndex, activeStyleIndex)} className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200"
+                                    disabled={true}
+
+                                  >
                                     <Plus size={12} />
                                   </button>
-                                  <button onClick={() => deleteNestedSizeRow(activeModalRowIndex, activeStyleIndex, sizeIdx)} className="p-1 bg-red-100 rounded text-red-700 hover:bg-red-200">
+                                  <button onClick={() => deleteNestedSizeRow(activeModalRowIndex, activeStyleIndex, sizeIdx)} className="p-1 bg-red-100 rounded text-red-700 hover:bg-red-200" disabled={true}
+
+                                  >
                                     <FaTrash size={10} />
                                   </button>
                                 </div>
@@ -575,6 +588,8 @@ const PackingItems = ({
                       placeholder=""
                       addNew={true}
                       childComponent={ItemGroup}
+                      disabled={true}
+
                     />
                   </td>
                   <td className="border border-gray-300 text-[11px] items-center pt-2">
@@ -590,6 +605,8 @@ const PackingItems = ({
                       placeholder=""
                       addNew={true}
                       childComponent={ItemSubGroupMaster}
+                      disabled={true}
+
                     />
                   </td>
                   <td className="text-[11px] border border-gray-300 text-left items-center pt-2">
@@ -608,6 +625,8 @@ const PackingItems = ({
                       placeholder=""
                       addNew={true}
                       childComponent={StyleItemMaster}
+                      disabled={true}
+
                     />
                   </td>
                   <td className="border border-gray-300 text-[11px] items-center pt-2 text-center">
@@ -630,6 +649,8 @@ const PackingItems = ({
                       onChange={(e) => handleInputChange(e.target.value, index, "labelWidth")}
                       className="w-full text-left px-1 bg-transparent text-[11px] outline-none focus:bg-white"
                       readOnly={readOnly || orderType === "AGAINSTPI"}
+                      disabled={true}
+
                     />
                   </td>
                   <td className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium">
@@ -664,6 +685,8 @@ const PackingItems = ({
                           className="flex items-center justify-center p-0.5 bg-blue-50 hover:bg-blue-100 rounded"
                           title="Add row"
                           tabIndex={-1}
+                          disabled={true}
+
                         >
                           <Plus size={13} className="text-blue-700" />
                         </button>

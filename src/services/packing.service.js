@@ -131,6 +131,7 @@ async function get(req) {
     searchOrderType,
     finYearId,
     searchCustomer,
+    serachJobCard
   } = req.query;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -164,9 +165,33 @@ async function get(req) {
         : undefined,
       docId: Boolean(serachDocNo)
         ? {
-          contains: serachDocNo,
+          contains: serachDocNo.toUpperCase(),
         }
         : undefined,
+      OrderEntry: {
+        docId: searchOrderType
+          ? {
+            contains: searchOrderType.toUpperCase(),
+          }
+          : undefined,
+      },
+      OrderEntry: {
+        customer: {
+          name: searchCustomer
+            ? {
+              contains: searchCustomer.toUpperCase(),
+            }
+            : undefined,
+        }
+      },
+      JobCard: {
+        docId: serachJobCard
+          ? {
+            contains: serachJobCard.toUpperCase(),
+          }
+          : undefined,
+      }
+
 
 
     },
@@ -180,6 +205,12 @@ async function get(req) {
           }
         }
       },
+      OrderEntry: {
+        include: {
+          customer: true
+        }
+      },
+      JobCard: true
     },
     orderBy: {
       id: "desc",
@@ -415,6 +446,7 @@ async function getOne(id) {
           }
         }
       },
+      OrderEntry: true
     },
   });
 
@@ -629,7 +661,7 @@ async function create(body) {
 }
 async function update(id, body, files) {
   const {
-
+    userId,
     attachments,
 
     orderItems,
@@ -643,7 +675,7 @@ async function update(id, body, files) {
     ?.filter((i) => i.id)
     .map((i) => parseInt(i.id));
 
-  const parsedItems = JSON.parse(orderItems || "[]");
+  const parsedItems = typeof orderItems === "string" ? JSON.parse(orderItems || "[]") : (orderItems || []);
   const incomingItemIds = parsedItems
     ?.filter((i) => i.id)
     .map((i) => parseInt(i.id));
@@ -667,8 +699,49 @@ async function update(id, body, files) {
     .map((item) => item.id);
 
 
+  let stockEntries = [];
+  if (parsedItems && parsedItems.length > 0) {
+    parsedItems.forEach((item) => {
+      const baseStock = {
+        branchId: dataFound.branchId,
+        jobCardId: dataFound.jobCardId,
+        orderId: dataFound.orderId,
+        createdById: userId ? parseInt(userId) : dataFound.createdById,
+        inOrOut: "In",
+        processName: "Packing",
+        styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
+        itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+        uomId: item?.uomId ? parseInt(item.uomId) : null,
+        hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
+      };
 
-
+      if (item?.styleBreakup?.length > 0) {
+        item.styleBreakup.forEach((st) => {
+          if (st?.sizeBreakup?.length > 0) {
+            st.sizeBreakup.forEach((s) => {
+              stockEntries.push({
+                ...baseStock,
+                styleId: st.styleId ? parseInt(st.styleId) : null,
+                sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                qty: s?.packingQty ? parseFloat(s.packingQty) : null,
+              });
+            });
+          } else {
+            stockEntries.push({
+              ...baseStock,
+              styleId: st.styleId ? parseInt(st.styleId) : null,
+              qty: st?.packingQty ? parseFloat(st.packingQty) : null,
+            });
+          }
+        });
+      } else {
+        stockEntries.push({
+          ...baseStock,
+          qty: item?.packingQty ? parseFloat(item.packingQty) : null,
+        });
+      }
+    });
+  }
 
 
   await prisma.$transaction(async (tx) => {
@@ -678,10 +751,6 @@ async function update(id, body, files) {
         id: parseInt(id),
       },
       data: {
-
-
-
-
         PackingItems: {
           deleteMany: incomingItemIds.length
             ? { id: { notIn: incomingItemIds } }
@@ -691,34 +760,14 @@ async function update(id, body, files) {
             .map((item) => ({
               where: { id: parseInt(item.id) },
               data: {
-                styleItemId: item.styleItemId
-                  ? parseInt(item.styleItemId)
-                  : null,
-                itemGroupId: item.itemGroupId
-                  ? parseInt(item.itemGroupId)
-                  : null,
-                itemSubGroupId: item?.itemSubGroupId
-                  ? parseInt(item?.itemSubGroupId)
-                  : null,
+                styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
+                itemGroupId: item.itemGroupId ? parseInt(item.itemGroupId) : null,
+                itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
                 labelWidth: item?.labelWidth ?? "",
                 trackingType: item.trackingType,
                 price: item?.price ? parseFloat(item.price) : null,
                 amount: item?.amount ? parseFloat(item.amount) : null,
                 dozen: item?.dozen ? parseFloat(item.dozen) : null,
-                taxPercent:
-                  item?.taxPercent && !isNaN(Number(item.taxPercent))
-                    ? parseFloat(item.taxPercent)
-                    : null,
-                discountType: item?.discountType || null,
-                discountValue:
-                  item?.discountValue && !isNaN(Number(item.discountValue))
-                    ? parseFloat(item.discountValue)
-                    : null,
-
-                hsnId: item.hsnId ? parseInt(item.hsnId) : null,
-
-                orderQty: item.orderQty ? parseInt(item.orderQty) : null,
-                sizeId: item.sizeId ? parseInt(item.sizeId) : null,
                 uomId: item.uomId ? parseInt(item.uomId) : null,
                 gsmId: item.gsmId ? parseInt(item.gsmId) : null,
                 PackingStyleBreakup: {
@@ -735,7 +784,6 @@ async function update(id, body, files) {
                             grossWeight: s.grossWeight ? String(s.grossWeight) : null,
                             netWeight: s.netWeight ? String(s.netWeight) : null,
                             dimensions: s.dimensions ?? "",
-                            orderSizeBreakupId: s.id ? parseInt(s.id) : null
                           }))
                         } : undefined
                     }))
@@ -749,27 +797,12 @@ async function update(id, body, files) {
             .map((item) => ({
               styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
               itemGroupId: item.itemGroupId ? parseInt(item.itemGroupId) : null,
-              itemSubGroupId: item?.itemSubGroupId
-                ? parseInt(item?.itemSubGroupId)
-                : null,
+              itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
               labelWidth: item?.labelWidth ?? "",
               trackingType: item.trackingType,
               price: item?.price ? parseFloat(item.price) : null,
               amount: item?.amount ? parseFloat(item.amount) : null,
               dozen: item?.dozen ? parseFloat(item.dozen) : null,
-              taxPercent:
-                item?.taxPercent && !isNaN(Number(item.taxPercent))
-                  ? parseFloat(item.taxPercent)
-                  : null,
-              discountType: item?.discountType || null,
-              discountValue:
-                item?.discountValue && !isNaN(Number(item.discountValue))
-                  ? parseFloat(item.discountValue)
-                  : null,
-
-              hsnId: item.hsnId ? parseInt(item.hsnId) : null,
-              orderQty: item.orderQty ? parseInt(item.orderQty) : null,
-              sizeId: item.sizeId ? parseInt(item.sizeId) : null,
               uomId: item.uomId ? parseInt(item.uomId) : null,
               gsmId: item.gsmId ? parseInt(item.gsmId) : null,
               PackingStyleBreakup:
@@ -794,46 +827,25 @@ async function update(id, body, files) {
                   : undefined,
             })),
         },
-        attachments: {
-          deleteMany: {
-            ...(incomingIds.length > 0 && {
-              id: { notIn: incomingIds },
-            }),
-          },
 
-          update: parseAttachments
-            .filter((item) => item.id)
-            .map((sub) => ({
-              where: { id: parseInt(sub.id) },
-              data: {
-                date: sub?.date ? new Date(sub?.date) : undefined,
-                filePath: (() => {
-                  const matchedFile = files?.find(
-                    (f) => f.originalname === sub.filePath,
-                  );
-                  return matchedFile
-                    ? matchedFile.filename
-                    : sub.filePath || undefined;
-                })(),
-                name: sub?.name ? sub?.name : undefined,
-              },
-            })),
-
-          create: parseAttachments
-            .filter((item) => !item.id)
-            .map((sub) => ({
-              date: sub?.date ? new Date(sub?.date) : undefined,
-              filePath: (() => {
-                const matchedFile = files?.find(
-                  (f) => f.originalname === sub.filePath,
-                );
-                return matchedFile ? matchedFile.filename : sub.filePath;
-              })(),
-              name: sub?.name ? sub?.name : undefined,
-            })),
-        },
       },
     });
+
+    await tx.Stock.deleteMany({
+      where: {
+        packingId: parseInt(id),
+      }
+    });
+
+    if (stockEntries.length > 0) {
+      const stockEntriesWithPackingId = stockEntries.map(entry => ({
+        ...entry,
+        packingId: data.id,
+      }));
+      await tx.Stock.createMany({
+        data: stockEntriesWithPackingId
+      });
+    }
 
   });
 

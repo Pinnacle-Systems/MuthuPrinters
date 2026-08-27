@@ -15,3 +15,4 @@ export { default as ProcessBillApi } from "./ProcessBillService";
 export { default as SalesDeliveryApi } from "./SalesDeliveryService";
 export { default as PackingApi } from "./PackingService";
 export { default as SaleOrderApi } from "./SalesOrderService";
+export { default as PackingControlApi } from "./PackingControl";
