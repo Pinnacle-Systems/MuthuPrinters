@@ -209,19 +209,23 @@ async function UpdateProcess(req) {
 
      
 
-      let actualQty;
-      if (pRoute.JobCard.itemType === "LABEL") {
-        actualQty = pRoute.JobCard.rollQty || 0;
-      } else {
-        actualQty = pRoute.JobCard.runningQty || 0;
+      let actualQty = pRoute.actualQty || pRoute.sendQty;
+      if (!actualQty) {
+        if (pRoute.JobCard?.itemType === "LABEL") {
+          actualQty = pRoute.JobCard.rollQty || 0;
+        } else if (pRoute.JobCard) {
+          actualQty = pRoute.JobCard.runningQty || 0;
+        } else {
+          actualQty = 0;
+        }
       }
-
       let effectiveQty = actualQty;
       if (pRoute.sequence > 1) {
         const previousRoutes = await tx.processRoute.findMany({
           where: {
             jobCardId: pRoute.jobCardId,
             sequence: { lt: pRoute.sequence },
+            reworkSetId: pRoute.reworkSetId || null,
           },
         });
         const previousWastages = previousRoutes.reduce(
@@ -282,10 +286,12 @@ async function UpdateProcess(req) {
         0,
       );
 
-      let routeStatus = "COMPLETED";
-      if (pendingQty > 0) {
-        routeStatus = "PARTIALLY_COMPLETED";
-         }
+      let routeStatus = "NOT_STARTED";
+      if (totalCompleted > 0 || totalWastage > 0) {
+        routeStatus = pendingQty === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
+      } else if (pRoute.sendQty > 0) {
+        routeStatus = "IN_PROGRESS";
+      }
 
 
         const seqRoute = await tx?.processRoute?.findFirst({
@@ -546,19 +552,23 @@ async function UpdatePushProcess(req) {
           const jobcardId = punchInfo.jobCardId;
           const processId = punchInfo.processRouteId;
 
-          let actualQty = pRoute.actualQty || 0;
-          if (pRoute.JobCard && pRoute.JobCard.itemType === "LABEL") {
-            actualQty = pRoute.JobCard.rollQty || 0;
-          } else if (pRoute.JobCard) {
-            actualQty = pRoute.JobCard.runningQty || 0;
+          let actualQty = pRoute.actualQty || pRoute.sendQty;
+          if (!actualQty) {
+            if (pRoute.JobCard?.itemType === "LABEL") {
+              actualQty = pRoute.JobCard.rollQty || 0;
+            } else if (pRoute.JobCard) {
+              actualQty = pRoute.JobCard.runningQty || 0;
+            } else {
+              actualQty = 0;
+            }
           }
-
           let effectiveQty = actualQty;
           if (pRoute.sequence > 1) {
             const previousRoutes = await tx.processRoute.findMany({
               where: {
                 jobCardId: jobcardId,
                 sequence: { lt: pRoute.sequence },
+                reworkSetId: pRoute.reworkSetId || null,
               },
             });
             const previousWastages = previousRoutes.reduce(
@@ -577,9 +587,11 @@ async function UpdatePushProcess(req) {
 
           const pendingQty = Math.max(effectiveQty - (totalCompleted + totalWastage), 0);
 
-          let routeStatus = pRoute.status;
-          if (reason === "Partially Completed") {
+          let routeStatus = "NOT_STARTED";
+          if (totalCompleted > 0 || totalWastage > 0) {
             routeStatus = pendingQty === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
+          } else if (pRoute.sendQty > 0) {
+            routeStatus = "IN_PROGRESS";
           }
 
           const getIncomingExist = await tx.incomingQty.findFirst({
