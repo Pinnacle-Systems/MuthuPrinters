@@ -201,7 +201,7 @@ async function get_mob_jobcard(req) {
   const parsedId = parseInt(req?.query?.id);
   const userId = parseInt(req?.query?.userid);
   const processRouteId = parseInt(req?.query?.processRouteId);
-  const branchId =  parseInt(req?.query?.branchId)
+  const branchId = parseInt(req?.query?.branchId)
 
   var check_punch_result = await prisma.productionempPunch?.findFirst({
     where: {
@@ -400,18 +400,18 @@ async function get_mob_jobcard(req) {
       }
     }
 
-    if(!incomingData && (prevCheck?.pendingQty === 0 || prevCheck?.status === "COMPLETED" || !prevCheck) && checkProcessSeq?.sequence !== 1){
-     incomingData = {
+    if (!incomingData && (prevCheck?.pendingQty === 0 || prevCheck?.status === "COMPLETED" || !prevCheck) && checkProcessSeq?.sequence !== 1) {
+      incomingData = {
         pendingQty: Number(checkProcessSeq?.pendingQty || 0),
         id: null
       }
     }
 
 
-    console.log("LL",incomingData)
-    
+    console.log("LL", incomingData)
+
     if (!data) return NoRecordFound("Job Card");
-    if (incomingData?.pendingQty === 0  || !incomingData) return NoRecordFound("No quantity has been transferred to this process yet.")
+    if (incomingData?.pendingQty === 0 || !incomingData) return NoRecordFound("No quantity has been transferred to this process yet.")
 
     // ── Approval setup ────────────────────
     const { module, hasApproval } = await getModuleApprovalSetup(
@@ -1181,7 +1181,11 @@ async function getOne(id) {
             include: {
               OrderStyleBreakup: {
                 include: {
-                  OrderSizeBreakup: true
+                  OrderSizeBreakup: {
+                    include: {
+                      PackingSizeBreakup: true
+                    }
+                  }
                 }
               }
             }
@@ -1191,7 +1195,6 @@ async function getOne(id) {
       _count: {
         select: {
           productionAllocations: true,
-
           productionempPunch: true,
           takenMachines: true,
         },
