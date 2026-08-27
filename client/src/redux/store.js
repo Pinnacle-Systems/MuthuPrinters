@@ -72,6 +72,7 @@ import {
   SalesDeliveryApi,
   SaleOrderApi,
   PackingApi,
+  PackingControlApi,
 } from "./uniformService";
 import OrderEntryApi from "./uniformService/OrderEntryService";
 import BoardMasterApi from "./services/boardService";
@@ -148,7 +149,8 @@ const commonReducers = {
   salesDelivery: SalesDeliveryApi.reducer,
   [ItemSubGroupMasterApi.reducerPath]: ItemSubGroupMasterApi.reducer,
   SalesOrder: SaleOrderApi.reducer,
-  Packing: PackingApi.reducer
+  Packing: PackingApi.reducer,
+  [PackingControlApi.reducerPath]: PackingControlApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -221,7 +223,8 @@ const commonMiddleware = [
   SalesDeliveryApi.middleware,
   ItemSubGroupMasterApi.middleware,
   SaleOrderApi.middleware,
-  PackingApi.middleware
+  PackingApi.middleware,
+  PackingControlApi.middleware
 ];
 
 const store = configureStore({

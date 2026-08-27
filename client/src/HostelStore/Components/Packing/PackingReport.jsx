@@ -39,6 +39,7 @@ const PackingReport = ({
     const [searchDocDate, setSearchDocDate] = useState("");
     const [searchCustomer, setSearchCustomer] = useState("");
     const [searchOrderType, setSearchOrderType] = useState("");
+    const [serachJobCard, setSearchJobCard] = useState("");
 
     const [totalCount, setTotalCount] = useState(0);
     const [currentPageNumber, setCurrentPageNumber] = useState(1);
@@ -56,6 +57,7 @@ const PackingReport = ({
         searchDocDate,
         searchCustomer,
         searchOrderType,
+        serachJobCard
     };
 
     useEffect(() => {
@@ -65,6 +67,7 @@ const PackingReport = ({
         searchDocDate,
         searchCustomer,
         searchOrderType,
+        serachJobCard
     ]);
 
     const companyId = secureLocalStorage.getItem(
@@ -362,11 +365,11 @@ const PackingReport = ({
                                         </th>
 
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
-                                            <div>Sale Order No</div>
+                                            <div>Packing No</div>
 
                                         </th>
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
-                                            <div>Sale Order Date</div>
+                                            <div>Packing Date</div>
                                         </th>
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-40">
                                             <div>Order No</div>
@@ -377,10 +380,10 @@ const PackingReport = ({
                                         </th>
 
                                         <th
-                                            className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
-                                            rowSpan={2}
+                                            className=" px-3 w-36  font-medium text-[13px]  text-gray-900  text-center "
+                                            rowSpan={1}
                                         >
-                                            <div> Remarks</div>
+                                            <div>Job Card No</div>
                                         </th>
 
 
@@ -440,6 +443,17 @@ const PackingReport = ({
                                                 }}
                                             />
                                         </th>
+                                        <th className="  px-1 font-medium text-[13px]  text-gray-900  text-center ">
+                                            <input
+                                                type="text"
+                                                className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
+                                                placeholder="Search"
+                                                value={serachJobCard}
+                                                onChange={(e) => {
+                                                    setSearchJobCard(e.target.value);
+                                                }}
+                                            />
+                                        </th>
                                     </tr>
                                 </thead>
                                 {isLoadingIndicator ? (
@@ -474,7 +488,7 @@ const PackingReport = ({
                                                     >
                                                         <td className="text-center ">{index + 1}</td>
 
-                                                        <td className="py-1.5 text-center">{dataObj.docId} </td>
+                                                        <td className="py-1.5 text-left">{dataObj.docId} </td>
 
                                                         <td className="py-1.5 text-left">
                                                             {getDateFromDateTimeToDisplay(dataObj.docDate)}
@@ -485,12 +499,12 @@ const PackingReport = ({
 
                                                         <td className="py-1.5 text-left">
                                                             {" "}
-                                                            {dataObj?.customer?.name}
+                                                            {dataObj?.OrderEntry?.customer?.name}
                                                         </td>
 
                                                         <td className="px-2 py-1">
-                                                            <div className="flex items-center justify-center gap-1.5 text-orange-700">
-                                                                {dataObj?.approvalStatus?.remarks || "-"}
+                                                            <div className="flex text-left justify-left gap-1.5 ">
+                                                                {dataObj?.JobCard?.docId || "-"}
                                                             </div>
                                                         </td>
                                                         {
