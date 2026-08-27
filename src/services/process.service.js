@@ -227,8 +227,13 @@ async function UpdateProcess(req) {
 
       // Validation for Max Allowed Quantity
       let maxAllowed = actualQty;
-      if (pRoute.sequence > 1 && getIncomingExist?.qty > 0) {  
-          maxAllowed = Number(getIncomingExist?.qty || 0)   }
+      if (pRoute.sequence > 1) {
+        if (getIncomingExist?.qty > 0) {
+          maxAllowed = Number(getIncomingExist.qty);
+        } else if (processIncomingQty > 0) {
+          maxAllowed = Number(processIncomingQty);
+        }
+      }
 
       const totalCompleted =
         Number(pRoute?.completedQty || 0) + Number(completedQty);
@@ -236,7 +241,7 @@ async function UpdateProcess(req) {
       const totalWastage =
         Number(pRoute?.wastageQty || 0) + Number(wastageQty || 0);
 
-         const totalCompleted_Incoming =
+      const totalCompleted_Incoming =
         Number(getIncomingExist?.completedQty || 0) + Number(completedQty);
 
       const totalWastage_Incoming =
@@ -256,13 +261,14 @@ async function UpdateProcess(req) {
         0,
       );
 
+      const baseIncomingQty = getIncomingExist ? Number(getIncomingExist.qty) : Number(processIncomingQty || 0);
       const pendingQty_Incoming = Math.max(
-        processIncomingQty - (totalCompleted_Incoming + totalWastage_Incoming),
+        baseIncomingQty - (totalCompleted_Incoming + totalWastage_Incoming),
         0,
       );
 
-        let routeStatus = "COMPLETED";
-        if (pendingQty > 0) {
+      let routeStatus = "COMPLETED";
+      if (pendingQty > 0) {
         routeStatus = "PARTIALLY_COMPLETED";
          }
 
@@ -274,21 +280,20 @@ async function UpdateProcess(req) {
           })
 
 
-          var isCompleted = false;
-          if(pendingQty === 0){
-            isCompleted = true ;
-          }
+      let isCompleted = false;
+      if (pendingQty_Incoming === 0) {
+        isCompleted = true;
+      }
 
-          if(getIncomingExist?.id && pRoute?.sequence > 1){
-
-              await tx?.incomingQty?.update({
-             data:{
-              jobCardId:jobcardId,
-              isCompleted:isCompleted,
-              pendingQty:pendingQty_Incoming,
-              wastageQty:totalWastage_Incoming,
-              completedQty:totalCompleted_Incoming
-                },
+      if (getIncomingExist?.id && pRoute?.sequence > 1) {
+        await tx?.incomingQty?.update({
+          data: {
+            jobCardId: jobcardId,
+            isCompleted: isCompleted,
+            pendingQty: pendingQty_Incoming,
+            wastageQty: totalWastage_Incoming,
+            completedQty: totalCompleted_Incoming
+          },
               where:{
               id:getIncomingExist?.id
               }
@@ -369,6 +374,33 @@ async function UpdateProcess(req) {
             isExpired: false
           }
         });
+      }
+
+      const stop_push_log = await tx.pushLogs.create({
+        data: {
+          pushtime: istISOString,
+          resumetime: istISOString, // Marks it as closed/not-paused
+          productionlog: Number(id),
+          Userid: Number(userId),
+          pauseReason: "Process Stopped",
+          remarks: remarks,
+          completedQty: Number(completedQty || 0),
+          wastageQty: Number(wastageQty || 0),
+        }
+      });
+
+      if (splitSizes && splitSizes.length > 0) {
+        await Promise.all(
+          splitSizes.map(async (element_size) => {
+            return await tx.splitSizes.create({
+              data: {
+                pushLogId: stop_push_log.id,
+                jobCardSizeId: element_size.id,
+                qty: element_size.qty,
+              },
+            });
+          })
+        );
       }
 
       addMain_punch_log = await tx.productionempPunch.update({
@@ -458,6 +490,9 @@ async function UpdatePushProcess(req) {
           productionlog: productionlogid,
           Userid: userId,
           pauseReason: pauseReason,
+          remarks: remarks,
+          completedQty: Number(completedQty || 0),
+          wastageQty: Number(wastageQty || 0),
           ...(!sizeswise && { pauseQty: Number(pauseQty) }),
         },
       });
@@ -483,6 +518,131 @@ async function UpdatePushProcess(req) {
             Machineid: machineId,
           },
         });
+      }
+
+      if (Number(completedQty || 0) > 0 || Number(wastageQty || 0) > 0) {
+        const punchInfo = await tx.productionempPunch.findUnique({
+          where: { id: productionlogid },
+          include: { ProcessRoute: { include: { JobCard: true } } }
+        });
+
+        if (punchInfo && punchInfo.ProcessRoute) {
+          const pRoute = punchInfo.ProcessRoute;
+          const jobcardId = punchInfo.jobCardId;
+          const processId = punchInfo.processRouteId;
+
+          let actualQty = pRoute.actualQty || 0;
+          if (pRoute.JobCard && pRoute.JobCard.itemType === "LABEL") {
+            actualQty = pRoute.JobCard.rollQty || 0;
+          } else if (pRoute.JobCard) {
+            actualQty = pRoute.JobCard.runningQty || 0;
+          }
+
+          const totalCompleted = Number(pRoute.completedQty || 0) + Number(completedQty || 0);
+          const totalWastage = Number(pRoute.wastageQty || 0) + Number(wastageQty || 0);
+
+          if ((totalCompleted + totalWastage) > actualQty) {
+            throw new Error(`Cannot process ${totalCompleted + totalWastage} pieces. The process only production below to ${actualQty}.`);
+          }
+
+          const pendingQty = Math.max(actualQty - (totalCompleted + totalWastage), 0);
+
+          let routeStatus = pRoute.status;
+          if (reason === "Partially Completed") {
+            routeStatus = pendingQty === 0 ? "COMPLETED" : "PARTIALLY_COMPLETED";
+          }
+
+          const getIncomingExist = await tx.incomingQty.findFirst({
+            where: {
+              sendRoute: processId,
+              pendingQty: { gt: 0 },
+              isCompleted: false
+            },
+            orderBy: { id: 'asc' }
+          });
+
+          let maxAllowed = actualQty;
+          if (pRoute.sequence > 1 && getIncomingExist?.qty > 0) {  
+              maxAllowed = Number(getIncomingExist?.qty || 0);
+          }
+
+          if (getIncomingExist && pRoute.sequence > 1) {
+            const totalCompleted_Incoming = Number(getIncomingExist.completedQty || 0) + Number(completedQty || 0);
+            const totalWastage_Incoming = Number(getIncomingExist.wastageQty || 0) + Number(wastageQty || 0);
+
+            if ((totalCompleted_Incoming + totalWastage_Incoming) > maxAllowed) {
+              throw new Error(`Cannot process ${totalCompleted_Incoming + totalWastage_Incoming} pieces. The previous process only completed ${maxAllowed} pieces.`);
+            }
+
+            const pendingQty_Incoming = Math.max((getIncomingExist.qty || 0) - (totalCompleted_Incoming + totalWastage_Incoming), 0);
+
+            await tx.incomingQty.update({
+              where: { id: getIncomingExist.id },
+              data: {
+                isCompleted: pendingQty_Incoming === 0,
+                pendingQty: pendingQty_Incoming,
+                wastageQty: totalWastage_Incoming,
+                completedQty: totalCompleted_Incoming
+              }
+            });
+          }
+
+          const seqRoute = await tx.processRoute.findFirst({
+            where: { jobCardId: jobcardId, sequence: Number(pRoute.sequence) + 1 }
+          });
+
+          if (seqRoute?.id && Number(completedQty || 0) > 0) {
+            await tx.incomingQty.create({
+              data: {
+                jobCardId: Number(jobcardId),
+                processRouteId: Number(processId),
+                sendRoute: seqRoute.id,
+                qty: Number(completedQty || 0),
+                pendingQty: Number(completedQty || 0),
+                completedQty: 0,
+                wastageQty: 0
+              }
+            });
+          }
+
+          await tx.processRoute.update({
+            where: { id: processId },
+            data: {
+              completedQty: totalCompleted,
+              wastageQty: totalWastage,
+              actualQty: actualQty,
+              pendingQty: pendingQty,
+              status: routeStatus
+            }
+          });
+
+          if (pendingQty > 0 && reason === "Partially Completed") {
+            const crypto = (await import("crypto")).default;
+            const reworkSetId = crypto.randomUUID();
+            await tx.reworkLog.create({
+              data: {
+                uniqueId: reworkSetId,
+                jobCardId: jobcardId,
+                processRouteId: processId,
+                actualQty: actualQty,
+                completedQty: totalCompleted,
+                wastageQty: totalWastage,
+                pendingQty: pendingQty,
+                reason: "Partially Delivered",
+                Userid: Number(userId) || null
+              }
+            });
+            await tx.reworkBatchTracker.create({
+              data: {
+                uniqueId: reworkSetId,
+                jobCardId: jobcardId,
+                processRouteId: processId,
+                userId: Number(userId) || 0,
+                isExpired: false
+              }
+            });
+          }
+        }
       }
     } else if (flag === "RESUME") {
       var checkTaken_M = await tx?.takenmachines?.findFirst({

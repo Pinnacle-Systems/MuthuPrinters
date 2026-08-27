@@ -201,7 +201,7 @@ async function get_mob_jobcard(req) {
   const parsedId = parseInt(req?.query?.id);
   const userId = parseInt(req?.query?.userid);
   const processRouteId = parseInt(req?.query?.processRouteId);
-  const branchId =  parseInt(req?.query?.branchId)
+  const branchId = parseInt(req?.query?.branchId)
 
   var check_punch_result = await prisma.productionempPunch?.findFirst({
     where: {
@@ -231,8 +231,8 @@ async function get_mob_jobcard(req) {
     check_punch_result?.ProcessRoute?.status == "IN_PROGRESS"
   ) {
     throw new Error("Already another user taken this jobcard");
-  } else if (check_punch_result?.ProcessRoute == "COMPLETED") {
-    throw new Error("Already completed and  taken this jobcard");
+  } else if (check_punch_result?.ProcessRoute?.status == "COMPLETED") {
+    throw new Error("Already completed and taken this jobcard");
   }
 
   if (isNaN(parsedId)) throw new Error("Invalid Job Card ID");
@@ -371,23 +371,20 @@ async function get_mob_jobcard(req) {
         AND: {
           outwardId: null
         }
-
-      }
+      },
+      orderBy: { id: 'asc' }
     })
 
 
 
-    if (!incomingData && checkProcessSeq?.status === "NOT_STARTED" || (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) === 0)) {
+    if ((!incomingData && checkProcessSeq?.status === "NOT_STARTED") || (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) === 0)) {
       incomingData = {
-        pendingQty: data?.runningQty,
+        pendingQty: data?.itemType === "LABEL" ? data?.rollQty : data?.runningQty,
         id: null
       }
     }
 
-
     const prevCheck = data?.processRoute?.find((seq) => (Number(checkProcessSeq?.sequence) - 1) === seq?.sequence)
-
-
 
     if ((!incomingData && checkProcessSeq?.status === "PARTIALLY_COMPLETED" && Number(checkProcessSeq?.pendingQty || 0) > 0) && (prevCheck?.pendingQty === 0 || prevCheck?.status === "COMPLETED" || !prevCheck)) {
       incomingData = {
@@ -396,9 +393,6 @@ async function get_mob_jobcard(req) {
       }
     }
 
-
-
-
     if ((!incomingData && (checkProcessSeq?.sequence === 1 && checkProcessSeq?.status === "IN_PROGRESS" && Number(checkProcessSeq?.pendingQty || 0) > 0))) {
       incomingData = {
         pendingQty: Number(checkProcessSeq?.pendingQty || 0),
@@ -406,8 +400,7 @@ async function get_mob_jobcard(req) {
       }
     }
 
-
-    if ((prevCheck?.pendingQty === 0 || prevCheck?.status === "COMPLETED" || !prevCheck) && checkProcessSeq?.sequence !== 1) {
+    if (!incomingData && (prevCheck?.pendingQty === 0 || prevCheck?.status === "COMPLETED" || !prevCheck) && checkProcessSeq?.sequence !== 1) {
       incomingData = {
         pendingQty: Number(checkProcessSeq?.pendingQty || 0),
         id: null
