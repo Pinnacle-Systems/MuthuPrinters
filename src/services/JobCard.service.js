@@ -201,6 +201,7 @@ async function get_mob_jobcard(req) {
   const parsedId = parseInt(req?.query?.id);
   const userId = parseInt(req?.query?.userid);
   const processRouteId = parseInt(req?.query?.processRouteId);
+  const branchId =  parseInt(req?.query?.branchId)
 
   var check_punch_result = await prisma.productionempPunch?.findFirst({
     where: {
