@@ -698,7 +698,7 @@ async function UpdatePushProcess(req) {
       if (checkTaken_M?.id) {
         addMain_punch_log = {
           statusCode: 1,
-          message: "Machine have taken by another employee.!!!!",
+          message: "This machine is currently being used by another employee.",
         };
         data = addMain_punch_log;
         return;
