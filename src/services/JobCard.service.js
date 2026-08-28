@@ -230,9 +230,9 @@ async function get_mob_jobcard(req) {
     !pushlog_last_ &&
     check_punch_result?.ProcessRoute?.status == "IN_PROGRESS"
   ) {
-    throw new Error("Already another user taken this jobcard");
+    throw new Error("Another user has already taken this job card.");
   } else if (check_punch_result?.ProcessRoute?.status == "COMPLETED") {
-    throw new Error("Already completed and taken this jobcard");
+    throw new Error("Already completed this jobcard");
   }
 
   if (isNaN(parsedId)) throw new Error("Invalid Job Card ID");
@@ -974,7 +974,7 @@ for (const iq of incomingQtys) {
      if (incomingQty) availableRoutes.push(route);
      if(route.status === "NOT_STARTED" && route?.sequence > 1 && incomingQty) foundNotStarted = true;
     // availableRoutes.push(route);
-  } else if (route.status === "NOT_STARTED" && route?.sequence===1 && !foundNotStarted) {
+  } else if ((route.status === "NOT_STARTED" && route?.sequence===1 && !foundNotStarted) || (route.status === "IN_PROGRESS" && route?.sequence===1 && !foundNotStarted) || (route.status === "PARTIALLY_COMPLETED" && route?.sequence===1 && !foundNotStarted) ) {
     availableRoutes.push(route);
     foundNotStarted = true;
   }
