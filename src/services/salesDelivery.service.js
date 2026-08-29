@@ -51,13 +51,11 @@ async function getNextDocId(branchId, shortCode, startTime, endTime, saveType) {
         return currentNo > maxNo ? current.docId : max;
       }, null);
 
-      newDocId = `${branchObj.branchCode}/${shortCode}/SD/${
-        parseInt(maxDocId.split("/").at(-1)) + 1
-      }`;
+      newDocId = `${branchObj.branchCode}/${shortCode}/SD/${parseInt(maxDocId.split("/").at(-1)) + 1
+        }`;
     } else {
-      newDocId = `${branchObj.branchCode}/${shortCode}/SD/${
-        parseInt(lastObject.docId.split("/").at(-1)) + 1
-      }`;
+      newDocId = `${branchObj.branchCode}/${shortCode}/SD/${parseInt(lastObject.docId.split("/").at(-1)) + 1
+        }`;
     }
   }
 
@@ -99,9 +97,9 @@ async function get(req) {
 
       AND: finYearDate
         ? [
-            { createdAt: { gte: finYearDate.startTime } },
-            { createdAt: { lte: finYearDate.endTime } },
-          ]
+          { createdAt: { gte: finYearDate.startTime } },
+          { createdAt: { lte: finYearDate.endTime } },
+        ]
         : undefined,
 
       docId: Boolean(searchDocNo) ? { contains: searchDocNo } : undefined,
@@ -263,120 +261,169 @@ async function create(body) {
     carriageCharge,
     currencyId,
     bankId,
+    orderId,
+    salesOrderId,
+    amount
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-        finYearDate.startDateStartTime,
-        finYearDate.endDateEndTime,
-      )
+      finYearDate.startDateStartTime,
+      finYearDate.endDateEndTime,
+    )
     : "";
 
-  const newDocId = await getNextDocId(
-    branchId,
-    shortCode,
-    finYearDate?.startDateStartTime,
-    finYearDate?.endDateEndTime,
-    draftSave,
-  );
+  const newDocId = await getNextDocId(branchId, shortCode, finYearDate?.startDateStartTime, finYearDate?.endDateEndTime, draftSave);
 
-  const data = await prisma.salesDelivery.create({
-    data: {
-      docId: newDocId,
 
-      docDate: docDate ? new Date(docDate) : null,
 
-      deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+  let stockEntries = [];
+  if (salesDeliveryItems && salesDeliveryItems.length > 0) {
+    salesDeliveryItems.forEach((item) => {
+      const baseStock = {
+        branchId: branchId ? parseInt(branchId) : null,
+        orderId: orderId ? parseInt(orderId) : null,
+        createdById: userId ? parseInt(userId) : null,
+        inOrOut: "Out",
+        processName: "Sales",
+        styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
+        itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+        uomId: item?.uomId ? parseInt(item.uomId) : null,
+        hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
+      };
 
-      createdById: parseInt(userId),
+      if (item?.styleBreakup?.length > 0) {
+        item.styleBreakup.forEach((st) => {
+          if (st?.sizeBreakup?.length > 0) {
+            st.sizeBreakup.forEach((s) => {
+              stockEntries.push({
+                ...baseStock,
+                styleId: st.styleId ? parseInt(st.styleId) : null,
+                sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                qty: s?.packingQty ? parseFloat(s.packingQty) : null,
+              });
+            });
+          } else {
+            stockEntries.push({
+              ...baseStock,
+              styleId: st.styleId ? parseInt(st.styleId) : null,
+              qty: s?.packingQty ? parseFloat(s.packingQty) : null,
+            });
+          }
+        });
+      } else {
+        stockEntries.push({
+          ...baseStock,
+          qty: s?.packingQty ? parseFloat(s.packingQty) : null,
+        });
+      }
+    });
+  }
+  let data
+  await prisma.$transaction(async (tx) => {
 
-      branchId: branchId ? parseInt(branchId) : null,
+    data = await prisma.salesDelivery.create({
+      data: {
+        docId: newDocId,
+        docDate: docDate ? new Date(docDate) : null,
+        branchId: branchId ? parseInt(branchId) : null,
+        customerId: customerId ? parseInt(customerId) : null,
+        salesOrderId: salesOrderId ? parseInt(salesOrderId) : null,
+        deliveryType: deliveryType ? deliveryType : null,
+        conversionType,
+        payTermId: payTermId ? parseInt(payTermId) : null,
+        taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
+        vehicleNo,
+        weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+        bankId: bankId ? parseInt(bankId) : null,
 
-      customerId: customerId ? parseInt(customerId) : null,
 
-      orderEntryId: orderEntryId ? parseInt(orderEntryId) : null,
+        createdById: parseInt(userId),
+        orderEntryId: orderEntryId ? parseInt(orderEntryId) : null,
+        remarks,
+        discountValue: discountValue ? parseFloat(discountValue) : null,
+        termsAndCondition,
+        termsId: termsId ? parseInt(termsId) : null,
+        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+        discountType,
 
-      dcNo,
 
-      vehicleNo,
+        salesDeliveryItems: {
+          create: (salesDeliveryItems || []).map((item) => ({
+            styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
+            itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+            itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
+            labelWidth: item?.labelWidth ?? "",
+            hsnId: item.hsnId ? parseInt(item.hsnId) : null,
+            uomId: item.uomId ? parseInt(item.uomId) : null,
 
-      deliveryType,
+            qty: item.qty ? parseFloat(item.qty) : null,
+            price: item.price ? parseFloat(item.price) : null,
+            amount: item.amount ? parseFloat(item.amount) : null,
+            discountType: item.discountType,
+            discountValue: item.discountValue ? parseFloat(item.discountValue) : null,
+            taxPercent: item.taxPercent ? parseFloat(item.taxPercent) : null,
+            trackingType: item.trackingType,
 
-      remarks,
+            SalesStyleBreakup:
+              item?.styleBreakup?.length > 0
+                ? {
+                  create: item.styleBreakup.map((st) => ({
+                    styleId: st.styleId ? parseInt(st.styleId) : null,
+                    SalesSizeBreakup: st?.sizeBreakup?.length > 0
+                      ? {
+                        create: st.sizeBreakup.map((s) => ({
+                          sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                          qty: s.qty ? parseInt(s.qty) : null,
+                        }))
+                      } : undefined
+                  })),
+                }
+                : undefined,
+          })),
 
-      discountType,
 
-      discountValue: discountValue ? parseFloat(discountValue) : null,
 
-      taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
 
-      termsAndCondition,
-
-      termsId: termsId ? parseInt(termsId) : null,
-
-      payTermId: payTermId ? parseInt(payTermId) : null,
-
-      conversionType,
-
-      weightInKg: weightInKg ? parseFloat(weightInKg) : null,
-
-      carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
-
-      currencyId: currencyId ? parseInt(currencyId) : null,
-
-      bankId: bankId ? parseInt(bankId) : null,
-
-      salesDeliveryItems: {
-        create: (salesDeliveryItems || []).map((item) => ({
-          styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
-
-          qty: item.qty ? parseFloat(item.qty) : null,
-
-          price: item.price ? parseFloat(item.price) : null,
-
-          amount: item.amount ? parseFloat(item.amount) : null,
-
-          discountType: item.discountType,
-
-          discountValue: item.discountValue
-            ? parseFloat(item.discountValue)
-            : null,
-
-          taxPercent: item.taxPercent ? parseFloat(item.taxPercent) : null,
-
-          uomId: item.uomId ? parseInt(item.uomId) : null,
-
-          hsnId: item.hsnId ? parseInt(item.hsnId) : null,
-
-          trackingType: item.trackingType,
-
-          sizeBreakup: {
-            create: (item.sizeBreakup || [])
-              .filter((size) => size.sizeId)
-              .map((size) => ({
-                sizeId: size.sizeId ? parseInt(size.sizeId) : null,
-
-                qty: size.qty ? parseInt(size.qty) : 0,
-              })),
-          },
-        })),
-      },
-    },
-    include: {
-      salesDeliveryItems: {
-        include: {
-          sizeBreakup: {
-            include: {
-              Size: true,
-            },
-          },
         },
-      },
-    },
-  });
 
+
+
+
+      },
+
+
+
+    });
+    if (stockEntries.length > 0) {
+      const stockEntriesWithSalesDeliveryId = stockEntries.map(entry => ({
+        ...entry,
+        salesDeliveryId: data.id,
+      }));
+      await tx.Stock.createMany({
+        data: stockEntriesWithSalesDeliveryId
+      });
+    }
+    if (deliveryType === "AGAINST_INVOICE") {
+      await tx.Ledger.create({
+        data: {
+          EntryType: "Sales",
+          LedgerType: "Customer",
+          creditOrDebit: "Debit",
+          partyId: customerId ? parseInt(customerId) : null,
+          amount: amount ? parseFloat(amount) : null,
+          date: docDate ? new Date(docDate) : null,
+          remarks: remarks ? remarks : null,
+          refId: data.id ? parseInt(data.id) : null,
+          refType: "Sales",
+          createdById: parseInt(userId),
+          salesDeliveryId: data?.id ? parseInt(data.id) : null,
+        }
+      })
+    }
+  });
   return {
     statusCode: 0,
     data,

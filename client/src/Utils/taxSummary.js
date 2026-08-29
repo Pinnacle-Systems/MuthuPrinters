@@ -5,6 +5,8 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
   discountValue,
   isDozen = false,
   qtyField = "qty",
+  returnCharge,
+  returnChargeType
 ) {
   let roundTo = 2;
 
@@ -35,6 +37,13 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
     const hsn = item?.hsn || "NA";
 
     const gross = isDozen ? dozen * price : qty * price;
+
+    console.log(
+      qty,
+      dozen,
+      price,
+      gross
+      , "sales delivery")
 
     const itemDiscount =
       dType === "Flat" ? discountVal : (gross * discountVal) / 100;
@@ -84,7 +93,15 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
       sgst = (finalTaxable * half) / 100;
     }
 
-    const net = finalTaxable + cgst + sgst + igst;
+    let net = finalTaxable + cgst + sgst + igst;
+
+    if (returnCharge) {
+      if (returnChargeType === "Flat") {
+        net += Number(returnCharge);
+      } else {
+        net += (net * Number(returnCharge)) / 100;
+      }
+    }
 
     // 👉 INSERT totals INTO poItems
     item.totals = {

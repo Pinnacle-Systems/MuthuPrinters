@@ -160,7 +160,7 @@ const index = () => {
             onView={handleView}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            itemsPerPage={10}
+            itemsPerPage={15}
             userData={userData?.data}
             onCreateJobCard={handleCreateJobCard}
             canApprove={canApprove}
