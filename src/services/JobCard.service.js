@@ -239,7 +239,8 @@ async function get_mob_jobcard(req) {
 
   try {
     const data = await prisma.jobCard.findUnique({
-      where: { id: parsedId },
+      where: { id: parsedId ,    AND:[{ isCancelled:false,
+      isHold:false,}]},
       select: {
         id: true,
         docId: true,
@@ -783,6 +784,8 @@ async function get_mob_joblist(req) {
       customer: {
         name: searchCustomer ? { contains: searchCustomer } : undefined,
       },
+       AND:[{ isCancelled:false,
+      isHold:false}],
       productionAllocations: {
         some: {
           allocationDetails: {
