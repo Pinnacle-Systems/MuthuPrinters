@@ -658,6 +658,7 @@ async function create(body) {
       //   ? parseFloat(item.receivedQty || 0) - parseFloat(item.wastageQty || 0)
       //   : 0;
       const acceptedQty = item ? parseFloat(item.receivedQty || 0) : 0;
+      const currentWastageQty = item ? parseFloat(item.wastageQty || 0) : 0;
 
       let outwardId = null;
       if (item?.productionOutwardId) {
@@ -700,7 +701,7 @@ async function create(body) {
           const totalCompleted_Incoming =
             Number(getIncomingExist_.completedQty || 0) + Number(acceptedQty);
           const totalWastage_Incoming =
-            Number(getIncomingExist_.wastageQty || 0) + Number(wastageQty);
+            Number(getIncomingExist_.wastageQty || 0) + Number(currentWastageQty);
           const pendingQty_Incoming = Math.max(
             Number(getIncomingExist_.qty || 0) -
               (totalCompleted_Incoming + totalWastage_Incoming),
@@ -736,7 +737,7 @@ async function create(body) {
         const totalCompleted_Incoming =
           Number(getIncomingExist.completedQty || 0) + Number(acceptedQty);
         const totalWastage_Incoming =
-          Number(getIncomingExist.wastageQty || 0) + Number(wastageQty);
+          Number(getIncomingExist.wastageQty || 0) + Number(currentWastageQty);
         const pendingQty_Incoming = Math.max(
           Number(getIncomingExist.qty || 0) -
             (totalCompleted_Incoming + totalWastage_Incoming),

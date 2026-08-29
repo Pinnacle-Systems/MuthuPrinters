@@ -230,16 +230,17 @@ async function get_mob_jobcard(req) {
     !pushlog_last_ &&
     check_punch_result?.ProcessRoute?.status == "IN_PROGRESS"
   ) {
-    throw new Error("Already another user taken this jobcard");
+    throw new Error("Another user has already taken this job card.");
   } else if (check_punch_result?.ProcessRoute?.status == "COMPLETED") {
-    throw new Error("Already completed and taken this jobcard");
+    throw new Error("Already completed this jobcard");
   }
 
   if (isNaN(parsedId)) throw new Error("Invalid Job Card ID");
 
   try {
     const data = await prisma.jobCard.findUnique({
-      where: { id: parsedId },
+      where: { id: parsedId ,    AND:[{ isCancelled:false,
+      isHold:false,}]},
       select: {
         id: true,
         docId: true,
@@ -783,6 +784,8 @@ async function get_mob_joblist(req) {
       customer: {
         name: searchCustomer ? { contains: searchCustomer } : undefined,
       },
+       AND:[{ isCancelled:false,
+      isHold:false}],
       productionAllocations: {
         some: {
           allocationDetails: {
@@ -908,9 +911,29 @@ async function get_mob_joblist(req) {
     };
   });
 
-  console.log("log", resolvedData);
+const routeIds = [];
+     resolvedData.forEach((jobCard) => {
+     jobCard.processRoute?.forEach((route) => {
+    if (route.status === "PARTIALLY_COMPLETED" || route.status === "IN_PROGRESS" || route.status === "NOT_STARTED") {
+         routeIds.push(route.id); // whatever field maps to `sendRoute`
+      }
+       });
+       });
 
-  var filtered_ = resolvedData
+       const incomingQtys = await prisma.incomingQty.findMany({
+       where: {
+       jobCardId: { in: jobCardIds },      // already computed earlier in your function
+        sendRoute: { in: routeIds },
+       pendingQty: { gt: 0 },
+       AND:{
+        outwardId :null
+       }
+         },
+          });
+
+         
+
+  var filtered_ = await resolvedData
     ?.filter((resolved_) => {
       const status = resolved_?.approvalStatus?.status;
       const Complted = resolved_?.processRoute?.some(
@@ -918,7 +941,7 @@ async function get_mob_joblist(req) {
       );
       return (status === "APPROVED" || status === "NOT_CONFIGURED") && Complted;
     })
-    ?.flatMap((routes) => {
+    ?.flatMap(  (routes) => {
       var Sorted_Sequence = routes?.processRoute?.sort(
         (a, b) => a.sequence - b.sequence,
       );
@@ -926,16 +949,41 @@ async function get_mob_joblist(req) {
       const availableRoutes = [];
       let foundNotStarted = false;
 
-      for (let route of (Sorted_Sequence || [])) {
-        if (route.status === "COMPLETED") continue;
+      
 
-        if (route.status === "PARTIALLY_COMPLETED" || route.status === "IN_PROGRESS") {
-          availableRoutes.push(route);
-        } else if (route.status === "NOT_STARTED" && !foundNotStarted) {
-          availableRoutes.push(route);
-          foundNotStarted = true; // Only take the FIRST NOT_STARTED process
-        }
-      }
+
+          const incomingQtyMap = new Map();
+for (const iq of incomingQtys) {
+  const key = `${iq.jobCardId}-${iq.sendRoute}`;
+  if (!incomingQtyMap.has(key)) {
+    incomingQtyMap.set(key, iq);
+  }
+}
+
+
+     for (let route of (Sorted_Sequence || [])) {
+  if (route.status === "COMPLETED") continue;
+
+  console.log(
+  "jobcard", routes?.id,
+  "sorted:", Sorted_Sequence?.map(r => ({ id: r.id, seq: r.sequence, status: r.status }))
+);
+
+  if ((route.status === "PARTIALLY_COMPLETED" || route.status === "IN_PROGRESS" || route.status === "NOT_STARTED") &&  route?.sequence > 1) {
+    const key = `${routes?.id}-${route.id}`;
+    const incomingQty = incomingQtyMap.get(key); // instant, in-memory
+
+
+     if (incomingQty) availableRoutes.push(route);
+     if(route.status === "NOT_STARTED" && route?.sequence > 1 && incomingQty) foundNotStarted = true;
+    // availableRoutes.push(route);
+  } else if ((route.status === "NOT_STARTED" && route?.sequence===1 && !foundNotStarted) || (route.status === "IN_PROGRESS" && route?.sequence===1 && !foundNotStarted) || (route.status === "PARTIALLY_COMPLETED" && route?.sequence===1 && !foundNotStarted) ) {
+    availableRoutes.push(route);
+    foundNotStarted = true;
+  }
+}
+
+
 
       var machineList = routes?.plateDetails?.map((machineMap) => ({ ...machineMap?.Machine }))
 
