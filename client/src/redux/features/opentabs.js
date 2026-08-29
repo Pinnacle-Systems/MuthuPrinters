@@ -9,46 +9,58 @@ export const openTabs = createSlice({
   initialState,
   reducers: {
     push: (state, action) => {
+
       const existingIndex = state.tabs.findIndex(
-        (item) => item.name === action.payload.name,
+
+
+        (item) => item.name === action.payload.name
+
       );
+      console.log(existingIndex, "existingIndex")
+      console.log(action, "actionaction")
+
       state.tabs = state.tabs.map((tab) => {
         return { ...tab, active: false };
       });
+      // if (existingIndex >= 0) {
+      //   state.tabs[existingIndex] = {
+      //     ...state.tabs[existingIndex],
+      //     active: true,
+      //     id: action.payload.id,
+      //     projectId: action.payload.projectId,
+      //     projectForm: action.payload.projectForm,
+      //     transactionType: action.payload.transactionType,
+      //     data: action.payload.data,
+      //   };
+      // } else {
+      //   state.tabs.push({
+      //     id: action.payload.id,
+      //     name: action.payload.name,
+      //     active: true,
+      //     projectId: action.payload.projectId,
+      //     projectForm: action.payload.projectForm,
+      //     transactionType: action.payload.transactionType,
+      //     data: action.payload.data,
+      //   });
+      // }   
+      /////       change this for user Permissions editing mode 
       if (existingIndex >= 0) {
         state.tabs[existingIndex] = {
           ...state.tabs[existingIndex],
+          ...action.payload,
           active: true,
-          previewId: action.payload.previewId,
-          date: action.payload.date,
-          params: action.payload.params ?? null,
-          pageId: action.payload.id,
         };
       } else {
         state.tabs.push({
-          name: action.payload.name,
+          ...action.payload,
           active: true,
-          previewId: action.payload.previewId,
-          date: action.payload.date,
-          params: action.payload.params ?? null,
-          pageId: action.payload.id,
         });
-      }
-      localStorage.setItem("openTabs", JSON.stringify(state.tabs));
-    },
-    clearTabParams: (state, action) => {
-      // ⬅️ add this
-      const index = state.tabs.findIndex(
-        (item) => item.name === action.payload,
-      );
-      if (index >= 0) {
-        state.tabs[index].params = null;
       }
       localStorage.setItem("openTabs", JSON.stringify(state.tabs));
     },
     remove: (state, action) => {
       const existingIndex = state.tabs.findIndex(
-        (item) => item.name === action.payload.name,
+        (item) => item.name === action.payload.name
       );
       if (state.tabs[existingIndex]?.active) {
         if (state.tabs.length > 1) {
@@ -68,12 +80,13 @@ export const openTabs = createSlice({
           }
         }
       }
-      state.tabs = state.tabs.filter((tab) => tab.name !== action.payload.name);
+      state.tabs = state.tabs.filter(tab => tab.name !== action.payload.name);
       localStorage.setItem("openTabs", JSON.stringify(state.tabs));
     },
   },
 });
 
-export const { push, remove, clearTabParams } = openTabs.actions;
+// Action creators are generated for each case reducer function
+export const { push, remove } = openTabs.actions;
 
 export default openTabs.reducer;

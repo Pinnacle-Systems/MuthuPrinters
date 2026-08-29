@@ -831,6 +831,8 @@ model Stock {
   orderId               Int?
   Packing               Packing?             @relation(fields: [packingId], references: [id], onDelete: Cascade)
   packingId             Int?
+  SalesDelivery         SalesDelivery?       @relation(fields: [salesDeliveryId], references: [id], onDelete: Cascade)
+  salesDeliveryId       Int?
 }
 
 model SalesBill {
@@ -967,25 +969,27 @@ model Payment {
 }
 
 model Style {
-  id                   Int                    @id @default(autoincrement())
-  name                 String?
-  aliasName            String?
-  code                 String?
-  active               Boolean?               @default(false)
-  SizeTemplate         SizeTemplate?          @relation(fields: [sizeTemplateId], references: [id])
-  sizeTemplateId       Int?
-  ItemGroup            ItemGroup?             @relation(fields: [itemGroupId], references: [id])
-  itemGroupId          Int?
-  Uom                  Uom?                   @relation(fields: [uomId], references: [id])
-  uomId                Int?
-  Gsm                  Gsm?                   @relation(fields: [gsmId], references: [id])
-  gsmId                Int?
-  DeliveryChallanItems DeliveryChallanItems[]
-  DeliveryInvoiceItems DeliveryInvoiceItems[]
-  PIStyleBreakup       PIStyleBreakup[]
-  PackingStyleBreakup  PackingStyleBreakup[]
-  OrderStyleBreakup    OrderStyleBreakup[]
-  Stock                Stock[]
+  id                    Int                     @id @default(autoincrement())
+  name                  String?
+  aliasName             String?
+  code                  String?
+  active                Boolean?                @default(false)
+  SizeTemplate          SizeTemplate?           @relation(fields: [sizeTemplateId], references: [id])
+  sizeTemplateId        Int?
+  ItemGroup             ItemGroup?              @relation(fields: [itemGroupId], references: [id])
+  itemGroupId           Int?
+  Uom                   Uom?                    @relation(fields: [uomId], references: [id])
+  uomId                 Int?
+  Gsm                   Gsm?                    @relation(fields: [gsmId], references: [id])
+  gsmId                 Int?
+  DeliveryChallanItems  DeliveryChallanItems[]
+  DeliveryInvoiceItems  DeliveryInvoiceItems[]
+  PIStyleBreakup        PIStyleBreakup[]
+  PackingStyleBreakup   PackingStyleBreakup[]
+  OrderStyleBreakup     OrderStyleBreakup[]
+  Stock                 Stock[]
+  SaleOrderStyleBreakup SaleOrderStyleBreakup[]
+  SalesStyleBreakup     SalesStyleBreakup[]
 }
 
 model StyleItem {
@@ -1183,6 +1187,8 @@ model Ledger {
   partyBillNo       String?
   createdAt         DateTime?        @default(now())
   updatedAt         DateTime?        @updatedAt
+  SalesDelivery     SalesDelivery?   @relation(fields: [salesDeliveryId], references: [id], onDelete: Cascade)
+  salesDeliveryId   Int?
 }
 
 model TaxTerm {
@@ -1739,6 +1745,7 @@ model ItemGroup {
   proformaInvoiceItems   ProformaInvoiceItem[]
   SalesOrderItems        SalesOrderItems[]
   PackingItems           PackingItems[]
+  SalesDeliveryItems     SalesDeliveryItems[]
 }
 
 model SizeTemplate {
@@ -2780,73 +2787,93 @@ model BillingProcess {
 }
 
 model SalesDelivery {
-  id                Int                 @id @default(autoincrement())
-  docId             String
-  docDate           DateTime?
-  deliveryDate      DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  createdById       Int?
-  createdBy         User?               @relation("createdBy", fields: [createdById], references: [id])
-  updatedById       Int?
-  updatedBy         User?               @relation("updatedBy", fields: [updatedById], references: [id])
-  branchId          Int?
-  Branch            Branch?             @relation(fields: [branchId], references: [id])
-  customerId        Int?
-  Customer          Party?              @relation(fields: [customerId], references: [id])
-  orderEntryId      Int?
-  OrderEntry        OrderEntry?         @relation(fields: [orderEntryId], references: [id])
-  dcNo              String?
-  vehicleNo         String?
-  deliveryType      String?
-  remarks           String?
-  discountType      String?
-  discountValue     Float?
-  TaxTemplate       TaxTemplate?        @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
-  taxTemplateId     Int?
-  termsAndCondition String?
-  Terms             TermsAndConditions? @relation(fields: [termsId], references: [id])
-  termsId           Int?
-  PayTerm           PayTerm?            @relation(fields: [payTermId], references: [id])
-  payTermId         Int?
-  Bank              Bank?               @relation(fields: [bankId], references: [id])
-  bankId            Int?
-  conversionType    String?
-  weightInKg        Float?
-  carriageCharge    Float?
-  currencyId        Int?
-  Currency          Currency?           @relation(fields: [currencyId], references: [id])
-
-  salesDeliveryItems SalesDeliveryItems[]
+  id                     Int                  @id @default(autoincrement())
+  docId                  String
+  docDate                DateTime?
+  deliveryDate           DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  createdById            Int?
+  createdBy              User?                @relation("createdBy", fields: [createdById], references: [id])
+  updatedById            Int?
+  updatedBy              User?                @relation("updatedBy", fields: [updatedById], references: [id])
+  branchId               Int?
+  Branch                 Branch?              @relation(fields: [branchId], references: [id])
+  customerId             Int?
+  Customer               Party?               @relation(fields: [customerId], references: [id])
+  orderEntryId           Int?
+  OrderEntry             OrderEntry?          @relation(fields: [orderEntryId], references: [id])
+  salesOrderId           Int?
+  SalesOrder             SalesOrder?          @relation(fields: [salesOrderId], references: [id])
+  dcNo                   String?
+  vehicleNo              String?
+  deliveryType           String?
+  remarks                String?
+  discountType           String?
+  discountValue          Float?
+  TaxTemplate            TaxTemplate?         @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
+  taxTemplateId          Int?
+  termsAndCondition      String?
+  Terms                  TermsAndConditions?  @relation(fields: [termsId], references: [id])
+  termsId                Int?
+  PayTerm                PayTerm?             @relation(fields: [payTermId], references: [id])
+  payTermId              Int?
+  Bank                   Bank?                @relation(fields: [bankId], references: [id])
+  bankId                 Int?
+  conversionType         String?
+  weightInKg             Float?
+  carriageCharge         Float?
+  currencyId             Int?
+  Currency               Currency?            @relation(fields: [currencyId], references: [id])
+  isDeliveryTaxInclusive Boolean?             @default(false)
+  deliveryTaxType        String?
+  deliveryTaxValue       Float?
+  salesDeliveryItems     SalesDeliveryItems[]
+  Ledger                 Ledger[]
+  Stock                  Stock[]
 }
 
 model SalesDeliveryItems {
-  id              Int           @id @default(autoincrement())
-  salesDeliveryId Int
-  SalesDelivery   SalesDelivery @relation(fields: [salesDeliveryId], references: [id], onDelete: Cascade)
-  styleItemId     Int?
-  StyleItem       StyleItem?    @relation(fields: [styleItemId], references: [id])
-  qty             Float?
-  price           Float?
-  amount          Float?
-  discountType    String?
-  discountValue   Float?
-  taxPercent      Float?
-  uomId           Int?
-  Uom             Uom?          @relation(fields: [uomId], references: [id])
-  hsnId           Int?
-  Hsn             Hsn?          @relation(fields: [hsnId], references: [id])
-  trackingType    String?
-
-  sizeBreakup SalesSizeBreakup[]
+  id                Int                 @id @default(autoincrement())
+  salesDeliveryId   Int
+  SalesDelivery     SalesDelivery       @relation(fields: [salesDeliveryId], references: [id], onDelete: Cascade)
+  styleItemId       Int?
+  StyleItem         StyleItem?          @relation(fields: [styleItemId], references: [id])
+  itemGroupId       Int?
+  ItemGroup         ItemGroup?          @relation(fields: [itemGroupId], references: [id])
+  itemSubGroupId    Int?
+  ItemSubGroup      ItemSubGroup?       @relation(fields: [itemSubGroupId], references: [id])
+  qty               Float?
+  price             Float?
+  amount            Float?
+  discountType      String?
+  discountValue     Float?
+  taxPercent        Float?
+  uomId             Int?
+  Uom               Uom?                @relation(fields: [uomId], references: [id])
+  hsnId             Int?
+  Hsn               Hsn?                @relation(fields: [hsnId], references: [id])
+  trackingType      String?
+  labelWidth        String?
+  dozen             Float?
+  SalesStyleBreakup SalesStyleBreakup[]
 }
 
-model SalesSizeBreakup {
+model SalesStyleBreakup {
   id                  Int                 @id @default(autoincrement())
   salesDeliveryItemId Int
   SalesDeliveryItem   SalesDeliveryItems? @relation(fields: [salesDeliveryItemId], references: [id], onDelete: Cascade)
+  styleId             Int?
+  Style               Style?              @relation(fields: [styleId], references: [id])
+  SalesSizeBreakup    SalesSizeBreakup[]
+}
+
+model SalesSizeBreakup {
+  id                  Int                @id @default(autoincrement())
+  salesStyleBreakupId Int?
+  SalesStyleBreakup   SalesStyleBreakup? @relation(fields: [salesStyleBreakupId], references: [id])
   sizeId              Int?
-  Size                Size?               @relation(fields: [sizeId], references: [id])
+  Size                Size?              @relation(fields: [sizeId], references: [id])
   qty                 Int?
 }
 
@@ -2869,86 +2896,101 @@ model ItemSubGroup {
   proformaInvoiceItems ProformaInvoiceItem[]
   SalesOrderItems      SalesOrderItems[]
   PackingItems         PackingItems[]
+  SalesDeliveryItems   SalesDeliveryItems[]
 }
 
 model SalesOrder {
-  id                Int                 @id @default(autoincrement())
-  docId             String
-  docDate           DateTime?
-  deliveryDate      DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  createdBy         User?               @relation("createdBy", fields: [createdById], references: [id])
-  createdById       Int?
-  updatedBy         User?               @relation("updatedBy", fields: [updatedById], references: [id])
-  updatedById       Int?
-  Branch            Branch?             @relation(fields: [branchId], references: [id])
-  branchId          Int?
-  customer          Party?              @relation(fields: [customerId], references: [id])
-  customerId        Int?
-  OrderEntry        OrderEntry?         @relation(fields: [orderId], references: [id])
-  orderId           Int?
-  orderType         String?
-  orderQty          Int?
-  remarks           String?
-  termsAndCondition String?
-  Terms             TermsAndConditions? @relation(fields: [termsId], references: [id])
-  termsId           Int?
-  refNo             String?
-  validDays         Int?
-  validTo           DateTime?
-  attachments       attachments[]
-  TaxTemplate       TaxTemplate?        @relation(fields: [taxTemplateId], references: [id])
-  taxTemplateId     Int?
-  discountType      String?
-  discountValue     Float?
-  conversionType    String?
-  PayTerm           PayTerm?            @relation(fields: [payTermId], references: [id])
-  payTermId         Int?
-  Loading           City?               @relation("loading", fields: [loadingId], references: [id])
-  loadingId         Int?
-  Delivery          City?               @relation("delivery", fields: [deliveryId], references: [id])
-  deliveryId        Int?
-  SalesOrderItems   SalesOrderItems[]
+  id                     Int                 @id @default(autoincrement())
+  docId                  String
+  docDate                DateTime?
+  deliveryDate           DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  createdBy              User?               @relation("createdBy", fields: [createdById], references: [id])
+  createdById            Int?
+  updatedBy              User?               @relation("updatedBy", fields: [updatedById], references: [id])
+  updatedById            Int?
+  Branch                 Branch?             @relation(fields: [branchId], references: [id])
+  branchId               Int?
+  customer               Party?              @relation(fields: [customerId], references: [id])
+  customerId             Int?
+  OrderEntry             OrderEntry?         @relation(fields: [orderId], references: [id])
+  orderId                Int?
+  orderType              String?
+  orderQty               Int?
+  remarks                String?
+  termsAndCondition      String?
+  Terms                  TermsAndConditions? @relation(fields: [termsId], references: [id])
+  termsId                Int?
+  refNo                  String?
+  validDays              Int?
+  validTo                DateTime?
+  attachments            attachments[]
+  TaxTemplate            TaxTemplate?        @relation(fields: [taxTemplateId], references: [id])
+  taxTemplateId          Int?
+  discountType           String?
+  discountValue          Float?
+  conversionType         String?
+  PayTerm                PayTerm?            @relation(fields: [payTermId], references: [id])
+  payTermId              Int?
+  Loading                City?               @relation("loading", fields: [loadingId], references: [id])
+  loadingId              Int?
+  Delivery               City?               @relation("delivery", fields: [deliveryId], references: [id])
+  deliveryId             Int?
+  deliveryCharge         Int?
+  isDeliveryTaxInclusive Boolean?            @default(false)
+  deliveryTaxType        String?
+  deliveryTaxValue       Float?
+  SalesOrderItems        SalesOrderItems[]
+  SalesDelivery          SalesDelivery[]
 }
 
 model SalesOrderItems {
+  id                    Int                     @id @default(autoincrement())
+  saleOrderId           Int?
+  SalesOrder            SalesOrder?             @relation(fields: [saleOrderId], references: [id], onDelete: Cascade)
+  styleItemId           Int?
+  StyleItem             StyleItem?              @relation(fields: [styleItemId], references: [id])
+  orderQty              Int?
+  sizeId                Int?
+  Size                  Size?                   @relation(fields: [sizeId], references: [id])
+  uomId                 Int?
+  Uom                   Uom?                    @relation(fields: [uomId], references: [id])
+  gsmId                 Int?
+  Gsm                   Gsm?                    @relation(fields: [gsmId], references: [id])
+  itemGroupId           Int?
+  ItemGroup             ItemGroup?              @relation(fields: [itemGroupId], references: [id])
+  hsnId                 Int?
+  Hsn                   Hsn?                    @relation(fields: [hsnId], references: [id])
+  trackingType          String?
+  itemSubGroupId        Int?
+  ItemSubGroup          ItemSubGroup?           @relation(fields: [itemSubGroupId], references: [id])
+  labelWidth            String?
+  price                 Float?
+  amount                Float?
+  dozen                 Float?
+  taxPercent            Float?
+  discountType          String?
+  discountValue         Float?
+  SaleOrderStyleBreakup SaleOrderStyleBreakup[]
+}
+
+model SaleOrderStyleBreakup {
   id                   Int                    @id @default(autoincrement())
-  saleOrderId          Int?
-  SalesOrder           SalesOrder?            @relation(fields: [saleOrderId], references: [id], onDelete: Cascade)
-  styleItemId          Int?
-  StyleItem            StyleItem?             @relation(fields: [styleItemId], references: [id])
-  orderQty             Int?
-  sizeId               Int?
-  Size                 Size?                  @relation(fields: [sizeId], references: [id])
-  uomId                Int?
-  Uom                  Uom?                   @relation(fields: [uomId], references: [id])
-  gsmId                Int?
-  Gsm                  Gsm?                   @relation(fields: [gsmId], references: [id])
-  itemGroupId          Int?
-  ItemGroup            ItemGroup?             @relation(fields: [itemGroupId], references: [id])
-  hsnId                Int?
-  Hsn                  Hsn?                   @relation(fields: [hsnId], references: [id])
-  trackingType         String?
-  itemSubGroupId       Int?
-  ItemSubGroup         ItemSubGroup?          @relation(fields: [itemSubGroupId], references: [id])
-  labelWidth           String?
-  price                Float?
-  amount               Float?
-  dozen                Float?
-  taxPercent           Float?
-  discountType         String?
-  discountValue        Float?
+  salesItemId          Int
+  SalesOrderItems      SalesOrderItems        @relation(fields: [salesItemId], references: [id], onDelete: Cascade)
+  styleId              Int?
+  Style                Style?                 @relation(fields: [styleId], references: [id])
   SaleOrderSizeBreakup SaleOrderSizeBreakup[]
 }
 
 model SaleOrderSizeBreakup {
-  id              Int             @id @default(autoincrement())
-  saleOrderId     Int
-  SalesOrderItems SalesOrderItems @relation(fields: [saleOrderId], references: [id], onDelete: Cascade)
-  sizeId          Int?
-  Size            Size?           @relation(fields: [sizeId], references: [id])
-  qty             Int?
+  id                    Int                   @id @default(autoincrement())
+  saleStyleBreakupId    Int
+  SaleOrderStyleBreakup SaleOrderStyleBreakup @relation(fields: [saleStyleBreakupId], references: [id], onDelete: Cascade)
+  sizeId                Int?
+  Size                  Size?                 @relation(fields: [sizeId], references: [id])
+  qty                   Int?
 }
 
 model Packing {

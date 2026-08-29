@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import Swal from "sweetalert2";
 import { TextInput, DropdownInput, DateInputNew } from "../../../Inputs";
 import {
@@ -44,12 +44,19 @@ import { conversionTypes, receiptTypes } from "../../../Utils/DropdownData.js";
 import { useGetCurrenciesQuery } from "../../../redux/services/CurrencyMasterService.js";
 import { useGetbankQuery } from "../../../redux/services/BankMasterService.js";
 import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
+import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
+import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService.js";
+import { useGetSalesOrderByIdQuery, useGetSalesOrderQuery } from "../../../redux/uniformService/SalesOrderService.js";
+import { padRows } from "../OrderEntry/OrderItemsUtils.js";
 
 const EMPTY_ROW = {
+  itemGroupId: "",
+  itemSubGroupId: "",
   styleItemId: "",
   uomId: "",
   hsnId: "",
   qty: "",
+  labelWidth: "",
   price: "",
   amount: "",
 };
@@ -106,13 +113,15 @@ const SalesDeliveryForm = ({
   const [bankId, setBankId] = useState("");
   const customerRef = useRef(null);
   const termsRef = useRef(null);
+  const [saleOrderId, setSaleOrderId] = useState("");
+
+  const [deliveryTaxValue, setDeliveryTaxValue] = useState("");
+  const [deliveryTaxType, setDeliveryTaxType] = useState("Flat");
 
   const effectiveReadOnly = readOnly || childRecord.current > 0;
   const isCumInvoice = deliveryType === "AGAINST_INVOICE";
 
-  const dispatch = useDispatch();
 
-  const { data: allData } = useGetSalesDeliveryQuery({ params: { branchId } });
   const { data: singleData } = useGetSalesDeliveryByIdQuery(id, { skip: !id });
   const { data: taxTypeList } = useGetTaxTemplateQuery({
     params: { companyId },
@@ -130,11 +139,37 @@ const SalesDeliveryForm = ({
 
   const { data: bankList } = useGetbankQuery({ params: { companyId } });
   const { data: sizeList } = useGetSizeMasterQuery({ params: { companyId } });
-
+  const { data: itemGroupList } = useGetItemGroupMasterQuery({ params: { companyId } });
+  const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({ params: { companyId } });
   const [dispatchInvalidate] = useInvalidateTags();
 
   const [addData] = useAddSalesDeliveryMutation();
   const [updateData] = useUpdateSalesDeliveryMutation();
+
+
+
+  const { data: salesOrderData } = useGetSalesOrderQuery({ params: { branchId } });
+  const { data: singleSaleOrderData, refetch: refetchSalesOrderData, isFetching: isSingleorderFetching, isLoading: isSingleorderLoading } = useGetSalesOrderByIdQuery(saleOrderId, { skip: !saleOrderId || id });
+
+
+
+  const syncFormWithDbForOrder = useCallback(
+    (data) => {
+      setCustomerId(data?.customerId ? data?.customerId : "")
+      setItems(padRows(data?.SalesOrderItems || []));
+      setSaleOrderId(data?.id || "");
+
+    },
+    [id],
+  );
+
+  useEffect(() => {
+    if (id) return
+    if (saleOrderId && singleSaleOrderData?.data) {
+      syncFormWithDbForOrder(singleSaleOrderData.data);
+    }
+  }, [isSingleorderFetching, isSingleorderLoading, saleOrderId, syncFormWithDbForOrder, singleSaleOrderData]);
+
 
   useEffect(() => {
     if (id && singleData?.data) {
@@ -190,21 +225,74 @@ const SalesDeliveryForm = ({
     const errors = [];
     const seen = new Set();
     items.forEach((item, index) => {
-      if (!item.styleItemId) errors.push(`Row ${index + 1}: Style is required`);
-      if (!item.hsnId) errors.push(`Row ${index + 1}: HSN is required`);
-      if (!item.uomId) errors.push(`Row ${index + 1}: UOM is required`);
-      if (!item.qty || Number(item.qty) <= 0)
-        errors.push(`Row ${index + 1}: Qty is required`);
-      const key = `${item.styleItemId}_${item.uomId}`;
+      if (!item.styleItemId) {
+        errors.push(`Row ${index + 1}: Style is required`);
+      }
+      if (!item.itemGroupId) {
+        errors.push(`Row ${index + 1}: Item Group is required`);
+      }
+      if (!item.hsnId) {
+        errors.push(`Row ${index + 1}: HSN is required`);
+      }
+      if (!item.uomId) {
+        errors.push(`Row ${index + 1}: UOM is required`);
+      }
+
+
+      const key = `${item.styleItemId}_${item.uomId}_${item.itemGroupId}`;
       if (seen.has(key)) {
         errors.push(`Row ${index + 1}: Duplicate item found`);
       } else {
         seen.add(key);
       }
+      if (item.styleBreakup?.length) {
+        let sizeSum = 0;
+        item.styleBreakup.forEach((style, styleIndex) => {
+          if (!style.styleId) {
+            errors.push(`Row ${index + 1}, Style Row ${styleIndex + 1}: Style is required`);
+          }
+
+          if (style.sizeBreakup?.length) {
+            const sizeSeen = new Set();
+            style.sizeBreakup.forEach((size, sizeIndex) => {
+              if (!size.sizeId) {
+                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Size is required`);
+              }
+
+              const qty = Number(size.qty || 0);
+              sizeSum += qty;
+
+              if (qty <= 0) {
+                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`);
+              }
+
+              if (size.sizeId) {
+                if (sizeSeen.has(size.sizeId)) {
+                  errors.push(`Row ${index + 1}, Style ${styleIndex + 1}: Duplicate size found`);
+                } else {
+                  sizeSeen.add(size.sizeId);
+                }
+              }
+            });
+          } else {
+            errors.push(`Row ${index + 1}, Style Row ${styleIndex + 1}: Size Breakup is required`);
+          }
+        });
+
+      } else {
+        errors.push(`Row ${index + 1}: Style Breakup is required for Order Qty`);
+      }
+      if (isCustomerExport && !loadingId) {
+        errors.push(`Loading Port is required`);
+      }
+
+      if (isCustomerExport && !deliveryId) {
+        errors.push(`Delivery Port is required`);
+      }
     });
+
     return errors;
   };
-
   const handleSave = async (pendingAction = null) => {
     if (!customerId) {
       Swal.fire({
@@ -323,6 +411,8 @@ const SalesDeliveryForm = ({
       weightInKg,
       carriageCharge,
       bankId,
+      saleOrderId,
+
     };
 
     try {
@@ -435,47 +525,47 @@ const SalesDeliveryForm = ({
   const leftActions = [
     ...(!effectiveReadOnly
       ? [
-          {
-            key: "saveAndClose",
-            icon: (
-              <span className="flex items-center gap-1">
-                <FiSave className="h-4 w-4" />
-                <HiX className="h-4 w-4" />
-              </span>
-            ),
-            hoverLabel: "Save & Close",
-            iconOnly: true,
-            onClick: () => handleSave("close"),
-            onKeyDown: (e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                handleSave("close");
-              }
-            },
-            className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
+        {
+          key: "saveAndClose",
+          icon: (
+            <span className="flex items-center gap-1">
+              <FiSave className="h-4 w-4" />
+              <HiX className="h-4 w-4" />
+            </span>
+          ),
+          hoverLabel: "Save & Close",
+          iconOnly: true,
+          onClick: () => handleSave("close"),
+          onKeyDown: (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.stopPropagation();
+              handleSave("close");
+            }
           },
-          {
-            key: "saveAndNew",
-            icon: (
-              <span className="flex items-center gap-1">
-                <FiSave className="h-4 w-4" />
-                <HiOutlineRefresh className="h-4 w-4" />
-              </span>
-            ),
-            hoverLabel: "Save & New",
-            iconOnly: true,
-            onClick: () => handleSave("new"),
-            onKeyDown: (e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.stopPropagation();
-                handleSave("new");
-              }
-            },
-            className: `bg-indigo-600 hover:bg-indigo-700 ${actionButtonClass}`,
+          className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
+        },
+        {
+          key: "saveAndNew",
+          icon: (
+            <span className="flex items-center gap-1">
+              <FiSave className="h-4 w-4" />
+              <HiOutlineRefresh className="h-4 w-4" />
+            </span>
+          ),
+          hoverLabel: "Save & New",
+          iconOnly: true,
+          onClick: () => handleSave("new"),
+          onKeyDown: (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.stopPropagation();
+              handleSave("new");
+            }
           },
-        ]
+          className: `bg-indigo-600 hover:bg-indigo-700 ${actionButtonClass}`,
+        },
+      ]
       : []),
   ];
 
@@ -491,39 +581,39 @@ const SalesDeliveryForm = ({
     },
     ...(isCumInvoice
       ? [
-          {
-            key: "summary",
-            icon: <FiEye className="h-4 w-4" />,
-            hoverLabel: "View Summary",
-            iconOnly: true,
-            onClick: () => {
-              if (!taxTemplateId) {
-                Swal.fire({
-                  title: "Information",
-                  text: "Please Select Tax Template!",
-                  icon: "info",
-                  confirmButtonColor: "#3085d6",
-                });
-                return;
-              }
-              setSummary(true);
-            },
-            className:
-              "bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md transition",
+        {
+          key: "summary",
+          icon: <FiEye className="h-4 w-4" />,
+          hoverLabel: "View Summary",
+          iconOnly: true,
+          onClick: () => {
+            if (!taxTemplateId) {
+              Swal.fire({
+                title: "Information",
+                text: "Please Select Tax Template!",
+                icon: "info",
+                confirmButtonColor: "#3085d6",
+              });
+              return;
+            }
+            setSummary(true);
           },
-        ]
+          className:
+            "bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md transition",
+        },
+      ]
       : []),
     ...(id
       ? [
-          {
-            key: "print",
-            icon: <FiPrinter className="h-4 w-4" />,
-            hoverLabel: "Print",
-            iconOnly: true,
-            onClick: () => setPrintModalOpen(true),
-            className: `bg-slate-600 hover:bg-slate-700 ${actionButtonClass}`,
-          },
-        ]
+        {
+          key: "print",
+          icon: <FiPrinter className="h-4 w-4" />,
+          hoverLabel: "Print",
+          iconOnly: true,
+          onClick: () => setPrintModalOpen(true),
+          className: `bg-slate-600 hover:bg-slate-700 ${actionButtonClass}`,
+        },
+      ]
       : []),
   ].filter((a) => !a.hidden);
 
@@ -548,8 +638,13 @@ const SalesDeliveryForm = ({
       discountType,
       discountValue,
       conversionType === "DOZEN" ? true : false,
+      "orderQty",
+      deliveryTaxValue,
+      deliveryTaxType,
     );
   }, [items, isSupplierOutside, discountType, discountValue, conversionType]);
+
+  console.log(enrichedData, "enrichedData")
 
   const totalQty = items?.reduce(
     (sum, item) => sum + (parseFloat(item.qty) || 0),
@@ -581,29 +676,8 @@ const SalesDeliveryForm = ({
               type="date"
             />
           </div>
-          <div className="md:col-span-1">
-            <DropdownInput
-              name="Receipt Basis"
-              options={receiptTypes}
-              value={deliveryType}
-              setValue={(value) => setDeliveryType(value)}
-              required={true}
-              readOnly={readOnly}
-              disabled={childRecord.current > 0 || readOnly}
-              ref={customerRef}
-            />
-          </div>
-          <div className="w-28">
-            <DropdownInput
-              name="Conversion"
-              options={conversionTypes}
-              value={conversionType}
-              setValue={(value) => setConversionType(value)}
-              required={true}
-              readOnly={readOnly}
-              disabled={childRecord.current > 0 || readOnly}
-            />
-          </div>
+
+
         </div>
       </div>
 
@@ -620,8 +694,8 @@ const SalesDeliveryForm = ({
                 id
                   ? customerList?.data?.filter((item) => item?.isCustomer)
                   : customerList?.data?.filter(
-                      (item) => item?.active && item?.isCustomer,
-                    ),
+                    (item) => item?.active && item?.isCustomer,
+                  ),
                 "name",
                 "id",
               )}
@@ -633,6 +707,27 @@ const SalesDeliveryForm = ({
               addNewLabel="+ Add New Customer"
               childComponent={PartyMaster}
               addNewModalWidth="w-[90%] h-[95%]"
+              disabled={readOnly || childRecord.current > 0}
+              openOnFocus={true}
+            />
+          </div>
+          <div className="md:col-span-1">
+            <DropdownWithModal
+              name="Sale Order No"
+              options={dropDownListObject(
+                id
+                  ? salesOrderData?.data?.filter((item) => item?.customerId === customerId)
+                  : salesOrderData?.data?.filter(
+                    (item) => item?.customerId === customerId,
+                  ),
+                "docId",
+                "id",
+              )}
+              value={saleOrderId}
+              setValue={setSaleOrderId}
+              required={true}
+              readOnly={readOnly}
+              className="w-[150px]"
               disabled={readOnly || childRecord.current > 0}
               openOnFocus={true}
             />
@@ -660,6 +755,55 @@ const SalesDeliveryForm = ({
             />
           </div>
 
+
+        </div>
+      </div>
+      <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+          Delivery Details
+        </h2>
+        <div className="grid grid-cols-4  gap-2">
+          {/* <div className="">
+            <DateInputNew
+              name="Delivery Date"
+              value={deliveryDate}
+              setValue={setDeliveryDate}
+              disabled={effectiveReadOnly}
+              required={true}
+              type="date"
+            />
+          </div>
+          <div className="">
+            <TextInput
+              name="DC No"
+              value={dcNo}
+              setValue={setDcNo}
+              disabled={effectiveReadOnly}
+            />
+          </div> */}
+          <div className="md:col-span-1">
+            <DropdownInput
+              name="Receipt Basis"
+              options={receiptTypes}
+              value={deliveryType}
+              setValue={(value) => setDeliveryType(value)}
+              required={true}
+              readOnly={readOnly}
+              disabled={childRecord.current > 0 || readOnly}
+              ref={customerRef}
+            />
+          </div>
+          <div className="w-28">
+            <DropdownInput
+              name="Conversion"
+              options={conversionTypes}
+              value={conversionType}
+              setValue={(value) => setConversionType(value)}
+              required={true}
+              readOnly={readOnly}
+              disabled={childRecord.current > 0 || readOnly}
+            />
+          </div>
           {isCumInvoice && (
             <>
               <div className="md:col-span-1">
@@ -722,31 +866,6 @@ const SalesDeliveryForm = ({
               )}
             </>
           )}
-        </div>
-      </div>
-      <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-          Delivery Details
-        </h2>
-        <div className="grid grid-cols-4  gap-2">
-          <div className="">
-            <DateInputNew
-              name="Delivery Date"
-              value={deliveryDate}
-              setValue={setDeliveryDate}
-              disabled={effectiveReadOnly}
-              required={true}
-              type="date"
-            />
-          </div>
-          <div className="">
-            <TextInput
-              name="DC No"
-              value={dcNo}
-              setValue={setDcNo}
-              disabled={effectiveReadOnly}
-            />
-          </div>
           <div className="">
             <TextInput
               name="Vehicle No"
@@ -850,28 +969,55 @@ const SalesDeliveryForm = ({
             summaryColumn: "right",
             emphasized: true,
           },
+          {
+            key: "returnCharge",
+            label: "Return Charges",
+            summaryColumn: "right",
+            renderValue: () => (
+              <div className="flex items-center gap-1">
+                <select
+                  value={deliveryTaxType}
+                  onChange={(e) => setDeliveryTaxType(e.target.value)}
+                  disabled={readOnly}
+                  className={`h-7 rounded border border-slate-300 bg-white px-1 text-[11px] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200 ${readOnly ? "cursor-not-allowed bg-slate-100 text-slate-500" : ""}`}
+                >
+                  <option value="Flat">Flat</option>
+                  <option value="Percentage">Percentage</option>
+                </select>
+                <input
+                  type="number"
+                  value={deliveryTaxValue}
+                  onChange={(event) => setDeliveryTaxValue(event.target.value)}
+                  onBlur={() => setDeliveryTaxValue(formatChargeValue(deliveryTaxValue))}
+                  readOnly={readOnly}
+                  className={`h-7 w-16 rounded border border-slate-300 px-1.5 py-0 text-right text-[11px] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200 ${readOnly ? "cursor-not-allowed bg-slate-100 text-slate-500" : "bg-white"}`}
+                />
+              </div>
+            ),
+          },
           ...(isCumInvoice
             ? [
-                {
-                  key: "netAmount",
-                  label: "Net Amount",
-                  value: `${enrichedData.net?.toFixed(2)}`,
-                  summaryColumn: "right",
-                  emphasized: true,
-                },
-              ]
+              {
+                key: "netAmount",
+                label: "Net Amount",
+                value: `${enrichedData.net?.toFixed(2)}`,
+                summaryColumn: "right",
+                emphasized: true,
+              },
+            ]
             : []),
           ...(isCustomerExport
             ? [
-                {
-                  key: "carriageCharge",
-                  label: "Carraige Charges",
-                  value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${carriageCharge}`,
-                  summaryColumn: "right",
-                  emphasized: true,
-                },
-              ]
+              {
+                key: "carriageCharge",
+                label: "Carraige Charges",
+                value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${carriageCharge}`,
+                summaryColumn: "right",
+                emphasized: true,
+              },
+            ]
             : []),
+
         ]}
       />
       <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
@@ -948,6 +1094,8 @@ const SalesDeliveryForm = ({
     </>
   );
 
+  console.log(items, "itemsitems")
+
   return (
     <>
       {isCumInvoice && (
@@ -1006,6 +1154,8 @@ const SalesDeliveryForm = ({
             isCumInvoice={isCumInvoice}
             isSupplierOutside={isSupplierOutside}
             sizeList={sizeList}
+            itemGroupList={itemGroupList}
+            itemSubGroupList={itemSubGroupList}
             conversionType={conversionType}
             isCustomerExport={isCustomerExport}
           />

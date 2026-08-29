@@ -164,14 +164,14 @@ async function get(req) {
         : undefined,
       docId: Boolean(serachDocNo)
         ? {
-          contains: serachDocNo,
+          contains: serachDocNo.trim().toUpperCase(),
         }
         : undefined,
       orderType: Boolean(searchOrderType)
-        ? { contains: searchOrderType }
+        ? { contains: searchOrderType.trim().toUpperCase() }
         : undefined,
       customer: {
-        name: searchCustomer ? { contains: searchCustomer } : undefined,
+        name: searchCustomer ? { contains: searchCustomer.trim().toUpperCase() } : undefined,
       },
     },
     include: {
@@ -477,87 +477,20 @@ async function getOne(id) {
       id: parseInt(id),
     },
     include: {
-      attachments: true,
       SalesOrderItems: {
         include: {
-          SaleOrderSizeBreakup: true,
-          ItemGroup: {
-            select: {
-              name: true,
-            },
-          },
-          Hsn: {
-            select: {
-              name: true,
-            },
-          },
-
-        },
+          SaleOrderStyleBreakup: {
+            include: {
+              SaleOrderSizeBreakup: true
+            }
+          }
+        }
       },
-      Branch: {
-        select: {
-          branchName: true,
-        },
-      },
-      customer: {
-        select: {
-          name: true,
-        },
-      },
-
-
     },
   });
 
   if (!data) return NoRecordFound("Purchase Inward");
-  const { module, hasApproval } = await getModuleApprovalSetup(
-    REFERENCE_PAGE,
-    data.branchId,
-  );
-  let log = null;
-  let shouldTrigger = false;
 
-  if (hasApproval && module) {
-    // 🔹 get approval log for this record
-    log = await prisma.approvalLog.findFirst({
-      where: {
-        referencePage: REFERENCE_PAGE,
-        referenceId: data.id,
-      },
-      include: {
-        LevelLogs: {
-          include: {
-            User: { select: { id: true, username: true } },
-          },
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    });
-
-    // 🔹 if no log → check config condition
-    if (!log) {
-      const activeConfigs = await prisma.approvalConfig.findMany({
-        where: {
-          moduleId: module.id,
-          branchId: parseInt(data.branchId),
-          active: true,
-        },
-        include: {
-          ConfigConditions: {
-            include: {
-              Field: true,
-              Operator: true,
-              CompareField: true,
-            },
-          },
-        },
-      });
-
-      if (activeConfigs.length > 0) {
-        shouldTrigger = evaluateConfigs(activeConfigs, data);
-      }
-    }
-  }
 
   return {
     statusCode: 0,
@@ -565,13 +498,15 @@ async function getOne(id) {
       ...data,
       SalesOrderItems: data.SalesOrderItems.map((item) => ({
         ...item,
-        sizeBreakup: item.SaleOrderSizeBreakup.map((size) => ({
+        styleBreakup: item.SaleOrderStyleBreakup.map((size) => ({
           ...size,
-          id: size.id.toString(),
+          sizeBreakup: size.SaleOrderSizeBreakup?.map((breakup) => ({
+            ...breakup,
+
+          })),
         })),
       })),
-      approvalStatus: getApprovalStatus(log, !!log || shouldTrigger),
-      approvalLog: log,
+
     },
   };
 }
@@ -629,6 +564,7 @@ async function create(body) {
         ? parseInt(item?.itemSubGroupId)
         : null,
       labelWidth: item?.labelWidth ?? "",
+      orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
       trackingType: item?.trackingType,
       price: item?.price ? parseFloat(item.price) : null,
       amount: item?.amount ? parseFloat(item.amount) : null,
@@ -648,18 +584,24 @@ async function create(body) {
           : null,
       uomId: item?.uomId ? parseInt(item.uomId) : null,
       hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
+      price: item?.price ? parseFloat(item?.price) : null,
+      orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
 
-      SaleOrderSizeBreakup:
-        item?.sizeBreakup?.length > 0
+      SaleOrderStyleBreakup:
+        item?.styleBreakup?.length > 0
           ? {
-            create: item.sizeBreakup.map((s) => ({
-              sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-              qty: s.qty ? parseInt(s.qty) : null,
-
+            create: item.styleBreakup.map((st) => ({
+              styleId: st.styleId ? parseInt(st.styleId) : null,
+              SaleOrderSizeBreakup: st?.sizeBreakup?.length > 0
+                ? {
+                  create: st.sizeBreakup.map((s) => ({
+                    sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                    qty: s.qty ? parseInt(s.qty) : null,
+                  }))
+                } : undefined
             })),
           }
           : undefined,
-      // sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
     }))
     : [];
 
@@ -695,18 +637,7 @@ async function create(body) {
               create: safeOrderItems,
             }
             : undefined,
-        attachments:
-          JSON.parse(attachments)?.length > 0
-            ? {
-              createMany: {
-                data: JSON.parse(attachments).map((sub) => ({
-                  date: sub?.date ? new Date(sub?.date) : undefined,
-                  filePath: sub?.filePath ? sub?.filePath : undefined,
-                  name: sub?.name ? sub?.name : undefined,
-                })),
-              },
-            }
-            : undefined,
+
       },
     });
 
@@ -718,194 +649,89 @@ async function create(body) {
 async function update(id, body, files) {
   const {
     userId,
-    branchId,
-    docDate,
-    customerId,
-    orderType,
-    deliveryDate,
-    remarks,
-    requirements,
-    orderQty,
     attachments,
-    termsId,
-    termsAndCondition,
+
     orderItems,
-    submitApproval,
-    productionType,
-    proFormaId,
-    refNo,
-    isRepeatedPI,
-    validDays,
-    taxTemplateId,
-    discountType,
-    discountValue,
-    conversionType,
-    payTermId,
-    bankId,
-    currencyId,
-    weightInKg,
-    carriageCharge,
-    loadingId,
-    deliveryId,
-    carriageTax,
-    orderId
+
   } = await body;
 
-  const safeorderQty =
-    orderQty && !isNaN(Number(orderQty)) ? parseFloat(orderQty) : null;
+
 
   const parseAttachments = JSON.parse(attachments || "[]");
   const incomingIds = parseAttachments
     ?.filter((i) => i.id)
     .map((i) => parseInt(i.id));
 
-  const parsedItems = JSON.parse(orderItems || "[]");
+  const parsedItems = typeof orderItems === "string" ? JSON.parse(orderItems || "[]") : (orderItems || []);
   const incomingItemIds = parsedItems
     ?.filter((i) => i.id)
     .map((i) => parseInt(i.id));
-  const { module, hasApproval } = await getModuleApprovalSetup(
-    REFERENCE_PAGE,
-    branchId,
-  );
+
+
+
   let data;
-  const dataFound = await prisma.salesOrder.findUnique({
+
+  const dataFound = await prisma.SalesOrder.findUnique({
     where: {
       id: parseInt(id),
     },
     include: {
-      attachments: { select: { id: true, filePath: true } },
       SalesOrderItems: true,
     },
   });
-  if (!dataFound) return NoRecordFound("Purchase Inward");
+  if (!dataFound) return NoRecordFound("Sales Order");
+
   const removedItemIds = dataFound.SalesOrderItems
     .filter((item) => !incomingItemIds.includes(item.id))
     .map((item) => item.id);
-  const removedAttachments = dataFound.attachments.filter(
-    (existing) => !incomingIds.includes(existing.id),
-  );
-  const updatedAttachmentsWithNewFile = dataFound.attachments.filter(
-    (existing) => {
-      const incoming = parseAttachments.find(
-        (i) => parseInt(i.id) === existing.id,
-      );
-      // If incoming filePath is empty/changed and old had a file
-      return (
-        incoming &&
-        existing.filePath &&
-        (!incoming.filePath || incoming.filePath !== existing.filePath)
-      );
-    },
-  );
 
-  // ✅ Unlink removed attachment files
-  const unlinkFile = (filePath) => {
-    if (!filePath) return;
-    const fullPath = path.join("./uploads", filePath);
-    fs.unlink(fullPath, (err) => {
-      if (err) console.warn(`Could not delete file: ${fullPath}`, err.message);
-      else console.log(`Deleted file: ${fullPath}`);
-    });
-  };
 
-  // Delete files for removed attachments
-  removedAttachments.forEach((att) => unlinkFile(att.filePath));
 
-  // Delete old files for attachments where file was replaced
-  updatedAttachmentsWithNewFile.forEach((att) => unlinkFile(att.filePath));
-  let finalRefNo = refNo || null;
-  if (productionType === "SAMPLE" && dataFound.docId) {
-    const parts = dataFound.docId.split("/");
-    if (parts.length >= 4) {
-      const finYear = parts[1];
-      const number = parts[3];
 
-      finalRefNo = `${finYear}/SAM/${number}`;
-    }
-  }
-  const validTo = moment(docDate).add(validDays, "days").endOf("day").toDate();
+
   await prisma.$transaction(async (tx) => {
-    await tx.notification.deleteMany({
-      where: {
-        referencePage: REFERENCE_PAGE,
-        referenceId: {
-          in: removedItemIds,
-        },
-      },
-    });
+
     data = await tx.SalesOrder.update({
       where: {
         id: parseInt(id),
       },
       data: {
-        docDate: docDate ? new Date(docDate) : null,
-        orderId: orderId ? parseInt(orderId) : null,
-        createdById: parseInt(userId),
-        branchId: branchId ? parseInt(branchId) : null,
-        customerId: customerId ? parseInt(customerId) : null,
-
-        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
-        remarks,
-        termsId: termsId ? parseInt(termsId) : null,
-        termsAndCondition,
-        validDays: validDays ? parseInt(validDays) : null,
-        validTo: validTo,
-        taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
-        discountType: discountType || null,
-        discountValue: discountValue ? parseFloat(discountValue) : null,
-        payTermId: payTermId ? parseInt(payTermId) : null,
-        deliveryId: deliveryId ? parseInt(deliveryId) : null,
-
-
         SalesOrderItems: {
           deleteMany: incomingItemIds.length
             ? { id: { notIn: incomingItemIds } }
-            : {}, // delete all if no items sent
+            : {},
           update: parsedItems
             .filter((item) => item.id)
             .map((item) => ({
               where: { id: parseInt(item.id) },
               data: {
-                styleItemId: item.styleItemId
-                  ? parseInt(item.styleItemId)
-                  : null,
-                itemGroupId: item.itemGroupId
-                  ? parseInt(item.itemGroupId)
-                  : null,
-                itemSubGroupId: item?.itemSubGroupId
-                  ? parseInt(item?.itemSubGroupId)
-                  : null,
+                styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
+                itemGroupId: item.itemGroupId ? parseInt(item.itemGroupId) : null,
+                itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
+                orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
+
                 labelWidth: item?.labelWidth ?? "",
                 trackingType: item.trackingType,
                 price: item?.price ? parseFloat(item.price) : null,
                 amount: item?.amount ? parseFloat(item.amount) : null,
                 dozen: item?.dozen ? parseFloat(item.dozen) : null,
-                taxPercent:
-                  item?.taxPercent && !isNaN(Number(item.taxPercent))
-                    ? parseFloat(item.taxPercent)
-                    : null,
-                discountType: item?.discountType || null,
-                discountValue:
-                  item?.discountValue && !isNaN(Number(item.discountValue))
-                    ? parseFloat(item.discountValue)
-                    : null,
-
-                hsnId: item.hsnId ? parseInt(item.hsnId) : null,
-
-                orderQty: item.orderQty ? parseInt(item.orderQty) : null,
-                sizeId: item.sizeId ? parseInt(item.sizeId) : null,
                 uomId: item.uomId ? parseInt(item.uomId) : null,
                 gsmId: item.gsmId ? parseInt(item.gsmId) : null,
-                SaleOrderSizeBreakup: {
+                SaleOrderStyleBreakup: {
                   deleteMany: {},
-                  create:
-                    item.sizeBreakup?.length > 0
-                      ? item.sizeBreakup.map((s) => ({
-                        sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                        qty: s.qty ? parseInt(s.qty) : null,
+                  create: item?.styleBreakup?.length > 0
+                    ? item.styleBreakup.map((st) => ({
+                      styleId: st.styleId ? parseInt(st.styleId) : null,
+                      SaleOrderSizeBreakup: st?.sizeBreakup?.length > 0
+                        ? {
+                          create: st.sizeBreakup.map((s) => ({
+                            sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                            qty: s.qty ? parseInt(s.qty) : null,
 
-                      }))
-                      : [],
+                          }))
+                        } : undefined
+                    }))
+                    : []
                 },
               },
             })),
@@ -915,106 +741,41 @@ async function update(id, body, files) {
             .map((item) => ({
               styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
               itemGroupId: item.itemGroupId ? parseInt(item.itemGroupId) : null,
-              itemSubGroupId: item?.itemSubGroupId
-                ? parseInt(item?.itemSubGroupId)
-                : null,
+              itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
               labelWidth: item?.labelWidth ?? "",
               trackingType: item.trackingType,
               price: item?.price ? parseFloat(item.price) : null,
               amount: item?.amount ? parseFloat(item.amount) : null,
               dozen: item?.dozen ? parseFloat(item.dozen) : null,
-              taxPercent:
-                item?.taxPercent && !isNaN(Number(item.taxPercent))
-                  ? parseFloat(item.taxPercent)
-                  : null,
-              discountType: item?.discountType || null,
-              discountValue:
-                item?.discountValue && !isNaN(Number(item.discountValue))
-                  ? parseFloat(item.discountValue)
-                  : null,
-
-              hsnId: item.hsnId ? parseInt(item.hsnId) : null,
-              orderQty: item.orderQty ? parseInt(item.orderQty) : null,
-              sizeId: item.sizeId ? parseInt(item.sizeId) : null,
               uomId: item.uomId ? parseInt(item.uomId) : null,
               gsmId: item.gsmId ? parseInt(item.gsmId) : null,
-              SaleOrderSizeBreakup:
-                item.sizeBreakup?.length > 0
-                  ? {
-                    create: item.sizeBreakup.map((s) => ({
-                      sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                      qty: s.qty ? parseInt(s.qty) : null,
+              orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
+              price: item?.price ? parseFloat(item?.price) : null,
 
+              SaleOrderStyleBreakup:
+                item?.styleBreakup?.length > 0
+                  ? {
+                    create: item.styleBreakup.map((st) => ({
+                      styleId: st.styleId ? parseInt(st.styleId) : null,
+                      SaleOrderSizeBreakup: st?.sizeBreakup?.length > 0
+                        ? {
+                          create: st.sizeBreakup.map((s) => ({
+                            sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                            qty: s.qty ? parseInt(s.qty) : null,
+                          }))
+                        } : undefined
                     })),
                   }
                   : undefined,
             })),
         },
-        attachments: {
-          deleteMany: {
-            ...(incomingIds.length > 0 && {
-              id: { notIn: incomingIds },
-            }),
-          },
 
-          update: parseAttachments
-            .filter((item) => item.id)
-            .map((sub) => ({
-              where: { id: parseInt(sub.id) },
-              data: {
-                date: sub?.date ? new Date(sub?.date) : undefined,
-                filePath: (() => {
-                  const matchedFile = files?.find(
-                    (f) => f.originalname === sub.filePath,
-                  );
-                  return matchedFile
-                    ? matchedFile.filename
-                    : sub.filePath || undefined;
-                })(),
-                name: sub?.name ? sub?.name : undefined,
-              },
-            })),
-
-          create: parseAttachments
-            .filter((item) => !item.id)
-            .map((sub) => ({
-              date: sub?.date ? new Date(sub?.date) : undefined,
-              filePath: (() => {
-                const matchedFile = files?.find(
-                  (f) => f.originalname === sub.filePath,
-                );
-                return matchedFile ? matchedFile.filename : sub.filePath;
-              })(),
-              name: sub?.name ? sub?.name : undefined,
-            })),
-        },
       },
     });
-    if (submitApproval && hasApproval && module) {
-      await tx.approvalLog.deleteMany({
-        where: {
-          referenceId: parseInt(id),
-          referencePage: REFERENCE_PAGE,
-          status: { in: ["REJECTED", "NOTAPPROVED"] },
-        },
-      });
 
-      const fullRecord = await tx.orderEntry.findUnique({
-        where: { id: parseInt(id) },
-        include: await buildIncludeForModule(module.id),
-      });
 
-      await createApprovalLog(
-        tx,
-        branchId,
-        module.id,
-        data.id,
-        REFERENCE_PAGE,
-        fullRecord,
-        data.docId,
-        userId,
-      );
-    }
+
+
   });
 
   return { statusCode: 0, data };
