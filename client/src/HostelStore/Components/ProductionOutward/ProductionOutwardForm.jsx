@@ -151,7 +151,7 @@ const ProcessTree = ({
                 const immediatePrev = sorted[idx - 1];
 
                 if (immediatePrev?.status?.toUpperCase() === "IN_PROGRESS") {
-                  return false;
+                  return true;
                 }
               }
 
