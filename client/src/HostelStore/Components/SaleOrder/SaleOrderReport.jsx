@@ -367,13 +367,14 @@ const SaleOrderReport = ({
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-32">
                                             <div>Sale Order Date</div>
                                         </th>
+                                        <th className="w-80  px-3   font-medium text-[13px] text-gray-900  text-center ">
+                                            <div>Customer</div>
+                                        </th>
                                         <th className=" px-3  font-medium text-[13px]  text-gray-900  text-center w-40">
                                             <div>Order No</div>
                                         </th>
 
-                                        <th className="w-80  px-3   font-medium text-[13px] text-gray-900  text-center ">
-                                            <div>Customer</div>
-                                        </th>
+
 
                                         <th
                                             className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
@@ -417,17 +418,6 @@ const SaleOrderReport = ({
                                                 }}
                                             />
                                         </th>
-                                        <th className="  px-1 font-medium text-[13px]  text-gray-900  text-center w-40">
-                                            <input
-                                                type="text"
-                                                className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
-                                                placeholder="Search"
-                                                value={searchOrderType}
-                                                onChange={(e) => {
-                                                    setSearchOrderType(e.target.value);
-                                                }}
-                                            />
-                                        </th>
                                         <th className="w-80  px-1 font-medium text-[13px]  text-gray-900  text-center ">
                                             <input
                                                 type="text"
@@ -439,6 +429,18 @@ const SaleOrderReport = ({
                                                 }}
                                             />
                                         </th>
+                                        <th className="  px-1 font-medium text-[13px]  text-gray-900  text-center w-40">
+                                            <input
+                                                type="text"
+                                                className="text-black h-5   w-full   px-1 focus:outline-none border  border-gray-400 rounded-md"
+                                                placeholder="Search"
+                                                value={searchOrderType}
+                                                onChange={(e) => {
+                                                    setSearchOrderType(e.target.value);
+                                                }}
+                                            />
+                                        </th>
+
                                     </tr>
                                 </thead>
                                 {isLoadingIndicator ? (
@@ -478,14 +480,15 @@ const SaleOrderReport = ({
                                                         <td className="py-1.5 text-left">
                                                             {getDateFromDateTimeToDisplay(dataObj.docDate)}
                                                         </td>
-                                                        <td className="py-1.5 text-left  ">
-                                                            {dataObj.OrderEntry?.docId}{" "}
-                                                        </td>
-
                                                         <td className="py-1.5 text-left">
                                                             {" "}
                                                             {dataObj?.customer?.name}
                                                         </td>
+                                                        <td className="py-1.5 text-left  ">
+                                                            {dataObj.OrderEntry?.docId}{" "}
+                                                        </td>
+
+
 
                                                         <td className="px-2 py-1">
                                                             <div className="flex items-center justify-center gap-1.5 text-orange-700">

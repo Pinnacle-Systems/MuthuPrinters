@@ -13,7 +13,7 @@ const receiptTypeLabel = (type) => {
   return type || "—";
 };
 
-const SalesDeliveryReport = ({
+const SalesBillEntryReport = ({
   onView,
   onEdit,
   onDelete,
@@ -349,4 +349,4 @@ const SalesDeliveryReport = ({
   );
 };
 
-export default SalesDeliveryReport;
+export default SalesBillEntryReport;

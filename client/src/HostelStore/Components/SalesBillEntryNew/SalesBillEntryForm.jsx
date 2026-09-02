@@ -1,24 +1,24 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import Swal from "sweetalert2";
-import { TextInput, DropdownInput, DateInputNew } from "../../../Inputs";
+import { TextInput, DropdownInput, DateInputNew } from "../../../Inputs/index.js";
 import {
   useAddSalesDeliveryMutation,
   useUpdateSalesDeliveryMutation,
   useDeleteSalesDeliveryMutation,
   useGetSalesDeliveryByIdQuery,
   useGetSalesDeliveryQuery,
-} from "../../../redux/uniformService/SalesDeliveryService";
-import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
+} from "../../../redux/uniformService/SalesDeliveryService.js";
+import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper.js";
 import {
   dropDownListObject,
   dropDownListObjectMultiple,
-} from "../../../Utils/contructObject";
-import SalesDeliveryItems from "./SalesDeliveryItems.jsx";
+} from "../../../Utils/contructObject.js";
+import SalesBillEntryItems from "./SalesBillEntryItems.jsx";
 import moment from "moment";
 import { PDFViewer } from "@react-pdf/renderer";
-import Modal from "../../../UiComponents/Modal";
+import Modal from "../../../UiComponents/Modal/index.js";
 import SalesDeliveryPrintFormat from "./SalesDeliveryPrintFormat.jsx";
-import tw from "../../../Utils/tailwind-react-pdf";
+import tw from "../../../Utils/tailwind-react-pdf.js";
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 import { FiEdit2, FiSave, FiPrinter, FiEye } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
@@ -26,11 +26,11 @@ import {
   CommonFormFooter,
   TransactionActions,
   TransactionLayout,
-} from "../../../Basic/components/Reuseable";
+} from "../../../Basic/components/Reuseable/index.js";
 import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
-import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
-import PoSummary from "../PurchaseOrder/PoSummary";
-import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
+import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary.js";
+import PoSummary from "../PurchaseOrder/PoSummary.js";
+import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import { PartyMaster } from "../index.js";
 import {
@@ -73,7 +73,7 @@ const padItems = (itemsArray = []) => {
   return itemsArray;
 };
 
-const SalesDeliveryForm = ({
+const SalesBillEntryForm = ({
   readOnly,
   setReadOnly,
   id,
@@ -1096,7 +1096,7 @@ const SalesDeliveryForm = ({
       </Modal>
 
       <TransactionLayout
-        title="Sales Delivery"
+        title="Sales Bill Entry"
         badge={<ModeChip id={id} readOnly={readOnly} />}
         closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
         onClose={onClose}
@@ -1105,7 +1105,7 @@ const SalesDeliveryForm = ({
         detailsLayout="default"
         detailsLayouts={["default"]}
         gridItems={
-          <SalesDeliveryItems
+          <SalesBillEntryItems
             items={items}
             enrichedItems={enrichedData}
             setItems={setItems}
@@ -1128,4 +1128,4 @@ const SalesDeliveryForm = ({
   );
 };
 
-export default SalesDeliveryForm;
+export default SalesBillEntryForm;

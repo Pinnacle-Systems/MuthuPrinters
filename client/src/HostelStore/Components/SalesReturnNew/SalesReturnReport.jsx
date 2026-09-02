@@ -6,6 +6,7 @@ import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Tooltip } from "@mui/material";
 import { useGetSalesDeliveryQuery } from "../../../redux/uniformService/SalesDeliveryService";
 import { UserPermissions } from "../../../Utils/UserPermissions";
+import { useGetSalesReturnQuery } from "../../../redux/services/SalesReturnService";
 
 const receiptTypeLabel = (type) => {
   if (type === "AGAINST_INVOICE") return "Delivery cum Invoice";
@@ -13,7 +14,7 @@ const receiptTypeLabel = (type) => {
   return type || "—";
 };
 
-const SalesDeliveryReport = ({
+const SalesReturnReport = ({
   onView,
   onEdit,
   onDelete,
@@ -29,21 +30,19 @@ const SalesDeliveryReport = ({
   const [searchCustomer, setSearchCustomer] = useState("");
   const [totalCount, setTotalCount] = useState(0);
   const [currentPageNumber, setCurrentPageNumber] = useState(1);
-  const [searchOrderNo, setSearchOrderNo] = useState("");
-
   const { hasPermission } = UserPermissions();
 
-  const searchFields = { searchDocNo, searchDocDate, searchCustomer, searchOrderNo };
+  const searchFields = { searchDocNo, searchDocDate, searchCustomer };
 
   useEffect(() => {
     setCurrentPageNumber(1);
-  }, [searchDocNo, searchDocDate, searchCustomer, searchOrderNo]);
+  }, [searchDocNo, searchDocDate, searchCustomer]);
 
   const {
     data: allData,
     isFetching,
     isLoading,
-  } = useGetSalesDeliveryQuery({
+  } = useGetSalesReturnQuery({
     params: {
       branchId,
       ...searchFields,
@@ -157,19 +156,19 @@ const SalesDeliveryReport = ({
                   S No
                 </th>
                 <th className="px-3 font-medium text-[13px] text-gray-900 text-center w-32">
-                  Sales Delivery No
+                  Sales Return No
                 </th>
-                <th className="px-3 font-medium text-[13px] text-gray-900 text-center w-40">
-                  Sales Delivery Date
+                <th className="px-3 font-medium text-[13px] text-gray-900 text-center w-32">
+                  Sales Return Date
                 </th>
                 <th className="w-80 px-3 font-medium text-[13px] text-gray-900 text-center">
                   Customer
                 </th>
-                <th className="w-40 px-3 font-medium text-[13px] text-gray-900 text-center">
-                  Sales Order
+                <th className="px-3 font-medium text-[13px] text-gray-900 text-center w-40">
+                  Order No
                 </th>
                 <th className="px-3 font-medium text-[13px] text-gray-900 text-center w-40">
-                  Type
+                  Sales Delivery No
                 </th>
                 <th className="w-14 px-3 font-medium text-[13px] text-gray-900 text-center">
                   Actions
@@ -206,17 +205,24 @@ const SalesDeliveryReport = ({
                     onChange={(e) => setSearchCustomer(e.target.value)}
                   />
                 </th>
-                <th className="w-40 px-1 font-medium text-[13px] text-gray-900 text-center">
+                <th className=" px-1 font-medium text-[13px] text-gray-900 text-center">
                   <input
                     type="text"
                     className="text-black h-5 w-full px-1 focus:outline-none border border-gray-400 rounded-md"
                     placeholder="Search"
-                    value={searchOrderNo}
-                    onChange={(e) => setSearchOrderNo(e.target.value)}
+                    value={searchCustomer}
+                    onChange={(e) => setSearchCustomer(e.target.value)}
                   />
                 </th>
-                <th className="px-3 w-40 font-medium text-[13px] text-gray-900 text-center"></th>
-                <th className="w-14 px-3 font-medium text-[13px] text-gray-900 text-center"></th>
+                <th className=" px-1 font-medium text-[13px] text-gray-900 text-center">
+                  <input
+                    type="text"
+                    className="text-black h-5 w-full px-1 focus:outline-none border border-gray-400 rounded-md"
+                    placeholder="Search"
+                    value={searchCustomer}
+                    onChange={(e) => setSearchCustomer(e.target.value)}
+                  />
+                </th>                <th className="w-14 px-3 font-medium text-[13px] text-gray-900 text-center"></th>
               </tr>
             </thead>
             <tbody className="bg-white">
@@ -242,23 +248,19 @@ const SalesDeliveryReport = ({
                     className={`hover:bg-gray-50 transition-colors border-b border-gray-200 text-[12px] ${index % 2 === 0 ? "bg-white" : "bg-gray-100"}`}
                   // onClick={() => onView(item.id)}
                   >
-                    <td className="text-center">{index + 1}</td>
-                    <td className="py-1.5 text-center">{item.docId}</td>
-                    <td className="py-1.5 text-center">
+                    <td className="text-left">{index + 1}</td>
+                    <td className="py-1.5 text-left">{item.docId}</td>
+                    <td className="py-1.5 text-left">
                       {getDateFromDateTimeToDisplay(item.docDate)}
                     </td>
                     <td className="py-1.5 text-left px-2">
                       {item.Customer?.name}
                     </td>
                     <td className="py-1.5 text-left px-2">
-                      {item.SalesOrder?.docId}
+                      {item.SalesDelivery?.SalesOrder?.OrderEntry?.docId}
                     </td>
-                    <td className="py-1.5 text-center">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${item.deliveryType === "AGAINST_INVOICE" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}
-                      >
-                        {receiptTypeLabel(item.deliveryType)}
-                      </span>
+                    <td className="py-1.5 text-left px-2">
+                      {item.SalesDelivery?.docId}
                     </td>
                     <td className="px-2 py-1">
                       <div
@@ -349,4 +351,4 @@ const SalesDeliveryReport = ({
   );
 };
 
-export default SalesDeliveryReport;
+export default SalesReturnReport;

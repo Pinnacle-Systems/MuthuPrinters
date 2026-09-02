@@ -1,24 +1,24 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import Swal from "sweetalert2";
-import { TextInput, DropdownInput, DateInputNew } from "../../../Inputs";
+import { TextInput, DropdownInput, DateInputNew } from "../../../Inputs/index.js";
 import {
   useAddSalesDeliveryMutation,
   useUpdateSalesDeliveryMutation,
   useDeleteSalesDeliveryMutation,
   useGetSalesDeliveryByIdQuery,
   useGetSalesDeliveryQuery,
-} from "../../../redux/uniformService/SalesDeliveryService";
-import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper";
+} from "../../../redux/uniformService/SalesDeliveryService.js";
+import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper.js";
 import {
   dropDownListObject,
   dropDownListObjectMultiple,
-} from "../../../Utils/contructObject";
-import SalesDeliveryItems from "./SalesDeliveryItems.jsx";
+} from "../../../Utils/contructObject.js";
+import SalesDeliveryItems from "./SalesReturnItems.jsx";
 import moment from "moment";
 import { PDFViewer } from "@react-pdf/renderer";
-import Modal from "../../../UiComponents/Modal";
+import Modal from "../../../UiComponents/Modal/index.js";
 import SalesDeliveryPrintFormat from "./SalesDeliveryPrintFormat.jsx";
-import tw from "../../../Utils/tailwind-react-pdf";
+import tw from "../../../Utils/tailwind-react-pdf.js";
 import { IoArrowBackCircleSharp } from "react-icons/io5";
 import { FiEdit2, FiSave, FiPrinter, FiEye } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
@@ -26,11 +26,11 @@ import {
   CommonFormFooter,
   TransactionActions,
   TransactionLayout,
-} from "../../../Basic/components/Reuseable";
+} from "../../../Basic/components/Reuseable/index.js";
 import { useGetTaxTemplateQuery } from "../../../redux/services/TaxTemplateServices.js";
-import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
-import PoSummary from "../PurchaseOrder/PoSummary";
-import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService";
+import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary.js";
+import PoSummary from "../PurchaseOrder/PoSummary.js";
+import { useGetPartyByIdQuery } from "../../../redux/services/PartyMasterService.js";
 import { DropdownWithModal } from "../../../Inputs/Reuseable.js";
 import { PartyMaster } from "../index.js";
 import {
@@ -48,6 +48,7 @@ import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMas
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService.js";
 import { useGetSalesOrderByIdQuery, useGetSalesOrderQuery } from "../../../redux/uniformService/SalesOrderService.js";
 import { padRows } from "../OrderEntry/OrderItemsUtils.js";
+import { useAddSalesReturnMutation, useGetSalesReturnByIdQuery, useUpdateSalesReturnMutation } from "../../../redux/services/SalesReturnService.js";
 
 const EMPTY_ROW = {
   itemGroupId: "",
@@ -73,7 +74,7 @@ const padItems = (itemsArray = []) => {
   return itemsArray;
 };
 
-const SalesDeliveryForm = ({
+const SalesReturnForm = ({
   readOnly,
   setReadOnly,
   id,
@@ -114,7 +115,7 @@ const SalesDeliveryForm = ({
   const [bankId, setBankId] = useState("");
   const customerRef = useRef(null);
   const termsRef = useRef(null);
-  const [salesOrderId, setSalesOrderId] = useState("");
+  const [salesDeliveryId, setSalesDeliveryId] = useState("");
 
   const [deliveryTaxValue, setDeliveryTaxValue] = useState("");
   const [deliveryTaxType, setDeliveryTaxType] = useState("Flat");
@@ -123,7 +124,7 @@ const SalesDeliveryForm = ({
   const isCumInvoice = deliveryType === "AGAINST_INVOICE";
 
 
-  const { data: singleData, isFetching: isSingleFetching, isLoading: isSingleLoading } = useGetSalesDeliveryByIdQuery(id, { skip: !id });
+  const { data: singleData, isFetching: isSingleFetching, isLoading: isSingleLoading } = useGetSalesReturnByIdQuery(id, { skip: !id });
   const { data: taxTypeList } = useGetTaxTemplateQuery({
     params: { companyId },
   });
@@ -144,13 +145,13 @@ const SalesDeliveryForm = ({
   const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({ params: { companyId } });
   const [dispatchInvalidate] = useInvalidateTags();
 
-  const [addData] = useAddSalesDeliveryMutation();
-  const [updateData] = useUpdateSalesDeliveryMutation();
+  const [addData] = useAddSalesReturnMutation();
+  const [updateData] = useUpdateSalesReturnMutation();
 
 
 
-  const { data: salesOrderData, } = useGetSalesOrderQuery({ params: { branchId } });
-  const { data: singleSaleOrderData, refetch: refetchSalesOrderData, isFetching: isSingleorderFetching, isLoading: isSingleorderLoading } = useGetSalesOrderByIdQuery(salesOrderId, { skip: !salesOrderId || id });
+  const { data: salesDeliveryData, } = useGetSalesDeliveryQuery({ params: { branchId } });
+  const { data: singleSalesDeliveryData, refetch: refetchSalesOrderData, isFetching: isSingleorderFetching, isLoading: isSingleorderLoading } = useGetSalesDeliveryByIdQuery(salesDeliveryId, { skip: !salesDeliveryId || id });
 
 
   const syncFormWithDb = useCallback(
@@ -182,7 +183,7 @@ const SalesDeliveryForm = ({
       setWeightInKg(data?.weightInKg ? data?.weightInKg : "");
       setCarriageCharge(data?.carriageCharge ? data?.carriageCharge : "");
       setBankId(data?.bankId ? data?.bankId : "");
-      setSalesOrderId(data?.orderId ? data?.orderId : "");
+      setSalesDeliveryId(data?.orderId ? data?.orderId : "");
       setDeliveryTaxType(data?.deliveryTaxType ? data?.deliveryTaxType : "Flat");
       setDeliveryTaxValue(data?.deliveryTaxValue ? data?.deliveryTaxValue : "");
     },
@@ -201,8 +202,8 @@ const SalesDeliveryForm = ({
   const syncFormWithDbForOrder = useCallback(
     (data) => {
       setCustomerId(data?.customerId ? data?.customerId : "")
-      setItems(padRows(data?.SalesOrderItems || []));
-      setSalesOrderId(data?.id || "");
+      setItems(padRows(data?.salesDeliveryItems || []));
+      setSalesDeliveryId(data?.id || "");
 
     },
     [id],
@@ -210,10 +211,10 @@ const SalesDeliveryForm = ({
 
   useEffect(() => {
     if (id) return
-    if (salesOrderId && singleSaleOrderData?.data) {
-      syncFormWithDbForOrder(singleSaleOrderData.data);
+    if (salesDeliveryId && singleSalesDeliveryData?.data) {
+      syncFormWithDbForOrder(singleSalesDeliveryData.data);
     }
-  }, [isSingleorderFetching, isSingleorderLoading, salesOrderId, syncFormWithDbForOrder, singleSaleOrderData]);
+  }, [isSingleorderFetching, isSingleorderLoading, salesDeliveryId, syncFormWithDbForOrder, singleSalesDeliveryData]);
 
 
   useEffect(() => {
@@ -238,7 +239,7 @@ const SalesDeliveryForm = ({
       setDiscountType(data.discountType || "Percentage");
       setDiscountValue(data.discountValue || 0);
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      setItems(padItems(data.salesDeliveryItems || []));
+      setItems(padItems(data.SalesReturnItems || []));
       setConversionType(data.conversionType || "PCS");
       setCurrencyId(data.currencyId || "");
       setWeightInKg(data.weightInKg || "");
@@ -318,7 +319,7 @@ const SalesDeliveryForm = ({
     weightInKg,
     carriageCharge,
     bankId,
-    salesOrderId,
+    salesDeliveryId,
     amount: amount,
     enrichedData,
     deliveryTaxType,
@@ -626,11 +627,11 @@ const SalesDeliveryForm = ({
         </h2>
         <div className="grid grid-cols-2 gap-2">
           <div className="w-36">
-            <TextInput name="Sales Delivery No" value={docId} disabled={true} />
+            <TextInput name="Sales Return No" value={docId} disabled={true} />
           </div>
           <div className="w-28">
             <DateInputNew
-              name="Sales Delivery Date"
+              name="Sales Return Date"
               value={docDate}
               setValue={setDocDate}
               disabled={true}
@@ -675,18 +676,18 @@ const SalesDeliveryForm = ({
           </div>
           <div className="md:col-span-1">
             <DropdownWithModal
-              name="Sale Order No"
+              name="Sale Delivery No"
               options={dropDownListObject(
                 id
-                  ? salesOrderData?.data?.filter((item) => item?.customerId === customerId)
-                  : salesOrderData?.data?.filter(
+                  ? salesDeliveryData?.data?.filter((item) => item?.customerId === customerId)
+                  : salesDeliveryData?.data?.filter(
                     (item) => item?.customerId === customerId,
                   ),
                 "docId",
                 "id",
               )}
-              value={salesOrderId}
-              setValue={setSalesOrderId}
+              value={salesDeliveryId}
+              setValue={setSalesDeliveryId}
               required={true}
               readOnly={readOnly}
               className="w-[150px]"
@@ -1096,7 +1097,7 @@ const SalesDeliveryForm = ({
       </Modal>
 
       <TransactionLayout
-        title="Sales Delivery"
+        title="Sales Return"
         badge={<ModeChip id={id} readOnly={readOnly} />}
         closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
         onClose={onClose}
@@ -1128,4 +1129,4 @@ const SalesDeliveryForm = ({
   );
 };
 
-export default SalesDeliveryForm;
+export default SalesReturnForm;

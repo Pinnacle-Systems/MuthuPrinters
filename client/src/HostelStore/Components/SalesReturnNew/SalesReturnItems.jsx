@@ -238,18 +238,18 @@ const SalesDeliveryItems = ({
 
 
 
-      if (field === "deliveryQty") {
+      if (field === "returnQty") {
         const orderQty = Number(sizeBreakup[sizeIndex].qty) || 0;
-        const newDeliveryQty = Number(value) || 0;
+        const newReturnQty = Number(value) || 0;
         const allowedPercentage = Number(deliveryPercentage) || 0;
-        const maxAllowed = orderQty + (orderQty * allowedPercentage) / 100;
-        const overllQty = Number(sizeBreakup[sizeIndex].alreadyDeliveryQty) + newDeliveryQty;
+        const maxAllowed = orderQty
+        const overllQty = Number(sizeBreakup[sizeIndex].alreadyReturnQty) + newReturnQty;
 
         if (overllQty > maxAllowed) {
           Swal.fire({
             icon: "warning",
             title: "Exceeds Limit",
-            text: `Delivery Qty cannot exceed ${maxAllowed.toFixed(2)} (Order Qty + ${allowedPercentage}% packing control).`,
+            text: `Return Qty cannot exceed ${maxAllowed.toFixed(2)}.`,
           });
           return prev;
         }
@@ -424,10 +424,10 @@ const SalesDeliveryItems = ({
                         <tr>
                           <th className="border border-gray-300 px-2 py-1.5 w-10 text-center">#</th>
                           <th className="border border-gray-300 px-2 py-1.5">Size</th>
-                          <th className="border border-gray-300 px-2 py-1.5 w-32">Sale Order Qty</th>
-                          <th className="border border-gray-300 px-2 py-1.5 w-32">Already Deliverd Qty</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-32">Sales Delivery Qty</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-32">Already Return Qty</th>
 
-                          <th className="border border-gray-300 px-2 py-1.5 w-32">Delivery Qty</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-32">Return Qty</th>
 
                           <th className="border border-gray-300 px-2 py-1.5 w-20 text-center">Actions</th>
                         </tr>
@@ -463,7 +463,7 @@ const SalesDeliveryItems = ({
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1 text-right">
-                              {parseFloat(sizeRow.alreadyDeliveryQty)}
+                              {parseFloat(sizeRow.alreadyReturnQty)}
                             </td>
                             <td className="border border-gray-300 px-2 py-1">
                               <input
@@ -471,8 +471,8 @@ const SalesDeliveryItems = ({
                                 type="number"
                                 min="0"
                                 className="w-full text-right outline-none bg-transparent h-7"
-                                value={sizeRow.deliveryQty}
-                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "deliveryQty", e.target.value)}
+                                value={sizeRow.returnQty}
+                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "returnQty", e.target.value)}
                                 onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "deliveryQty", parseFloat(e.target.value || 0))}
                                 disabled={readOnly || childRecord?.current > 0 || false}
                               />
@@ -547,10 +547,10 @@ const SalesDeliveryItems = ({
                 UOM
               </th>
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
-                Order Qty<span className="text-red-500">*</span>
+                Delivery Qty<span className="text-red-500">*</span>
               </th>
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
-                Delivery Qty
+                Return Qty
               </th>
               <th className="w-32 px-2 py-2 text-center font-medium border border-gray-300 ">
                 Label Width
@@ -670,10 +670,10 @@ const SalesDeliveryItems = ({
                     </span>
                   </td>
                   <td className="border border-gray-300 text-[11px] text-right items-center pt-2 pr-1 font-medium">
-                    {row.orderQty ? Number(row.orderQty) : ""}
+                    {row.salesDeliveryQty ? Number(row.salesDeliveryQty) : ""}
                   </td>
                   <td className="border border-gray-300 text-[11px] text-right items-center pt-2 pr-1 font-medium">
-                    {row.deliveryQty ? Number(row.deliveryQty) : ""}
+                    {row.returnQty ? Number(row.returnQty) : ""}
                   </td>
                   <td className="border border-gray-300 text-[11px] text-left items-center pt-2 pl-1 font-medium">
                     <input

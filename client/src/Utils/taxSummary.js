@@ -5,8 +5,8 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
   discountValue,
   isDozen = false,
   qtyField = "qty",
-  returnCharge,
-  returnChargeType
+  deliveryTaxValue,
+  deliveryTaxType
 ) {
   let roundTo = 2;
 
@@ -20,6 +20,9 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
     slabBreakup: [],
     hsnBreakup: {},
   };
+
+  console.log(deliveryTaxValue, deliveryTaxType, "returnChargereturnCharge")
+
 
   const slabMap = {};
   const hsnMap = {};
@@ -95,13 +98,7 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
 
     let net = finalTaxable + cgst + sgst + igst;
 
-    if (returnCharge) {
-      if (returnChargeType === "Flat") {
-        net += Number(returnCharge);
-      } else {
-        net += (net * Number(returnCharge)) / 100;
-      }
-    }
+
 
     // 👉 INSERT totals INTO poItems
     item.totals = {
@@ -155,8 +152,17 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
   });
 
   const totalTax = result.slabBreakup.reduce((s, b) => s + b.amount, 0);
-  const totalBeforeRound = result.taxable + totalTax;
+  let totalBeforeRound = result.taxable + totalTax;
 
+
+  if (deliveryTaxType) {
+    if (deliveryTaxType === "Flat") {
+      totalBeforeRound += Number(deliveryTaxValue);
+    } else {
+      totalBeforeRound += (totalBeforeRound * Number(deliveryTaxValue)) / 100;
+    }
+  }
+  console.log(totalBeforeRound, 'totalBeforeRound')
   const roundedNet = Math.round(totalBeforeRound);
   result.roundOff = +(roundedNet - totalBeforeRound).toFixed(roundTo);
   result.net = roundedNet;
