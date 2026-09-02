@@ -235,7 +235,7 @@ async function get_mob_jobcard(req) {
     throw new Error("Already completed this jobcard");
   }
 
-  if (isNaN(parsedId)) throw new Error("Invalid Job Card ID");
+  if (isNaN(parsedId)) throw new Error("Job card is invalid. Please scan a valid job card or select department to contiue.");
 
   try {
     const data = await prisma.jobCard.findUnique({
