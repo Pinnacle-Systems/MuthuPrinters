@@ -371,28 +371,28 @@ export const stockUpdate = async (tx, poType, inwardOrReturn, item) => {
     price: parseFloat(poItem.price),
     itemDetails: poType.includes("Yarn")
       ? {
-          yarnId: parseInt(poItem.yarnId),
-          colorId: parseInt(poItem.colorId),
-          uomId: parseInt(poItem.uomId),
-        }
+        yarnId: parseInt(poItem.yarnId),
+        colorId: parseInt(poItem.colorId),
+        uomId: parseInt(poItem.uomId),
+      }
       : poType.includes("Fabric")
         ? {
-            fabricId: parseInt(poItem.fabricId),
-            colorId: parseInt(poItem.colorId),
-            uomId: parseInt(poItem.uomId),
-            fDiaId: parseInt(poItem.fDiaId),
-            kDiaId: parseInt(poItem.kDiaId),
-            gaugeId: parseInt(poItem.gaugeId),
-            designId: parseInt(poItem.designId),
-            gsmId: parseInt(poItem.gsmId),
-            loopLengthId: parseInt(poItem.loopLengthId),
-          }
+          fabricId: parseInt(poItem.fabricId),
+          colorId: parseInt(poItem.colorId),
+          uomId: parseInt(poItem.uomId),
+          fDiaId: parseInt(poItem.fDiaId),
+          kDiaId: parseInt(poItem.kDiaId),
+          gaugeId: parseInt(poItem.gaugeId),
+          designId: parseInt(poItem.designId),
+          gsmId: parseInt(poItem.gsmId),
+          loopLengthId: parseInt(poItem.loopLengthId),
+        }
         : {
-            accessoryId: parseInt(poItem.accessoryId),
-            colorId: parseInt(poItem.colorId),
-            uomId: parseInt(poItem.uomId),
-            sizeId: parseInt(poItem.sizeId),
-          },
+          accessoryId: parseInt(poItem.accessoryId),
+          colorId: parseInt(poItem.colorId),
+          uomId: parseInt(poItem.uomId),
+          sizeId: parseInt(poItem.sizeId),
+        },
   };
   let stockData = {};
   if (item.stockId) {
@@ -470,15 +470,15 @@ export function getDateTimeRange(date) {
 }
 
 
-  const cdate = new Date();
-  export const current_dateOnly = new Date(
-    cdate.getFullYear(),
-    cdate.getMonth(),
-    cdate.getDate(),
-  );
+const cdate = new Date();
+export const current_dateOnly = new Date(
+  cdate.getFullYear(),
+  cdate.getMonth(),
+  cdate.getDate(),
+);
 
 
- export const startDate = new Date(
+export const startDate = new Date(
   cdate.getFullYear(),
   cdate.getMonth(),
   cdate.getDate(),
@@ -491,3 +491,9 @@ export const endDate = new Date(
   cdate.getDate(),
   23, 59, 59, 999 // last millisecond of the day
 );
+
+export function childRecordCount(count) {
+  if (!count) return false
+  return Object.values(count).some(v => v > 0);
+
+}

@@ -1,20 +1,20 @@
 import { useDispatch } from "react-redux";
-import { getCommonParams } from "../../../Utils/helper";
-import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService";
-import { useGetUserByIdQuery } from "../../../redux/services/UsersMasterService";
-import { useDeleteSalesDeliveryMutation } from "../../../redux/uniformService/SalesDeliveryService";
+import { getCommonParams } from "../../../Utils/helper.js";
+import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
+import { useGetUserByIdQuery } from "../../../redux/services/UsersMasterService.js";
+import { useDeleteSalesDeliveryMutation } from "../../../redux/uniformService/SalesDeliveryService.js";
 import { useGetPartyQuery } from "../../../redux/services/PartyMasterService.js";
 import { useGetBranchQuery } from "../../../redux/services/BranchMasterService.js";
 import { useState } from "react";
 import { FaPlus } from "react-icons/fa";
-import SalesDeliveryReport from "./SalesDeliveryReport.jsx";
-import SalesDeliveryForm from "./SalesDeliveryForm.jsx";
+import SalesBillEntryReport from "./SalesBillEntryReport.jsx";
+import SalesBillEntryForm from "./SalesBillEntryForm.jsx";
 import Swal from "sweetalert2";
 import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterService.js";
 import { UserPermissions } from "../../../Utils/UserPermissions.js";
-import useInvalidateTags from '../../../CustomHooks/useInvalidateTags';
+import useInvalidateTags from '../../../CustomHooks/useInvalidateTags.js';
 
-const SalesDelivery = () => {
+const index = () => {
   const [showForm, setShowForm] = useState(false);
   const [id, setId] = useState("");
   const [readOnly, setReadOnly] = useState(false);
@@ -100,7 +100,7 @@ const SalesDelivery = () => {
         <div className="flex flex-col sm:flex-row justify-between bg-white py-1 px-1 items-start sm:items-center mb-4 gap-x-4 rounded-tl-lg rounded-tr-lg shadow-sm border border-gray-200">
           <div>
             <h1 className="text-lg font-bold text-gray-800">
-              Sales Delivery Report
+              Sales Bill Entry Report
             </h1>
           </div>
           <div className="flex items-center gap-2">
@@ -114,7 +114,7 @@ const SalesDelivery = () => {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <SalesDeliveryReport
+          <SalesBillEntryReport
             onView={handleView}
             onEdit={handleEdit}
             onDelete={handleDelete}
@@ -126,7 +126,7 @@ const SalesDelivery = () => {
 
       {showForm && (
         <div className="h-[93vh] overflow-hidden">
-          <SalesDeliveryForm
+          <SalesBillEntryForm
             readOnly={readOnly}
             setReadOnly={setReadOnly}
             id={id}
@@ -146,4 +146,4 @@ const SalesDelivery = () => {
   );
 };
 
-export default SalesDelivery;
+export default index;

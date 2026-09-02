@@ -163,8 +163,8 @@ const useInvalidateTags = () => {
       payload: ["Quotation"],
     },
     {
-      type: `saleOrder/invalidateTags`,
-      payload: ["saleOrder"],
+      type: `SalesOrder/invalidateTags`,
+      payload: ["SalesOrder"],
     },
     {
       type: `salesInvoice/invalidateTags`,
@@ -172,7 +172,7 @@ const useInvalidateTags = () => {
     },
     {
       type: `salesDelivery/invalidateTags`,
-      payload: ["salesDelivery"],
+      payload: ["SalesDelivery"],
     },
     {
       type: `salesReturn/invalidateTags`,

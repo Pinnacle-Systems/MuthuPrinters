@@ -81,6 +81,7 @@ import {
   salesOrder,
   packing,
   PackingControl,
+  salesBillEntry,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -207,6 +208,7 @@ app.use("/process_mob", processMob);
 app.use("/packing", packing);
 app.use("/salesOrder", salesOrder);
 app.use("/packingControl", PackingControl);
+app.use("/salesBillEntry", salesBillEntry);
 
 
 app.get("/retreiveFile/:fileName", (req, res) => {

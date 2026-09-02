@@ -395,7 +395,7 @@ const SaleOrderItems = ({
                           <th className="border border-gray-300 px-2 py-1.5 w-10 text-center">#</th>
                           <th className="border border-gray-300 px-2 py-1.5">Size</th>
                           <th className="border border-gray-300 px-2 py-1.5 w-32">Order Qty</th>
-                          <th className="border border-gray-300 px-2 py-1.5 w-20 text-center">Actions</th>
+                          {/* <th className="border border-gray-300 px-2 py-1.5 w-20 text-center">Actions</th> */}
                         </tr>
                       </thead>
                       <tbody>
@@ -428,7 +428,7 @@ const SaleOrderItems = ({
                                 disabled={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
                               />
                             </td>
-                            <td className="border border-gray-300 px-2 py-1 text-center">
+                            {/* <td className="border border-gray-300 px-2 py-1 text-center">
                               {!readOnly && !childRecord?.current > 0 && orderType !== "AGAINSTPI" && (
                                 <div className="flex items-center justify-center gap-1">
                                   <button onClick={() => addNestedSizeRow(activeModalRowIndex, activeStyleIndex)} className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200" title="Add size row">
@@ -439,7 +439,7 @@ const SaleOrderItems = ({
                                   </button>
                                 </div>
                               )}
-                            </td>
+                            </td> */}
                           </tr>
                         ))}
                       </tbody>
@@ -681,7 +681,7 @@ const SaleOrderItems = ({
                           "price",
                         );
                       }}
-                      readOnly={readOnly || orderType === "AGAINSTPI"}
+                      disabled={true}
                       onFocus={(e) => {
                         e.target.select();
                         setFocusedField(`price-${index}`);

@@ -29,7 +29,7 @@ import {
 } from "../OrderEntry/OrderItemsUtils";
 import { useGetPackingControlQuery } from "../../../redux/uniformService/PackingControl";
 
-const SalesDeliveryItems = ({
+const SalesBillEntryItems = ({
   items,
   enrichedItems,
   setItems,
@@ -891,4 +891,4 @@ const SalesDeliveryItems = ({
   );
 };
 
-export default SalesDeliveryItems;
+export default SalesBillEntryItems;

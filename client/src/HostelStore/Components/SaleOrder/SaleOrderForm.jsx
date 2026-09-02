@@ -145,13 +145,12 @@ const SaleOrderForm = ({
   const [deliveryId, setDeliveryId] = useState("");
   const [carriageTax, setCarriageTax] = useState("");
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
-
+  const [childRecord, setChildRecord] = useState(0);
   const [orderId, setOrderId] = useState("")
 
   const dispatch = useDispatch();
   const qrRef = useRef(null);
   const customerRef = useRef(null);
-  const childRecord = useRef(0);
   const requirementRef = useRef(null);
 
   const [dispatchInvalidate] = useInvalidateTags();
@@ -249,7 +248,6 @@ const SaleOrderForm = ({
       );
       setTermsAndCondition(data?.termsAndCondition || "");
       setTermsId(data?.termsId || "");
-      childRecord.current = data?.childRecord ? data?.childRecord : 0;
       setOrderItems(padRows(data?.SalesOrderItems || []));
       setProductionType(data?.productionType || "SAMPLE");
       setProFormaId(data?.proFormaId || "");
@@ -268,6 +266,7 @@ const SaleOrderForm = ({
       setCarriageTax(data?.carriageTax?.toFixed(2) || "");
       setLoadingId(data?.loadingId || "");
       setDeliveryId(data?.deliveryId || "");
+      setChildRecord(data?.childRecord || 0);
     },
     [id],
   );
@@ -1362,7 +1361,7 @@ const SaleOrderForm = ({
                       childComponent={PayTermMaster}
                       addNewModalWidth="w-[40%] h-[66%]"
                       disabled={
-                        childRecord.current > 0 ||
+                        childRecord ||
                         readOnly
                       }
                     />
@@ -1387,7 +1386,7 @@ const SaleOrderForm = ({
                       // childComponent={TermsAndCondtionMaster}
                       addNewModalWidth="w-[40%] h-[66%]"
                       disabled={
-                        childRecord.current > 0 ||
+                        childRecord ||
                         readOnly
                       }
                     />
@@ -1404,7 +1403,7 @@ const SaleOrderForm = ({
                       setValue={setTaxTemplateId}
                       required={!isCustomerExport}
                       readOnly={
-                        childRecord.current > 0 ||
+                        childRecord ||
                         readOnly ||
                         orderType === "AGAINSTPI"
                       }
@@ -1424,7 +1423,7 @@ const SaleOrderForm = ({
           <SaleOrderItems
             orderItems={orderItems}
             setOrderItems={setOrderItems}
-            readOnly={readOnly || childRecord?.current > 0}
+            readOnly={readOnly || childRecord}
             styleItemList={styleItemList}
             sizeList={sizeList}
             uomList={uomList}
@@ -1456,7 +1455,7 @@ const SaleOrderForm = ({
                   value: requirements,
                   onChange: setRequirements,
                   placeholder: "Enter Terms & Condtions...",
-                  readOnly: readOnly || childRecord.current > 0,
+                  readOnly: readOnly || childRecord,
                   ref: requirementRef,
                 },
                 {
@@ -1464,7 +1463,7 @@ const SaleOrderForm = ({
                   value: remarks,
                   onChange: setRemarks,
                   placeholder: "Additional notes...",
-                  readOnly: readOnly || childRecord.current > 0,
+                  readOnly: readOnly || childRecord,
                 },
               ]}
               hasSummaryTitle={
