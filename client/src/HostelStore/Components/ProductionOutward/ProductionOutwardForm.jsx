@@ -153,6 +153,7 @@ const ProcessTree = ({
                 if (immediatePrev?.status?.toUpperCase() === "IN_PROGRESS") {
                   return false;
                 }
+
               }
 
               // find nearest preceding NON-outside (inside) process
