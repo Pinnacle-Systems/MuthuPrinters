@@ -3,6 +3,8 @@ import { NoRecordFound } from "../configs/Responses.js";
 import {
   getYearShortCodeForFinYear,
   getDateFromDateTime,
+  startDate,
+  endDate,
 } from "../utils/helper.js";
 import { getFinYearStartTimeEndTime } from "../utils/finYearHelper.js";
 import { getTableRecordWithId } from "../utils/helperQueries.js";
@@ -931,7 +933,22 @@ const routeIds = [];
          },
           });
 
-         
+          
+  const busyMachines = await prisma?.takenmachines?.findMany({
+    where: {
+      stDatetime: {
+        gte: startDate,
+        lt: endDate,
+      },
+      isAvailable: false,
+    },
+    select: {
+      Machineid: true,
+      User: true,
+      JobCard: true,
+      ProcessRoute: true,
+    },
+  });
 
   var filtered_ = await resolvedData
     ?.filter((resolved_) => {
@@ -985,7 +1002,18 @@ for (const iq of incomingQtys) {
 
 
 
-      var machineList = routes?.plateDetails?.map((machineMap) => ({ ...machineMap?.Machine }))
+      var machineList = routes?.plateDetails?.map((machineMap) => {
+        const machine = machineMap?.Machine;
+        if (!machine) return null;
+        
+        const busyMachine_filter = busyMachines?.find(
+          (bmf) => bmf.Machineid === machine?.id,
+        );
+        if (busyMachine_filter) {
+          return { ...machine, busy: true, busy_by: busyMachine_filter?.User, JobCard: busyMachine_filter?.JobCard };
+        }
+        return { ...machine, busy: false };
+      }).filter(Boolean);
 
       return availableRoutes.map((route) => ({
         id: routes?.id,
