@@ -736,7 +736,6 @@ async function UpdatePushProcess(req) {
     data = addMain_punch_log;
   });
 
-  console.log("process PUSH", data);
   if (data?.statusCode === 1) return data;
   return { statusCode: 0, data };
 }

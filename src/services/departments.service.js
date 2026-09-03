@@ -32,6 +32,37 @@ async function get(req) {
 }
 
 
+
+async function getmobile(req) {
+    const { companyId, active } = req.query
+    let data;
+    data = await prisma.department.findMany({
+        where: {
+            companyId: companyId ? parseInt(companyId) : undefined,
+            active: active ? Boolean(active) : undefined,
+            isTaken: true
+        },
+        include: {
+            _count: {
+                select: {
+                    doctor: true
+                }
+            }
+        }
+    });
+
+
+
+    return {
+        statusCode: 0, data: data = data.map(order => ({
+            ...order,
+            childRecord: order?._count.doctor > 0
+        })),
+    };
+}
+
+
+
 async function getOne(id) {
     const childRecord = await prisma.employee.count({ where: { departmentId: parseInt(id) } });
     const data = await prisma.department.findUnique({
@@ -112,6 +143,7 @@ async function remove(id) {
 
 export {
     get,
+    getmobile,
     getOne,
     getSearch,
     create,
