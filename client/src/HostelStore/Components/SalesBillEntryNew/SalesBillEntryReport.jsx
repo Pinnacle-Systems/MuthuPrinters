@@ -6,6 +6,7 @@ import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Tooltip } from "@mui/material";
 import { useGetSalesDeliveryQuery } from "../../../redux/uniformService/SalesDeliveryService";
 import { UserPermissions } from "../../../Utils/UserPermissions";
+import { useGetSalesBillEntryQuery } from "../../../redux/uniformService/SalesBillEntryService";
 
 const receiptTypeLabel = (type) => {
   if (type === "AGAINST_INVOICE") return "Delivery cum Invoice";
@@ -43,7 +44,7 @@ const SalesBillEntryReport = ({
     data: allData,
     isFetching,
     isLoading,
-  } = useGetSalesDeliveryQuery({
+  } = useGetSalesBillEntryQuery({
     params: {
       branchId,
       ...searchFields,

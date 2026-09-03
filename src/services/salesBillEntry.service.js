@@ -57,7 +57,7 @@ async function getNextDocId(
 
     return newDocId;
   } else {
-    let lastObject = await prisma.SalesOrder.findFirst({
+    let lastObject = await prisma.SalesBillEntry.findFirst({
       where: {
         branchId: parseInt(branchId),
         AND: [
@@ -79,7 +79,7 @@ async function getNextDocId(
     });
 
     const branchObj = await getTableRecordWithId(branchId, "branch");
-    let newDocId = `${branchObj.branchCode}/${shortCode}/SO/1`;
+    let newDocId = `${branchObj.branchCode}/${shortCode}/SB/1`;
     if (lastObject) {
       if (lastObject.docId === "Draft Save") {
         const records = await prisma.SalesOrder.findMany({
@@ -108,10 +108,10 @@ async function getNextDocId(
 
           return currentNo > maxNo ? current.docId : max;
         }, null);
-        newDocId = `${branchObj.branchCode}/${shortCode}/SO/${parseInt(maxDocId.split("/").at(-1)) + 1
+        newDocId = `${branchObj.branchCode}/${shortCode}/SB/${parseInt(maxDocId.split("/").at(-1)) + 1
           }`;
       } else {
-        newDocId = `${branchObj.branchCode}/${shortCode}/SO/${parseInt(lastObject.docId.split("/").at(-1)) + 1
+        newDocId = `${branchObj.branchCode}/${shortCode}/SB/${parseInt(lastObject.docId.split("/").at(-1)) + 1
           }`;
       }
     }
@@ -144,7 +144,7 @@ async function get(req) {
   );
   let data;
   let totalCount;
-  data = await prisma.SalesOrder.findMany({
+  data = await prisma.SalesBillEntry.findMany({
     where: {
       branchId: branchId ? parseInt(branchId) : undefined,
       AND: finYearDate
@@ -184,11 +184,7 @@ async function get(req) {
         },
       },
       OrderEntry: { select: { docId: true } },
-      _count: {
-        select: {
-          SalesDelivery: true,
-        },
-      },
+
     },
     orderBy: {
       id: "desc",
@@ -213,7 +209,7 @@ async function get(req) {
     data: data?.map((i) => {
       return {
         ...i,
-        childRecord: childRecordCount(i._count) || null
+        // childRecord: childRecordCount(i._count) || null
       };
     }),
     nextDocId: newDocId,
@@ -556,7 +552,7 @@ async function create(body) {
 
   const validTo = moment(docDate).add(validDays, "days").endOf("day").toDate();
   await prisma.$transaction(async (tx) => {
-    data = await tx.SalesOrder.create({
+    data = await tx.SalesBillEntry.create({
       data: {
         docId: newDocId,
         docDate: docDate ? new Date(docDate) : null,
@@ -577,7 +573,7 @@ async function create(body) {
         payTermId: payTermId ? parseInt(payTermId) : null,
         deliveryId: deliveryId ? parseInt(deliveryId) : null,
 
-        SalesOrderItems:
+        SalesBillEntryItems:
           safeOrderItems.length > 0
             ? {
               create: safeOrderItems,

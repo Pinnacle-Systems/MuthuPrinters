@@ -238,18 +238,22 @@ const SalesBillEntryItems = ({
 
 
 
-      if (field === "deliveryQty") {
-        const orderQty = Number(sizeBreakup[sizeIndex].qty) || 0;
+      if (field === "billQty") {
+        const deliveryQty = Number(sizeBreakup[sizeIndex].deliveryQty) || 0;
         const newDeliveryQty = Number(value) || 0;
         const allowedPercentage = Number(deliveryPercentage) || 0;
-        const maxAllowed = orderQty + (orderQty * allowedPercentage) / 100;
-        const overllQty = Number(sizeBreakup[sizeIndex].alreadyDeliveryQty) + newDeliveryQty;
+        const maxAllowed = deliveryQty + (deliveryQty * allowedPercentage) / 100;
+        const overllQty = (Number(sizeBreakup[sizeIndex].alreadyBilledQty) || 0) + newDeliveryQty;
 
+        console.log({
+          overllQty,
+          newDeliveryQty
+        }, "overllQtyoverllQty")
         if (overllQty > maxAllowed) {
           Swal.fire({
             icon: "warning",
             title: "Exceeds Limit",
-            text: `Delivery Qty cannot exceed ${maxAllowed.toFixed(2)} (Order Qty + ${allowedPercentage}% packing control).`,
+            text: `Bill Qty cannot exceed ${maxAllowed.toFixed(2)} (Delivery Qty + ${allowedPercentage}% packing control).`,
           });
           return prev;
         }
@@ -424,10 +428,10 @@ const SalesBillEntryItems = ({
                         <tr>
                           <th className="border border-gray-300 px-2 py-1.5 w-10 text-center">#</th>
                           <th className="border border-gray-300 px-2 py-1.5">Size</th>
-                          <th className="border border-gray-300 px-2 py-1.5 w-32">Sale Order Qty</th>
-                          <th className="border border-gray-300 px-2 py-1.5 w-32">Already Deliverd Qty</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-32">Sales Delivery Qty</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-32">Already Billed Qty</th>
 
-                          <th className="border border-gray-300 px-2 py-1.5 w-32">Delivery Qty</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-32">Billing Qty</th>
 
                           <th className="border border-gray-300 px-2 py-1.5 w-20 text-center">Actions</th>
                         </tr>
@@ -456,9 +460,9 @@ const SalesBillEntryItems = ({
                                 type="number"
                                 min="0"
                                 className="w-full text-right outline-none bg-transparent h-7"
-                                value={sizeRow.qty}
-                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "qty", e.target.value)}
-                                onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "qty", parseFloat(e.target.value || 0))}
+                                value={sizeRow.deliveryQty}
+                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "deliveryQty", e.target.value)}
+                                onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "deliveryQty", parseFloat(e.target.value || 0))}
                                 disabled={readOnly || childRecord?.current > 0 || false}
                               />
                             </td>
@@ -471,9 +475,9 @@ const SalesBillEntryItems = ({
                                 type="number"
                                 min="0"
                                 className="w-full text-right outline-none bg-transparent h-7"
-                                value={sizeRow.deliveryQty}
-                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "deliveryQty", e.target.value)}
-                                onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "deliveryQty", parseFloat(e.target.value || 0))}
+                                value={sizeRow.billQty}
+                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "billQty", e.target.value)}
+                                onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "billQty", parseFloat(e.target.value || 0))}
                                 disabled={readOnly || childRecord?.current > 0 || false}
                               />
                             </td>
@@ -547,10 +551,10 @@ const SalesBillEntryItems = ({
                 UOM
               </th>
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
-                Order Qty<span className="text-red-500">*</span>
+                Delivery Qty<span className="text-red-500">*</span>
               </th>
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
-                Delivery Qty
+                Bill Qty<span className="text-red-500">*</span>
               </th>
               <th className="w-32 px-2 py-2 text-center font-medium border border-gray-300 ">
                 Label Width

@@ -48,6 +48,7 @@ import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMas
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService.js";
 import { useGetSalesOrderByIdQuery, useGetSalesOrderQuery } from "../../../redux/uniformService/SalesOrderService.js";
 import { padRows } from "../OrderEntry/OrderItemsUtils.js";
+import { useAddSalesBillEntryMutation, useUpdateSalesBillEntryMutation } from "../../../redux/uniformService/SalesBillEntryService.js";
 
 const EMPTY_ROW = {
   itemGroupId: "",
@@ -144,8 +145,8 @@ const SalesBillEntryForm = ({
   const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({ params: { companyId } });
   const [dispatchInvalidate] = useInvalidateTags();
 
-  const [addData] = useAddSalesDeliveryMutation();
-  const [updateData] = useUpdateSalesDeliveryMutation();
+  const [addData] = useAddSalesBillEntryMutation();
+  const [updateData] = useUpdateSalesBillEntryMutation();
 
 
 

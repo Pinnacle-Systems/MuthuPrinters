@@ -377,6 +377,7 @@ model Department {
   doctor             Employee[]           @relation()
   Company            Company              @relation(fields: [companyId], references: [id])
   companyId          Int
+  isTaken            Boolean?
   productionempPunch productionempPunch[]
   machines           Machine[]
   processes          Process[]
