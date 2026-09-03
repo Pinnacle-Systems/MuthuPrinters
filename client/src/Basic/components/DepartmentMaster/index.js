@@ -332,7 +332,7 @@ export default function Form({
                   disabled={childRecord.current > 0}
                 />
               </div>
-              <CheckBoxNew name="ISTaken" readOnly={readOnly} value={isTaken} setValue={setIsTaken} />
+              <CheckBoxNew name="IsTaken" readOnly={readOnly} value={isTaken} setValue={setIsTaken} />
 
               <div>
                 <ToggleButton
