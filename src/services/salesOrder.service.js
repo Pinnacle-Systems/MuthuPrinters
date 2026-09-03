@@ -433,7 +433,7 @@ async function getOne(id) {
     },
   });
 
-  if (!data) return NoRecordFound("Purchase Inward");
+  if (!data) return NoRecordFound("Sale Order");
 
 
   return {

@@ -200,7 +200,11 @@ async function get(req) {
         include: {
           PackingStyleBreakup: {
             include: {
-              PackingSizeBreakup: true,
+              PackingSizeBreakup: {
+                include: {
+                  PackingBreakup: true,
+                }
+              },
             }
           }
         }
@@ -435,6 +439,7 @@ async function getOne(id) {
             include: {
               PackingSizeBreakup: {
                 include: {
+                  PackingBreakup: true,
                   OrderSizeBreakup: {
                     include: {
                       PackingSizeBreakup: true
@@ -463,6 +468,7 @@ async function getOne(id) {
           ...size,
           sizeBreakup: size.PackingSizeBreakup?.map((breakup) => ({
             ...breakup,
+            packingBreakup: breakup.PackingBreakup || [],
             alreadyPackingQty: breakup.OrderSizeBreakup?.PackingSizeBreakup
               ?.filter((i) => i?.id !== breakup?.id)
               ?.reduce((acc, size) => acc + (size.packingQty || 0), 0)
@@ -562,7 +568,13 @@ async function create(body) {
                     grossWeight: s.grossWeight ? String(s.grossWeight) : null,
                     netWeight: s.netWeight ? String(s.netWeight) : null,
                     dimensions: s.dimensions ?? "",
-                    orderSizeBreakupId: s.id ? parseInt(s.id) : null
+                    orderSizeBreakupId: s.id ? parseInt(s.id) : null,
+                    PackingBreakup: s?.packingBreakup?.length > 0 ? {
+                      create: s.packingBreakup.map(b => ({
+                        bundle: b.bundle ? parseInt(b.bundle) : null,
+                        qty: b.qty ? parseInt(b.qty) : null
+                      }))
+                    } : undefined
                   }))
                 } : undefined
             })),
@@ -785,6 +797,12 @@ async function update(id, body, files) {
                             grossWeight: s.grossWeight ? String(s.grossWeight) : null,
                             netWeight: s.netWeight ? String(s.netWeight) : null,
                             dimensions: s.dimensions ?? "",
+                            PackingBreakup: s?.packingBreakup?.length > 0 ? {
+                              create: s.packingBreakup.map(b => ({
+                                bundle: b.bundle ? parseInt(b.bundle) : null,
+                                qty: b.qty ? parseInt(b.qty) : null
+                              }))
+                            } : undefined
                           }))
                         } : undefined
                     }))
@@ -820,7 +838,13 @@ async function update(id, body, files) {
                             grossWeight: s.grossWeight ? String(s.grossWeight) : null,
                             netWeight: s.netWeight ? String(s.netWeight) : null,
                             dimensions: s.dimensions ?? "",
-                            orderSizeBreakupId: s.id ? parseInt(s.id) : null
+                            orderSizeBreakupId: s.id ? parseInt(s.id) : null,
+                            PackingBreakup: s?.packingBreakup?.length > 0 ? {
+                              create: s.packingBreakup.map(b => ({
+                                bundle: b.bundle ? parseInt(b.bundle) : null,
+                                qty: b.qty ? parseInt(b.qty) : null
+                              }))
+                            } : undefined
                           }))
                         } : undefined
                     })),
