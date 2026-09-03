@@ -17,6 +17,7 @@ import {
   ToggleButton,
   TextInputNew,
   TextInputNew1,
+  CheckBoxNew,
 } from "../../../Inputs";
 import ReportTemplate from "../ReportTemplate";
 import { Check, Power } from "lucide-react";
@@ -42,7 +43,7 @@ export default function Form({
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [active, setActive] = useState(true);
-
+  const [isTaken, setIsTaken] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const childRecord = useRef(0);
   const { refs, handlers, focusFirstInput } = useFormKeyboardNavigation();
@@ -81,6 +82,7 @@ export default function Form({
       setName(data?.name ? data.name : "");
       setCode(data?.code ? data.code : "");
       setActive(id ? (data?.active ? data.active : false) : true);
+      setIsTaken(data?.isTaken ?? false);
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
     },
     [id],
@@ -98,6 +100,7 @@ export default function Form({
       sessionStorage.getItem("sessionId") + "userCompanyId",
     ),
     id,
+    isTaken
   };
 
   const validateData = (data) => {
@@ -329,6 +332,8 @@ export default function Form({
                   disabled={childRecord.current > 0}
                 />
               </div>
+              <CheckBoxNew name="ISTaken" readOnly={readOnly} value={isTaken} setValue={setIsTaken} />
+
               <div>
                 <ToggleButton
                   name="Status"

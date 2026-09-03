@@ -5,9 +5,9 @@ import { NoRecordFound } from '../configs/Responses.js';
 
 async function get(req) {
     const { companyId, active } = req.query
-    
+
     let data;
-     data = await prisma.department.findMany({
+    data = await prisma.department.findMany({
         where: {
             companyId: companyId ? parseInt(companyId) : undefined,
             active: active ? Boolean(active) : undefined,
@@ -21,8 +21,8 @@ async function get(req) {
         }
     });
 
-   
-    
+
+
     return {
         statusCode: 0, data: data = data.map(order => ({
             ...order,
@@ -68,11 +68,12 @@ async function getSearch(req) {
 }
 
 async function create(body) {
-    const { name, code, companyId } = await body
+    const { name, code, companyId, isTaken } = await body
     const data = await prisma.department.create(
         {
             data: {
-                name, code, companyId: parseInt(companyId)
+                name, code, companyId: parseInt(companyId),
+                isTaken: isTaken ? Boolean(isTaken) : false
             }
         }
     )
@@ -80,7 +81,7 @@ async function create(body) {
 }
 
 async function update(id, body) {
-    const { name, code, active } = await body
+    const { name, code, active, isTaken } = await body
     const dataFound = await prisma.department.findUnique({
         where: {
             id: parseInt(id)
@@ -93,7 +94,8 @@ async function update(id, body) {
         },
         data:
         {
-            name, code, active
+            name, code, active, isTaken: isTaken ? Boolean(isTaken) : false
+
         },
     })
     return { statusCode: 0, data };
