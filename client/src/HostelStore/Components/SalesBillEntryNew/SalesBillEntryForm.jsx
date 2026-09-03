@@ -114,7 +114,7 @@ const SalesBillEntryForm = ({
   const [bankId, setBankId] = useState("");
   const customerRef = useRef(null);
   const termsRef = useRef(null);
-  const [salesOrderId, setSalesOrderId] = useState("");
+  const [salesDeliveryId, setSalesDeliveryId] = useState("");
 
   const [deliveryTaxValue, setDeliveryTaxValue] = useState("");
   const [deliveryTaxType, setDeliveryTaxType] = useState("Flat");
@@ -149,8 +149,8 @@ const SalesBillEntryForm = ({
 
 
 
-  const { data: salesOrderData, } = useGetSalesOrderQuery({ params: { branchId } });
-  const { data: singleSaleOrderData, refetch: refetchSalesOrderData, isFetching: isSingleorderFetching, isLoading: isSingleorderLoading } = useGetSalesOrderByIdQuery(salesOrderId, { skip: !salesOrderId || id });
+  const { data: salesDeliveryData, } = useGetSalesDeliveryQuery({ params: { branchId } });
+  const { data: singleSaleDeliveryData, refetch: refetchSalesOrderData, isFetching: isSingleorderFetching, isLoading: isSingleorderLoading } = useGetSalesDeliveryByIdQuery(salesDeliveryId, { skip: !salesDeliveryId || id });
 
 
   const syncFormWithDb = useCallback(
@@ -182,7 +182,7 @@ const SalesBillEntryForm = ({
       setWeightInKg(data?.weightInKg ? data?.weightInKg : "");
       setCarriageCharge(data?.carriageCharge ? data?.carriageCharge : "");
       setBankId(data?.bankId ? data?.bankId : "");
-      setSalesOrderId(data?.orderId ? data?.orderId : "");
+      setSalesDeliveryId(data?.orderId ? data?.orderId : "");
       setDeliveryTaxType(data?.deliveryTaxType ? data?.deliveryTaxType : "Flat");
       setDeliveryTaxValue(data?.deliveryTaxValue ? data?.deliveryTaxValue : "");
     },
@@ -201,8 +201,8 @@ const SalesBillEntryForm = ({
   const syncFormWithDbForOrder = useCallback(
     (data) => {
       setCustomerId(data?.customerId ? data?.customerId : "")
-      setItems(padRows(data?.SalesOrderItems || []));
-      setSalesOrderId(data?.id || "");
+      setItems(padRows(data?.salesDeliveryItems || []));
+      setSalesDeliveryId(data?.id || "");
 
     },
     [id],
@@ -210,10 +210,10 @@ const SalesBillEntryForm = ({
 
   useEffect(() => {
     if (id) return
-    if (salesOrderId && singleSaleOrderData?.data) {
-      syncFormWithDbForOrder(singleSaleOrderData.data);
+    if (salesDeliveryId && singleSaleDeliveryData?.data) {
+      syncFormWithDbForOrder(singleSaleDeliveryData.data);
     }
-  }, [isSingleorderFetching, isSingleorderLoading, salesOrderId, syncFormWithDbForOrder, singleSaleOrderData]);
+  }, [isSingleorderFetching, isSingleorderLoading, salesDeliveryId, syncFormWithDbForOrder, singleSaleDeliveryData]);
 
 
   useEffect(() => {
@@ -318,7 +318,7 @@ const SalesBillEntryForm = ({
     weightInKg,
     carriageCharge,
     bankId,
-    salesOrderId,
+    salesOrderId: salesDeliveryId,
     amount: amount,
     enrichedData,
     deliveryTaxType,
@@ -678,15 +678,15 @@ const SalesBillEntryForm = ({
               name="Sale Order No"
               options={dropDownListObject(
                 id
-                  ? salesOrderData?.data?.filter((item) => item?.customerId === customerId)
-                  : salesOrderData?.data?.filter(
+                  ? salesDeliveryData?.data?.filter((item) => item?.customerId === customerId)
+                  : salesDeliveryData?.data?.filter(
                     (item) => item?.customerId === customerId,
                   ),
                 "docId",
                 "id",
               )}
-              value={salesOrderId}
-              setValue={setSalesOrderId}
+              value={salesDeliveryId}
+              setValue={setSalesDeliveryId}
               required={true}
               readOnly={readOnly}
               className="w-[150px]"

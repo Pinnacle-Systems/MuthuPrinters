@@ -48,6 +48,7 @@ const PackingItems = ({
   const [activeModalRowIndex, setActiveModalRowIndex] = useState(null);
   const [activeStyleIndex, setActiveStyleIndex] = useState(0);
   const [focusedField, setFocusedField] = useState(null);
+  const [activePackingBreakupInfo, setActivePackingBreakupInfo] = useState(null);
 
   const { data: packingControlData, isLoading, isFetching } = useGetPackingControlQuery({});
 
@@ -202,9 +203,9 @@ const PackingItems = ({
         const currentQty = Number(currentSize.qty) || 0;
         const currentAlreadyPackingQty = Number(currentSize.alreadyPackingQty) || 0;
         const enteredPackingQty = Number(value) || 0;
-        
+
         const maxAllowed = (currentQty * (Number(packingPercentage) || 0)) / 100 + currentQty - currentAlreadyPackingQty;
-        
+
         if (enteredPackingQty > maxAllowed) {
           Swal.fire({
             icon: "warning",
@@ -273,6 +274,99 @@ const PackingItems = ({
       if (orderType !== "AGAINSTPI") {
         row.orderQty = recalculateOrderQty(styleBreakup);
       }
+      rows[rowIndex] = row;
+      return rows;
+    });
+  };
+
+  const handlePackingBreakupChange = (rowIndex, styleIndex, sizeIndex, breakupIndex, field, value) => {
+    setOrderItems((prev) => {
+      const rows = [...prev];
+      const row = { ...rows[rowIndex] };
+      const styleBreakup = [...(row.styleBreakup || [])];
+      const styleObj = { ...styleBreakup[styleIndex] };
+      const sizeBreakup = [...(styleObj.sizeBreakup || [])];
+      const sizeObj = { ...sizeBreakup[sizeIndex] };
+      const packingBreakup = [...(sizeObj.packingBreakup || [])];
+
+      packingBreakup[breakupIndex] = { ...packingBreakup[breakupIndex], [field]: value };
+
+      let totalPackingQty = 0;
+      packingBreakup.forEach(item => {
+        const bundle = Number(item.bundle) || 0;
+        const qty = Number(item.qty) || 0;
+        totalPackingQty += (bundle * qty);
+      });
+
+      const currentQty = Number(sizeObj.qty) || 0;
+      const currentAlreadyPackingQty = Number(sizeObj.alreadyPackingQty) || 0;
+      const maxAllowed = (currentQty * (Number(packingPercentage) || 0)) / 100 + currentQty - currentAlreadyPackingQty;
+
+      if (totalPackingQty > maxAllowed) {
+        Swal.fire({
+          icon: "warning",
+          title: "Invalid Packing Quantity",
+          text: `Total packing quantity cannot exceed ${maxAllowed}`,
+        });
+        return prev;
+      }
+
+      sizeObj.packingBreakup = packingBreakup;
+      sizeObj.packingQty = totalPackingQty;
+      sizeBreakup[sizeIndex] = sizeObj;
+      styleObj.sizeBreakup = sizeBreakup;
+      styleBreakup[styleIndex] = styleObj;
+      row.styleBreakup = styleBreakup;
+      rows[rowIndex] = row;
+      return rows;
+    });
+  };
+
+  const addPackingBreakupRow = (rowIndex, styleIndex, sizeIndex) => {
+    setOrderItems((prev) => {
+      const rows = [...prev];
+      const row = { ...rows[rowIndex] };
+      const styleBreakup = [...(row.styleBreakup || [])];
+      const styleObj = { ...styleBreakup[styleIndex] };
+      const sizeBreakup = [...(styleObj.sizeBreakup || [])];
+      const sizeObj = { ...sizeBreakup[sizeIndex] };
+
+      sizeObj.packingBreakup = [...(sizeObj.packingBreakup || []), { bundle: "", pcs: "" }];
+
+      sizeBreakup[sizeIndex] = sizeObj;
+      styleObj.sizeBreakup = sizeBreakup;
+      styleBreakup[styleIndex] = styleObj;
+      row.styleBreakup = styleBreakup;
+      rows[rowIndex] = row;
+      return rows;
+    });
+  };
+
+  const deletePackingBreakupRow = (rowIndex, styleIndex, sizeIndex, breakupIndex) => {
+    setOrderItems((prev) => {
+      const rows = [...prev];
+      const row = { ...rows[rowIndex] };
+      const styleBreakup = [...(row.styleBreakup || [])];
+      const styleObj = { ...styleBreakup[styleIndex] };
+      const sizeBreakup = [...(styleObj.sizeBreakup || [])];
+      const sizeObj = { ...sizeBreakup[sizeIndex] };
+
+      const packingBreakup = [...(sizeObj.packingBreakup || [])];
+      packingBreakup.splice(breakupIndex, 1);
+
+      let totalPackingQty = 0;
+      packingBreakup.forEach(item => {
+        const bundle = Number(item.bundle) || 0;
+        const pcs = Number(item.pcs) || 0;
+        totalPackingQty += (bundle * pcs);
+      });
+
+      sizeObj.packingBreakup = packingBreakup;
+      sizeObj.packingQty = totalPackingQty;
+      sizeBreakup[sizeIndex] = sizeObj;
+      styleObj.sizeBreakup = sizeBreakup;
+      styleBreakup[styleIndex] = styleObj;
+      row.styleBreakup = styleBreakup;
       rows[rowIndex] = row;
       return rows;
     });
@@ -449,14 +543,31 @@ const PackingItems = ({
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1">
-                              <input
-                                type="number"
-                                min="0"
-                                className="w-full text-right outline-none bg-transparent"
-                                value={sizeRow.packingQty}
-                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "packingQty", e.target.value)}
-                                disabled={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
-                              />
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  className="w-full text-right outline-none bg-transparent cursor-not-allowed"
+                                  value={sizeRow.packingQty}
+                                  readOnly
+                                  disabled={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                                />
+                                {!readOnly && !childRecord?.current > 0 && orderType !== "AGAINSTPI" && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActivePackingBreakupInfo({ rowIndex: activeModalRowIndex, styleIndex: activeStyleIndex, sizeIndex: sizeIdx });
+                                      if (!(sizeRow.packingBreakup?.length > 0)) {
+                                        addPackingBreakupRow(activeModalRowIndex, activeStyleIndex, sizeIdx);
+                                      }
+                                    }}
+                                    className="text-indigo-600 hover:text-indigo-800"
+                                    title="Packing Breakup"
+                                  >
+                                    <FaEye size={14} />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                             <td className="border border-gray-300 px-2 py-1">
                               <input
@@ -515,6 +626,78 @@ const PackingItems = ({
                   )}
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Packing Breakup Modal */}
+      <Modal
+        isOpen={activePackingBreakupInfo !== null}
+        onClose={() => setActivePackingBreakupInfo(null)}
+        widthClass="w-[50vw]"
+      >
+        <div className="p-4 bg-white rounded-lg max-h-[75vh] flex flex-col">
+          <h2 className="text-lg font-bold mb-4">Packing Breakup</h2>
+          {activePackingBreakupInfo !== null && (
+            <div className="flex-1 overflow-auto border border-gray-200 rounded">
+              <table className="w-full text-left border-collapse border border-gray-300 bg-white text-sm">
+                <thead className="bg-gray-100 sticky top-0">
+                  <tr>
+                    <th className="border border-gray-300 px-2 py-1.5 w-16 text-center">S.No</th>
+                    <th className="border border-gray-300 px-2 py-1.5 text-center">Bundle</th>
+                    <th className="border border-gray-300 px-2 py-1.5 text-center">Qty</th>
+                    <th className="border border-gray-300 px-2 py-1.5 text-center">Total</th>
+                    <th className="border border-gray-300 px-2 py-1.5 w-16 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(orderItems[activePackingBreakupInfo.rowIndex]?.styleBreakup?.[activePackingBreakupInfo.styleIndex]?.sizeBreakup?.[activePackingBreakupInfo.sizeIndex]?.packingBreakup || []).map((breakupRow, breakupIdx) => (
+                    <tr key={breakupIdx} className="hover:bg-gray-50">
+                      <td className="border border-gray-300 px-2 py-1 text-center">{breakupIdx + 1}</td>
+                      <td className="border border-gray-300 px-2 py-1">
+                        <input
+                          type="number"
+                          min="0"
+                          className="w-full text-right outline-none bg-transparent"
+                          value={breakupRow.bundle}
+                          onChange={(e) => handlePackingBreakupChange(activePackingBreakupInfo.rowIndex, activePackingBreakupInfo.styleIndex, activePackingBreakupInfo.sizeIndex, breakupIdx, "bundle", e.target.value)}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-2 py-1">
+                        <input
+                          type="number"
+                          min="0"
+                          className="w-full text-right outline-none bg-transparent"
+                          value={breakupRow.qty}
+                          onChange={(e) => handlePackingBreakupChange(activePackingBreakupInfo.rowIndex, activePackingBreakupInfo.styleIndex, activePackingBreakupInfo.sizeIndex, breakupIdx, "qty", e.target.value)}
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-2 py-1 text-right bg-gray-50 font-semibold">
+                        {(Number(breakupRow.bundle) || 0) * (Number(breakupRow.qty) || 0)}
+                      </td>
+                      <td className="border border-gray-300 px-2 py-1 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => addPackingBreakupRow(activePackingBreakupInfo.rowIndex, activePackingBreakupInfo.styleIndex, activePackingBreakupInfo.sizeIndex)}
+                            className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200"
+                          >
+                            <Plus size={12} />
+                          </button>
+                          {breakupIdx > 0 && (
+                            <button
+                              onClick={() => deletePackingBreakupRow(activePackingBreakupInfo.rowIndex, activePackingBreakupInfo.styleIndex, activePackingBreakupInfo.sizeIndex, breakupIdx)}
+                              className="p-1 bg-red-100 rounded text-red-700 hover:bg-red-200"
+                            >
+                              <FaTrash size={10} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
