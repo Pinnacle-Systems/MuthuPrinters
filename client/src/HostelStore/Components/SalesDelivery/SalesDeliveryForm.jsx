@@ -543,20 +543,31 @@ const SalesDeliveryForm = ({
 
       } else {
         const res = await addData(data).unwrap();
-        savedId = res.data.id;
+        savedId = res?.data?.id;
         setId(savedId);
-        Swal.fire({
-          title: "Success",
-          text: "Sales Delivery created successfully",
-          icon: "success",
-          timer: 1500,
-          showConfirmButton: false,
-          didClose: () => {
-            customerRef.current?.focus();
-          },
-        });
-        invalidateTagsDispatch()
+        if (res?.statusCode === 0) {
+          Swal.fire({
+            title: "Success",
 
+
+
+            text: "Sales Delivery created successfully",
+            icon: "success",
+            timer: 1500,
+            showConfirmButton: false,
+            didClose: () => {
+              customerRef.current?.focus();
+            },
+          });
+          invalidateTagsDispatch()
+        } else {
+          Swal.fire({
+            title: "Error",
+            text: res?.message || "Failed to save Sales Delivery",
+            icon: "error",
+            confirmButtonColor: "#d33",
+          });
+        }
       }
       setReadOnly(true);
       dispatchInvalidate();
@@ -564,9 +575,10 @@ const SalesDeliveryForm = ({
       if (pendingAction === "new") onNew();
       else if (pendingAction === "close") onClose();
     } catch (error) {
+      console.log(error, ":error")
       Swal.fire({
         title: "Error",
-        text: error.data?.message || "Failed to save Sales Delivery",
+        text: error?.message || "Failed to save Sales Delivery",
         icon: "error",
         confirmButtonColor: "#d33",
       });

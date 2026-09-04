@@ -146,16 +146,16 @@ model UserOnBranch {
 }
 
 model Role {
-  id              Int              @id @default(autoincrement())
-  name            String
-  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  companyId       Int
-  User            User[]
-  RoleOnPage      RoleOnPage[]
-  active          Boolean          @default(true)
-  defaultRole     Boolean          @default(false)
-  approvalConfigs ApprovalConfig[]
-  MobileNotification   MobileNotification[]
+  id                 Int                  @id @default(autoincrement())
+  name               String
+  company            Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId          Int
+  User               User[]
+  RoleOnPage         RoleOnPage[]
+  active             Boolean              @default(true)
+  defaultRole        Boolean              @default(false)
+  approvalConfigs    ApprovalConfig[]
+  MobileNotification MobileNotification[]
 
   @@unique([companyId, name])
 }
@@ -2932,6 +2932,7 @@ model SalesDelivery {
   loadingId              Int?
   Delivery               City?                @relation("delivery", fields: [deliveryId], references: [id])
   deliveryId             Int?
+  carriageTax            Float?
   salesDeliveryItems     SalesDeliveryItems[]
   Ledger                 Ledger[]
   Stock                  Stock[]
@@ -3361,12 +3362,13 @@ model SaleBillEntrySizeBreakup {
   Size                        Size?                     @relation(fields: [sizeId], references: [id])
   qty                         Int?
 }
-model MobileNotification{
-  id                          Int                       @id @default(autoincrement())
-  userId                      Int?
-  user                        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  roleId                       Int?
-  role                         Role?        @relation(fields:[roleId],references: [id])
-  createdAt                    DateTime?
-  isViewed                     Boolean?
+
+model MobileNotification {
+  id        Int       @id @default(autoincrement())
+  userId    Int?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId    Int?
+  role      Role?     @relation(fields: [roleId], references: [id])
+  createdAt DateTime?
+  isViewed  Boolean?
 }
