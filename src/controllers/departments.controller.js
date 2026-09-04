@@ -1,10 +1,20 @@
 import { Prisma } from '../lib/prisma.js'
 
-import { get as _get, getOne as _getOne, getSearch as _getSearch, create as _create, update as _update, remove as _remove } from '../services/departments.service.js';
+import { get as _get,getmobile as _getmobile, getOne as _getOne, getSearch as _getSearch, create as _create, update as _update, remove as _remove } from '../services/departments.service.js';
 
 async function get(req, res, next) {
     try {
         res.json(await _get(req));
+        console.log(res.statusCode);
+    } catch (err) {
+        console.error(`Error `, err.message);
+    }
+}
+
+
+async function getmobile(req, res, next) {
+    try {
+        res.json(await _getmobile(req));
         console.log(res.statusCode);
     } catch (err) {
         console.error(`Error `, err.message);
@@ -86,6 +96,7 @@ async function remove(req, res, next) {
 
 export {
     get,
+    getmobile,
     getOne,
     getSearch,
     create,

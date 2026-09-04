@@ -155,6 +155,7 @@ model Role {
   active          Boolean          @default(true)
   defaultRole     Boolean          @default(false)
   approvalConfigs ApprovalConfig[]
+  MobileNotification   MobileNotification[]
 
   @@unique([companyId, name])
 }
@@ -231,6 +232,7 @@ model User {
   productionInwardsUpdatedBy     ProductionInward[]     @relation("InwardUpdatedBy")
   processBillsCreatedBy          ProcessBill[]          @relation(name: "createdBy")
   processBillsUpdatedBy          ProcessBill[]          @relation(name: "updatedBy")
+  MobileNotification             MobileNotification[]
 
   pushLogs                 pushLogs[]
   productionemplog         productionempPunch[]
@@ -3358,4 +3360,13 @@ model SaleBillEntrySizeBreakup {
   sizeId                      Int?
   Size                        Size?                     @relation(fields: [sizeId], references: [id])
   qty                         Int?
+}
+model MobileNotification{
+  id                          Int                       @id @default(autoincrement())
+  userId                      Int?
+  user                        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId                       Int?
+  role                         Role?        @relation(fields:[roleId],references: [id])
+  createdAt                    DateTime?
+  isViewed                     Boolean?
 }
