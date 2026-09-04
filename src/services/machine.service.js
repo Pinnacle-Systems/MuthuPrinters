@@ -120,4 +120,145 @@ async function remove(id) {
   return { statusCode: 0, data };
 }
 
-export { get, getOne, create, update, remove };
+async function notificationMachines(req) {
+  let userId = req.user?.id;
+  if (!userId && req.query?.userId) userId = parseInt(req.query.userId);
+  if (!userId && req.headers?.userid) userId = parseInt(req.headers.userid);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const data = await prisma.takenmachines.findMany({
+    where: {
+      isAvailable: false,
+    },
+    include: {
+      Machine: {
+        include: {
+          MobileNotification: {
+            where: {
+              userId: userId ? userId : undefined,
+              createdAt: {
+                gte: today,
+              },
+            },
+          },
+        },
+      },
+      User: {
+        include: {
+          Employee: true,
+        },
+      },
+      ProcessRoute: {
+        include: {
+          Process: true,
+        },
+      },
+      JobCard: true,
+      deparment: true,
+    },
+  });
+  const currentTime = new Date();
+
+  const formattedData = data
+    .filter((record) => {
+      if (!userId) return true; // If we cannot identify the user, don't filter
+      const machineNotifications = record.Machine?.MobileNotification || [];
+      const viewedToday = machineNotifications.some(
+        (notif) => notif.isViewed === true,
+      );
+      // Exclude this record if the user has already viewed the notification today
+      return !viewedToday;
+    })
+    .map((record) => {
+      const startTime = new Date(record.stDatetime);
+      const diffMs = currentTime - startTime;
+      const diffHours = diffMs / (1000 * 60 * 60);
+      const diffDays = Math.floor(diffHours / 24);
+      const remainingHours = Math.floor(diffHours % 24);
+
+      let runningDuration = "";
+      if (diffDays > 0) {
+        runningDuration = `${diffDays} days and ${remainingHours} hours`;
+      } else {
+        runningDuration = `${Math.floor(diffHours)} hours`;
+      }
+
+      return {
+        id: record.id,
+        machineId: record.Machineid,
+        machineName: record.Machine?.name || "Unknown",
+        departmentName: record.deparment?.name || "Unknown",
+        user: record.User?.Employee?.name || record.User?.username || "Unknown",
+        process: record.ProcessRoute?.Process?.name || "Unknown",
+        jobCard: record.JobCard?.docId || "Unknown",
+        startTime: startTime.toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+        }),
+        startTimeUTC: record.stDatetime,
+        runningDuration: runningDuration,
+        runningDurationHours: diffHours,
+      };
+    });
+
+  return { statusCode: 0, data: formattedData };
+}
+
+async function machineViewed(req) {
+  const { machineId } = req.body;
+  let userId = req.body?.userId;
+  if (!userId && req.body?.userId) userId = parseInt(req.body.userId);
+  if (!userId && req.query?.userId) userId = parseInt(req.query.userId);
+  if (!userId && req.headers?.userid) userId = parseInt(req.headers.userid);
+
+  if (!userId) {
+    return { statusCode: 1, message: "User ID is required to mark as viewed" };
+  }
+  if (!machineId) {
+    return { statusCode: 1, message: "Machine ID is required" };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+
+  const existingNotification = await prisma.mobileNotification.findFirst({
+    where: {
+      userId: userId,
+      machineId: parseInt(machineId),
+      createdAt: {
+        gte: today,
+      },
+    },
+  });
+
+  let data;
+  if (existingNotification) {
+    data = await prisma.mobileNotification.update({
+      where: { id: existingNotification.id },
+      data: { isViewed: true },
+    });
+  } else {
+    data = await prisma.mobileNotification.create({
+      data: {
+        userId: userId,
+        machineId: parseInt(machineId),
+        isViewed: true,
+        createdAt: new Date(),
+      },
+    });
+  }
+
+  return { statusCode: 0, message: "Notification marked as viewed", data };
+}
+
+export {
+  get,
+  getOne,
+  create,
+  update,
+  remove,
+  notificationMachines,
+  machineViewed,
+};

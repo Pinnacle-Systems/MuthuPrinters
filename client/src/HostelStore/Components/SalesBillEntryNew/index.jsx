@@ -13,6 +13,7 @@ import Swal from "sweetalert2";
 import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterService.js";
 import { UserPermissions } from "../../../Utils/UserPermissions.js";
 import useInvalidateTags from '../../../CustomHooks/useInvalidateTags.js';
+import { useDeleteSalesBillEntryMutation } from "../../../redux/uniformService/SalesBillEntryService.js";
 
 const index = () => {
   const [showForm, setShowForm] = useState(false);
@@ -39,7 +40,7 @@ const index = () => {
     setReadOnly(false);
   };
 
-  const [removeData] = useDeleteSalesDeliveryMutation();
+  const [removeData] = useDeleteSalesBillEntryMutation();
   const [invalidateTagsDispatch] = useInvalidateTags();
 
   const handleDelete = async (id) => {

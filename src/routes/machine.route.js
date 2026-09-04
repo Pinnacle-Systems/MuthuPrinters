@@ -6,9 +6,15 @@ import {
   create,
   update,
   remove,
+  notificationMachines,
+  machineViewed,
 } from "../controllers/machine.controller.js";
 
 router.post("/", create);
+
+router.post("/viewed", machineViewed);
+
+router.get("/notifications", notificationMachines);
 
 router.get("/", get);
 

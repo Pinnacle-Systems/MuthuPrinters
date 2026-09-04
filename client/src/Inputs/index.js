@@ -971,7 +971,7 @@ export const DropdownWithSearch = ({
             : []
         }
         onChange={(value) => {
-          setValue(value[0] ? value[0]?.id : "");
+          setValue(value[0] ? value[0]?.id :value?.id);
         }}
       />
     </div>

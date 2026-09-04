@@ -211,3 +211,9 @@ export const outwardProcessTypes = [
   { show: "SINGLE", value: "SINGLE" },
   { show: "MULTIPLE", value: "Multiple" },
 ];
+
+export const roleGroup = [
+  { show: "MANAGER", value: "MANAGER" },
+  { show: "ADMIN", value: "ADMIN" },
+  { show: "SUPERVISOR", value: "SUPERVISOR" },
+];
