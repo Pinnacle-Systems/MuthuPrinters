@@ -99,6 +99,7 @@ const SaleOrderForm = ({
   branchData,
   hasPermission,
   cityList,
+  bankList
 }) => {
   const today = new Date();
   const [docDate, setDocDate] = useState(
@@ -283,8 +284,17 @@ const SaleOrderForm = ({
     (data) => {
       setCustomerId(data?.customerId ? data?.customerId : "")
       setPayTermId(data?.payTermId || "");
+      setTaxTemplateId(data?.taxTemplateId ? data?.taxTemplateId : "");
+      setTermsId(data?.termsId ? data?.termsId : "");
+      setDeliveryDate(data?.deliveryDate ? moment.utc(data.deliveryDate).format("YYYY-MM-DD") : "");
       setOrderItems(padRows(data?.orderItems || []));
-
+      setCurrencyId(data?.currencyId ? (data?.currencyId) : "");
+      setLoadingId(data?.loadingId ? data?.loadingId : "");
+      setDeliveryId(data?.deliveryId ? data?.deliveryId : "");
+      setWeightInKg(data?.weightInKg ? data?.weightInKg?.toFixed(3) : "");
+      setCarriageCharge(data?.carriageCharge ? data?.carriageCharge?.toFixed(2) : "");
+      setCarriageTax(data?.carriageTax ? data?.carriageTax?.toFixed(2) : "");
+      setBankId(data?.bankId ? data?.bankId : "");
     },
     [id],
   );
@@ -334,6 +344,7 @@ const SaleOrderForm = ({
     carriageTax,
     orderId
   };
+
 
   console.log(orderItems, "orderItemsorderItems")
 
@@ -774,6 +785,189 @@ const SaleOrderForm = ({
       }),
     );
   };
+  const effectiveReadOnly = readOnly || childRecord.current > 0;
+  const [accordionOpen, setAccordionOpen] = useState(true);
+
+  const shippingAccordion = (
+    <div className="border border-slate-200 rounded-md bg-white shadow-sm mt-1">
+      {/* Accordion Header */}
+      <button
+        type="button"
+        onClick={() => setAccordionOpen((prev) => !prev)}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-left"
+      >
+        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">
+          Other Details
+        </span>
+        <svg
+          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${accordionOpen ? "rotate-180" : ""
+            }`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      {/* Accordion Body */}
+      {accordionOpen && (
+        <div className="px-3 pb-2 border-t border-slate-100">
+          <div className="flex gap-2 gap-x-4 w-fit">
+            {isCustomerExport && (
+              <>
+                <div className="w-60">
+                  <DropdownInput
+                    name="Loading Port"
+                    options={dropDownListObject(
+                      cityList?.data?.filter((item) => item.active),
+                      "name",
+                      "id",
+                    )}
+                    value={loadingId}
+                    setValue={setLoadingId}
+                    readOnly={effectiveReadOnly}
+                    required={true}
+                  />
+                </div>
+                <div className="w-60">
+                  <DropdownInput
+                    name="Delivery Port"
+                    options={dropDownListObject(
+                      cityList?.data?.filter((item) => item.active),
+                      "name",
+                      "id",
+                    )}
+                    value={deliveryId}
+                    setValue={setDeliveryId}
+                    readOnly={effectiveReadOnly}
+                    required={true}
+                  />
+                </div>
+              </>
+            )}
+            <div className="w-[105px]">
+              <DateInputNew
+                name="Delivery Date"
+                value={deliveryDate}
+                setValue={setDeliveryDate}
+                disabled={effectiveReadOnly}
+                type="date"
+                required={true}
+              />
+            </div>
+            <div className="w-32">
+              <DropdownInput
+                name="Conversion"
+                options={conversionTypes}
+                value={conversionType}
+                setValue={(value) => setConversionType(value)}
+                required={true}
+                readOnly={effectiveReadOnly}
+                disabled={childRecord.current > 0 || readOnly}
+              />
+            </div>
+            <div className="w-24">
+              <TextInput
+                name="WeightInKg (KG)"
+                value={weightInKg}
+                setValue={setWeightInKg}
+                disabled={effectiveReadOnly}
+                type="number"
+                min="0"
+                className="text-right"
+                required={true}
+                onBlur={(e) =>
+                  setWeightInKg(
+                    e.target.value ? Number(e.target.value).toFixed(3) : "",
+                  )
+                }
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
+
+            <TextInput
+              name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
+              value={carriageCharge}
+              setValue={setCarriageCharge}
+              disabled={effectiveReadOnly}
+              type="number"
+              min="0"
+              className="text-right"
+              onBlur={(e) =>
+                setCarriageCharge(
+                  e.target.value ? Number(e.target.value).toFixed(2) : "",
+                )
+              }
+              onFocus={(e) => {
+                e.target.select();
+              }}
+            />
+            <div className="w-24">
+              <TextInput
+                name="Carriage Tax%"
+                value={carriageTax}
+                setValue={setCarriageTax}
+                disabled={effectiveReadOnly}
+                type="number"
+                min="0"
+                className="text-right"
+                onBlur={(e) =>
+                  setCarriageTax(
+                    e.target.value ? Number(e.target.value).toFixed(2) : "",
+                  )
+                }
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
+            <div className="w-32">
+              <TextInput
+                name="Carriage Final Amount"
+                value={carriageFinalAmt}
+                disabled={true}
+                type="number"
+                min="0"
+                className="text-right"
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
+            <div className="w-72">
+              <DropdownWithModal
+                name="Advising Bank"
+                options={dropDownListObjectMultiple(
+                  id
+                    ? bankList?.data
+                    : bankList?.data?.filter((item) => item?.active),
+                  ["name", "Branch.name"],
+                  "id",
+                )}
+                value={bankId}
+                setValue={setBankId}
+                required={isCustomerExport}
+                readOnly={effectiveReadOnly}
+                className={`w-[150px]`}
+                addNewLabel="+ Add New Bank"
+                childComponent={BankMaster}
+                addNewModalWidth="w-[45%] h-[64%]"
+                disabled={readOnly}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -1409,10 +1603,44 @@ const SaleOrderForm = ({
                       }
                     />
                   </div>
-
+                  {isCustomerExport && (
+                    <div className="md:col-span-1">
+                      <DropdownWithModal
+                        name="Currency"
+                        options={dropDownListObject(
+                          id
+                            ? currencyList?.data
+                            : currencyList?.data?.filter((item) => item?.active),
+                          "name",
+                          "id",
+                        )}
+                        value={currencyId}
+                        setValue={setCurrencyId}
+                        required={true}
+                        readOnly={readOnly}
+                        className={`w-full max-w-none`}
+                        dropdownMinWidth={240}
+                        addNewLabel="+ Add New Currency"
+                        childComponent={CurrencyMaster}
+                        addNewModalWidth="w-[40%] h-[66%]"
+                      />
+                    </div>
+                  )}
+                  {/* <div className="w-[105px]">
+                    <DateInputNew
+                      name="Valid To"
+                      value={validityTo}
+                      setValue={setValidityTo}
+                      disabled={effectiveReadOnly}
+                      required={true}
+                      type="date"
+                    />
+                  </div> */}
                 </div>
               </div>
+
             </div>
+            {shippingAccordion}
 
 
           </div>

@@ -21,7 +21,7 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
     hsnBreakup: {},
   };
 
-  console.log(deliveryTaxValue, deliveryTaxType, "returnChargereturnCharge")
+  console.log(qtyField, "qtyFieldqtyField")
 
 
   const slabMap = {};
@@ -41,15 +41,9 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
 
     const gross = isDozen ? dozen * price : qty * price;
 
-    console.log(
-      qty,
-      dozen,
-      price,
-      gross
-      , "sales delivery")
+    console.log(qty, dozen, price, gross, isDozen, "sales delivery")
 
-    const itemDiscount =
-      dType === "Flat" ? discountVal : (gross * discountVal) / 100;
+    const itemDiscount = dType === "Flat" ? discountVal : (gross * discountVal) / 100;
 
     const taxableBeforeOverall = gross - itemDiscount;
 

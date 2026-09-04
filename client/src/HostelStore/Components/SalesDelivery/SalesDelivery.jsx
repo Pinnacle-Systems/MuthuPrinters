@@ -13,6 +13,7 @@ import Swal from "sweetalert2";
 import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterService.js";
 import { UserPermissions } from "../../../Utils/UserPermissions.js";
 import useInvalidateTags from '../../../CustomHooks/useInvalidateTags';
+import { useGetCityQuery } from "../../../redux/services/CityMasterService.js";
 
 const SalesDelivery = () => {
   const [showForm, setShowForm] = useState(false);
@@ -40,6 +41,8 @@ const SalesDelivery = () => {
   };
 
   const [removeData] = useDeleteSalesDeliveryMutation();
+  const { data: cityList } = useGetCityQuery({ params });
+
   const [invalidateTagsDispatch] = useInvalidateTags();
 
   const handleDelete = async (id) => {
@@ -139,6 +142,7 @@ const SalesDelivery = () => {
             payTermList={payTermList}
             hasPermission={hasPermission}
             invalidateTagsDispatch={invalidateTagsDispatch}
+            cityList={cityList}
           />
         </div>
       )}

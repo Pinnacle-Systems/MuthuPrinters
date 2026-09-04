@@ -108,6 +108,7 @@ async function login(req) {
       return subscriptionResult;
     }
   }
+  console.log(data, "data")
 
   const token = jwt.sign(
     {
@@ -121,6 +122,8 @@ async function login(req) {
     "RANDOM-TOKEN",
     { expiresIn: deviceby == "android" ? "30m" : "24h" },
   );
+
+  console.log(token, "token")
 
   return {
     statusCode: 0,
@@ -208,22 +211,22 @@ async function create(body) {
       password: hashedPassword,
       UserOnBranch: branches
         ? {
-            createMany: {
-              data: branches.map((branch) => {
-                return { branchId: parseInt(branch.id) };
-              }),
-            },
-          }
+          createMany: {
+            data: branches.map((branch) => {
+              return { branchId: parseInt(branch.id) };
+            }),
+          },
+        }
         : undefined,
       role: roleId
         ? {
-            connect: { id: parseInt(roleId) },
-          }
+          connect: { id: parseInt(roleId) },
+        }
         : undefined,
       Employee: employeeId
         ? {
-            connect: { id: parseInt(employeeId) },
-          }
+          connect: { id: parseInt(employeeId) },
+        }
         : undefined,
       active,
     },
@@ -252,10 +255,10 @@ async function update(id, body) {
         deleteMany: branches ? {} : undefined,
         createMany: branches
           ? {
-              data: branches.map((branch) => {
-                return { branchId: parseInt(branch.id) };
-              }),
-            }
+            data: branches.map((branch) => {
+              return { branchId: parseInt(branch.id) };
+            }),
+          }
           : undefined,
       },
       roleId: roleId ? parseInt(roleId) : undefined,

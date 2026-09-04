@@ -21,6 +21,7 @@ import Swal from "sweetalert2";
 import { useGetCityQuery } from "../../../redux/services/CityMasterService.js";
 import SaleOrderReport from "./SaleOrderReport.jsx";
 import { useDeleteSalesOrderMutation } from "../../../redux/uniformService/SalesOrderService.js";
+import { useGetbankQuery } from "../../../redux/services/BankMasterService.js";
 
 const index = () => {
   const [showForm, setShowForm] = useState(false);
@@ -66,6 +67,8 @@ const index = () => {
     setReadOnly(false);
   };
   const [removeData] = useDeleteSalesOrderMutation();
+  const { data: bankList } = useGetbankQuery({ params });
+
   const handleDelete = async (id) => {
     setId(id);
     if (id) {
@@ -188,6 +191,7 @@ const index = () => {
             branchData={branchData}
             hasPermission={hasPermission}
             cityList={cityList}
+            bankList={bankList}
           />
         </div>
       )}
