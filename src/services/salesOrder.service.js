@@ -575,7 +575,15 @@ async function create(body) {
         discountType: discountType || null,
         discountValue: discountValue ? parseFloat(discountValue) : null,
         payTermId: payTermId ? parseInt(payTermId) : null,
+
+        currencyId: currencyId ? parseInt(currencyId) : null,
+        loadingId: loadingId ? parseInt(loadingId) : null,
         deliveryId: deliveryId ? parseInt(deliveryId) : null,
+        weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+        carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+        conversionType: conversionType ? conversionType : 'DOZEN',
+        carriageTax: carriageTax ? parseFloat(carriageTax) : null,
+        bankId: bankId ? parseInt(bankId) : null,
 
         SalesOrderItems:
           safeOrderItems.length > 0

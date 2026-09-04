@@ -487,7 +487,8 @@ async function create(body) {
     loadingId,
     deliveryId,
     carriageTax,
-    orderId
+    orderId,
+    salesDeliveryId
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
@@ -556,22 +557,19 @@ async function create(body) {
       data: {
         docId: newDocId,
         docDate: docDate ? new Date(docDate) : null,
-        orderId: orderId ? parseInt(orderId) : null,
+        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
         createdById: parseInt(userId),
         branchId: branchId ? parseInt(branchId) : null,
         customerId: customerId ? parseInt(customerId) : null,
-
-        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
+        orderId: orderId ? parseInt(orderId) : null,
+        salesDeliveryId: salesDeliveryId ? parseInt(salesDeliveryId) : null,
         remarks,
-        termsId: termsId ? parseInt(termsId) : null,
-        termsAndCondition,
         validDays: validDays ? parseInt(validDays) : null,
         validTo: validTo,
         taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
         discountType: discountType || null,
         discountValue: discountValue ? parseFloat(discountValue) : null,
         payTermId: payTermId ? parseInt(payTermId) : null,
-        deliveryId: deliveryId ? parseInt(deliveryId) : null,
 
         SalesBillEntryItems:
           safeOrderItems.length > 0
@@ -726,15 +724,9 @@ async function update(id, body, files) {
 async function remove(id) {
   const orderEntryId = parseInt(id);
 
-  const dataFound = await prisma.SalesOrder.findUnique({
-    where: { id: orderEntryId },
-    include: {
-      attachments: { select: { filePath: true } },
-      SalesOrderItems: { select: { id: true } },
-    },
-  });
 
-  const data = await prisma.SalesOrder.delete({
+
+  const data = await prisma.SalesBillEntry.delete({
     where: {
       id: orderEntryId,
     },

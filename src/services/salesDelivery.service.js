@@ -321,7 +321,10 @@ async function create(body) {
     salesOrderId,
     amount,
     deliveryTaxType,
-    deliveryTaxValue
+    deliveryTaxValue,
+    loadingId,
+    deliveryId,
+    carriageTax
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -454,6 +457,14 @@ async function create(body) {
         deliveryTaxValue: deliveryTaxValue ? parseFloat(deliveryTaxValue) : null,
         salesOrderId: salesOrderId ? parseInt(salesOrderId) : null,
 
+        currencyId: currencyId ? parseInt(currencyId) : null,
+        loadingId: loadingId ? parseInt(loadingId) : null,
+        deliveryId: deliveryId ? parseInt(deliveryId) : null,
+        weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+        carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+        conversionType: conversionType ? conversionType : 'DOZEN',
+        carriageTax: carriageTax ? parseFloat(carriageTax) : null,
+        bankId: bankId ? parseInt(bankId) : null,
 
         salesDeliveryItems: {
           create: (salesDeliveryItems || []).map((item) => ({

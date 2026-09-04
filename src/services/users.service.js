@@ -88,26 +88,27 @@ async function login(req) {
   const isMatched = await bcrypt.compare(password, data.password);
   if (!isMatched) return { statusCode: 1, message: "Invalid Password" };
 
-  if (data.role?.company?.name) {
-    const subscriptionResult = await getSubscriptionDetails(
-      data.role.company.name,
-    );
+  // if (data.role?.company?.name) {
+  //   const subscriptionResult = await getSubscriptionDetails(
+  //     data.role.company.name,
+  //   );
 
-    if (subscriptionResult?.statusCode === 0 && subscriptionResult.data) {
-      data.role.company.Subscription = [
-        {
-          ...subscriptionResult.data,
-          planStatus: findDateInRange(
-            subscriptionResult.data.validFrom,
-            subscriptionResult.data.expireAt,
-            new Date(),
-          ),
-        },
-      ];
-    } else if (subscriptionResult?.message) {
-      return subscriptionResult;
-    }
-  }
+  //   if (subscriptionResult?.statusCode === 0 && subscriptionResult.data) {
+  //     data.role.company.Subscription = [
+  //       {
+  //         ...subscriptionResult.data,
+  //         planStatus: findDateInRange(
+  //           subscriptionResult.data.validFrom,
+  //           subscriptionResult.data.expireAt,
+  //           new Date(),
+  //         ),
+  //       },
+  //     ];
+  //   } else if (subscriptionResult?.message) {
+  //     return subscriptionResult;
+  //   }
+  // }
+  console.log(data, "data")
 
   const token = jwt.sign(
     {
@@ -121,6 +122,8 @@ async function login(req) {
     "RANDOM-TOKEN",
     { expiresIn: deviceby == "android" ? "30m" : "24h" },
   );
+
+  console.log(token, "token")
 
   return {
     statusCode: 0,
@@ -208,22 +211,22 @@ async function create(body) {
       password: hashedPassword,
       UserOnBranch: branches
         ? {
-            createMany: {
-              data: branches.map((branch) => {
-                return { branchId: parseInt(branch.id) };
-              }),
-            },
-          }
+          createMany: {
+            data: branches.map((branch) => {
+              return { branchId: parseInt(branch.id) };
+            }),
+          },
+        }
         : undefined,
       role: roleId
         ? {
-            connect: { id: parseInt(roleId) },
-          }
+          connect: { id: parseInt(roleId) },
+        }
         : undefined,
       Employee: employeeId
         ? {
-            connect: { id: parseInt(employeeId) },
-          }
+          connect: { id: parseInt(employeeId) },
+        }
         : undefined,
       active,
     },
@@ -252,10 +255,10 @@ async function update(id, body) {
         deleteMany: branches ? {} : undefined,
         createMany: branches
           ? {
-              data: branches.map((branch) => {
-                return { branchId: parseInt(branch.id) };
-              }),
-            }
+            data: branches.map((branch) => {
+              return { branchId: parseInt(branch.id) };
+            }),
+          }
           : undefined,
       },
       roleId: roleId ? parseInt(roleId) : undefined,

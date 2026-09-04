@@ -315,6 +315,9 @@ model FinYear {
   openingBalances     OpeningBalance[]
   purchaseBillEntries PurchaseBillEntry[]
   proformaInvoices    ProformaInvoice[]
+  SalesOrder          SalesOrder[]
+  Packing             Packing[]
+  SalesDelivery       SalesDelivery[]
 }
 
 model EmployeeCategory {
@@ -367,6 +370,8 @@ model City {
   orderEntryLoading       OrderEntry[]      @relation(name: "loading")
   SalesOrderDelivery      SalesOrder[]      @relation(name: "delivery")
   SalesOrderLoading       SalesOrder[]      @relation(name: "loading")
+  SalesDeliveryDelivery   SalesDelivery[]   @relation(name: "delivery")
+  SalesDeliveryLoading    SalesDelivery[]   @relation(name: "loading")
 }
 
 model Department {
@@ -2616,6 +2621,7 @@ model Currency {
   salesDeliveries  SalesDelivery[]
   orderEntries     OrderEntry[]
   SalesReturn      SalesReturn[]
+  SalesOrder       SalesOrder[]
 }
 
 model Bank {
@@ -2633,6 +2639,7 @@ model Bank {
   proformaInvoices ProformaInvoice[]
   salesDeliveries  SalesDelivery[]
   orderEntries     OrderEntry[]
+  SalesOrder       SalesOrder[]
 }
 
 model ProductionAllocation {
@@ -2888,6 +2895,8 @@ model SalesDelivery {
   branchId               Int?
   Branch                 Branch?              @relation(fields: [branchId], references: [id])
   customerId             Int?
+  finYear                FinYear?             @relation(fields: [finYearId], references: [id])
+  finYearId              Int?
   Customer               Party?               @relation(fields: [customerId], references: [id])
   orderEntryId           Int?
   OrderEntry             OrderEntry?          @relation(fields: [orderEntryId], references: [id])
@@ -2899,6 +2908,7 @@ model SalesDelivery {
   remarks                String?
   discountType           String?
   discountValue          Float?
+  validityTo             DateTime?
   TaxTemplate            TaxTemplate?         @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
   taxTemplateId          Int?
   termsAndCondition      String?
@@ -2916,6 +2926,10 @@ model SalesDelivery {
   isDeliveryTaxInclusive Boolean?             @default(false)
   deliveryTaxType        String?
   deliveryTaxValue       Float?
+  Loading                City?                @relation("loading", fields: [loadingId], references: [id])
+  loadingId              Int?
+  Delivery               City?                @relation("delivery", fields: [deliveryId], references: [id])
+  deliveryId             Int?
   salesDeliveryItems     SalesDeliveryItems[]
   Ledger                 Ledger[]
   Stock                  Stock[]
@@ -3013,11 +3027,13 @@ model SalesOrder {
   branchId               Int?
   customer               Party?              @relation(fields: [customerId], references: [id])
   customerId             Int?
+  finYear                FinYear?            @relation(fields: [finYearId], references: [id])
+  finYearId              Int?
+  remarks                String?
   OrderEntry             OrderEntry?         @relation(fields: [orderId], references: [id])
   orderId                Int?
   orderType              String?
   orderQty               Int?
-  remarks                String?
   termsAndCondition      String?
   Terms                  TermsAndConditions? @relation(fields: [termsId], references: [id])
   termsId                Int?
@@ -3029,19 +3045,27 @@ model SalesOrder {
   taxTemplateId          Int?
   discountType           String?
   discountValue          Float?
-  conversionType         String?
   PayTerm                PayTerm?            @relation(fields: [payTermId], references: [id])
   payTermId              Int?
-  Loading                City?               @relation("loading", fields: [loadingId], references: [id])
-  loadingId              Int?
-  Delivery               City?               @relation("delivery", fields: [deliveryId], references: [id])
-  deliveryId             Int?
   deliveryCharge         Int?
   isDeliveryTaxInclusive Boolean?            @default(false)
   deliveryTaxType        String?
   deliveryTaxValue       Float?
-  SalesOrderItems        SalesOrderItems[]
-  SalesDelivery          SalesDelivery[]
+  Currency               Currency?           @relation(fields: [currencyId], references: [id])
+  currencyId             Int?
+  weightInKg             Float?
+  Loading                City?               @relation("loading", fields: [loadingId], references: [id])
+  loadingId              Int?
+  Delivery               City?               @relation("delivery", fields: [deliveryId], references: [id])
+  deliveryId             Int?
+  carriageCharge         Float?
+  carriageTax            Float?
+  bankId                 Int?
+  Bank                   Bank?               @relation(fields: [bankId], references: [id])
+  conversionType         String?
+
+  SalesOrderItems SalesOrderItems[]
+  SalesDelivery   SalesDelivery[]
 }
 
 model SalesOrderItems {
@@ -3111,6 +3135,8 @@ model Packing {
   jobCardId        Int?
   JobCard          JobCard?       @relation(fields: [jobCardId], references: [id])
   orderType        String?
+  finYear          FinYear?       @relation(fields: [finYearId], references: [id])
+  finYearId        Int?
   orderQty         Int?
   remarks          String?
   refNo            String?
