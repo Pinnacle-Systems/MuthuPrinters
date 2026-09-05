@@ -46,18 +46,18 @@ async function getSearch(req) {
 }
 
 async function create(body) {
-  const { name, packingPercentage, active } = await body;
+  const { name, packingPercentage, deliveryPercentage } = await body;
   const data = await prisma.PackingControlPanel.create({
     data: {
       packingPercentage,
-      // active
+      deliveryPercentage
     },
   });
   return { statusCode: 0, data };
 }
 
 async function update(id, body) {
-  const { packingPercentage, active } = await body;
+  const { packingPercentage, deliveryPercentage } = await body;
   const dataFound = await prisma.PackingControlPanel.findUnique({
     where: {
       id: parseInt(id),
@@ -70,7 +70,7 @@ async function update(id, body) {
     },
     data: {
       packingPercentage,
-      // active
+      deliveryPercentage
     },
   });
   return { statusCode: 0, data };

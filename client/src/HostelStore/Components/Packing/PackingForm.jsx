@@ -518,13 +518,13 @@ const PackingForm = ({
       } else {
         errors.push(`Row ${index + 1}: Style Breakup is required for Order Qty`);
       }
-      if (isCustomerExport && !loadingId) {
-        errors.push(`Loading Port is required`);
-      }
+      // if (isCustomerExport && !loadingId) {
+      //   errors.push(`Loading Port is required`);
+      // }
 
-      if (isCustomerExport && !deliveryId) {
-        errors.push(`Delivery Port is required`);
-      }
+      // if (isCustomerExport && !deliveryId) {
+      //   errors.push(`Delivery Port is required`);
+      // }
     });
 
     return errors;
