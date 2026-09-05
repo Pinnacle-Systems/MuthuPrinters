@@ -124,6 +124,11 @@ const SalesReturnForm = ({
   const isCumInvoice = deliveryType === "AGAINST_INVOICE";
 
 
+  const [carriageTax, setCarriageTax] = useState("");
+  const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
+  const [loadingId, setLoadingId] = useState("");
+  const [deliveryId, setDeliveryId] = useState("");
+
   const { data: singleData, isFetching: isSingleFetching, isLoading: isSingleLoading } = useGetSalesReturnByIdQuery(id, { skip: !id });
   const { data: taxTypeList } = useGetTaxTemplateQuery({
     params: { companyId },
@@ -177,7 +182,7 @@ const SalesReturnForm = ({
       setDiscountType(data?.discountType ? data?.discountType : "Percentage");
       setDiscountValue(data?.discountValue ? data?.discountValue : 0);
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      setItems(padItems(data?.salesDeliveryItems || []));
+      setItems(padItems(data?.SalesReturnItems || []));
       setConversionType(data?.conversionType ? data?.conversionType : "PCS");
       setCurrencyId(data?.currencyId ? data?.currencyId : "");
       setWeightInKg(data?.weightInKg ? data?.weightInKg : "");
@@ -186,6 +191,7 @@ const SalesReturnForm = ({
       setSalesDeliveryId(data?.orderId ? data?.orderId : "");
       setDeliveryTaxType(data?.deliveryTaxType ? data?.deliveryTaxType : "Flat");
       setDeliveryTaxValue(data?.deliveryTaxValue ? data?.deliveryTaxValue : "");
+      setSalesDeliveryId(data?.salesDeliveryId ? data?.salesDeliveryId : "");
     },
     [id],
   );
@@ -204,6 +210,17 @@ const SalesReturnForm = ({
       setCustomerId(data?.customerId ? data?.customerId : "")
       setItems(padRows(data?.salesDeliveryItems || []));
       setSalesDeliveryId(data?.id || "");
+      setItems(padRows(data?.salesDeliveryItems ? data?.salesDeliveryItems : []));
+      setPayTermId(data?.payTermId ? data?.payTermId : "");
+      // setCurrencyId(data?.currencyId ? (data?.currencyId) : "");
+      setLoadingId(data?.loadingId ? data?.loadingId : "");
+      setDeliveryId(data?.deliveryId ? data?.deliveryId : "");
+      // setWeightInKg(data?.weightInKg ? data?.weightInKg?.toFixed(3) : "");
+      // setCarriageCharge(data?.carriageCharge ? data?.carriageCharge?.toFixed(2) : "");
+      // setCarriageTax(data?.carriageTax ? data?.carriageTax : "");
+      // setBankId(data?.bankId ? data?.bankId : "");
+      setConversionType(data?.conversionType ? data?.conversionType : "");
+      setTaxTemplateId(data?.taxTemplateId ? data?.taxTemplateId : "");
 
     },
     [id],
@@ -217,36 +234,7 @@ const SalesReturnForm = ({
   }, [isSingleorderFetching, isSingleorderLoading, salesDeliveryId, syncFormWithDbForOrder, singleSalesDeliveryData]);
 
 
-  useEffect(() => {
-    if (id && singleData?.data) {
-      const data = singleData.data;
-      setDocId(data.docId);
-      setDocDate(moment(data.docDate).format("YYYY-MM-DD"));
-      setDeliveryDate(
-        data.deliveryDate
-          ? moment(data.deliveryDate).format("YYYY-MM-DD")
-          : moment().format("YYYY-MM-DD"),
-      );
-      setCustomerId(data.customerId);
-      setDcNo(data.dcNo || "");
-      setVehicleNo(data.vehicleNo || "");
-      setDeliveryType(data.deliveryType || "AGAINST_INVOICE");
-      setRemarks(data.remarks || "");
-      setTermsAndCondition(data.termsAndCondition || "");
-      setTermsId(data.termsId || "");
-      setTaxTemplateId(data.taxTemplateId || "");
-      setPayTermId(data.payTermId || "");
-      setDiscountType(data.discountType || "Percentage");
-      setDiscountValue(data.discountValue || 0);
-      childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      setItems(padItems(data.SalesReturnItems || []));
-      setConversionType(data.conversionType || "PCS");
-      setCurrencyId(data.currencyId || "");
-      setWeightInKg(data.weightInKg || "");
-      setCarriageCharge(data.carriageCharge || "");
-      setBankId(data.bankId || "");
-    }
-  }, [id, singleData]);
+
 
   useEffect(() => {
     customerRef.current?.focus();
@@ -364,11 +352,11 @@ const SalesReturnForm = ({
                 errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Size is required`);
               }
 
-              const qty = Number(size.qty || 0);
+              const qty = Number(size.returnQty || 0);
               sizeSum += qty;
 
               if (qty <= 0) {
-                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`);
+                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: ReturnQty must be greater than 0`);
               }
 
               if (size.sizeId) {
@@ -387,13 +375,13 @@ const SalesReturnForm = ({
       } else {
         errors.push(`Row ${index + 1}: Style Breakup is required for Order Qty`);
       }
-      if (isCustomerExport && !loadingId) {
-        errors.push(`Loading Port is required`);
-      }
+      // if (isCustomerExport && !loadingId) {
+      //   errors.push(`Loading Port is required`);
+      // }
 
-      if (isCustomerExport && !deliveryId) {
-        errors.push(`Delivery Port is required`);
-      }
+      // if (isCustomerExport && !deliveryId) {
+      //   errors.push(`Delivery Port is required`);
+      // }
     });
 
     return errors;
@@ -427,35 +415,35 @@ const SalesReturnForm = ({
       return;
     }
 
-    if (!deliveryDate) {
-      Swal.fire({
-        title: "Warning",
-        text: "Delivery Date is required",
-        icon: "warning",
-        confirmButtonColor: "#3085d6",
-      });
-      return;
-    }
+    // if (!deliveryDate) {
+    //   Swal.fire({
+    //     title: "Warning",
+    //     text: "Delivery Date is required",
+    //     icon: "warning",
+    //     confirmButtonColor: "#3085d6",
+    //   });
+    //   return;
+    // }
 
-    if (isCustomerExport && !currencyId) {
-      Swal.fire({
-        title: "Warning",
-        text: "Currency is required",
-        icon: "warning",
-        confirmButtonColor: "#3085d6",
-      });
-      return;
-    }
+    // if (isCustomerExport && !currencyId) {
+    //   Swal.fire({
+    //     title: "Warning",
+    //     text: "Currency is required",
+    //     icon: "warning",
+    //     confirmButtonColor: "#3085d6",
+    //   });
+    //   return;
+    // }
 
-    if (isCustomerExport && !bankId) {
-      Swal.fire({
-        title: "Warning",
-        text: "Bank is required",
-        icon: "warning",
-        confirmButtonColor: "#3085d6",
-      });
-      return;
-    }
+    // if (isCustomerExport && !bankId) {
+    //   Swal.fire({
+    //     title: "Warning",
+    //     text: "Bank is required",
+    //     icon: "warning",
+    //     confirmButtonColor: "#3085d6",
+    //   });
+    //   return;
+    // }
 
     const filteredItems = items.filter((item) => item.styleItemId);
     if (filteredItems.length === 0) {
@@ -617,292 +605,251 @@ const SalesReturnForm = ({
     (sum, item) => sum + (parseFloat(item.amount) || 0),
     0,
   );
+  const [accordionOpen, setAccordionOpen] = useState(true);
+
 
   const headerContent = (
-    <div className="flex flex-col md:flex-row gap-1 w-full">
-      {/* Basic Details */}
-      <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-          Basic Details
-        </h2>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="w-36">
-            <TextInput name="Sales Return No" value={docId} disabled={true} />
-          </div>
-          <div className="w-28">
-            <DateInputNew
-              name="Sales Return Date"
-              value={docDate}
-              setValue={setDocDate}
-              disabled={true}
-              required={true}
-              type="date"
-            />
-          </div>
+    <>
+      <div className="flex flex-col md:flex-row gap-1 w-full">
+        {/* Basic Details */}
+        <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+          <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+            Basic Details
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="w-36">
+              <TextInput name="Sales Return No" value={docId} disabled={true} required />
+            </div>
+            <div className="w-28">
+              <DateInputNew
+                name="Sales Return Date"
+                value={docDate}
+                setValue={setDocDate}
+                disabled={true}
+                required={true}
+                type="date"
+              />
+            </div>
 
 
+          </div>
         </div>
-      </div>
 
-      {/* Customer & Receipt Details */}
-      <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-          Customer Details
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <div className="md:col-span-2">
-            <DropdownWithModal
-              name="Customer"
-              options={dropDownListObject(
-                id
-                  ? customerList?.data?.filter((item) => item?.isCustomer)
-                  : customerList?.data?.filter(
-                    (item) => item?.active && item?.isCustomer,
-                  ),
-                "name",
-                "id",
-              )}
-              value={customerId}
-              setValue={setCustomerId}
-              required={true}
-              readOnly={readOnly}
-              className="w-[150px]"
-              addNewLabel="+ Add New Customer"
-              childComponent={PartyMaster}
-              addNewModalWidth="w-[90%] h-[95%]"
-              disabled={readOnly || childRecord.current > 0}
-              openOnFocus={true}
-            />
-          </div>
-          <div className="md:col-span-1">
-            <DropdownWithModal
-              name="Sale Delivery No"
-              options={dropDownListObject(
-                id
-                  ? salesDeliveryData?.data?.filter((item) => item?.customerId === customerId)
-                  : salesDeliveryData?.data?.filter(
-                    (item) => item?.customerId === customerId,
-                  ),
-                "docId",
-                "id",
-              )}
-              value={salesDeliveryId}
-              setValue={setSalesDeliveryId}
-              required={true}
-              readOnly={readOnly}
-              className="w-[150px]"
-              disabled={readOnly || childRecord.current > 0}
-              openOnFocus={true}
-            />
-          </div>
-          <div className="md:col-span-1">
-            <TextInput
-              name="Contact Person"
-              value={findFromList(
-                customerId,
-                customerList?.data,
-                "contactPersonName",
-              )}
-              disabled={true}
-            />
-          </div>
-          <div className="md:col-span-1">
-            <TextInput
-              name="Phone"
-              value={findFromList(
-                customerId,
-                customerList?.data,
-                "contactNumber",
-              )}
-              disabled={true}
-            />
-          </div>
+        <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+          <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+            Customer Details
+          </h2>
+          <div className="grid grid-cols-2  gap-2">
+            <div className="w-64">
+              <DropdownWithModal
+                name="Customer"
+                options={dropDownListObject(
+                  id
+                    ? customerList?.data?.filter((item) => item?.isCustomer)
+                    : customerList?.data?.filter(
+                      (item) => item?.active && item?.isCustomer,
+                    ),
+                  "name",
+                  "id",
+                )}
+                value={customerId}
+                setValue={setCustomerId}
+                required={true}
+                readOnly={readOnly}
+                className="w-[150px]"
+                addNewLabel="+ Add New Customer"
+                childComponent={PartyMaster}
+                addNewModalWidth="w-[90%] h-[95%]"
+                disabled={readOnly || childRecord.current > 0}
+                openOnFocus={true}
+              />
+            </div>
+            <div className="w-44">
+              <DropdownWithModal
+                name="Sale Delivery No"
+                options={dropDownListObject(
+                  id
+                    ? salesDeliveryData?.data?.filter((item) => item?.customerId === customerId)
+                    : salesDeliveryData?.data?.filter(
+                      (item) => item?.customerId === customerId,
+                    ),
+                  "docId",
+                  "id",
+                )}
+                value={salesDeliveryId}
+                setValue={setSalesDeliveryId}
+                required={true}
+                readOnly={readOnly}
+                className="w-[150px]"
+                disabled={readOnly || childRecord.current > 0}
+                openOnFocus={true}
+              />
+            </div>
 
 
+
+          </div>
         </div>
-      </div>
-      <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-          Delivery Details
-        </h2>
-        <div className="grid grid-cols-4  gap-2">
-          {/* <div className="">
-            <DateInputNew
-              name="Delivery Date"
-              value={deliveryDate}
-              setValue={setDeliveryDate}
-              disabled={effectiveReadOnly}
-              required={true}
-              type="date"
-            />
-          </div>
-          <div className="">
-            <TextInput
-              name="DC No"
-              value={dcNo}
-              setValue={setDcNo}
-              disabled={effectiveReadOnly}
-            />
-          </div> */}
-          <div className="md:col-span-1">
-            <DropdownInput
-              name="Receipt Basis"
-              options={receiptTypes}
-              value={deliveryType}
-              setValue={(value) => setDeliveryType(value)}
-              required={true}
-              readOnly={readOnly}
-              disabled={childRecord.current > 0 || readOnly}
-              ref={customerRef}
-            />
-          </div>
-          <div className="w-28">
-            <DropdownInput
-              name="Conversion"
-              options={conversionTypes}
-              value={conversionType}
-              setValue={(value) => setConversionType(value)}
-              required={true}
-              readOnly={readOnly}
-              disabled={childRecord.current > 0 || readOnly}
-            />
-          </div>
-          {isCumInvoice && (
-            <>
-              <div className="md:col-span-1">
-                <DropdownWithModal
-                  name="Pay Term"
-                  options={dropDownListObject(
-                    id
-                      ? payTermList?.data
-                      : payTermList?.data?.filter((item) => item?.active),
-                    "name",
-                    "id",
-                  )}
-                  value={payTermId}
-                  setValue={setPayTermId}
-                  required={true}
-                  readOnly={readOnly}
-                  className="w-full max-w-none"
-                  dropdownMinWidth={240}
-                  addNewLabel="+ Add New Pay Term"
-                  childComponent={PayTermMaster}
-                  addNewModalWidth="w-[40%] h-[66%]"
-                />
-              </div>
-              <div className="md:col-span-1">
-                <DropdownInput
-                  name="Tax Type"
-                  options={dropDownListObject(
-                    taxTypeList ? taxTypeList?.data : [],
-                    "name",
-                    "id",
-                  )}
-                  value={taxTemplateId}
-                  setValue={setTaxTemplateId}
-                  required={!isCustomerExport}
-                  readOnly={effectiveReadOnly}
-                />
-              </div>
-              {isCustomerExport && (
+
+        <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+          <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+            Delivery Details
+          </h2>
+          <div className="grid grid-cols-4  gap-2">
+
+
+            <div className="w-28">
+              <DropdownInput
+                name="Conversion"
+                options={conversionTypes}
+                value={conversionType}
+                setValue={(value) => setConversionType(value)}
+                required={true}
+                readOnly={readOnly}
+                disabled={childRecord.current > 0 || readOnly}
+              />
+            </div>
+            {isCumInvoice && (
+              <>
                 <div className="md:col-span-1">
                   <DropdownWithModal
-                    name="Currency"
+                    name="Pay Term"
                     options={dropDownListObject(
                       id
-                        ? currencyList?.data
-                        : currencyList?.data?.filter((item) => item?.active),
+                        ? payTermList?.data
+                        : payTermList?.data?.filter((item) => item?.active),
                       "name",
                       "id",
                     )}
-                    value={currencyId}
-                    setValue={setCurrencyId}
+                    value={payTermId}
+                    setValue={setPayTermId}
                     required={true}
                     readOnly={readOnly}
-                    className={`w-full max-w-none`}
+                    className="w-full max-w-none"
                     dropdownMinWidth={240}
-                    addNewLabel="+ Add New Currency"
-                    childComponent={CurrencyMaster}
+                    addNewLabel="+ Add New Pay Term"
+                    childComponent={PayTermMaster}
                     addNewModalWidth="w-[40%] h-[66%]"
                   />
                 </div>
-              )}
-            </>
-          )}
-          <div className="">
-            <TextInput
-              name="Vehicle No"
-              value={vehicleNo}
-              setValue={setVehicleNo}
-              disabled={effectiveReadOnly}
-            />
-          </div>
-          <div>
-            <TextInput
-              name="WeightInKg (KG)"
-              value={weightInKg}
-              setValue={setWeightInKg}
-              disabled={readOnly}
-              type="number"
-              min="0"
-              className="text-right"
-              onBlur={(e) =>
-                setWeightInKg(
-                  e.target.value ? Number(e.target.value).toFixed(3) : "",
-                )
-              }
-              onFocus={(e) => {
-                e.target.select();
-              }}
-            />
-          </div>
-          {isCustomerExport && (
-            <div>
+                <div className="md:col-span-1">
+                  <DropdownInput
+                    name="Tax Type"
+                    options={dropDownListObject(
+                      taxTypeList ? taxTypeList?.data : [],
+                      "name",
+                      "id",
+                    )}
+                    value={taxTemplateId}
+                    setValue={setTaxTemplateId}
+                    required={!isCustomerExport}
+                    readOnly={effectiveReadOnly}
+                  />
+                </div>
+                {/* {isCustomerExport && (
+                  <div className="md:col-span-1">
+                    <DropdownWithModal
+                      name="Currency"
+                      options={dropDownListObject(
+                        id
+                          ? currencyList?.data
+                          : currencyList?.data?.filter((item) => item?.active),
+                        "name",
+                        "id",
+                      )}
+                      value={currencyId}
+                      setValue={setCurrencyId}
+                      required={true}
+                      readOnly={readOnly}
+                      className={`w-full max-w-none`}
+                      dropdownMinWidth={240}
+                      addNewLabel="+ Add New Currency"
+                      childComponent={CurrencyMaster}
+                      addNewModalWidth="w-[40%] h-[66%]"
+                    />
+                  </div>
+                )} */}
+              </>
+            )}
+            <div className="">
               <TextInput
-                name={`Carriage Charge ${currencyId ? `(${isCurrencySymbol})` : ""}`}
-                value={carriageCharge}
-                setValue={setCarriageCharge}
+                name="Vehicle No"
+                value={vehicleNo}
+                setValue={setVehicleNo}
+                disabled={effectiveReadOnly}
+              />
+            </div>
+            {/* <div>
+              <TextInput
+                name="WeightInKg (KG)"
+                value={weightInKg}
+                setValue={setWeightInKg}
                 disabled={readOnly}
                 type="number"
                 min="0"
                 className="text-right"
                 onBlur={(e) =>
-                  setCarriageCharge(
-                    e.target.value ? Number(e.target.value).toFixed(2) : "",
+                  setWeightInKg(
+                    e.target.value ? Number(e.target.value).toFixed(3) : "",
                   )
                 }
                 onFocus={(e) => {
                   e.target.select();
                 }}
               />
-            </div>
-          )}
-          {isCumInvoice && (
-            <div className="col-span-2">
-              <DropdownWithModal
-                name="Advising Bank"
-                options={dropDownListObjectMultiple(
-                  id
-                    ? bankList?.data
-                    : bankList?.data?.filter((item) => item?.active),
-                  ["name", "Branch.name"],
-                  "id",
-                )}
-                value={bankId}
-                setValue={setBankId}
-                required={isCustomerExport}
-                readOnly={readOnly}
-                className={`w-[150px]`}
-                addNewLabel="+ Add New Bank"
-                childComponent={BankMaster}
-                addNewModalWidth="w-[45%] h-[64%]"
-                disabled={readOnly}
-              />
-            </div>
-          )}
+            </div> */}
+            {/* {isCustomerExport && (
+              <div>
+                <TextInput
+                  name={`Carriage Charge ${currencyId ? `(${isCurrencySymbol})` : ""}`}
+                  value={carriageCharge}
+                  setValue={setCarriageCharge}
+                  disabled={readOnly}
+                  type="number"
+                  min="0"
+                  className="text-right"
+                  onBlur={(e) =>
+                    setCarriageCharge(
+                      e.target.value ? Number(e.target.value).toFixed(2) : "",
+                    )
+                  }
+                  onFocus={(e) => {
+                    e.target.select();
+                  }}
+                />
+              </div>
+            )} */}
+            {/* {isCumInvoice && (
+              <div className="col-span-2">
+                <DropdownWithModal
+                  name="Advising Bank"
+                  options={dropDownListObjectMultiple(
+                    id
+                      ? bankList?.data
+                      : bankList?.data?.filter((item) => item?.active),
+                    ["name", "Branch.name"],
+                    "id",
+                  )}
+                  value={bankId}
+                  setValue={setBankId}
+                  required={isCustomerExport}
+                  readOnly={readOnly}
+                  className={`w-[150px]`}
+                  addNewLabel="+ Add New Bank"
+                  childComponent={BankMaster}
+                  addNewModalWidth="w-[45%] h-[64%]"
+                  disabled={readOnly}
+                />
+              </div>
+            )} */}
+          </div>
         </div>
       </div>
-    </div>
+      {/* <div>
+        {shippingAccordion}
+      </div> */}
+    </>
+
   );
 
   const footerContent = (

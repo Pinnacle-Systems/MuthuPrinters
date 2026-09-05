@@ -197,6 +197,11 @@ const SalesDeliveryForm = ({
       setSalesOrderId(data?.orderId ? data?.orderId : "");
       setDeliveryTaxType(data?.deliveryTaxType ? data?.deliveryTaxType : "Flat");
       setDeliveryTaxValue(data?.deliveryTaxValue ? data?.deliveryTaxValue : "");
+      setCarriageTax(data?.carriageTax ? data?.carriageTax : "");
+      setDeliveryId(data?.deliveryId ? data?.deliveryId : "");
+      setLoadingId(data?.loadingId ? data?.loadingId : "");
+      setSalesOrderId(data?.salesOrderId ? data?.salesOrderId : "");
+
     },
     [id],
   );
@@ -221,7 +226,7 @@ const SalesDeliveryForm = ({
       setDeliveryId(data?.deliveryId ? data?.deliveryId : "");
       setWeightInKg(data?.weightInKg ? data?.weightInKg?.toFixed(3) : "");
       setCarriageCharge(data?.carriageCharge ? data?.carriageCharge?.toFixed(2) : "");
-      setCarriageTax(data?.carriageTax ? data?.carriageTax?.toFixed(2) : "");
+      setCarriageTax(data?.carriageTax ? data?.carriageTax : "");
       setBankId(data?.bankId ? data?.bankId : "");
       setConversionType(data?.conversionType ? data?.conversionType : "");
       setTaxTemplateId(data?.taxTemplateId ? data?.taxTemplateId : "");
@@ -237,36 +242,7 @@ const SalesDeliveryForm = ({
   }, [isSingleorderFetching, isSingleorderLoading, salesOrderId, syncFormWithDbForOrder, singleSaleOrderData]);
 
 
-  useEffect(() => {
-    if (id && singleData?.data) {
-      const data = singleData.data;
-      setDocId(data.docId);
-      setDocDate(moment(data.docDate).format("YYYY-MM-DD"));
-      setDeliveryDate(
-        data.deliveryDate
-          ? moment(data.deliveryDate).format("YYYY-MM-DD")
-          : moment().format("YYYY-MM-DD"),
-      );
-      setCustomerId(data.customerId);
-      setDcNo(data.dcNo || "");
-      setVehicleNo(data.vehicleNo || "");
-      setDeliveryType(data.deliveryType || "AGAINST_INVOICE");
-      setRemarks(data.remarks || "");
-      setTermsAndCondition(data.termsAndCondition || "");
-      setTermsId(data.termsId || "");
-      setTaxTemplateId(data.taxTemplateId || "");
-      setPayTermId(data.payTermId || "");
-      setDiscountType(data.discountType || "Percentage");
-      setDiscountValue(data.discountValue || 0);
-      childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      setItems(padItems(data.salesDeliveryItems || []));
-      setConversionType(data.conversionType || "PCS");
-      setCurrencyId(data.currencyId || "");
-      setWeightInKg(data.weightInKg || "");
-      setCarriageCharge(data.carriageCharge || "");
-      setBankId(data.bankId || "");
-    }
-  }, [id, singleData]);
+
 
   useEffect(() => {
     customerRef.current?.focus();
@@ -316,7 +292,18 @@ const SalesDeliveryForm = ({
   console.log(filteredItems, "filteredItems")
   console.log(enrichedData, "enrichedData")
 
-  const amount = enrichedData?.net;
+  const amount = !isCustomerExport ? enrichedData?.net : (enrichedData.items?.reduce(
+    (sum, item) =>
+      sum + (parseFloat(item.amount) || 0),
+    0,
+  ) || 0) - (enrichedData.itemDiscount +
+    enrichedData.overallDiscount >
+    0
+    ? enrichedData.itemDiscount +
+    enrichedData.overallDiscount
+    : 0) + (parseFloat(carriageFinalAmt) || 0)
+
+
   const data = {
     userId,
     branchId,
@@ -347,6 +334,10 @@ const SalesDeliveryForm = ({
     enrichedData,
     deliveryTaxType,
     deliveryTaxValue,
+    loadingId,
+    carriageFinalAmt,
+    deliveryId,
+    carriageTax
   };
 
   useEffect(() => {
@@ -394,11 +385,11 @@ const SalesDeliveryForm = ({
                 errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Size is required`);
               }
 
-              const qty = Number(size.qty || 0);
+              const qty = Number(size.deliveryQty || 0);
               sizeSum += qty;
 
               if (qty <= 0) {
-                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`);
+                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: DeliveryQty must be greater than 0`);
               }
 
               if (size.sizeId) {
@@ -548,9 +539,6 @@ const SalesDeliveryForm = ({
         if (res?.statusCode === 0) {
           Swal.fire({
             title: "Success",
-
-
-
             text: "Sales Delivery created successfully",
             icon: "success",
             timer: 1500,
@@ -560,6 +548,10 @@ const SalesDeliveryForm = ({
             },
           });
           invalidateTagsDispatch()
+          if (pendingAction === "new") onNew();
+          else if (pendingAction === "close") onClose();
+          setReadOnly(true);
+          dispatchInvalidate();
         } else {
           Swal.fire({
             title: "Error",
@@ -569,11 +561,9 @@ const SalesDeliveryForm = ({
           });
         }
       }
-      setReadOnly(true);
-      dispatchInvalidate();
 
-      if (pendingAction === "new") onNew();
-      else if (pendingAction === "close") onClose();
+
+
     } catch (error) {
       console.log(error, ":error")
       Swal.fire({

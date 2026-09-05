@@ -142,9 +142,10 @@ async function getOne(id) {
                     ...size,
                     sizeBreakup: size.SalesReturnSizeBreakup?.map((breakup) => ({
                         ...breakup,
+                        deliveryQty: breakup?.qty,
                         alreadyReturnQty: breakup.SalesSizeBreakup?.SalesReturnSizeBreakup
                             ?.filter((i) => i?.id !== breakup?.id)
-                            ?.reduce((acc, size) => acc + (size.returnQty || 0), 0)
+                            ?.reduce((acc, size) => parseInt(acc) + parseInt(size.returnQty || 0), 0)
                     })),
                 })),
             })),
@@ -300,7 +301,7 @@ async function create(body) {
                         discountValue: item.discountValue ? parseFloat(item.discountValue) : null,
                         taxPercent: item.taxPercent ? parseFloat(item.taxPercent) : null,
                         trackingType: item.trackingType,
-
+                        deliveryQty: item?.deliveryQty ? parseFloat(item?.deliveryQty) : null,
                         SalesReturnStyleBreakup:
                             item?.styleBreakup?.length > 0
                                 ? {
@@ -310,7 +311,7 @@ async function create(body) {
                                             ? {
                                                 create: st.sizeBreakup.map((s) => ({
                                                     sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                                                    qty: s.qty ? String(s.qty) : null,
+                                                    qty: s.deliveryQty ? String(s.deliveryQty) : null,
                                                     returnQty: s.returnQty ? String(s.returnQty) : null,
                                                     salesSizeBreakupId: s.id ? parseInt(s.id) : null,
 
@@ -530,6 +531,8 @@ async function update(id, body, files) {
                             discountValue: item.discountValue ? parseFloat(item.discountValue) : null,
                             taxPercent: item.taxPercent ? parseFloat(item.taxPercent) : null,
                             trackingType: item.trackingType,
+                            deliveryQty: item?.deliveryQty ? parseFloat(item?.deliveryQty) : null,
+
                             SalesReturnStyleBreakup: {
                                 create: item?.styleBreakup?.length > 0
                                     ? item.styleBreakup.map((st) => ({

@@ -158,20 +158,18 @@ const SalesBillEntryReport = ({
                   S No
                 </th>
                 <th className="px-3 font-medium text-[13px] text-gray-900 text-center w-32">
-                  Sales Delivery No
+                  Sales Bill No
                 </th>
                 <th className="px-3 font-medium text-[13px] text-gray-900 text-center w-40">
-                  Sales Delivery Date
+                  Sales Bill Date
                 </th>
                 <th className="w-80 px-3 font-medium text-[13px] text-gray-900 text-center">
                   Customer
                 </th>
                 <th className="w-40 px-3 font-medium text-[13px] text-gray-900 text-center">
-                  Sales Order
+                  Sales Delivery No
                 </th>
-                <th className="px-3 font-medium text-[13px] text-gray-900 text-center w-40">
-                  Type
-                </th>
+
                 <th className="w-14 px-3 font-medium text-[13px] text-gray-900 text-center">
                   Actions
                 </th>
@@ -216,7 +214,6 @@ const SalesBillEntryReport = ({
                     onChange={(e) => setSearchOrderNo(e.target.value)}
                   />
                 </th>
-                <th className="px-3 w-40 font-medium text-[13px] text-gray-900 text-center"></th>
                 <th className="w-14 px-3 font-medium text-[13px] text-gray-900 text-center"></th>
               </tr>
             </thead>
@@ -230,7 +227,7 @@ const SalesBillEntryReport = ({
               ) : allData?.data?.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-6 py-10 text-center text-gray-500 italic"
                   >
                     No records found
@@ -249,18 +246,12 @@ const SalesBillEntryReport = ({
                       {getDateFromDateTimeToDisplay(item.docDate)}
                     </td>
                     <td className="py-1.5 text-left px-2">
-                      {item.Customer?.name}
+                      {item.customer?.name}
                     </td>
                     <td className="py-1.5 text-left px-2">
-                      {item.SalesOrder?.docId}
+                      {item.SalesDelivery?.docId}
                     </td>
-                    <td className="py-1.5 text-center">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${item.deliveryType === "AGAINST_INVOICE" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}
-                      >
-                        {receiptTypeLabel(item.deliveryType)}
-                      </span>
-                    </td>
+
                     <td className="px-2 py-1">
                       <div
                         className="flex items-center justify-center gap-1"

@@ -143,7 +143,7 @@ const SalesDeliveryItems = ({
     let qty = 0;
     rowBreakup.forEach(style => {
       style.sizeBreakup.forEach(sz => {
-        qty += (Number(sz.deliveryQty) || 0);
+        qty += (Number(sz.returnQty) || 0);
       });
     });
     return qty;
@@ -195,8 +195,8 @@ const SalesDeliveryItems = ({
 
       if (true) {
         row.orderQty = recalculateOrderQty(row.styleBreakup);
-        row.deliveryQty = recalculateDeliveryQty(row.styleBreakup);
-        const qty = row.deliveryQty;
+        row.returnQty = recalculateDeliveryQty(row.styleBreakup);
+        const qty = row.returnQty;
         const price = row.price;
         const dozen = qty / 12;
         row.dozen = dozen ? dozen.toFixed(2) : "";
@@ -239,7 +239,7 @@ const SalesDeliveryItems = ({
 
 
       if (field === "returnQty") {
-        const orderQty = Number(sizeBreakup[sizeIndex].qty) || 0;
+        const orderQty = Number(sizeBreakup[sizeIndex].deliveryQty) || 0;
         const newReturnQty = Number(value) || 0;
         const allowedPercentage = Number(deliveryPercentage) || 0;
         const maxAllowed = orderQty
@@ -260,11 +260,11 @@ const SalesDeliveryItems = ({
       styleBreakup[styleIndex] = styleObj;
       row.styleBreakup = styleBreakup;
 
-      if (field === "qty" || field === "deliveryQty") {
+      if (field === "qty" || field === "returnQty") {
         if (true) {
           row.orderQty = recalculateOrderQty(styleBreakup);
-          row.deliveryQty = recalculateDeliveryQty(styleBreakup);
-          const qty = row.deliveryQty;
+          row.returnQty = recalculateDeliveryQty(styleBreakup);
+          const qty = row.returnQty;
           const price = row.price;
           const dozen = qty / 12;
           row.dozen = dozen ? dozen.toFixed(2) : "";
@@ -456,7 +456,7 @@ const SalesDeliveryItems = ({
                                 type="number"
                                 min="0"
                                 className="w-full text-right outline-none bg-transparent h-7"
-                                value={sizeRow.qty}
+                                value={sizeRow.deliveryQty}
                                 onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "qty", e.target.value)}
                                 onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "qty", parseFloat(e.target.value || 0))}
                                 disabled={readOnly || childRecord?.current > 0 || false}
@@ -473,7 +473,7 @@ const SalesDeliveryItems = ({
                                 className="w-full text-right outline-none bg-transparent h-7"
                                 value={sizeRow.returnQty}
                                 onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "returnQty", e.target.value)}
-                                onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "deliveryQty", parseFloat(e.target.value || 0))}
+                                onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "returnQty", parseFloat(e.target.value || 0))}
                                 disabled={readOnly || childRecord?.current > 0 || false}
                               />
                             </td>
@@ -562,9 +562,9 @@ const SalesDeliveryItems = ({
                 Price {isCurrencySymbol && `(${isCurrencySymbol})`}
                 <span className="text-red-500">*</span>
               </th>
-                <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+                {/* <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                   Gross
-                </th>
+                </th> */}
                 {!isCustomerExport && (
                   <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
                     Tax
@@ -670,7 +670,7 @@ const SalesDeliveryItems = ({
                     </span>
                   </td>
                   <td className="border border-gray-300 text-[11px] text-right items-center pt-2 pr-1 font-medium">
-                    {row.salesDeliveryQty ? Number(row.salesDeliveryQty) : ""}
+                    {row.deliveryQty ? Number(row.deliveryQty) : ""}
                   </td>
                   <td className="border border-gray-300 text-[11px] text-right items-center pt-2 pr-1 font-medium">
                     {row.returnQty ? Number(row.returnQty) : ""}
@@ -752,7 +752,7 @@ const SalesDeliveryItems = ({
                       }}
                     />
                   </td>
-                    <td className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium text-black">
+                    {/* <td className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium text-black">
                       <span className="pr-1">
                         {isCurrencySymbol && row.styleItemId
                           ? ` ${isCurrencySymbol}`
@@ -764,7 +764,7 @@ const SalesDeliveryItems = ({
                           isCurrencySymbol,
                         )
                         : ""}
-                    </td>
+                    </td> */}
                     {!isCustomerExport && (
                       <td className="text-[11px] border border-gray-300 text-center items-center pt-2 font-medium">
                         <button

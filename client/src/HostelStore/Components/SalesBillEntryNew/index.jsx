@@ -14,6 +14,7 @@ import { useGetPaytermMasterQuery } from "../../../redux/services/payTermMasterS
 import { UserPermissions } from "../../../Utils/UserPermissions.js";
 import useInvalidateTags from '../../../CustomHooks/useInvalidateTags.js';
 import { useDeleteSalesBillEntryMutation } from "../../../redux/uniformService/SalesBillEntryService.js";
+import { useGetCityQuery } from "../../../redux/services/CityMasterService.js";
 
 const index = () => {
   const [showForm, setShowForm] = useState(false);
@@ -42,6 +43,7 @@ const index = () => {
 
   const [removeData] = useDeleteSalesBillEntryMutation();
   const [invalidateTagsDispatch] = useInvalidateTags();
+  const { data: cityList } = useGetCityQuery({ params });
 
   const handleDelete = async (id) => {
     if (id) {
@@ -140,6 +142,7 @@ const index = () => {
             payTermList={payTermList}
             hasPermission={hasPermission}
             invalidateTagsDispatch={invalidateTagsDispatch}
+            cityList={cityList}
           />
         </div>
       )}

@@ -143,7 +143,7 @@ const SalesBillEntryItems = ({
     let qty = 0;
     rowBreakup.forEach(style => {
       style.sizeBreakup.forEach(sz => {
-        qty += (Number(sz.deliveryQty) || 0);
+        qty += (Number(sz.billQty) || 0);
       });
     });
     return qty;
@@ -195,7 +195,7 @@ const SalesBillEntryItems = ({
 
       if (true) {
         row.orderQty = recalculateOrderQty(row.styleBreakup);
-        row.deliveryQty = recalculateDeliveryQty(row.styleBreakup);
+        row.billQty = recalculateDeliveryQty(row.styleBreakup);
         const qty = row.deliveryQty;
         const price = row.price;
         const dozen = qty / 12;
@@ -264,11 +264,11 @@ const SalesBillEntryItems = ({
       styleBreakup[styleIndex] = styleObj;
       row.styleBreakup = styleBreakup;
 
-      if (field === "qty" || field === "deliveryQty") {
+      if (field === "qty" || field === "billQty") {
         if (true) {
           row.orderQty = recalculateOrderQty(styleBreakup);
-          row.deliveryQty = recalculateDeliveryQty(styleBreakup);
-          const qty = row.deliveryQty;
+          row.billQty = recalculateDeliveryQty(styleBreakup);
+          const qty = row.billQty;
           const price = row.price;
           const dozen = qty / 12;
           row.dozen = dozen ? dozen.toFixed(2) : "";
@@ -467,7 +467,7 @@ const SalesBillEntryItems = ({
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1 text-right">
-                              {parseFloat(sizeRow.alreadyDeliveryQty)}
+                              {parseFloat(sizeRow.alreadyBilledQty)}
                             </td>
                             <td className="border border-gray-300 px-2 py-1">
                               <input
@@ -674,10 +674,10 @@ const SalesBillEntryItems = ({
                     </span>
                   </td>
                   <td className="border border-gray-300 text-[11px] text-right items-center pt-2 pr-1 font-medium">
-                    {row.orderQty ? Number(row.orderQty) : ""}
+                    {row.deliveryQty ? Number(row.deliveryQty) : ""}
                   </td>
                   <td className="border border-gray-300 text-[11px] text-right items-center pt-2 pr-1 font-medium">
-                    {row.deliveryQty ? Number(row.deliveryQty) : ""}
+                    {row.billQty ? Number(row.billQty) : ""}
                   </td>
                   <td className="border border-gray-300 text-[11px] text-left items-center pt-2 pl-1 font-medium">
                     <input
