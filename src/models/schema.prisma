@@ -151,6 +151,7 @@ model Role {
   company            Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   companyId          Int
   User               User[]
+  type               String?
   RoleOnPage         RoleOnPage[]
   active             Boolean              @default(true)
   defaultRole        Boolean              @default(false)
@@ -2712,6 +2713,7 @@ model Machine {
   productionempPunch productionempPunch[]
   takenMachines      takenmachines[]
   PlateDetails       PlateDetails[]
+  MobileNotification MobileNotification[]
 }
 
 model Notification {
@@ -3398,4 +3400,6 @@ model MobileNotification {
   role      Role?     @relation(fields: [roleId], references: [id])
   createdAt DateTime?
   isViewed  Boolean?
+  machineId Int?
+  machine   Machine?  @relation(fields: [machineId], references: [id])
 }

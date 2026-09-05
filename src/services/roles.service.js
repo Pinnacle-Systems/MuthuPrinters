@@ -54,12 +54,12 @@ async function getSearch(req) {
 }
 
 async function create(body) {
-    const { name, companyId, pages, active } = await body
-    console.log(pages, "pages");
+    const { name, companyId, pages,type, active } = await body
     const data = await prisma.role.create({
         data: {
             name,
             companyId: companyId ? parseInt(companyId) : null,
+            type:type,
             active: active,
             RoleOnPage: {
                 createMany: {
@@ -72,7 +72,7 @@ async function create(body) {
 }
 
 async function update(id, body) {
-    const { name, companyId, pages, active } = await body
+    const { name, companyId, pages, active,type } = await body
     const dataFound = await prisma.role.findUnique({
         where: {
             id: parseInt(id)
@@ -87,6 +87,7 @@ async function update(id, body) {
             name,
             companyId: parseInt(companyId),
             active: active,
+            type:type,
             RoleOnPage: {
                 deleteMany: {},
                 createMany: {
