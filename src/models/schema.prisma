@@ -3001,6 +3001,15 @@ model SalesSizeBreakup {
   deliveryQty              String?
   SalesReturnSizeBreakup   SalesReturnSizeBreakup[]
   SaleBillEntrySizeBreakup SaleBillEntrySizeBreakup[]
+  SalesDeliveryPacking     SalesDeliveryPacking[]
+}
+
+model SalesDeliveryPacking {
+  id                 Int              @id @default(autoincrement())
+  salesSizeBreakupId Int
+  SalesSizeBreakup   SalesSizeBreakup @relation(fields: [salesSizeBreakupId], references: [id], onDelete: Cascade)
+  qty                Int?
+  bundle             Int?
 }
 
 model ItemSubGroup {
@@ -3130,6 +3139,15 @@ model SaleOrderSizeBreakup {
   Size                  Size?                 @relation(fields: [sizeId], references: [id])
   qty                   Int?
   SalesSizeBreakup      SalesSizeBreakup[]
+  SalesOrderPacking     SalesOrderPacking[]
+}
+
+model SalesOrderPacking {
+  id                     Int                  @id @default(autoincrement())
+  saleOrderSizeBreakupId Int
+  SaleOrderSizeBreakup   SaleOrderSizeBreakup @relation(fields: [saleOrderSizeBreakupId], references: [id], onDelete: Cascade)
+  qty                    Int?
+  bundle                 Int?
 }
 
 model Packing {

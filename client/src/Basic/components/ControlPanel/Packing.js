@@ -13,6 +13,7 @@ const Packing = () => {
   const [form, setForm] = useState(false);
   const [active, setActive] = useState(true);
   const [packingPercentage, setPackingPercentage] = useState("")
+  const [deliveryPercentage, setDeliveryPercentage] = useState("")
   const [readOnly, setReadOnly] = useState(false);
 
   const { data: allData, isLoading, isFetching } = useGetPackingControlQuery({ params });
@@ -26,6 +27,7 @@ const Packing = () => {
   const data = {
     active,
     packingPercentage,
+    deliveryPercentage,
     id
   }
 
@@ -64,6 +66,7 @@ const Packing = () => {
       setId(allData?.data[0].id)
       setActive(allData?.data[0].active)
       setPackingPercentage(allData?.data[0].packingPercentage)
+      setDeliveryPercentage(allData?.data[0].deliveryPercentage)
     }
   }, [allData, isLoading, isFetching])
 
@@ -75,7 +78,9 @@ const Packing = () => {
           <div className='mb-5  w-64'>
             <TextInputNew name="Packing Percenatage" value={packingPercentage} setValue={setPackingPercentage} required={true} readOnly={readOnly} />
           </div>
-
+          <div className='mb-5  w-64'>
+            <TextInputNew name="Delivery Percenatage" value={deliveryPercentage} setValue={setDeliveryPercentage} required={true} readOnly={readOnly} />
+          </div>
           {/* <div className='mb-5'>
             <ToggleButton name="Status" options={statusDropdown} value={active} setActive={setActive} required={true} readOnly={readOnly} />
           </div> */}

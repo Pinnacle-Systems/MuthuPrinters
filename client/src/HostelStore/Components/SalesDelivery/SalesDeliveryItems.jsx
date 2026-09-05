@@ -59,7 +59,7 @@ const SalesDeliveryItems = ({
 
   const { data: packingControlData, isLoading, isFetching } = useGetPackingControlQuery({});
 
-  const deliveryPercentage = packingControlData?.data?.[0]?.packingPercentage;
+  const deliveryPercentage = packingControlData?.data?.[0]?.deliveryPercentage;
 
   const [contextMenu, setContextMenu] = useState(null);
   const [currentSelectedIndex, setCurrentSelectedIndex] = useState(null);
