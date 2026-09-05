@@ -173,16 +173,18 @@ async function notificationMachines(req) {
     })
     .map((record) => {
       const startTime = new Date(record.stDatetime);
-      const diffMs = currentTime - startTime;
-      const diffHours = diffMs / (1000 * 60 * 60);
-      const diffDays = Math.floor(diffHours / 24);
-      const remainingHours = Math.floor(diffHours % 24);
+      const diffMs = Math.max(0, currentTime - startTime);
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      const diffDays = Math.floor(hours / 24);
+      const remainingHours = hours % 24;
 
       let runningDuration = "";
       if (diffDays > 0) {
-        runningDuration = `${diffDays} days and ${remainingHours} hours`;
+        runningDuration = `${diffDays}d ${remainingHours}h ${mins}m`;
       } else {
-        runningDuration = `${Math.floor(diffHours)} hours`;
+        runningDuration = `${hours}h ${mins}m`;
       }
 
       return {
@@ -198,7 +200,7 @@ async function notificationMachines(req) {
         }),
         startTimeUTC: record.stDatetime,
         runningDuration: runningDuration,
-        runningDurationHours: diffHours,
+        runningDurationHours: diffMs / (1000 * 60 * 60),
       };
     });
 
