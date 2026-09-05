@@ -8,7 +8,7 @@ import {
   useGetSalesDeliveryByIdQuery,
   useGetSalesDeliveryQuery,
 } from "../../../redux/uniformService/SalesDeliveryService.js";
-import { findFromList, getCommonParams, ModeChip } from "../../../Utils/helper.js";
+import { findFromList, formatCurrencyAmount, getCommonParams, ModeChip } from "../../../Utils/helper.js";
 import {
   dropDownListObject,
   dropDownListObjectMultiple,
@@ -48,7 +48,8 @@ import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMas
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService.js";
 import { useGetSalesOrderByIdQuery, useGetSalesOrderQuery } from "../../../redux/uniformService/SalesOrderService.js";
 import { padRows } from "../OrderEntry/OrderItemsUtils.js";
-import { useAddSalesBillEntryMutation, useUpdateSalesBillEntryMutation } from "../../../redux/uniformService/SalesBillEntryService.js";
+import { useAddSalesBillEntryMutation, useGetSalesBillEntryByIdQuery, useUpdateSalesBillEntryMutation } from "../../../redux/uniformService/SalesBillEntryService.js";
+import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
 
 const EMPTY_ROW = {
   itemGroupId: "",
@@ -84,7 +85,8 @@ const SalesBillEntryForm = ({
   customerList,
   payTermList,
   hasPermission,
-  invalidateTagsDispatch
+  invalidateTagsDispatch,
+  cityList
 }) => {
   const { branchId, companyId, finYearId, userId } = getCommonParams();
 
@@ -119,12 +121,17 @@ const SalesBillEntryForm = ({
 
   const [deliveryTaxValue, setDeliveryTaxValue] = useState("");
   const [deliveryTaxType, setDeliveryTaxType] = useState("Flat");
+  const [carriageTax, setCarriageTax] = useState("");
+  const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
+  const [loadingId, setLoadingId] = useState("");
+  const [deliveryId, setDeliveryId] = useState("");
+
 
   const effectiveReadOnly = readOnly || childRecord.current > 0;
   const isCumInvoice = deliveryType === "AGAINST_INVOICE";
 
 
-  const { data: singleData, isFetching: isSingleFetching, isLoading: isSingleLoading } = useGetSalesDeliveryByIdQuery(id, { skip: !id });
+  const { data: singleData, isFetching: isSingleFetching, isLoading: isSingleLoading } = useGetSalesBillEntryByIdQuery(id, { skip: !id });
   const { data: taxTypeList } = useGetTaxTemplateQuery({
     params: { companyId },
   });
@@ -177,15 +184,18 @@ const SalesBillEntryForm = ({
       setDiscountType(data?.discountType ? data?.discountType : "Percentage");
       setDiscountValue(data?.discountValue ? data?.discountValue : 0);
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      setItems(padItems(data?.salesDeliveryItems || []));
+      setItems(padItems(data?.SalesBillEntryItems || []));
       setConversionType(data?.conversionType ? data?.conversionType : "PCS");
       setCurrencyId(data?.currencyId ? data?.currencyId : "");
       setWeightInKg(data?.weightInKg ? data?.weightInKg : "");
       setCarriageCharge(data?.carriageCharge ? data?.carriageCharge : "");
       setBankId(data?.bankId ? data?.bankId : "");
-      setSalesDeliveryId(data?.orderId ? data?.orderId : "");
+      setCarriageTax(data?.carriageTax ? data?.carriageTax : "");
       setDeliveryTaxType(data?.deliveryTaxType ? data?.deliveryTaxType : "Flat");
       setDeliveryTaxValue(data?.deliveryTaxValue ? data?.deliveryTaxValue : "");
+      setSalesDeliveryId(data?.salesDeliveryId ? data?.salesDeliveryId : "");
+      setDeliveryId(data?.deliveryId ? data?.deliveryId : "");
+      setLoadingId(data?.loadingId ? data?.loadingId : "");
     },
     [id],
   );
@@ -202,9 +212,17 @@ const SalesBillEntryForm = ({
   const syncFormWithDbForOrder = useCallback(
     (data) => {
       setCustomerId(data?.customerId ? data?.customerId : "")
-      setItems(padRows(data?.salesDeliveryItems || []));
-      setSalesDeliveryId(data?.id || "");
-
+      setItems(padRows(data?.salesDeliveryItems ? data?.salesDeliveryItems : []));
+      setPayTermId(data?.payTermId ? data?.payTermId : "");
+      setCurrencyId(data?.currencyId ? (data?.currencyId) : "");
+      setLoadingId(data?.loadingId ? data?.loadingId : "");
+      setDeliveryId(data?.deliveryId ? data?.deliveryId : "");
+      setWeightInKg(data?.weightInKg ? data?.weightInKg?.toFixed(3) : "");
+      setCarriageCharge(data?.carriageCharge ? data?.carriageCharge?.toFixed(2) : "");
+      setCarriageTax(data?.carriageTax ? data?.carriageTax?.toFixed(2) : "");
+      setBankId(data?.bankId ? data?.bankId : "");
+      setConversionType(data?.conversionType ? data?.conversionType : "");
+      setTaxTemplateId(data?.taxTemplateId ? data?.taxTemplateId : "");
     },
     [id],
   );
@@ -217,36 +235,15 @@ const SalesBillEntryForm = ({
   }, [isSingleorderFetching, isSingleorderLoading, salesDeliveryId, syncFormWithDbForOrder, singleSaleDeliveryData]);
 
 
+
   useEffect(() => {
-    if (id && singleData?.data) {
-      const data = singleData.data;
-      setDocId(data.docId);
-      setDocDate(moment(data.docDate).format("YYYY-MM-DD"));
-      setDeliveryDate(
-        data.deliveryDate
-          ? moment(data.deliveryDate).format("YYYY-MM-DD")
-          : moment().format("YYYY-MM-DD"),
-      );
-      setCustomerId(data.customerId);
-      setDcNo(data.dcNo || "");
-      setVehicleNo(data.vehicleNo || "");
-      setDeliveryType(data.deliveryType || "AGAINST_INVOICE");
-      setRemarks(data.remarks || "");
-      setTermsAndCondition(data.termsAndCondition || "");
-      setTermsId(data.termsId || "");
-      setTaxTemplateId(data.taxTemplateId || "");
-      setPayTermId(data.payTermId || "");
-      setDiscountType(data.discountType || "Percentage");
-      setDiscountValue(data.discountValue || 0);
-      childRecord.current = data?.childRecord ? data?.childRecord : 0;
-      setItems(padItems(data.salesDeliveryItems || []));
-      setConversionType(data.conversionType || "PCS");
-      setCurrencyId(data.currencyId || "");
-      setWeightInKg(data.weightInKg || "");
-      setCarriageCharge(data.carriageCharge || "");
-      setBankId(data.bankId || "");
-    }
-  }, [id, singleData]);
+    const charge = parseFloat(carriageCharge) || 0;
+    const tax = parseFloat(carriageTax) || 0;
+    const finalAmt = charge + (charge * tax) / 100;
+    setCarriageFinalAmt(finalAmt ? finalAmt.toFixed(2) : "");
+  }, [carriageCharge, carriageTax]);
+
+
 
   useEffect(() => {
     customerRef.current?.focus();
@@ -270,7 +267,9 @@ const SalesBillEntryForm = ({
   const isSupplierOutside = useMemo(() => {
     return supplierData?.data?.City?.state?.name !== "TAMILNADU";
   }, [supplierData]);
-
+  const currencyCode = currencyList?.data?.find(
+    (item) => item?.id === currencyId,
+  )?.code;
 
   const filteredItems = useMemo(() => items.filter((i) => i.styleItemId), [items]);
 
@@ -285,7 +284,7 @@ const SalesBillEntryForm = ({
         roundOff: 0,
       };
     return calculateTaxWithHSNBreakupAndInsertIntoPoItems(filteredItems, isSupplierOutside, discountType, discountValue, conversionType === "DOZEN" ? true : false,
-      "deliveryQty",
+      "billQty",
       deliveryTaxValue,
       deliveryTaxType,
     );
@@ -293,7 +292,19 @@ const SalesBillEntryForm = ({
 
   console.log(filteredItems, "filteredItems")
 
-  const amount = enrichedData?.net;
+  const amount = !isCustomerExport ? enrichedData?.net : (enrichedData.items?.reduce(
+    (sum, item) =>
+      sum + (parseFloat(item.amount) || 0),
+    0,
+  ) || 0) - (enrichedData.itemDiscount +
+    enrichedData.overallDiscount >
+    0
+    ? enrichedData.itemDiscount +
+    enrichedData.overallDiscount
+    : 0) + (parseFloat(carriageFinalAmt) || 0)
+
+
+
   const data = {
     userId,
     branchId,
@@ -309,7 +320,7 @@ const SalesBillEntryForm = ({
     termsAndCondition,
     termsId,
     taxTemplateId: isCumInvoice ? taxTemplateId : null,
-    salesDeliveryItems: filteredItems,
+    orderItems: filteredItems,
     payTermId: isCumInvoice ? payTermId : null,
     discountType,
     discountValue,
@@ -319,11 +330,17 @@ const SalesBillEntryForm = ({
     weightInKg,
     carriageCharge,
     bankId,
-    salesOrderId: salesDeliveryId,
+    salesDeliveryId,
     amount: amount,
     enrichedData,
     deliveryTaxType,
     deliveryTaxValue,
+
+    loadingId,
+    carriageFinalAmt,
+    deliveryId,
+    carriageTax
+
   };
 
   const validateRows = (items) => {
@@ -364,11 +381,11 @@ const SalesBillEntryForm = ({
                 errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Size is required`);
               }
 
-              const qty = Number(size.qty || 0);
+              const qty = Number(size.billQty || 0);
               sizeSum += qty;
 
               if (qty <= 0) {
-                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`);
+                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: billQty must be greater than 0`);
               }
 
               if (size.sizeId) {
@@ -581,7 +598,7 @@ const SalesBillEntryForm = ({
 
     setItems((prev) =>
       prev.map((item) => {
-        const qty = parseFloat(item.qty) || 0;
+        const qty = parseFloat(item.billQty) || 0;
         const price = parseFloat(item.price) || 0;
         const dozen = qty / 12;
 
@@ -617,257 +634,141 @@ const SalesBillEntryForm = ({
     (sum, item) => sum + (parseFloat(item.amount) || 0),
     0,
   );
+  const [accordionOpen, setAccordionOpen] = useState(true);
 
-  const headerContent = (
-    <div className="flex flex-col md:flex-row gap-1 w-full">
-      {/* Basic Details */}
-      <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-          Basic Details
-        </h2>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="w-36">
-            <TextInput name="Sales Delivery No" value={docId} disabled={true} />
-          </div>
-          <div className="w-28">
-            <DateInputNew
-              name="Sales Delivery Date"
-              value={docDate}
-              setValue={setDocDate}
-              disabled={true}
-              required={true}
-              type="date"
-            />
-          </div>
+  const shippingAccordion = (
+    <div className="border border-slate-200 rounded-md bg-white shadow-sm mt-1">
+      {/* Accordion Header */}
+      <button
+        type="button"
+        onClick={() => setAccordionOpen((prev) => !prev)}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-left"
+      >
+        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">
+          Other Details
+        </span>
+        <svg
+          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${accordionOpen ? "rotate-180" : ""
+            }`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
 
-
-        </div>
-      </div>
-
-      {/* Customer & Receipt Details */}
-      <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-          Customer Details
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <div className="md:col-span-2">
-            <DropdownWithModal
-              name="Customer"
-              options={dropDownListObject(
-                id
-                  ? customerList?.data?.filter((item) => item?.isCustomer)
-                  : customerList?.data?.filter(
-                    (item) => item?.active && item?.isCustomer,
-                  ),
-                "name",
-                "id",
-              )}
-              value={customerId}
-              setValue={setCustomerId}
-              required={true}
-              readOnly={readOnly}
-              className="w-[150px]"
-              addNewLabel="+ Add New Customer"
-              childComponent={PartyMaster}
-              addNewModalWidth="w-[90%] h-[95%]"
-              disabled={readOnly || childRecord.current > 0}
-              openOnFocus={true}
-            />
-          </div>
-          <div className="md:col-span-1">
-            <DropdownWithModal
-              name="Sale Order No"
-              options={dropDownListObject(
-                id
-                  ? salesDeliveryData?.data?.filter((item) => item?.customerId === customerId)
-                  : salesDeliveryData?.data?.filter(
-                    (item) => item?.customerId === customerId,
-                  ),
-                "docId",
-                "id",
-              )}
-              value={salesDeliveryId}
-              setValue={setSalesDeliveryId}
-              required={true}
-              readOnly={readOnly}
-              className="w-[150px]"
-              disabled={readOnly || childRecord.current > 0}
-              openOnFocus={true}
-            />
-          </div>
-          <div className="md:col-span-1">
-            <TextInput
-              name="Contact Person"
-              value={findFromList(
-                customerId,
-                customerList?.data,
-                "contactPersonName",
-              )}
-              disabled={true}
-            />
-          </div>
-          <div className="md:col-span-1">
-            <TextInput
-              name="Phone"
-              value={findFromList(
-                customerId,
-                customerList?.data,
-                "contactNumber",
-              )}
-              disabled={true}
-            />
-          </div>
-
-
-        </div>
-      </div>
-      <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
-        <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
-          Delivery Details
-        </h2>
-        <div className="grid grid-cols-4  gap-2">
-          {/* <div className="">
-            <DateInputNew
-              name="Delivery Date"
-              value={deliveryDate}
-              setValue={setDeliveryDate}
-              disabled={effectiveReadOnly}
-              required={true}
-              type="date"
-            />
-          </div>
-          <div className="">
-            <TextInput
-              name="DC No"
-              value={dcNo}
-              setValue={setDcNo}
-              disabled={effectiveReadOnly}
-            />
-          </div> */}
-          <div className="md:col-span-1">
-            <DropdownInput
-              name="Receipt Basis"
-              options={receiptTypes}
-              value={deliveryType}
-              setValue={(value) => setDeliveryType(value)}
-              required={true}
-              readOnly={readOnly}
-              disabled={childRecord.current > 0 || readOnly}
-              ref={customerRef}
-            />
-          </div>
-          <div className="w-28">
-            <DropdownInput
-              name="Conversion"
-              options={conversionTypes}
-              value={conversionType}
-              setValue={(value) => setConversionType(value)}
-              required={true}
-              readOnly={readOnly}
-              disabled={childRecord.current > 0 || readOnly}
-            />
-          </div>
-          {isCumInvoice && (
-            <>
-              <div className="md:col-span-1">
-                <DropdownWithModal
-                  name="Pay Term"
-                  options={dropDownListObject(
-                    id
-                      ? payTermList?.data
-                      : payTermList?.data?.filter((item) => item?.active),
-                    "name",
-                    "id",
-                  )}
-                  value={payTermId}
-                  setValue={setPayTermId}
-                  required={true}
-                  readOnly={readOnly}
-                  className="w-full max-w-none"
-                  dropdownMinWidth={240}
-                  addNewLabel="+ Add New Pay Term"
-                  childComponent={PayTermMaster}
-                  addNewModalWidth="w-[40%] h-[66%]"
-                />
-              </div>
-              <div className="md:col-span-1">
-                <DropdownInput
-                  name="Tax Type"
-                  options={dropDownListObject(
-                    taxTypeList ? taxTypeList?.data : [],
-                    "name",
-                    "id",
-                  )}
-                  value={taxTemplateId}
-                  setValue={setTaxTemplateId}
-                  required={!isCustomerExport}
-                  readOnly={effectiveReadOnly}
-                />
-              </div>
-              {isCustomerExport && (
-                <div className="md:col-span-1">
-                  <DropdownWithModal
-                    name="Currency"
+      {/* Accordion Body */}
+      {accordionOpen && (
+        <div className="px-3 pb-2 border-t border-slate-100">
+          <div className="flex gap-2 gap-x-4 w-fit">
+            {isCustomerExport && (
+              <>
+                <div className="w-60">
+                  <DropdownInput
+                    name="Loading Port"
                     options={dropDownListObject(
-                      id
-                        ? currencyList?.data
-                        : currencyList?.data?.filter((item) => item?.active),
+                      cityList?.data?.filter((item) => item.active),
                       "name",
                       "id",
                     )}
-                    value={currencyId}
-                    setValue={setCurrencyId}
+                    value={loadingId}
+                    setValue={setLoadingId}
+                    readOnly={effectiveReadOnly}
                     required={true}
-                    readOnly={readOnly}
-                    className={`w-full max-w-none`}
-                    dropdownMinWidth={240}
-                    addNewLabel="+ Add New Currency"
-                    childComponent={CurrencyMaster}
-                    addNewModalWidth="w-[40%] h-[66%]"
                   />
                 </div>
-              )}
-            </>
-          )}
-          <div className="">
+                <div className="w-60">
+                  <DropdownInput
+                    name="Delivery Port"
+                    options={dropDownListObject(
+                      cityList?.data?.filter((item) => item.active),
+                      "name",
+                      "id",
+                    )}
+                    value={deliveryId}
+                    setValue={setDeliveryId}
+                    readOnly={effectiveReadOnly}
+                    required={true}
+                  />
+                </div>
+              </>
+            )}
+            <div className="w-[105px]">
+              <DateInputNew
+                name="Delivery Date"
+                value={deliveryDate}
+                setValue={setDeliveryDate}
+                disabled={effectiveReadOnly}
+                type="date"
+                required={true}
+              />
+            </div>
+            <div className="w-32">
+              <DropdownInput
+                name="Conversion"
+                options={conversionTypes}
+                value={conversionType}
+                setValue={(value) => setConversionType(value)}
+                required={true}
+                readOnly={effectiveReadOnly}
+                disabled={childRecord.current > 0 || readOnly}
+              />
+            </div>
+            <div className="w-24">
+              <TextInput
+                name="WeightInKg (KG)"
+                value={weightInKg}
+                setValue={setWeightInKg}
+                disabled={effectiveReadOnly}
+                type="number"
+                min="0"
+                className="text-right"
+                required={true}
+                onBlur={(e) =>
+                  setWeightInKg(
+                    e.target.value ? Number(e.target.value).toFixed(3) : "",
+                  )
+                }
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
+
             <TextInput
-              name="Vehicle No"
-              value={vehicleNo}
-              setValue={setVehicleNo}
+              name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
+              value={carriageCharge}
+              setValue={setCarriageCharge}
               disabled={effectiveReadOnly}
-            />
-          </div>
-          <div>
-            <TextInput
-              name="WeightInKg (KG)"
-              value={weightInKg}
-              setValue={setWeightInKg}
-              disabled={readOnly}
               type="number"
               min="0"
               className="text-right"
               onBlur={(e) =>
-                setWeightInKg(
-                  e.target.value ? Number(e.target.value).toFixed(3) : "",
+                setCarriageCharge(
+                  e.target.value ? Number(e.target.value).toFixed(2) : "",
                 )
               }
               onFocus={(e) => {
                 e.target.select();
               }}
             />
-          </div>
-          {isCustomerExport && (
-            <div>
+            <div className="w-24">
               <TextInput
-                name={`Carriage Charge ${currencyId ? `(${isCurrencySymbol})` : ""}`}
-                value={carriageCharge}
-                setValue={setCarriageCharge}
-                disabled={readOnly}
+                name="Carriage Tax%"
+                value={carriageTax}
+                setValue={setCarriageTax}
+                disabled={effectiveReadOnly}
                 type="number"
                 min="0"
                 className="text-right"
                 onBlur={(e) =>
-                  setCarriageCharge(
+                  setCarriageTax(
                     e.target.value ? Number(e.target.value).toFixed(2) : "",
                   )
                 }
@@ -876,9 +777,20 @@ const SalesBillEntryForm = ({
                 }}
               />
             </div>
-          )}
-          {isCumInvoice && (
-            <div className="col-span-2">
+            <div className="w-32">
+              <TextInput
+                name="Carriage Final Amount"
+                value={carriageFinalAmt}
+                disabled={true}
+                type="number"
+                min="0"
+                className="text-right"
+                onFocus={(e) => {
+                  e.target.select();
+                }}
+              />
+            </div>
+            <div className="w-72">
               <DropdownWithModal
                 name="Advising Bank"
                 options={dropDownListObjectMultiple(
@@ -891,7 +803,7 @@ const SalesBillEntryForm = ({
                 value={bankId}
                 setValue={setBankId}
                 required={isCustomerExport}
-                readOnly={readOnly}
+                readOnly={effectiveReadOnly}
                 className={`w-[150px]`}
                 addNewLabel="+ Add New Bank"
                 childComponent={BankMaster}
@@ -899,163 +811,197 @@ const SalesBillEntryForm = ({
                 disabled={readOnly}
               />
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
-
-  const footerContent = (
+  const headerContent = (
     <>
-      <CommonFormFooter
-        remarks={remarks}
-        setRemarks={setRemarks}
-        terms={termsAndCondition}
-        setTerms={setTermsAndCondition}
-        readOnly={readOnly}
-        showTermSelect={true}
-        termsRef={termsRef}
-        termValue={termsId}
-        onTermChange={(value) => setTermsId(value)}
-        termOptions={
-          termsData?.data?.map((item) => ({
-            value: item.id,
-            label: item.name,
-            templateText: item.description || "",
-          })) || []
-        }
-        totalsRows={[
-          {
-            key: "totalQty",
-            label: "Total Qty",
-            value: totalQty.toFixed(3),
-            summaryColumn: "right",
-            emphasized: true,
-          },
-          {
-            key: "returnCharge",
-            label: "Return Charges",
-            summaryColumn: "right",
-            renderValue: () => (
-              <div className="flex items-center gap-1">
-                <select
-                  value={deliveryTaxType}
-                  onChange={(e) => setDeliveryTaxType(e.target.value)}
-                  disabled={readOnly}
-                  className={`h-7 rounded border border-slate-300 bg-white px-1 text-[11px] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200 ${readOnly ? "cursor-not-allowed bg-slate-100 text-slate-500" : ""}`}
-                >
-                  <option value="Flat">Flat</option>
-                  <option value="Percentage">Percentage</option>
-                </select>
-                <input
-                  type="number"
-                  value={deliveryTaxValue}
-                  onChange={(event) => setDeliveryTaxValue(event.target.value)}
-                  onBlur={() => setDeliveryTaxValue(deliveryTaxValue)}
-                  readOnly={readOnly}
-                  className={`h-7 w-16 rounded border border-slate-300 px-1.5 py-0 text-right text-[11px] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200 ${readOnly ? "cursor-not-allowed bg-slate-100 text-slate-500" : "bg-white"}`}
-                />
-              </div>
-            ),
-          },
-          ...(isCumInvoice
-            ? [
-              {
-                key: "netAmount",
-                label: "Net Amount",
-                value: `${enrichedData.net?.toFixed(2)}`,
-                summaryColumn: "right",
-                emphasized: true,
-              },
-            ]
-            : []),
-          ...(isCustomerExport
-            ? [
-              {
-                key: "carriageCharge",
-                label: "Carraige Charges",
-                value: `${isCurrencySymbol ? isCurrencySymbol : ""} ${carriageCharge}`,
-                summaryColumn: "right",
-                emphasized: true,
-              },
-            ]
-            : []),
+      <div className="flex flex-col md:flex-row gap-1 w-full">
+        {/* Basic Details */}
+        <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+          <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+            Basic Details
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="w-36">
+              <TextInput name="Sales Bill No" value={docId} disabled={true} />
+            </div>
+            <div className="w-28">
+              <DateInputNew
+                name="Sales Bill Date"
+                value={docDate}
+                setValue={setDocDate}
+                disabled={true}
+                required={true}
+                type="date"
+              />
+            </div>
 
-        ]}
-      />
-      <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
-        {/* Left Buttons */}
-        <div className="flex gap-2 flex-wrap">
-          {!readOnly && (
-            <button
-              onClick={() => handleSave("close")}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleSave("close");
-                  e.stopPropagation();
-                }
-              }}
-              disabled={readOnly}
-              className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs font-medium"
-            >
-              <HiOutlineRefresh className="w-3.5 h-3.5 mr-2" />
-              Save & Close
-            </button>
-          )}
-          {!readOnly && (
-            <button
-              onClick={() => handleSave("new")}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleSave("new");
-                }
-              }}
-              disabled={readOnly}
-              className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs font-medium"
-            >
-              <FiSave className="w-3.5 h-3.5 mr-2" />
-              Save & New
-            </button>
-          )}
+
+          </div>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          {!id ||
-            (readOnly && (
-              <button
-                className="bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700 flex items-center text-xs font-medium"
-                onClick={() => setReadOnly(false)}
-              >
-                <FiEdit2 className="w-3.5 h-3.5 mr-2" />
-                Edit
-              </button>
-            ))}
-          {isCumInvoice && (
-            <button
-              className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center text-xs font-medium"
-              onClick={() => setSummary(true)}
-            >
-              <FiEye className="h-4 w-4 mr-2" />
-              View Summary
-            </button>
-          )}
+        <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+          <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+            Customer Details
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="md:col-span-2">
+              <DropdownWithModal
+                name="Customer"
+                options={dropDownListObject(
+                  id
+                    ? customerList?.data?.filter((item) => item?.isCustomer)
+                    : customerList?.data?.filter(
+                      (item) => item?.active && item?.isCustomer,
+                    ),
+                  "name",
+                  "id",
+                )}
+                value={customerId}
+                setValue={setCustomerId}
+                required={true}
+                readOnly={readOnly}
+                className="w-[150px]"
+                addNewLabel="+ Add New Customer"
+                childComponent={PartyMaster}
+                addNewModalWidth="w-[90%] h-[95%]"
+                disabled={readOnly || childRecord.current > 0}
+                openOnFocus={true}
+              />
+            </div>
+            <div className="md:col-span-1">
+              <DropdownWithModal
+                name="Sales Delivery No"
+                options={dropDownListObject(
+                  id
+                    ? salesDeliveryData?.data?.filter((item) => item?.customerId === customerId)
+                    : salesDeliveryData?.data?.filter(
+                      (item) => item?.customerId === customerId && item.deliveryType === "WITHOUT_INVOICE",
+                    ),
+                  "docId",
+                  "id",
+                )}
+                value={salesDeliveryId}
+                setValue={setSalesDeliveryId}
+                required={true}
+                readOnly={readOnly}
+                className="w-[150px]"
+                disabled={readOnly || childRecord.current > 0}
+                openOnFocus={true}
+              />
+            </div>
+            <div className="md:col-span-1">
+              <TextInput
+                name="Contact Person"
+                value={findFromList(
+                  customerId,
+                  customerList?.data,
+                  "contactPersonName",
+                )}
+                disabled={true}
+              />
+            </div>
+            {/* <div className="md:col-span-1">
+            <TextInput
+              name="Phone"
+              value={findFromList(
+                customerId,
+                customerList?.data,
+                "contactNumber",
+              )}
+              disabled={true}
+            />
+          </div> */}
 
-          {id && (
-            <button
-              className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs font-medium"
-              onClick={() => setPrintModalOpen(true)}
-            >
-              <FiPrinter className="h-4 w-4 mr-2" />
-              Print
-            </button>
-          )}
+
+          </div>
         </div>
+        <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+          <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+            Delivery Details
+
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {isCumInvoice && (
+              <>
+                <div className="md:col-span-1">
+                  <DropdownWithModal
+                    name="Pay Term"
+                    options={dropDownListObject(
+                      id
+                        ? payTermList?.data
+                        : payTermList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={payTermId}
+                    setValue={setPayTermId}
+                    required={true}
+                    readOnly={readOnly}
+                    className="w-full max-w-none"
+                    dropdownMinWidth={240}
+                    addNewLabel="+ Add New Pay Term"
+                    childComponent={PayTermMaster}
+                    addNewModalWidth="w-[40%] h-[66%]"
+                  />
+                </div>
+                <div className="md:col-span-1">
+                  <DropdownInput
+                    name="Tax Type"
+                    options={dropDownListObject(
+                      taxTypeList ? taxTypeList?.data : [],
+                      "name",
+                      "id",
+                    )}
+                    value={taxTemplateId}
+                    setValue={setTaxTemplateId}
+                    required={!isCustomerExport}
+                    readOnly={effectiveReadOnly}
+                  />
+                </div>
+                {isCustomerExport && (
+                  <div className="md:col-span-1">
+                    <DropdownWithModal
+                      name="Currency"
+                      options={dropDownListObject(
+                        id
+                          ? currencyList?.data
+                          : currencyList?.data?.filter((item) => item?.active),
+                        "name",
+                        "id",
+                      )}
+                      value={currencyId}
+                      setValue={setCurrencyId}
+                      required={true}
+                      readOnly={readOnly}
+                      className={`w-full max-w-none`}
+                      dropdownMinWidth={240}
+                      addNewLabel="+ Add New Currency"
+                      childComponent={CurrencyMaster}
+                      addNewModalWidth="w-[40%] h-[66%]"
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+
+          </div>
+        </div>
+
+      </div>
+      <div>
+        {shippingAccordion}
       </div>
     </>
   );
+
+
+
+
 
   console.log(items, "itemsitems")
 
@@ -1123,8 +1069,296 @@ const SalesBillEntryForm = ({
             isCustomerExport={isCustomerExport}
           />
         }
-        footer={footerContent}
-      />
+        footer={
+          <>
+            <ReusableFormFooter
+              sections={[
+                //  {
+                //                   title: "Terms & Condtions",
+                //                   value: requirements,
+                //                   onChange: setRequirements,
+                //                   placeholder: "Enter Terms & Condtions...",
+                //                   readOnly: readOnly || childRecord,
+                //                   ref: requirementRef,
+                //                 },
+                {},
+                {
+                  title: "Remarks",
+                  value: remarks,
+                  onChange: setRemarks,
+                  placeholder: "Additional notes...",
+                  readOnly: readOnly || childRecord,
+                },
+              ]}
+              hasSummaryTitle={
+                <span className="block text-center w-full">Summary</span>
+              }
+              sectionColClass="md:col-span-4"
+              summaryColClass="md:col-span-4"
+              totalsRows={[
+                {
+                  key: "summary_grid",
+                  label: "",
+                  valueContainerClassName: "w-full",
+                  renderValue: () => {
+                    const taxTotals = !isCustomerExport
+                      ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
+                        const type = curr?.tax?.split(" ")[0];
+                        acc[type] = (acc[type] || 0) + curr.amount;
+                        return acc;
+                      }, {})
+                      : {};
+
+                    return (
+                      <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1">
+                        {/* Left Column */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Total Discount</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                enrichedData.itemDiscount +
+                                  enrichedData.overallDiscount >
+                                  0
+                                  ? enrichedData.itemDiscount +
+                                  enrichedData.overallDiscount
+                                  : 0,
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Taxable Amount</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                enrichedData.taxable || 0,
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          {taxTotals.CGST !== undefined &&
+                            taxTotals.SGST !== undefined ? (
+                            <div className="flex items-center justify-between w-full max-w-[210px]">
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-800 w-[32px]">
+                                  CGST
+                                </span>
+                                <span className="text-slate-800">:</span>
+                                <span className="font-medium text-slate-800">
+                                  {formatCurrencyAmount(
+                                    taxTotals.CGST,
+                                    currencyCode || isCurrencySymbol,
+                                  )}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-slate-800 w-[32px]">
+                                  SGST
+                                </span>
+                                <span className="text-slate-800">:</span>
+                                <span className="font-medium text-slate-800 text-right">
+                                  {formatCurrencyAmount(
+                                    taxTotals.SGST,
+                                    currencyCode || isCurrencySymbol,
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            Object.keys(taxTotals).map((type) => (
+                              <div
+                                key={type}
+                                className="flex items-center justify-between w-full max-w-[210px]"
+                              >
+                                <div className="flex justify-between w-[130px] text-slate-800">
+                                  <span>{type}</span>
+                                  <span>:</span>
+                                </div>
+                                <span className="font-medium text-slate-800 text-right w-[65px]">
+                                  {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                                  {formatCurrencyAmount(
+                                    taxTotals[type],
+                                    currencyCode || isCurrencySymbol,
+                                  )}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Right Column */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Carriage Charges</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {!isNaN(parseFloat(carriageFinalAmt)) &&
+                                carriageFinalAmt !== ""
+                                ? formatCurrencyAmount(
+                                  carriageFinalAmt,
+                                  currencyCode || isCurrencySymbol,
+                                )
+                                : "0.00"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Round Off</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                enrichedData.roundOff || 0,
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                              <span>Net Amount</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-bold text-indigo-700 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                (!isCustomerExport ? enrichedData.net
+                                  :
+                                  (enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0,) || 0) -
+                                  (enrichedData.itemDiscount + enrichedData.overallDiscount > 0
+                                    ? enrichedData.itemDiscount + enrichedData.overallDiscount
+                                    : 0)) + (parseFloat(carriageFinalAmt) || 0), currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  },
+                  summaryColumn: "left",
+                  emphasized: false,
+                },
+              ]}
+            />
+            <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
+              {/* Left Buttons */}
+              <div className="flex gap-2 flex-wrap">
+                {!readOnly && (
+                  <>
+                    <button
+                      onClick={() => handleSave("close")}
+                      disabled={readOnly}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleSave("close");
+                          e.stopPropagation();
+                        }
+                      }}
+                      className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                    >
+                      <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                      {id ? "Update & Close" : "Save & Close"}
+                    </button>
+                    <button
+                      onClick={() => handleSave("new")}
+                      disabled={readOnly}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleSave("new");
+                        }
+                      }}
+                      className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
+                    >
+                      <FiSave className="w-4 h-4 mr-2" />
+                      {id ? "Update & New" : " Save & New"}
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => {
+                    if (!taxTemplateId) {
+                      Swal.fire({
+                        title: "Information",
+                        text: "Please Select Tax Template !",
+                        icon: "info",
+                        confirmButtonColor: "#3085d6",
+                      });
+                      return;
+                    }
+                    setSummary(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!taxTemplateId) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toast.info("Please Select Tax Template !", {
+                        position: "top-center",
+                      });
+                      return;
+                    }
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSummary(true);
+                    }
+                  }}
+                  className="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 flex items-center text-xs"
+                >
+                  <FiEye className="w-4 h-4 mr-2" />
+                  View Summary
+                </button>
+
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                {!id ||
+                  (readOnly && (
+                    <button
+                      className="bg-yellow-600 text-white px-4 py-1 rounded hover:bg-yellow-700 flex items-center text-xs"
+                      onClick={() =>
+                        hasPermission(() => setReadOnly(false), "edit")
+                      }
+                      disabled={readOnly}
+                    >
+                      <FiEdit2 className="w-4 h-4 mr-2" />
+                      Edit
+                    </button>
+                  ))}
+
+                {
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedAttachmentIndex(null);
+                      setAttachmentModal(true);
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    📎 Upload
+                  </button>
+                }
+              </div>
+            </div>
+          </>
+        } />
     </>
   );
 };

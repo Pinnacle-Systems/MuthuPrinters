@@ -125,9 +125,9 @@ async function get(req) {
     pagination,
     pageNumber,
     dataPerPage,
-    serachDocNo,
+    searchDocNo,
     searchDocDate,
-    searchOrderType,
+    searchOrderNo,
     finYearId,
     searchCustomer,
   } = req.query;
@@ -161,14 +161,14 @@ async function get(req) {
           },
         ]
         : undefined,
-      docId: Boolean(serachDocNo)
+      docId: Boolean(searchDocNo)
         ? {
-          contains: serachDocNo.trim().toUpperCase(),
+          contains: searchDocNo.trim().toUpperCase(),
         }
         : undefined,
-      OrderEntry: {
-        docId: Boolean(searchOrderType)
-          ? { contains: searchOrderType.trim().toUpperCase() }
+      SalesDelivery: {
+        docId: Boolean(searchOrderNo)
+          ? { contains: searchOrderNo.trim().toUpperCase() }
           : undefined,
 
       },
@@ -183,7 +183,7 @@ async function get(req) {
           name: true,
         },
       },
-      OrderEntry: { select: { docId: true } },
+      SalesDelivery: true
 
     },
     orderBy: {
@@ -403,29 +403,29 @@ async function geOrderItemsList(req) {
 }
 
 async function getOne(id) {
-  const data = await prisma.SalesOrder.findUnique({
+  const data = await prisma.SalesBillEntry.findUnique({
     where: {
       id: parseInt(id),
     },
     include: {
-      SalesOrderItems: {
+      SalesBillEntryItems: {
         include: {
-          SaleOrderStyleBreakup: {
+          SaleBillEntryStyleBreakup: {
             include: {
-              SaleOrderSizeBreakup: {
+              SaleBillEntrySizeBreakup: {
                 include: {
-                  SalesSizeBreakup: true
-                },
-              },
+                  SalesSizeBreakup: {
+                    include: {
+                      SaleBillEntrySizeBreakup: true
+                    }
+                  }
+                }
+              }
             },
           },
         },
       },
-      _count: {
-        select: {
-          SalesDelivery: true,
-        },
-      },
+
     },
   });
 
@@ -437,14 +437,17 @@ async function getOne(id) {
     data: {
       ...data,
       childRecord: childRecordCount(data._count) || null,
-      SalesOrderItems: data.SalesOrderItems.map((item) => ({
+      SalesBillEntryItems: data.SalesBillEntryItems.map((item) => ({
         ...item,
-        styleBreakup: item.SaleOrderStyleBreakup.map((size) => ({
-          ...size,
-          sizeBreakup: size.SaleOrderSizeBreakup?.map((breakup) => ({
-            ...breakup,
-            alreadyDeliveryQty: breakup?.SalesSizeBreakup?.reduce((acc, size) => acc + parseInt(size.deliveryQty), 0),
+        billQty: item.SaleBillEntryStyleBreakup.reduce((acc, size) => acc + size.SaleBillEntrySizeBreakup.reduce((acc1, size1) => acc1 + size1.billQty, 0), 0),
 
+        styleBreakup: item.SaleBillEntryStyleBreakup.map((size) => ({
+          ...size,
+          sizeBreakup: size.SaleBillEntrySizeBreakup?.map((breakup) => ({
+            ...breakup,
+            alreadyBilledQty: breakup.SalesSizeBreakup?.SaleBillEntrySizeBreakup
+              ?.filter((i) => i?.id !== breakup?.id)
+              ?.reduce((acc, size) => acc + (size.billQty || 0), 0),
           })),
         })),
       })),
@@ -488,7 +491,10 @@ async function create(body) {
     deliveryId,
     carriageTax,
     orderId,
-    salesDeliveryId
+    salesDeliveryId,
+    deliveryTaxType,
+    deliveryTaxValue,
+    amount
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
@@ -502,44 +508,34 @@ async function create(body) {
   const safeOrderItems = parsedOrderItems?.length > 0
     ? parsedOrderItems.map((item) => ({
       styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
-      itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
-      itemSubGroupId: item?.itemSubGroupId
-        ? parseInt(item?.itemSubGroupId)
-        : null,
-      labelWidth: item?.labelWidth ?? "",
-      orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
-      trackingType: item?.trackingType,
-      price: item?.price ? parseFloat(item.price) : null,
-      amount: item?.amount ? parseFloat(item.amount) : null,
-      dozen: item?.dozen ? parseFloat(item.dozen) : null,
-      taxPercent:
-        item?.taxPercent && !isNaN(Number(item.taxPercent))
-          ? parseFloat(item.taxPercent)
-          : null,
-      discountType: item?.discountType || null,
-      discountValue:
-        item?.discountValue && !isNaN(Number(item.discountValue))
-          ? parseFloat(item.discountValue)
-          : null,
-      orderQty:
-        item?.orderQty && !isNaN(Number(item.orderQty))
-          ? parseInt(item.orderQty)
-          : null,
+      deliveryQty: item?.deliveryQty ? parseInt(item?.deliveryQty) : null,
+      sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
       uomId: item?.uomId ? parseInt(item.uomId) : null,
+      gsmId: item?.gsmId ? parseInt(item.gsmId) : null,
+      itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
       hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
-      price: item?.price ? parseFloat(item?.price) : null,
-      orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
+      trackingType: item?.trackingType,
+      itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
+      labelWidth: item?.labelWidth ?? "",
+      price: item?.price ? parseFloat(item.price) : null,
+      dozen: item?.dozen ? parseFloat(item.dozen) : null,
+      taxPercent: item?.taxPercent && !isNaN(Number(item.taxPercent)) ? parseFloat(item.taxPercent) : null,
+      discountType: item?.discountType || null,
+      discountValue: item?.discountValue && !isNaN(Number(item.discountValue)) ? parseFloat(item.discountValue) : null,
 
-      SaleOrderStyleBreakup:
+      SaleBillEntryStyleBreakup:
         item?.styleBreakup?.length > 0
           ? {
             create: item.styleBreakup.map((st) => ({
               styleId: st.styleId ? parseInt(st.styleId) : null,
-              SaleOrderSizeBreakup: st?.sizeBreakup?.length > 0
+              SaleBillEntrySizeBreakup: st?.sizeBreakup?.length > 0
                 ? {
                   create: st.sizeBreakup.map((s) => ({
                     sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                    qty: s.qty ? parseInt(s.qty) : null,
+                    billQty: s.billQty ? parseInt(s.billQty) : null,
+                    deliveryQty: s.deliveryQty ? parseInt(s.deliveryQty) : null,
+                    SalesSizeBreakupId: s.id ? parseInt(s.id) : null,
+
                   }))
                 } : undefined
             })),
@@ -571,6 +567,20 @@ async function create(body) {
         discountValue: discountValue ? parseFloat(discountValue) : null,
         payTermId: payTermId ? parseInt(payTermId) : null,
 
+
+        termsAndCondition,
+        deliveryTaxType: deliveryTaxType ? deliveryTaxType : null,
+        deliveryTaxValue: deliveryTaxValue ? parseFloat(deliveryTaxValue) : null,
+
+        currencyId: currencyId ? parseInt(currencyId) : null,
+        loadingId: loadingId ? parseInt(loadingId) : null,
+        deliveryId: deliveryId ? parseInt(deliveryId) : null,
+        weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+        carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+        conversionType: conversionType ? conversionType : 'DOZEN',
+        carriageTax: carriageTax ? parseFloat(carriageTax) : null,
+        bankId: bankId ? parseInt(bankId) : null,
+
         SalesBillEntryItems:
           safeOrderItems.length > 0
             ? {
@@ -581,6 +591,20 @@ async function create(body) {
       },
     });
 
+    await tx.Ledger.create({
+      data: {
+        EntryType: "Sales",
+        LedgerType: "Customer",
+        creditOrDebit: "Debit",
+        partyId: customerId ? parseInt(customerId) : null,
+        amount: amount ? parseFloat(amount) : null,
+        dcDate: docDate ? new Date(docDate) : null,
+        // createdById: parseInt(userId),
+        salesBillEntryId: data?.id ? parseInt(data.id) : null,
+        currencyId: currencyId ? parseInt(currencyId) : null,
+
+      }
+    })
 
   });
   return { statusCode: 0, data };
@@ -645,18 +669,23 @@ async function update(id, body, files) {
             .map((item) => ({
               where: { id: parseInt(item.id) },
               data: {
-                styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
-                itemGroupId: item.itemGroupId ? parseInt(item.itemGroupId) : null,
-                itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
+                styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
                 orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
-
+                sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
+                uomId: item?.uomId ? parseInt(item.uomId) : null,
+                gsmId: item?.gsmId ? parseInt(item.gsmId) : null,
+                itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+                hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
+                trackingType: item?.trackingType,
+                itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
                 labelWidth: item?.labelWidth ?? "",
-                trackingType: item.trackingType,
                 price: item?.price ? parseFloat(item.price) : null,
-                amount: item?.amount ? parseFloat(item.amount) : null,
+
                 dozen: item?.dozen ? parseFloat(item.dozen) : null,
-                uomId: item.uomId ? parseInt(item.uomId) : null,
-                gsmId: item.gsmId ? parseInt(item.gsmId) : null,
+                taxPercent: item?.taxPercent && !isNaN(Number(item.taxPercent)) ? parseFloat(item.taxPercent) : null,
+                discountType: item?.discountType || null,
+                discountValue: item?.discountValue && !isNaN(Number(item.discountValue)) ? parseFloat(item.discountValue) : null,
+
                 SaleOrderStyleBreakup: {
                   deleteMany: {},
                   create: item?.styleBreakup?.length > 0
@@ -666,7 +695,9 @@ async function update(id, body, files) {
                         ? {
                           create: st.sizeBreakup.map((s) => ({
                             sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                            qty: s.qty ? parseInt(s.qty) : null,
+                            qty: s.billQty ? parseInt(s.billQty) : null,
+                            deliveryQty: s.deliveryQty ? parseInt(s.deliveryQty) : null,
+                            SalesSizeBreakupId: s.id ? parseInt(s.id) : null,
 
                           }))
                         } : undefined
@@ -679,18 +710,22 @@ async function update(id, body, files) {
           create: parsedItems
             .filter((item) => !item.id)
             .map((item) => ({
-              styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
-              itemGroupId: item.itemGroupId ? parseInt(item.itemGroupId) : null,
+              styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
+              orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
+              sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
+              uomId: item?.uomId ? parseInt(item.uomId) : null,
+              gsmId: item?.gsmId ? parseInt(item.gsmId) : null,
+              itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+              hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
+              trackingType: item?.trackingType,
               itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
               labelWidth: item?.labelWidth ?? "",
-              trackingType: item.trackingType,
               price: item?.price ? parseFloat(item.price) : null,
-              amount: item?.amount ? parseFloat(item.amount) : null,
+
               dozen: item?.dozen ? parseFloat(item.dozen) : null,
-              uomId: item.uomId ? parseInt(item.uomId) : null,
-              gsmId: item.gsmId ? parseInt(item.gsmId) : null,
-              orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
-              price: item?.price ? parseFloat(item?.price) : null,
+              taxPercent: item?.taxPercent && !isNaN(Number(item.taxPercent)) ? parseFloat(item.taxPercent) : null,
+              discountType: item?.discountType || null,
+              discountValue: item?.discountValue && !isNaN(Number(item.discountValue)) ? parseFloat(item.discountValue) : null,
 
               SaleOrderStyleBreakup:
                 item?.styleBreakup?.length > 0
@@ -701,7 +736,10 @@ async function update(id, body, files) {
                         ? {
                           create: st.sizeBreakup.map((s) => ({
                             sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                            qty: s.qty ? parseInt(s.qty) : null,
+                            qty: s.billQty ? parseInt(s.billQty) : null,
+                            deliveryQty: s.deliveryQty ? parseInt(s.deliveryQty) : null,
+                            SalesSizeBreakupId: s.id ? parseInt(s.id) : null,
+
                           }))
                         } : undefined
                     })),
