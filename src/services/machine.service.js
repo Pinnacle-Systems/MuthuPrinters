@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma.js";
 import { NoRecordFound } from "../configs/Responses.js";
+import jwt from "jsonwebtoken";
 
 async function get(req) {
   const { companyId, active } = req.query;
@@ -124,13 +125,16 @@ async function notificationMachines(req) {
   let userId = req.user?.id;
   if (!userId && req.query?.userId) userId = parseInt(req.query.userId);
   if (!userId && req.headers?.userid) userId = parseInt(req.headers.userid);
-   
-  const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
-  const nowUtc = Date.now();
-   const istShifted = new Date(nowUtc + IST_OFFSET_MS);
-    istShifted.setUTCHours(0, 0, 0, 0);        
-    const today = new Date(istShifted.getTime() - IST_OFFSET_MS); 
+   var authToken = req?.headers?.authorization?.split(" ")[1]
 
+   var tokenDecode = await jwt.verify(authToken,"RANDOM-TOKEN")
+
+   if(tokenDecode?.userId) userId = tokenDecode?.userId
+
+  const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+   const istShifted = new Date(Date.now() + IST_OFFSET_MS);
+    istShifted.setUTCHours(0, 0, 0, 0);  
+    const today = istShifted; 
   const data = await prisma.takenmachines.findMany({
     where: {
       isAvailable: false,
@@ -163,14 +167,16 @@ async function notificationMachines(req) {
     },
   });
   const currentTime = new Date();
-
   const formattedData = data
     .filter((record) => {
       if (!userId) return true; // If we cannot identify the user, don't filter
       const machineNotifications = record.Machine?.MobileNotification || [];
+      
       const viewedToday = machineNotifications.some(
         (notif) => notif.isViewed === true,
       );
+
+      
       // Exclude this record if the user has already viewed the notification today
       return !viewedToday;
     })
