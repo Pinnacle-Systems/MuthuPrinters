@@ -124,9 +124,12 @@ async function notificationMachines(req) {
   let userId = req.user?.id;
   if (!userId && req.query?.userId) userId = parseInt(req.query.userId);
   if (!userId && req.headers?.userid) userId = parseInt(req.headers.userid);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+   
+  const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+  const nowUtc = Date.now();
+   const istShifted = new Date(nowUtc + IST_OFFSET_MS);
+    istShifted.setUTCHours(0, 0, 0, 0);        
+    const today = new Date(istShifted.getTime() - IST_OFFSET_MS); 
 
   const data = await prisma.takenmachines.findMany({
     where: {
