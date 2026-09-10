@@ -165,9 +165,12 @@ async function notificationMachines(req) {
     .filter((record) => {
       if (!userId) return true; // If we cannot identify the user, don't filter
       const machineNotifications = record.Machine?.MobileNotification || [];
-      const viewedToday = machineNotifications.some(
-        (notif) => notif.isViewed === true,
-      );
+      const zone = parseInt(req.query?.zone || "0");
+      const viewedToday = machineNotifications.some((notif) => {
+        if (zone === 1) return notif.zone1 === true;
+        if (zone === 2) return notif.zone2 === true;
+        return notif.isViewed === true;
+      });
       // Exclude this record if the user has already viewed the notification today
       return !viewedToday;
     })
@@ -225,6 +228,8 @@ async function machineViewed(req) {
   today.setHours(0, 0, 0, 0);
 
 
+  const zone = req.body?.zone ? parseInt(req.body.zone) : 0;
+
   const existingNotification = await prisma.mobileNotification.findFirst({
     where: {
       userId: userId,
@@ -239,7 +244,11 @@ async function machineViewed(req) {
   if (existingNotification) {
     data = await prisma.mobileNotification.update({
       where: { id: existingNotification.id },
-      data: { isViewed: true },
+      data: {
+        isViewed: true,
+        ...(zone === 1 && { zone1: true }),
+        ...(zone === 2 && { zone2: true }),
+      },
     });
   } else {
     data = await prisma.mobileNotification.create({
@@ -247,6 +256,8 @@ async function machineViewed(req) {
         userId: userId,
         machineId: parseInt(machineId),
         isViewed: true,
+        zone1: zone === 1,
+        zone2: zone === 2,
         createdAt: new Date(),
       },
     });

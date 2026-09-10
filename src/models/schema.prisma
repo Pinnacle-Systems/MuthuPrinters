@@ -3420,4 +3420,8 @@ model MobileNotification {
   isViewed  Boolean?
   machineId Int?
   machine   Machine?  @relation(fields: [machineId], references: [id])
+  zone1     Boolean?  @default(false)
+  zone2     Boolean?  @default(false)
 }
+
+
