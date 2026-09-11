@@ -131,6 +131,7 @@ async function get(req) {
     searchOrderType,
     finYearId,
     searchCustomer,
+    isTakeOnlyFinshedJobCards
   } = req.query;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -186,6 +187,11 @@ async function get(req) {
           JobCard: true,
         },
       },
+      JobCard: {
+        include: {
+          processRoute: true
+        }
+      }
     },
     orderBy: {
       id: "desc",
@@ -283,6 +289,21 @@ async function get(req) {
       pageNumber * parseInt(dataPerPage),
     );
   }
+
+  if (isTakeOnlyFinshedJobCards) {
+    resolvedData = resolvedData.filter(order => {
+      if (!order.JobCard) return false;
+      // Check if ANY job card has its LAST process route status as 'COMPLETED'
+      return order.JobCard.some(jobCard => {
+        const route = jobCard.processRoute;
+        if (!route || route.length === 0) return false;
+        const lastProcess = route[route.length - 1];
+        return lastProcess.status === 'COMPLETED';
+      });
+    });
+  }
+
+
 
   return {
     statusCode: 0,
@@ -501,6 +522,11 @@ async function getOne(id) {
               name: true,
             },
           },
+          jobCards: {
+            include: {
+              processRoute: true
+            }
+          },
           _count: {
             select: {
               jobCards: true,
@@ -523,7 +549,11 @@ async function getOne(id) {
           Branch: true,
         },
       },
-      JobCard: true,
+      JobCard: {
+        include: {
+          processRoute: true
+        }
+      },
       _count: {
         select: {
           JobCard: true,

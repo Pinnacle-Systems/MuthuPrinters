@@ -54,6 +54,7 @@ const PackingItems = ({
 
   const packingPercentage = packingControlData?.data?.[0]?.packingPercentage;
 
+  console.log(uomList, "uomList")
 
   useEffect(() => {
     if (!Array.isArray(orderItems)) return;
@@ -645,8 +646,10 @@ const PackingItems = ({
                 <thead className="bg-gray-100 sticky top-0">
                   <tr>
                     <th className="border border-gray-300 px-2 py-1.5 w-16 text-center">S.No</th>
-                    <th className="border border-gray-300 px-2 py-1.5 text-center">Bundle</th>
-                    <th className="border border-gray-300 px-2 py-1.5 text-center">Qty</th>
+                    <th className="border border-gray-300 px-2 py-1.5 text-center">Unit</th>
+
+                    <th className="border border-gray-300 px-2 py-1.5 text-center">No. of Units</th>
+                    <th className="border border-gray-300 px-2 py-1.5 text-center">Qty per Unit</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-center">Total</th>
                     <th className="border border-gray-300 px-2 py-1.5 w-16 text-center">Actions</th>
                   </tr>
@@ -656,6 +659,18 @@ const PackingItems = ({
                     <tr key={breakupIdx} className="hover:bg-gray-50">
                       <td className="border border-gray-300 px-2 py-1 text-center">{breakupIdx + 1}</td>
                       <td className="border border-gray-300 px-2 py-1">
+                        <FxSelectWithAdd
+                          value={breakupRow.packingUomId}
+                          onChange={(value) => handlePackingBreakupChange(activePackingBreakupInfo.rowIndex, activePackingBreakupInfo.styleIndex, activePackingBreakupInfo.sizeIndex, breakupIdx, "packingUomId", value)}
+                          options={(uomList?.data || [])
+                            .filter((i) => (id ? true : i.active))
+                            .map((i) => ({ label: i.name, value: i.id }))}
+                          readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+
+                          placeholder="Select Uom"
+                        />
+                      </td>
+                      <td className="border border-gray-300 px-2 py-1">
                         <input
                           type="number"
                           min="0"
@@ -664,6 +679,7 @@ const PackingItems = ({
                           onChange={(e) => handlePackingBreakupChange(activePackingBreakupInfo.rowIndex, activePackingBreakupInfo.styleIndex, activePackingBreakupInfo.sizeIndex, breakupIdx, "bundle", e.target.value)}
                         />
                       </td>
+
                       <td className="border border-gray-300 px-2 py-1">
                         <input
                           type="number"

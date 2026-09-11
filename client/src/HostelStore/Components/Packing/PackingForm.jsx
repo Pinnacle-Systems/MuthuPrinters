@@ -179,7 +179,7 @@ const PackingForm = ({
     isLoading: isSingleLoading,
   } = useGetPackingByIdQuery(id, { params, skip: !id, });
 
-  const { data: orderData, isFetching, isLoading } = useGetOrderEntryQuery({ params: { branchId, }, });
+  const { data: orderData, isFetching, isLoading } = useGetOrderEntryQuery({ params: { branchId, isTakeOnlyFinshedJobCards: true }, });
   const {
     data: singleorderData,
     isFetching: isSingleorderFetching,
@@ -284,7 +284,7 @@ const PackingForm = ({
 
   const syncFormWithDbForJobCard = useCallback(
     (data) => {
-      const orderItemsRaw = data?.OrderEntry?.orderItems || [];
+      const orderItemsRaw = data?.OrderEntry?.orderItems?.filter((i) => i.id === data?.orderItemId) || [];
       const mappedItems = orderItemsRaw.map((item) => ({
         ...item,
         styleBreakup: (item.OrderStyleBreakup || []).map((style) => ({
@@ -796,6 +796,10 @@ const PackingForm = ({
     );
   };
 
+  const jobcards = singleorderData?.data?.JobCard?.filter((i) => i.processRoute?.[i.processRoute?.length - 1]?.status == "COMPLETED")
+  console.log(jobcards, "jobcardsjobcards")
+
+
   return (
     <>
       <Modal isOpen={summary} onClose={() => setSummary(false)} widthClass="">
@@ -1259,7 +1263,7 @@ const PackingForm = ({
                   {id ?
                     <div className="col-span-1">
                       <TextInput
-                        name="Order No"
+                        name="Order No / Customer Po No"
                         value={findFromList(
                           orderId,
                           orderData?.data,
@@ -1272,7 +1276,7 @@ const PackingForm = ({
                     :
                     <div className="col-span-1">
                       <DropdownNew
-                        name="Order No"
+                        name="Order No / Customer Po No"
                         dataList={orderData?.data}
                         value={orderId}
                         setValue={setOrderId}
@@ -1318,7 +1322,7 @@ const PackingForm = ({
                     <div className="col-span-1">
                       <DropdownNew
                         name="Job Card No"
-                        dataList={singleorderData?.data?.JobCard || []}
+                        dataList={jobcards || []}
                         value={jobCardId}
                         setValue={setJobCardId}
                         required={true}
