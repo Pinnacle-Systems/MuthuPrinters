@@ -2226,6 +2226,7 @@ model JobCard {
   lenght                Int?
   width                 Int?
   meter                 Int?
+  isPackingComplted     String?
   boardQualities        BoardQuality[]
   processDetails        ProcessDetails[]
   laminationDetails     LaminationDetails[]
@@ -3243,7 +3244,7 @@ model PackingBreakup {
   packingUomId         Int?
   Uom                  Uom?               @relation(fields: [packingUomId], references: [id])
   qty                  Int?
-  bundle               Int?
+  noOfunits            Int?
 }
 
 model ReworkLog {

@@ -109,10 +109,10 @@ async function getNextDocId(
 
           return currentNo > maxNo ? current.docId : max;
         }, null);
-        newDocId = `${branchObj.branchCode}/${shortCode}/SO/${parseInt(maxDocId.split("/").at(-1)) + 1
+        newDocId = `${branchObj.branchCode}/${shortCode}/PK/${parseInt(maxDocId.split("/").at(-1)) + 1
           }`;
       } else {
-        newDocId = `${branchObj.branchCode}/${shortCode}/SO/${parseInt(lastObject.docId.split("/").at(-1)) + 1
+        newDocId = `${branchObj.branchCode}/${shortCode}/PK/${parseInt(lastObject.docId.split("/").at(-1)) + 1
           }`;
       }
     }
@@ -572,7 +572,7 @@ async function create(body) {
                     PackingBreakup: s?.packingBreakup?.length > 0 ? {
                       create: s.packingBreakup.map(b => ({
                         bundle: b.bundle ? parseInt(b.bundle) : null,
-                        qty: b.qty ? parseInt(b.qty) : null
+                        qty: b.qty ? parseInt(b.qty) : null,
                       }))
                     } : undefined
                   }))

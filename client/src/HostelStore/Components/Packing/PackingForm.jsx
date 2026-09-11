@@ -179,7 +179,7 @@ const PackingForm = ({
     isLoading: isSingleLoading,
   } = useGetPackingByIdQuery(id, { params, skip: !id, });
 
-  const { data: orderData, isFetching, isLoading } = useGetOrderEntryQuery({ params: { branchId, }, });
+  const { data: orderData, isFetching, isLoading } = useGetOrderEntryQuery({ params: { branchId, isTakeOnlyFinshedJobCards: true }, });
   const {
     data: singleorderData,
     isFetching: isSingleorderFetching,
@@ -284,7 +284,7 @@ const PackingForm = ({
 
   const syncFormWithDbForJobCard = useCallback(
     (data) => {
-      const orderItemsRaw = data?.OrderEntry?.orderItems || [];
+      const orderItemsRaw = data?.OrderEntry?.orderItems?.filter((i) => i.id === data?.orderItemId) || [];
       const mappedItems = orderItemsRaw.map((item) => ({
         ...item,
         styleBreakup: (item.OrderStyleBreakup || []).map((style) => ({
@@ -508,6 +508,20 @@ const PackingForm = ({
                 } else {
                   sizeSeen.add(size.sizeId);
                 }
+              }
+
+              if (size.packingBreakup?.length) {
+                size.packingBreakup.forEach((pb, pbIndex) => {
+                  if (!pb.packingUomId) {
+                    errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: Unit is required`);
+                  }
+                  if (!pb.noOfunits || Number(pb.noOfunits) <= 0) {
+                    errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: No. of Units must be greater than 0`);
+                  }
+                  if (!pb.qty || Number(pb.qty) <= 0) {
+                    errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: Qty per Unit must be greater than 0`);
+                  }
+                });
               }
             });
           } else {
@@ -795,6 +809,10 @@ const PackingForm = ({
       }),
     );
   };
+
+  const jobcards = singleorderData?.data?.JobCard?.filter((i) => i.processRoute?.[i.processRoute?.length - 1]?.status == "COMPLETED")
+  console.log(jobcards, "jobcardsjobcards")
+
 
   return (
     <>
@@ -1259,7 +1277,7 @@ const PackingForm = ({
                   {id ?
                     <div className="col-span-1">
                       <TextInput
-                        name="Order No"
+                        name="Order No / Customer Po No"
                         value={findFromList(
                           orderId,
                           orderData?.data,
@@ -1272,7 +1290,7 @@ const PackingForm = ({
                     :
                     <div className="col-span-1">
                       <DropdownNew
-                        name="Order No"
+                        name="Order No / Customer Po No"
                         dataList={orderData?.data}
                         value={orderId}
                         setValue={setOrderId}
@@ -1318,7 +1336,7 @@ const PackingForm = ({
                     <div className="col-span-1">
                       <DropdownNew
                         name="Job Card No"
-                        dataList={singleorderData?.data?.JobCard || []}
+                        dataList={jobcards || []}
                         value={jobCardId}
                         setValue={setJobCardId}
                         required={true}
@@ -1333,30 +1351,6 @@ const PackingForm = ({
                     </div>
                   }
 
-                  {/* <TextInput
-                    name="Production Qty"
-                    value={actualQty}
-                    disabled={true}
-                    className="w-20"
-                  />
-                  <TextInput
-                    name="Completed Qty"
-                    value={completedQty}
-                    disabled={true}
-                    className="w-20"
-                  />
-                  <TextInput
-                    name="Pending Qty"
-                    value={pendingQty}
-                    disabled={true}
-                    className="w-20"
-                  />
-                  <TextInput
-                    name="Already packed Qty"
-                    value={alreadyPackedQty}
-                    disabled={true}
-                    className="w-20"
-                  /> */}
 
                 </div>
               </div>

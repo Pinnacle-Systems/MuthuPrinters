@@ -106,11 +106,10 @@ const JobCardReport = ({
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className={`px-3 py-1 rounded-md ${
-              currentPage === 1
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 rounded-md ${currentPage === 1
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-white text-gray-600 hover:bg-gray-100"
+              }`}
           >
             <FaChevronLeft className="inline" />
           </button>
@@ -131,11 +130,10 @@ const JobCardReport = ({
               <button
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
-                className={`px-3 py-1 rounded-md ${
-                  currentPage === pageNum
-                    ? "bg-indigo-800 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
+                className={`px-3 py-1 rounded-md ${currentPage === pageNum
+                  ? "bg-indigo-800 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
+                  }`}
               >
                 {pageNum}
               </button>
@@ -149,11 +147,10 @@ const JobCardReport = ({
           {totalPages > 5 && currentPage < totalPages - 2 && (
             <button
               onClick={() => handlePageChange(totalPages)}
-              className={`px-3 py-1 rounded-md ${
-                currentPage === totalPages
-                  ? "bg-indigo-800 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-              }`}
+              className={`px-3 py-1 rounded-md ${currentPage === totalPages
+                ? "bg-indigo-800 text-white"
+                : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
             >
               {totalPages}
             </button>
@@ -162,11 +159,10 @@ const JobCardReport = ({
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className={`px-3 py-1 rounded-md ${
-              currentPage === totalPages
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-white text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`px-3 py-1 rounded-md ${currentPage === totalPages
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-white text-gray-600 hover:bg-gray-100"
+              }`}
           >
             <FaChevronRight className="inline" />
           </button>
@@ -220,7 +216,41 @@ const JobCardReport = ({
       setActionLoading(false);
     }
   };
+  const handleApproveJobCard = async () => {
 
+
+    setActionLoading(true);
+    try {
+      const result = await addApprovalStatus({
+        userId: userData?.id,
+        remarks: remarks || null,
+        actionType, // "APPROVE" or "REJECT"
+        referenceId: selectedJobCard?.id,
+        referencePage: "JOB CARD",
+        recordData: {},
+      }).unwrap();
+
+      if (result.statusCode === 0) {
+        toast.success(
+          result.message
+            ? result?.message
+            : actionType === "APPROVE"
+              ? "Job Card Approved!"
+              : "Job Card Sent Back for Review!",
+        );
+        dispatch(JobCardApi.util.invalidateTags(["jobCard"]));
+        setApprovalModal(false);
+      } else {
+        toast.error(result.message || "Action failed");
+        setApprovalModal(false);
+      }
+    } catch (err) {
+      toast.error(err?.data?.message || "Something went wrong!");
+      setApprovalModal(false);
+    } finally {
+      setActionLoading(false);
+    }
+  };
   return (
     <>
       <Modal
@@ -231,9 +261,8 @@ const JobCardReport = ({
         <div className="space-y-4">
           {/* Header */}
           <h2
-            className={`text-base font-semibold ${
-              actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
-            }`}
+            className={`text-base font-semibold ${actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
+              }`}
           >
             {actionType === "APPROVE"
               ? "✅ Approve Job Card"
@@ -306,11 +335,10 @@ const JobCardReport = ({
                   handleConfirmAction();
                 }
               }}
-              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${
-                actionType === "APPROVE"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-blue-600 hover:bg-blue-700"
-              } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
+              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${actionType === "APPROVE"
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-blue-600 hover:bg-blue-700"
+                } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
             >
               {actionLoading ? (
                 <>
@@ -380,6 +408,7 @@ const JobCardReport = ({
                     >
                       <div>Approval Status</div>
                     </th>
+
                     <th
                       className=" px-3 w-32  font-medium text-[13px]  text-gray-900  text-center "
                       rowSpan={2}
@@ -394,6 +423,12 @@ const JobCardReport = ({
                         <div>Approval Actions</div>
                       </th>
                     )}
+                    <th
+                      className=" px-3 w-36  font-medium text-[13px]  text-gray-900  text-center "
+                      rowSpan={2}
+                    >
+                      <div>Packing Completed</div>
+                    </th>
                     <th
                       className="w-14   px-3  font-medium text-[13px]  text-gray-900  text-center "
                       rowSpan={2}
@@ -472,9 +507,8 @@ const JobCardReport = ({
                           }}
                           tabIndex={0}
                           key={dataObj.id}
-                          className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${
-                            index % 2 === 0 ? "bg-white" : "bg-gray-100"
-                          }`}
+                          className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${index % 2 === 0 ? "bg-white" : "bg-gray-100"
+                            }`}
                           onClick={() => {
                             onClick(dataObj.id);
                           }}
@@ -528,43 +562,57 @@ const JobCardReport = ({
                                 {["PENDING"].includes(
                                   dataObj?.approvalStatus?.status,
                                 ) && (
-                                  <Tooltip title="Send Back for Review" arrow>
-                                    <button
-                                      onClick={() =>
-                                        handleApprovalAction(dataObj, "REJECT")
-                                      }
-                                      // disabled={dataObj?.approvalStatus?.status === "PENDING"}
-                                      className="p-1.5 rounded-md bg-blue-200 text-blue-700 hover:bg-blue-300 transition"
-                                    >
-                                      <MdKeyboardDoubleArrowLeft size={16} />
-                                    </button>
-                                  </Tooltip>
-                                )}
+                                    <Tooltip title="Send Back for Review" arrow>
+                                      <button
+                                        onClick={() =>
+                                          handleApprovalAction(dataObj, "REJECT")
+                                        }
+                                        // disabled={dataObj?.approvalStatus?.status === "PENDING"}
+                                        className="p-1.5 rounded-md bg-blue-200 text-blue-700 hover:bg-blue-300 transition"
+                                      >
+                                        <MdKeyboardDoubleArrowLeft size={16} />
+                                      </button>
+                                    </Tooltip>
+                                  )}
 
                                 {/* ✅ Approve — show only when PENDING */}
                                 {dataObj?.approvalStatus?.status ===
                                   "PENDING" && (
-                                  <Tooltip title="Approve" arrow>
-                                    <button
-                                      onClick={() =>
-                                        handleApprovalAction(dataObj, "APPROVE")
-                                      }
-                                      className="p-1.5 rounded-md bg-green-200 text-green-700 hover:bg-green-300 transition"
-                                    >
-                                      <FiCheck size={16} />
-                                    </button>
-                                  </Tooltip>
-                                )}
+                                    <Tooltip title="Approve" arrow>
+                                      <button
+                                        onClick={() =>
+                                          handleApprovalAction(dataObj, "APPROVE")
+                                        }
+                                        className="p-1.5 rounded-md bg-green-200 text-green-700 hover:bg-green-300 transition"
+                                      >
+                                        <FiCheck size={16} />
+                                      </button>
+                                    </Tooltip>
+                                  )}
+
+
 
                                 {dataObj?.approvalStatus?.status ===
                                   "NOT_CONFIGURED" && (
-                                  <span className="text-[10px] text-gray-400 italic">
-                                    —
-                                  </span>
-                                )}
+                                    <span className="text-[10px] text-gray-400 italic">
+                                      —
+                                    </span>
+                                  )}
                               </div>
                             </td>
                           )}
+                          <td>
+                            <Tooltip title="Packing Completed" arrow>
+                              <button
+                                onClick={() =>
+                                  handleApprovalAction(dataObj, "APPROVE")
+                                }
+                                className="p-1.5 rounded-md bg-green-200 text-green-700 hover:bg-green-300 transition"
+                              >
+                                <FiCheck size={16} />
+                              </button>
+                            </Tooltip>
+                          </td>
                           {rowActions && (
                             <td className="px-2 py-1">
                               <div className="flex items-center justify-center">
@@ -630,11 +678,10 @@ const JobCardReport = ({
                                     >
                                       <button
                                         className={`flex items-center gap-1 px-1 rounded transition
-       ${
-         dataObj.childRecord > 0
-           ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
-           : "bg-red-50 text-red-800 hover:bg-red-100"
-       }`}
+       ${dataObj.childRecord > 0
+                                            ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
+                                            : "bg-red-50 text-red-800 hover:bg-red-100"
+                                          }`}
                                         onClick={() =>
                                           hasPermission(
                                             () => onDelete(dataObj.id),
