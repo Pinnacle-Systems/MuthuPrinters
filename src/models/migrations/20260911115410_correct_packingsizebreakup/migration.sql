@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "PackingBreakup" ALTER COLUMN "qty" SET DATA TYPE TEXT,
+ALTER COLUMN "noOfunits" SET DATA TYPE TEXT;

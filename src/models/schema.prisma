@@ -3243,8 +3243,8 @@ model PackingBreakup {
   PackingSizeBreakup   PackingSizeBreakup @relation(fields: [PackingSizeBreakupId], references: [id], onDelete: Cascade)
   packingUomId         Int?
   Uom                  Uom?               @relation(fields: [packingUomId], references: [id])
-  qty                  Int?
-  noOfunits            Int?
+  qty                  String?
+  noOfunits            String?
 }
 
 model ReworkLog {

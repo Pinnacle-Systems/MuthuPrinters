@@ -553,6 +553,7 @@ async function create(body) {
 
       uomId: item?.uomId ? parseInt(item.uomId) : null,
       hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
+      orderQty: item?.orderQty ? parseInt(item.orderQty) : null,
 
       PackingStyleBreakup:
         item?.styleBreakup?.length > 0
@@ -571,8 +572,9 @@ async function create(body) {
                     orderSizeBreakupId: s.id ? parseInt(s.id) : null,
                     PackingBreakup: s?.packingBreakup?.length > 0 ? {
                       create: s.packingBreakup.map(b => ({
-                        bundle: b.bundle ? parseInt(b.bundle) : null,
-                        qty: b.qty ? parseInt(b.qty) : null,
+                        packingUomId: b.packingUomId ? parseInt(b.packingUomId) : null,
+                        noOfunits: b.noOfunits ? String(b.noOfunits) : null,
+                        qty: b.qty ? String(b.qty) : null,
                       }))
                     } : undefined
                   }))
@@ -799,8 +801,9 @@ async function update(id, body, files) {
                             dimensions: s.dimensions ?? "",
                             PackingBreakup: s?.packingBreakup?.length > 0 ? {
                               create: s.packingBreakup.map(b => ({
-                                bundle: b.bundle ? parseInt(b.bundle) : null,
-                                qty: b.qty ? parseInt(b.qty) : null
+                                packingUomId: b.packingUomId ? parseInt(b.packingUomId) : null,
+                                noOfunits: b.noOfunits ? String(b.noOfunits) : null,
+                                qty: b.qty ? String(b.qty) : null,
                               }))
                             } : undefined
                           }))
@@ -841,8 +844,9 @@ async function update(id, body, files) {
                             orderSizeBreakupId: s.id ? parseInt(s.id) : null,
                             PackingBreakup: s?.packingBreakup?.length > 0 ? {
                               create: s.packingBreakup.map(b => ({
-                                bundle: b.bundle ? parseInt(b.bundle) : null,
-                                qty: b.qty ? parseInt(b.qty) : null
+                                packingUomId: b.packingUomId ? parseInt(b.packingUomId) : null,
+                                noOfunits: b.noOfunits ? String(b.noOfunits) : null,
+                                qty: b.qty ? String(b.qty) : null,
                               }))
                             } : undefined
                           }))
