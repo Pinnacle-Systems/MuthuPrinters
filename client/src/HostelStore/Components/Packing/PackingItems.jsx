@@ -294,7 +294,7 @@ const PackingItems = ({
 
       let totalPackingQty = 0;
       packingBreakup.forEach(item => {
-        const bundle = Number(item.bundle) || 0;
+        const bundle = Number(item.noOfunits) || 0;
         const qty = Number(item.qty) || 0;
         totalPackingQty += (bundle * qty);
       });
@@ -675,8 +675,8 @@ const PackingItems = ({
                           type="number"
                           min="0"
                           className="w-full text-right outline-none bg-transparent"
-                          value={breakupRow.bundle}
-                          onChange={(e) => handlePackingBreakupChange(activePackingBreakupInfo.rowIndex, activePackingBreakupInfo.styleIndex, activePackingBreakupInfo.sizeIndex, breakupIdx, "bundle", e.target.value)}
+                          value={breakupRow.noOfunits}
+                          onChange={(e) => handlePackingBreakupChange(activePackingBreakupInfo.rowIndex, activePackingBreakupInfo.styleIndex, activePackingBreakupInfo.sizeIndex, breakupIdx, "noOfunits", e.target.value)}
                         />
                       </td>
 
@@ -690,7 +690,7 @@ const PackingItems = ({
                         />
                       </td>
                       <td className="border border-gray-300 px-2 py-1 text-right bg-gray-50 font-semibold">
-                        {(Number(breakupRow.bundle) || 0) * (Number(breakupRow.qty) || 0)}
+                        {(Number(breakupRow.noOfunits) || 0) * (Number(breakupRow.qty) || 0)}
                       </td>
                       <td className="border border-gray-300 px-2 py-1 text-center">
                         <div className="flex items-center justify-center gap-1">

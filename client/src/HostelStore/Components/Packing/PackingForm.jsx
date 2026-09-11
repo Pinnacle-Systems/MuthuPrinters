@@ -509,6 +509,20 @@ const PackingForm = ({
                   sizeSeen.add(size.sizeId);
                 }
               }
+
+              if (size.packingBreakup?.length) {
+                size.packingBreakup.forEach((pb, pbIndex) => {
+                  if (!pb.packingUomId) {
+                    errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: Unit is required`);
+                  }
+                  if (!pb.noOfunits || Number(pb.noOfunits) <= 0) {
+                    errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: No. of Units must be greater than 0`);
+                  }
+                  if (!pb.qty || Number(pb.qty) <= 0) {
+                    errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: Qty per Unit must be greater than 0`);
+                  }
+                });
+              }
             });
           } else {
             errors.push(`Row ${index + 1}, Style Row ${styleIndex + 1}: Size Breakup is required`);
@@ -1337,30 +1351,6 @@ const PackingForm = ({
                     </div>
                   }
 
-                  {/* <TextInput
-                    name="Production Qty"
-                    value={actualQty}
-                    disabled={true}
-                    className="w-20"
-                  />
-                  <TextInput
-                    name="Completed Qty"
-                    value={completedQty}
-                    disabled={true}
-                    className="w-20"
-                  />
-                  <TextInput
-                    name="Pending Qty"
-                    value={pendingQty}
-                    disabled={true}
-                    className="w-20"
-                  />
-                  <TextInput
-                    name="Already packed Qty"
-                    value={alreadyPackedQty}
-                    disabled={true}
-                    className="w-20"
-                  /> */}
 
                 </div>
               </div>

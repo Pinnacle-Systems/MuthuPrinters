@@ -110,6 +110,14 @@ const PoApi = createApi({
       }),
       invalidatesTags: ["po"],
     }),
+    addJobCardStaus: builder.mutation({
+      query: (payload) => ({
+        url: `${PO_API}/approval`,
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["po"],
+    }),
   }),
 });
 
