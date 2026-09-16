@@ -22,14 +22,17 @@ export function daysUntil(d) {
   return Math.ceil((due - today) / 86400000);
 }
 
-export function getDeliveryInfo(dueDate) {
+export function getDeliveryInfo(dueDate, orderStatus) {
+  if (orderStatus === "Fully Delivered") {
+    return { deliveryAlert: "done", deliveryStatus: "Delivered", days: null };
+  }
   const days = daysUntil(dueDate);
   if (days === null)
     return { deliveryAlert: "ok", deliveryStatus: "—", days: null };
   if (days < 0)
     return {
       deliveryAlert: "overdue",
-      deliveryStatus: `${Math.abs(days)}d Overdue`,
+      deliveryStatus: `${Math.abs(days)}d Delayed`,
       days,
     };
   if (days === 0)
@@ -81,8 +84,11 @@ export function computeOrderEntryRow(r) {
       .filter((d) => d !== "—")
       .join(", ") || "—";
 
-  const allSalesDeliveries =
-    r.SalesOrder?.flatMap((so) => so.SalesDelivery || []) || [];
+  const allSalesDeliveries = [
+    ...(r.salesDeliveries || []),
+    ...(r.SalesOrder?.flatMap((so) => so.SalesDelivery || []) || []),
+  ];
+
   const salesDeliveryIds =
     allSalesDeliveries
       .map((s) => s.docId)
@@ -97,13 +103,41 @@ export function computeOrderEntryRow(r) {
   const totalOrderQty =
     r.orderItems?.reduce((sum, item) => sum + (item.orderQty || 0), 0) || 0;
 
+  let orderStatus = "Not Delivered";
+  if (r.orderItems?.length > 0) {
+    let allFullyDelivered = true;
+    let anyDelivered = false;
+
+    r.orderItems.forEach(item => {
+      const relatedDeliveries = allSalesDeliveries.flatMap(sd => sd.salesDeliveryItems || []).filter(sdi => (sdi.styleItemId && sdi.styleItemId === item.styleItemId) || sdi.StyleItem?.name === item.StyleItem?.name);
+      const totalDelivered = relatedDeliveries.reduce((sum, d) => sum + (d.qty || 0), 0);
+      
+      if (totalDelivered > 0) {
+        anyDelivered = true;
+      }
+      if (totalDelivered < (item.orderQty || 0) || (item.orderQty || 0) === 0) {
+        if ((item.orderQty || 0) > 0 || totalDelivered === 0) {
+           allFullyDelivered = false;
+        }
+      }
+    });
+
+    if (allFullyDelivered) {
+      orderStatus = "Fully Delivered";
+    } else if (anyDelivered) {
+      orderStatus = "Partially Delivered";
+    }
+  }
+
   const { deliveryAlert, deliveryStatus, days } = getDeliveryInfo(
     r.deliveryDate,
+    orderStatus
   );
 
   return {
     ...r,
     orderQty: totalOrderQty,
+    orderStatus,
     deliveryAlert,
     deliveryStatus,
     days,
@@ -150,4 +184,5 @@ export const COLUMNS = [
   { key: "orderType", label: "Order Type", w: "130px" },
   { key: "productionType", label: "Production Type", w: "150px" },
   { key: "orderQty", label: "Order Qty", w: "120px" },
+  { key: "orderStatus", label: "Order Status", w: "150px" },
 ];

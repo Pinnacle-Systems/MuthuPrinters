@@ -1242,6 +1242,10 @@ async function getOrderEntryReport(req) {
         select: {
           docId: true,
           docDate: true,
+          runningQty: true,
+          orderQty: true,
+          rollQty: true,
+          styleItemId: true,
           StyleItem: { select: { name: true } },
           processRoute: {
             orderBy: { sequence: "asc" },
@@ -1261,15 +1265,35 @@ async function getOrderEntryReport(req) {
           docId: true,
           docDate: true,
           SalesOrderItems: {
-            select: { StyleItem: { select: { name: true } } },
+            select: {
+              styleItemId: true,
+              StyleItem: { select: { name: true } },
+            },
           },
           SalesDelivery: {
             select: {
               docId: true,
               docDate: true,
               salesDeliveryItems: {
-                select: { StyleItem: { select: { name: true } } },
+                select: {
+                  qty: true,
+                  styleItemId: true,
+                  StyleItem: { select: { name: true } },
+                },
               },
+            },
+          },
+        },
+      },
+      salesDeliveries: {
+        select: {
+          docId: true,
+          docDate: true,
+          salesDeliveryItems: {
+            select: { 
+              qty: true,
+              styleItemId: true,
+              StyleItem: { select: { name: true } } 
             },
           },
         },
@@ -1280,7 +1304,10 @@ async function getOrderEntryReport(req) {
           docDate: true,
           JobCard: { select: { docId: true } },
           PackingItems: {
-            select: { StyleItem: { select: { name: true } } },
+            select: {
+              styleItemId: true,
+              StyleItem: { select: { name: true } },
+            },
           },
         },
       },
@@ -1303,7 +1330,13 @@ async function getOrderEntryReport(req) {
     orderBy: { createdAt: "desc" },
   });
 
-  return { statusCode: 0, data: orderEntries, totalCount, totalPages, currentPage: pageNumber };
+  return {
+    statusCode: 0,
+    data: orderEntries,
+    totalCount,
+    totalPages,
+    currentPage: pageNumber,
+  };
 }
 
 export {

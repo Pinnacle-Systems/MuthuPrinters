@@ -17,13 +17,15 @@ const TABS = [
 
 export default function ExpandedRowDetail({ row }) {
   const [tab, setTab] = useState("items");
-  const salesDeliveries =
-    row.SalesOrder?.flatMap((so) =>
+  const salesDeliveries = [
+    ...(row.salesDeliveries?.map((sd) => ({ ...sd, SaleOrderNo: sd.SalesOrder?.docId || "-" })) || []),
+    ...(row.SalesOrder?.flatMap((so) =>
       (so.SalesDelivery || []).map((sd) => ({
         ...sd,
         SaleOrderNo: so.docId,
-      })),
-    ) || [];
+      }))
+    ) || [])
+  ];
 
   return (
     <div className="bg-gray-50 px-4 py-3 border-t border-gray-100 text-xs">
@@ -49,6 +51,7 @@ export default function ExpandedRowDetail({ row }) {
           <OrderItemsTab
             items={row.orderItems || []}
             jobCards={row.JobCard || []}
+            salesDeliveries={salesDeliveries}
           />
         )}
         {tab === "job" && (
@@ -87,7 +90,7 @@ export default function ExpandedRowDetail({ row }) {
   );
 }
 
-function OrderItemsTab({ items, jobCards }) {
+function OrderItemsTab({ items, jobCards, salesDeliveries = [] }) {
   if (items.length === 0) {
     return (
       <div className="p-4 text-center text-gray-500">
@@ -105,6 +108,9 @@ function OrderItemsTab({ items, jobCards }) {
             <th className="py-2 px-4 w-[150px]">Style</th>
             <th className="py-2 px-4 w-[250px]">Size Details</th>
             <th className="py-2 px-4 text-right w-[80px]">Qty</th>
+            <th className="py-2 px-4 text-right w-[100px]">Prod Qty</th>
+            <th className="py-2 px-4 w-[120px]">Prod Status</th>
+            <th className="py-2 px-4 w-[120px]">Delivery Status</th>
             <th className="py-2 px-4 w-[150px]">Job Card No</th>
             <th className="py-2 px-4 w-[300px]">Process Route</th>
           </tr>
@@ -115,8 +121,33 @@ function OrderItemsTab({ items, jobCards }) {
             const hasBreakups = breakups.length > 0;
 
             const matchingJobCard = jobCards.find(
-              (jc) => jc.StyleItem?.name === item.StyleItem?.name,
+              (jc) => (jc.styleItemId && jc.styleItemId === item.styleItemId) || jc.StyleItem?.name === item.StyleItem?.name,
             );
+
+            const prodQty = matchingJobCard ? (matchingJobCard.runningQty || matchingJobCard.rollQty || matchingJobCard.orderQty || 0) : 0;
+            
+            let prodStatus = "Not Started";
+            if (matchingJobCard && matchingJobCard.processRoute?.length > 0) {
+              const routes = matchingJobCard.processRoute;
+              const allCompleted = routes.every(pr => pr.status?.toLowerCase() === "completed");
+              const anyStarted = routes.some(pr => pr.status && pr.status.toLowerCase() !== "pending");
+              
+              if (allCompleted) {
+                prodStatus = "Completed";
+              } else if (anyStarted) {
+                prodStatus = "Partially Completed";
+              }
+            }
+
+            let deliveryStatus = "Not Started";
+            const relatedDeliveries = salesDeliveries.flatMap(sd => sd.salesDeliveryItems || []).filter(sdi => (sdi.styleItemId && sdi.styleItemId === item.styleItemId) || sdi.StyleItem?.name === item.StyleItem?.name);
+            const totalDelivered = relatedDeliveries.reduce((sum, d) => sum + (d.qty || 0), 0);
+            
+            if (totalDelivered >= (item.orderQty || 0) && (item.orderQty || 0) > 0) {
+              deliveryStatus = "Delivered Fully";
+            } else if (totalDelivered > 0) {
+              deliveryStatus = "Partially Delivered";
+            }
 
             return (
               <tr key={item.id || idx} className="hover:bg-gray-50">
@@ -161,6 +192,27 @@ function OrderItemsTab({ items, jobCards }) {
                 </td>
                 <td className="py-2 px-4 text-right align-top font-semibold text-gray-800">
                   {item.orderQty ?? 0}
+                </td>
+                <td className="py-2 px-4 text-right align-top text-gray-800">
+                  {prodQty}
+                </td>
+                <td className="py-2 px-4 align-top">
+                  <span className={`px-2 py-1 rounded-full text-[10px] font-medium border ${
+                    prodStatus === "Completed" ? "bg-green-50 text-green-700 border-green-200" :
+                    prodStatus === "Partially Completed" ? "bg-orange-50 text-orange-700 border-orange-200" :
+                    "bg-gray-50 text-gray-600 border-gray-200"
+                  }`}>
+                    {prodStatus}
+                  </span>
+                </td>
+                <td className="py-2 px-4 align-top">
+                  <span className={`px-2 py-1 rounded-full text-[10px] font-medium border ${
+                    deliveryStatus === "Delivered Fully" ? "bg-green-50 text-green-700 border-green-200" :
+                    deliveryStatus === "Partially Delivered" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                    "bg-gray-50 text-gray-600 border-gray-200"
+                  }`}>
+                    {deliveryStatus}
+                  </span>
                 </td>
                 <td className="py-2 px-4 align-top text-black">
                   {matchingJobCard?.docId || "—"}
@@ -282,14 +334,14 @@ function ProcessRouteBadges({ processRoutes }) {
           )}
           <span
             className={`px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${
-              pr.status === "Completed"
+              pr.status?.toLowerCase() === "completed"
                 ? "text-green-600 bg-green-50 border-green-200"
                 : "text-orange-600 bg-orange-50 border-orange-200"
             }`}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full ${
-                pr.status === "Completed"
+                pr.status?.toLowerCase() === "completed"
                   ? "bg-green-500"
                   : "bg-orange-500"
               }`}

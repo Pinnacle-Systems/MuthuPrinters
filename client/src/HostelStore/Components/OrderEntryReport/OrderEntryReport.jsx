@@ -490,7 +490,8 @@ export default function OrderEntryReport() {
         const r = node;
         dataRowCount++;
         const isOdd = dataRowCount % 2 === 1;
-        const bg = isOdd ? "FFFFFF" : "F9FAFB";
+        const isOverdue = r.deliveryAlert === "overdue";
+        const bg = isOverdue ? "FEE2E2" : (isOdd ? "FFFFFF" : "F9FAFB");
 
         const baseDataRow = allKeys.map((k, ki) => {
           if (k === "sno")
@@ -516,9 +517,13 @@ export default function OrderEntryReport() {
         const jobCards = r.JobCard || [];
         const saleOrders = r.SalesOrder || [];
         const packing = r.Packing || [];
-        const salesDeliveries = r.SalesOrder?.flatMap((so) => 
-          (so.SalesDelivery || []).map(sd => ({ ...sd, SaleOrderNo: so.docId }))
-        ) || [];
+        const salesDeliveries = [];
+        r.salesDeliveries?.forEach(sd => salesDeliveries.push({...sd, SaleOrderNo: sd.SalesOrder?.docId}));
+        r.SalesOrder?.forEach((so) => {
+           if (so.SalesDelivery) {
+             so.SalesDelivery.forEach(sd => salesDeliveries.push({...sd, SaleOrderNo: so.docId}));
+           }
+        });
 
         const maxChildRows = Math.max(0, orderItems.length, jobCards.length, saleOrders.length, packing.length, salesDeliveries.length);
         const blockRows = maxChildRows > 0 ? maxChildRows + 2 : 1;
@@ -582,15 +587,42 @@ export default function OrderEntryReport() {
                currentColOffset += colSpan;
             };
 
-            injectTable("Order Items", orderItems, ["Item Name", "Style", "Size Details", "Qty", "Job Card No", "Process Route"], (item) => {
+            injectTable("Order Items", orderItems, ["Item Name", "Style", "Size Details", "Qty", "Prod Qty", "Prod Status", "Delivery Status", "Job Card No", "Process Route"], (item) => {
                const breakups = item.OrderStyleBreakup || [];
                const styleStr = breakups.map(bk => bk.Style?.name || "-").join("\n") || "-";
                const sizeStr = breakups.map(bk => {
                  const sizes = bk.OrderSizeBreakup || [];
                  return sizes.map(sz => `${sz.Size?.name || "Size"}: ${sz.qty || 0}`).join(", ");
                }).filter(Boolean).join("\n") || "-";
-               const matchingJc = r.JobCard?.find((j) => j.StyleItem?.name === item.StyleItem?.name);
-               return [item.StyleItem?.name || "-", styleStr, sizeStr, item.orderQty || 0, matchingJc?.docId || "-", formatProcessRoute(matchingJc?.processRoute)];
+               
+               const matchingJc = r.JobCard?.find((j) => (j.styleItemId && j.styleItemId === item.styleItemId) || j.StyleItem?.name === item.StyleItem?.name);
+               
+               const prodQty = matchingJc ? (matchingJc.runningQty || matchingJc.rollQty || matchingJc.orderQty || 0) : 0;
+            
+               let prodStatus = "Not Started";
+               if (matchingJc && matchingJc.processRoute?.length > 0) {
+                 const routes = matchingJc.processRoute;
+                 const allCompleted = routes.every(pr => pr.status?.toLowerCase() === "completed");
+                 const anyStarted = routes.some(pr => pr.status && pr.status.toLowerCase() !== "pending");
+                 
+                 if (allCompleted) {
+                   prodStatus = "Completed";
+                 } else if (anyStarted) {
+                   prodStatus = "Partially Completed";
+                 }
+               }
+
+               let deliveryStatus = "Not Started";
+               const relatedDeliveries = salesDeliveries.flatMap(sd => sd.salesDeliveryItems || []).filter(sdi => (sdi.styleItemId && sdi.styleItemId === item.styleItemId) || sdi.StyleItem?.name === item.StyleItem?.name);
+               const totalDelivered = relatedDeliveries.reduce((sum, d) => sum + (d.qty || 0), 0);
+               
+               if (totalDelivered >= (item.orderQty || 0) && (item.orderQty || 0) > 0) {
+                 deliveryStatus = "Delivered Fully";
+               } else if (totalDelivered > 0) {
+                 deliveryStatus = "Partially Delivered";
+               }
+
+               return [item.StyleItem?.name || "-", styleStr, sizeStr, item.orderQty || 0, prodQty, prodStatus, deliveryStatus, matchingJc?.docId || "-", formatProcessRoute(matchingJc?.processRoute)];
             }, "DBEAFE", "1E3A8A");
 
             injectTable("Job Cards", jobCards, ["Job Card No", "Job Card Date", "Item Name", "Process Route"], (item) => [
@@ -682,8 +714,8 @@ export default function OrderEntryReport() {
     
     ws["!cols"] = [
       ...allKeys.map((k) => ({ wch: COL_WIDTHS[k] || 14 })),
-      // Order Items (6 columns)
-      { wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 10 }, { wch: 15 }, { wch: 30 },
+      // Order Items (9 columns)
+      { wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 30 },
       // Job Cards (4 columns)
       { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 30 },
       // Sale Orders (3 columns)
