@@ -71,6 +71,19 @@ const OrderEntryApi = createApi({
       },
       providesTags: ["orderEntry"],
     }),
+    getOrderEntryReport: builder.query({
+      query: ({ params }) => {
+        return {
+          url: ORDER_ENTRY_API + "/report/all",
+          method: "GET",
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+          params,
+        };
+      },
+      providesTags: ["orderEntry"],
+    }),
     addOrderEntry: builder.mutation({
       query: (payload) => ({
         url: ORDER_ENTRY_API,
@@ -108,6 +121,7 @@ export const {
   useAddOrderEntryMutation,
   useUpdateOrderEntryMutation,
   useDeleteOrderEntryMutation,
+  useGetOrderEntryReportQuery,
 } = OrderEntryApi;
 
 export default OrderEntryApi;

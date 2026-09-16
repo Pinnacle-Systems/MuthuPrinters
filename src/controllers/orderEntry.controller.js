@@ -6,7 +6,8 @@ import {
   update as _update,
   remove as _remove,
   getRefList as _getRefList,
-  geOrderItemsList as _geOrderItemsList
+  geOrderItemsList as _geOrderItemsList,
+  getOrderEntryReport as _getOrderEntryReport
 } from "../services/orderEntry.service.js";
 
 async function get(req, res, next) {
@@ -99,4 +100,12 @@ async function remove(req, res, next) {
   }
 }
 
-export { get, getOne, create, update, remove, getRefList ,geOrderItemsList};
+async function getOrderEntryReportHandler(req, res, next) {
+  try {
+    res.json(await _getOrderEntryReport(req));
+  } catch (err) {
+    console.error(`Error `, err.message);
+  }
+}
+
+export { get, getOne, create, update, remove, getRefList ,geOrderItemsList, getOrderEntryReportHandler as getOrderEntryReport };

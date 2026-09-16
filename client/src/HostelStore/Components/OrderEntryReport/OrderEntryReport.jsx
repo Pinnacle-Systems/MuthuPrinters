@@ -3,18 +3,16 @@
 //                       expanded border, group qty summary
 // ─────────────────────────────────────────────────────────────────────────────
 import React, { useMemo, useRef, useState } from "react";
-import { useGetPurchaseReportQuery } from "../../../redux/services/purchaseReportApi";
+import { useGetOrderEntryReportQuery } from "../../../redux/uniformService/OrderEntryService";
 import ColumnFilterMenu from "./components/ColumnFilterMenu";
 import ExpandedRowDetail from "./components/ExpandedRowDetail";
 import {
   COLUMNS,
   buildGroups,
-  computePORow,
-  dueBadgeCls,
+  computeOrderEntryRow,
   fmtDate,
-  statusBadgeCls,
+  deliveryBadgeCls,
 } from "./orderEntryReportUtils";
-import { dummyData } from "./dummyPurchaseReport";
 import XLSXStyle from "xlsx-js-style";
 import mpLogo from "../../../assets/mplogo.png";
 const PAGE_SIZE = 40;
@@ -38,18 +36,20 @@ const EXCEL_NUM_FMT = "#,##0.000";
 
 export default function OrderEntryReport() {
   const [queryParams] = useState({ branchId: undefined });
+  const [page, setPage] = useState(1);
+
   const {
     data: apiData,
     isLoading,
     isFetching,
     isError,
-  } = useGetPurchaseReportQuery(queryParams);
+  } = useGetOrderEntryReportQuery({ ...queryParams, page, limit: PAGE_SIZE });
+  console.log(apiData, "apiData");
 
   const allData = useMemo(
-    () => (apiData?.data || []).map(computePORow),
+    () => (apiData?.data || []).map(computeOrderEntryRow),
     [apiData],
   );
-  // const allData = useMemo(() => dummyData.map(computePORow), []);
   const [colOrder, setColOrder] = useState(() => COLUMNS.map((c) => c.key));
   const [groupKeys, setGroupKeys] = useState([]);
   const [groupDirs, setGroupDirs] = useState({});
@@ -59,30 +59,13 @@ export default function OrderEntryReport() {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState(1);
   const [expanded, setExpanded] = useState({});
-  const [page, setPage] = useState(1);
-
   const dragColRef = useRef(null);
   const dragGbOver = useRef(false);
 
   const uniqueVals = useMemo(() => {
     const map = {};
     COLUMNS.forEach(({ key }) => {
-      if (key === "dueStatus") {
-        map[key] = [
-          ...new Set(
-            allData.map((r) => {
-              if (r.dueAlert === "overdue") return "Overdue";
-              if (r.dueAlert === "soon") return "Due Today / Due Soon";
-              if (r.dueAlert === "done") return "Completed";
-              return "Remaining";
-            }),
-          ),
-        ].sort();
-      } else {
-        map[key] = [
-          ...new Set(allData.map((r) => String(r[key] ?? ""))),
-        ].sort();
-      }
+      map[key] = [...new Set(allData.map((r) => String(r[key] ?? "")))].sort();
     });
     return map;
   }, [allData]);
@@ -91,19 +74,7 @@ export default function OrderEntryReport() {
     return allData.filter((r) => {
       for (const [k, allowed] of Object.entries(colFilters)) {
         if (!allowed) continue;
-        if (k === "dueStatus") {
-          const category =
-            r.dueAlert === "overdue"
-              ? "Overdue"
-              : r.dueAlert === "soon"
-                ? "Due Today / Due Soon"
-                : r.dueAlert === "done"
-                  ? "Completed"
-                  : "Remaining";
-          if (!allowed.has(category)) return false;
-        } else {
-          if (!allowed.has(String(r[k] ?? ""))) return false;
-        }
+        if (!allowed.has(String(r[k] ?? ""))) return false;
       }
       return true;
     });
@@ -122,12 +93,9 @@ export default function OrderEntryReport() {
     });
   }, [filtered, sortKey, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const totalPages = apiData?.totalPages || 1;
   const safePage = Math.min(page, totalPages);
-  const paginated = sorted.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE,
-  );
+  const paginated = sorted;
 
   const tree = useMemo(
     () =>
@@ -140,10 +108,6 @@ export default function OrderEntryReport() {
   const metrics = useMemo(
     () => ({
       total: filtered.length,
-      overdue: filtered.filter((r) => r.dueAlert === "overdue").length,
-      soon: filtered.filter((r) => r.dueAlert === "soon").length,
-      fullR: filtered.filter((r) => r.status === "Fully Received").length,
-      totalBal: filtered.reduce((s, r) => s + r.balanceQty, 0),
     }),
     [filtered],
   );
@@ -233,160 +197,29 @@ export default function OrderEntryReport() {
   // ─── cell renderer ─────────────────────────────────────────────────────────
   function renderCellValue(row, key) {
     switch (key) {
-      case "docId":
-        return <div className="text-xs text-gray-600">{row.docId ?? "—"}</div>;
       case "docDate":
         return (
-          <span className="text-xs text-gray-600">{fmtDate(row.docDate)}</span>
+          <span className="text-xs text-gray-600">{fmtDate(row[key])}</span>
         );
-      case "dueDate":
+      case "deliveryDate":
         return (
-          <span className="text-xs text-gray-600">{fmtDate(row.dueDate)}</span>
+          <span className="text-xs text-gray-600">{fmtDate(row[key])}</span>
         );
-      case "dueStatus":
-        return (
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${dueBadgeCls(row.dueAlert)}`}
-          >
-            {row.dueStatus}
-          </span>
-        );
-      case "supplier":
-        return (
-          <span className="text-xs text-gray-600">{row.supplier ?? "—"}</span>
-        );
-      case "poType": {
-        const isOrder = row.poType === "ORDER";
+      case "deliveryStatus": {
+        const cls = deliveryBadgeCls(row.deliveryAlert);
         return (
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${isOrder ? "bg-blue-50 text-blue-700 border border-blue-200" : "bg-gray-100 text-gray-600 border border-gray-200"}`}
+            className={`inline-block px-2 py-0.5 text-[11px] font-medium rounded-full ${cls}`}
           >
-            {row.poType ?? "—"}
+            {row.deliveryStatus}
           </span>
         );
       }
-      case "inwardType": {
-        const colorMap = {
-          "Order Purchase Inward":
-            "bg-indigo-50 text-indigo-700 border border-indigo-200",
-          "General Purchase Inward":
-            "bg-teal-50 text-teal-700 border border-teal-200",
-          "Direct Inward":
-            "bg-orange-50 text-orange-700 border border-orange-200",
-        };
-        const cls =
-          colorMap[row.inwardType] ??
-          "bg-gray-100 text-gray-500 border border-gray-200";
-        const short = INWARD_SHORT[row.inwardType];
-        return row.inwardType && row.inwardType !== "—" ? (
-          <>
-            {/* screen: full label */}
-            <span
-              className={`print-hide inline-flex items-center px-2 py-0.5 rounded-full text-xs ${cls}`}
-            >
-              {row.inwardType}
-            </span>
-            {/* print: short code only */}
-            <span
-              className={`print-only-inline items-center px-1.5 py-0.5 rounded text-xs font-semibold ${cls}`}
-            >
-              {short ?? row.inwardType}
-            </span>
-          </>
-        ) : (
-          <span className="text-xs text-gray-600">—</span>
-        );
-      }
-      case "branch":
-        return (
-          <span className="text-xs text-gray-600">{row.branch ?? "—"}</span>
-        );
-
-      // ── qty columns — all fixed 2dp, bar FIRST then number ────────────────
-      case "poQty":
+      case "orderQty":
         return (
           <div className="text-xs text-right text-gray-600">
-            {fmt2(row.poQty)}
+            {row[key] ?? 0}
           </div>
-        );
-      case "inwardQty": {
-        const pct =
-          row.poQty > 0
-            ? Math.min(100, Math.round((row.inwardQty / row.poQty) * 100))
-            : 0;
-        return (
-          // Progress bar FIRST, then qty number
-          <div className="flex items-center gap-1.5">
-            <div className="inward-bar h-1.5 rounded-full bg-gray-200 flex-1 min-w-[32px]">
-              <div
-                className="h-full rounded-full bg-green-500"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-            <span className="inward-pct text-xs text-gray-500">{pct}%</span>
-            <span className="inward-num text-xs text-gray-600 min-w-[32px] text-right">
-              {fmt2(row.inwardQty)}
-            </span>
-          </div>
-        );
-      }
-      case "cancelQty":
-        return (
-          <div
-            className={`text-xs text-right ${row.cancelQty > 0 ? "text-red-600" : "text-gray-600"}`}
-          >
-            {fmt2(row.cancelQty)}
-          </div>
-        );
-      case "returnQty":
-        return (
-          <div
-            className={`text-xs text-right ${row.returnQty > 0 ? "text-[#6B3A2A]" : "text-gray-600"}`}
-          >
-            {fmt2(row.returnQty)}
-          </div>
-        );
-      case "billedQty": {
-        const isFullyBilled =
-          row.billedQty >= row.inwardQty && row.inwardQty > 0;
-        const isPartial = row.billedQty > 0 && row.billedQty < row.inwardQty;
-        return (
-          <div
-            className={`text-xs text-right ${isFullyBilled ? "text-green-600" : isPartial ? "text-amber-600" : "text-gray-600"}`}
-          >
-            {fmt2(row.billedQty)}
-          </div>
-        );
-      }
-      case "balanceQty":
-        return row.balanceQty === 0 ? (
-          <div className="text-xs text-right text-gray-600">0.00</div>
-        ) : (
-          <div className="text-xs text-right text-amber-600">
-            {fmt2(row.balanceQty)}
-          </div>
-        );
-      case "pendingInward": {
-        const isDone = [
-          "Fully Received",
-          "Cancelled",
-          "Closed (Inward + Cancelled)",
-        ].includes(row.status);
-        return !isDone && row.pendingInward > 0 ? (
-          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs">
-            {row.pendingInward} pending
-          </span>
-        ) : (
-          <span className="text-xs text-gray-600">—</span>
-        );
-      }
-      case "status":
-        return (
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${statusBadgeCls(row.status)}`}
-          >
-            {row.status}
-          </span>
         );
       default:
         return <span className="text-xs text-gray-600">{row[key] ?? "—"}</span>;
@@ -394,14 +227,7 @@ export default function OrderEntryReport() {
   }
 
   // ─── tree renderer ─────────────────────────────────────────────────────────
-  const QTY_KEYS = [
-    "poQty",
-    "inwardQty",
-    "cancelQty",
-    "returnQty",
-    "billedQty",
-    "balanceQty",
-  ];
+  const QTY_KEYS = ["orderQty"];
 
   let rowIndex = 0;
   // globalSno tracks absolute serial number across pages
@@ -434,7 +260,7 @@ export default function OrderEntryReport() {
             {/* expand col — hidden in print */}
             <td className="col-expand px-2 border-r border-b border-gray-200 w-8" />
             <td
-              colSpan={vc.length + 1}
+              colSpan={vc.length}
               className="px-3 py-2 text-xs font-medium text-indigo-700 border-b border-gray-200"
               style={{ paddingLeft: `${node._depth * 18 + 12}px` }}
             >
@@ -473,22 +299,21 @@ export default function OrderEntryReport() {
 
     const r = node;
     const stripe = rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50";
-    const isOverdue = r.dueAlert === "overdue";
+    const isOverdue = r.deliveryAlert === "overdue";
+    const rowBg = isOverdue ? "bg-red-50/50" : stripe;
     const sno = globalSnoStart + rowIndex + 1;
     rowIndex++;
 
     return (
       <React.Fragment key={r.id}>
-        <tr
-          className={`${isOverdue ? "row-overdue bg-red-50 hover:bg-red-100" : `${stripe} hover:bg-indigo-50`} transition-colors`}
-        >
+        <tr className={`${rowBg} hover:bg-indigo-50 transition-colors`}>
           {/* S.No */}
           <td className="px-2 py-1.5 w-10 text-center border-r border-b border-gray-100 text-xs text-gray-400 select-none">
             {sno}
           </td>
           {/* Expand toggle */}
           <td
-            className={`col-expand px-2 py-1.5 w-8 border-r border-b border-gray-100 ${isOverdue ? "border-l-2 border-l-red-500" : ""}`}
+            className={`col-expand px-2 py-1.5 w-8 border-r border-b border-gray-100`}
           >
             <button
               onClick={() => toggleExpand(r.id)}
@@ -501,9 +326,7 @@ export default function OrderEntryReport() {
             <td
               key={col.key}
               className={`px-2.5 py-1.5 whitespace-nowrap border-r border-b border-gray-100 last:border-r-0
-                  ${col.key === "inwardQty" ? "col-inward" : ""}
-    ${col.key === "inwardQty" ? "col-inward" : ""}
-    ${["poQty", "inwardQty", "cancelQty", "returnQty", "billedQty", "balanceQty"].includes(col.key) ? "col-qty" : ""}`}
+    ${["orderQty"].includes(col.key) ? "col-qty" : ""}`}
             >
               {renderCellValue(r, col.key)}
             </td>
@@ -512,7 +335,7 @@ export default function OrderEntryReport() {
 
         {/* ── expanded detail with full border ────────────────────────────── */}
         {expanded[r.id] && (
-          <tr className={stripe}>
+          <tr className={rowBg}>
             <td colSpan={vc.length + 2} className="p-0">
               <div className="mx-2 my-1.5 border-2 border-indigo-300 rounded-xl overflow-hidden shadow-sm ring-1 ring-indigo-100">
                 <ExpandedRowDetail row={r} />
@@ -551,16 +374,8 @@ export default function OrderEntryReport() {
       return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
     }
 
-    const RIGHT_KEYS = new Set([
-      "poQty",
-      "inwardQty",
-      "cancelQty",
-      "returnQty",
-      "billedQty",
-      "balanceQty",
-      "pendingInward",
-    ]);
-    const DATE_KEYS = new Set(["docDate", "dueDate"]);
+    const RIGHT_KEYS = new Set(["orderQty"]);
+    const DATE_KEYS = new Set(["docDate", "deliveryDate"]);
 
     const BORDER = {
       top: { style: "thin", color: { rgb: "E5E7EB" } },
@@ -606,87 +421,15 @@ export default function OrderEntryReport() {
       return c;
     }
 
-    // All qty cells now use fixed 2dp — no UOM logic
     function qtyCell(k, row, bg = null) {
       const raw = row[k];
       const numVal = typeof raw === "number" ? raw : parseFloat(raw) || 0;
-      // if value is 0 — same style as inward qty (plain gray)
-      if (numVal === 0) {
-        return cell(numVal, {
-          fontColor: "000000",
-          bold: false,
-          align: "right",
-          indent: 0,
-          numFmt: EXCEL_NUM_FMT,
-          fgColor: bg, // ← this was missing
-        });
-      }
-      const colorMap = {
-        cancelQty: numVal > 0 ? "DC2626" : "6B7280",
-        returnQty: numVal > 0 ? "92400E" : "6B7280",
-        billedQty:
-          row.billedQty >= row.inwardQty && row.inwardQty > 0
-            ? "15803D"
-            : row.billedQty > 0
-              ? "D97706"
-              : "9CA3AF",
-        balanceQty: numVal > 0 ? "D97706" : "6B7280",
-      };
       return cell(numVal, {
-        fontColor: colorMap[k] || "1F2937",
-        bold: ["billedQty", "balanceQty"].includes(k) && numVal > 0,
+        fontColor: "1F2937",
+        bold: false,
         align: "right",
         indent: 0,
         numFmt: EXCEL_NUM_FMT,
-        fgColor: bg,
-      });
-    }
-
-    function dueStatusCell(row, bg = null) {
-      const colorMap = {
-        overdue: "DC2626",
-        soon: "D97706",
-        done: "6B7280",
-        ok: "16A34A",
-      };
-      return cell(String(row.dueStatus ?? "—"), {
-        fontColor: colorMap[row.dueAlert] || "374151",
-        bold: true,
-        fgColor: bg,
-      });
-    }
-    function poTypeCell(row, bg = null) {
-      return cell(String(row.poType ?? "—"), {
-        fontColor: row.poType === "ORDER" ? "1D4ED8" : "374151",
-        bold: row.poType === "ORDER",
-        fgColor: bg,
-      });
-    }
-    function inwardTypeCell(row, bg = null) {
-      const colorMap = {
-        "Order Purchase Inward": "3730A3",
-        "General Purchase Inward": "0D7377",
-        "Direct Inward": "9A3412",
-      };
-      return cell(String(row.inwardType ?? "—"), {
-        fontColor: colorMap[row.inwardType] || "374151",
-        bold: !!colorMap[row.inwardType],
-        fgColor: bg,
-      });
-    }
-    function statusCell(row, bg = null) {
-      const colorMap = {
-        "Fully Received": "15803D",
-        "Partially Received": "1D4ED8",
-        "Partially Received & Cancelled": "DC2626",
-        "Closed (Inward + Cancelled)": "DC2626",
-        Cancelled: "DC2626",
-        "Partially Cancelled": "DC2626",
-        Pending: "D97706",
-      };
-      return cell(String(row.status ?? "—"), {
-        fontColor: colorMap[row.status] || "374151",
-        bold: true,
         fgColor: bg,
       });
     }
@@ -696,6 +439,7 @@ export default function OrderEntryReport() {
     const allLabels = ["S.No", ...labels];
 
     const allSheetRows = [];
+    const customMerges = [];
     const GROUP_BG = ["F6F6F6", "F0F0F0", "EBEBEB", "E5E5E5"];
     let dataRowCount = 0;
 
@@ -715,11 +459,11 @@ export default function OrderEntryReport() {
         const qtyStr = QTY_KEYS.filter((k) => qtyTotals[k] > 0)
           .map(
             (k) =>
-              `${COLUMNS.find((c) => c.key === k)?.label || k}: ${Number(qtyTotals[k]).toFixed(3)}`,
+              `${COLUMNS.find((c) => c.key === k)?.label || k}: ${Number(qtyTotals[k]).toFixed(3)}`
           )
           .join("  |  ");
 
-        const label = `${col?.label || node._key}: ${node._val || "(blank)"}  —  ${node._count} item${node._count !== 1 ? "s" : ""}${qtyStr ? "  |  " + qtyStr : ""}`;
+        const label = `${col?.label || node._key}: ${node._val || "(blank)"}  -  ${node._count} item${node._count !== 1 ? "s" : ""}${qtyStr ? "  |  " + qtyStr : ""}`;
         const bg = GROUP_BG[depth] || "F6F6F6";
         const fs = depth === 0 ? 10 : 9;
 
@@ -736,15 +480,19 @@ export default function OrderEntryReport() {
         });
 
         allSheetRows.push({ cells: groupRow, isGroup: true, depth: depth + 1 });
+        customMerges.push({
+          s: { r: allSheetRows.length, c: depth + 1 },
+          e: { r: allSheetRows.length, c: allKeys.length - 1 },
+        });
+        
         node._children.forEach((child) => flattenNode(child, depth + 1));
       } else {
         const r = node;
         dataRowCount++;
         const isOdd = dataRowCount % 2 === 1;
-        const isOverdue = r.dueAlert === "overdue";
-        const bg = isOverdue ? "FEF2F2 " : isOdd ? "FFFFFF" : "F9FAFB";
+        const bg = isOdd ? "FFFFFF" : "F9FAFB";
 
-        const dataRow = allKeys.map((k, ki) => {
+        const baseDataRow = allKeys.map((k, ki) => {
           if (k === "sno")
             return cell(dataRowCount, {
               fontColor: "9CA3AF",
@@ -754,29 +502,127 @@ export default function OrderEntryReport() {
             });
           if (DATE_KEYS.has(k))
             return cell(fmtExcelDate(r[k]), { fgColor: bg });
-          if (k === "dueStatus") return dueStatusCell(r, bg); // ← pass bg
-          if (k === "poType") return poTypeCell(r, bg); // ← pass bg
-          if (k === "inwardType") return inwardTypeCell(r, bg); // ← pass bg
-          if (k === "status") return statusCell(r, bg); // ← pass bg
           if (RIGHT_KEYS.has(k)) return qtyCell(k, r, bg);
           if (k === "docId")
             return cell(String(r[k] ?? ""), {
               fontColor: "1F2937",
               bold: false,
-
-              fgColor: bg,
-            });
-          if (k === "supplier")
-            return cell(String(r[k] ?? ""), {
-              fontColor: "1F2937",
-              bold: false,
-
               fgColor: bg,
             });
           return cell(String(r[k] ?? ""), { fgColor: bg });
         });
 
-        allSheetRows.push({ cells: dataRow, isGroup: false, depth: 0 });
+        const orderItems = r.orderItems || [];
+        const jobCards = r.JobCard || [];
+        const saleOrders = r.SalesOrder || [];
+        const packing = r.Packing || [];
+        const salesDeliveries = r.SalesOrder?.flatMap((so) => 
+          (so.SalesDelivery || []).map(sd => ({ ...sd, SaleOrderNo: so.docId }))
+        ) || [];
+
+        const maxChildRows = Math.max(0, orderItems.length, jobCards.length, saleOrders.length, packing.length, salesDeliveries.length);
+        const blockRows = maxChildRows > 0 ? maxChildRows + 2 : 1;
+        const startRowIndex = allSheetRows.length + 1; // +1 because row 0 is the sheet headers
+        
+        const emptyBaseCells = allKeys.map(() => cell("", { fgColor: bg }));
+        
+        const rows = [];
+        for (let i = 0; i < blockRows; i++) {
+           rows.push({ cells: i === 0 ? baseDataRow : [...emptyBaseCells], isGroup: false });
+        }
+
+        if (maxChildRows > 0) {
+            const formatProcessRoute = (prList) => {
+              if (!Array.isArray(prList)) return "-";
+              return prList.map(pr => {
+                const name = pr.Process?.name?.toUpperCase() || "PROCESS";
+                const outside = pr.Process?.isOutsideJob ? ", Outside" : "";
+                const status = pr.status || "Pending";
+                const qty = pr.completedQty || 0;
+                return `${pr.sequence || ""}. ${name} [${status}, Qty: ${qty}${outside}]`;
+              }).join("\n");
+            };
+    
+            const getDocItemName = (doc) => {
+              return doc.StyleItem?.name ||
+                doc.SalesOrderItems?.map((i) => i.StyleItem?.name).filter(Boolean).join(", ") ||
+                doc.PackingItems?.map((i) => i.StyleItem?.name).filter(Boolean).join(", ") ||
+                doc.salesDeliveryItems?.map((i) => i.StyleItem?.name).filter(Boolean).join(", ") ||
+                "-";
+            };
+
+            let currentColOffset = allKeys.length;
+            
+            const injectTable = (title, items, headers, rowMapper, themeColor, textColor) => {
+               const colSpan = headers.length;
+               // Row 0: Title
+               rows[0].cells[currentColOffset] = cell(title, { bold: true, fgColor: themeColor, fontColor: textColor });
+               for (let c = 1; c < colSpan; c++) {
+                  rows[0].cells[currentColOffset + c] = cell("", { fgColor: themeColor });
+               }
+               // Row 1: Headers
+               for (let c = 0; c < colSpan; c++) {
+                  rows[1].cells[currentColOffset + c] = cell(headers[c], { bold: true, fgColor: "F3F4F6", fontColor: "000000" });
+               }
+               // Row 2+: Data
+               for (let i = 0; i < maxChildRows; i++) {
+                  if (i < items.length) {
+                     const rowData = rowMapper(items[i]);
+                     for (let c = 0; c < colSpan; c++) {
+                        rows[2 + i].cells[currentColOffset + c] = cell(rowData[c], { fgColor: bg });
+                     }
+                  } else {
+                     for (let c = 0; c < colSpan; c++) {
+                        rows[2 + i].cells[currentColOffset + c] = cell("", { fgColor: bg });
+                     }
+                  }
+               }
+               
+               customMerges.push({ s: { r: startRowIndex, c: currentColOffset }, e: { r: startRowIndex, c: currentColOffset + colSpan - 1 } });
+               currentColOffset += colSpan;
+            };
+
+            injectTable("Order Items", orderItems, ["Item Name", "Style", "Size Details", "Qty", "Job Card No", "Process Route"], (item) => {
+               const breakups = item.OrderStyleBreakup || [];
+               const styleStr = breakups.map(bk => bk.Style?.name || "-").join("\n") || "-";
+               const sizeStr = breakups.map(bk => {
+                 const sizes = bk.OrderSizeBreakup || [];
+                 return sizes.map(sz => `${sz.Size?.name || "Size"}: ${sz.qty || 0}`).join(", ");
+               }).filter(Boolean).join("\n") || "-";
+               const matchingJc = r.JobCard?.find((j) => j.StyleItem?.name === item.StyleItem?.name);
+               return [item.StyleItem?.name || "-", styleStr, sizeStr, item.orderQty || 0, matchingJc?.docId || "-", formatProcessRoute(matchingJc?.processRoute)];
+            }, "DBEAFE", "1E3A8A");
+
+            injectTable("Job Cards", jobCards, ["Job Card No", "Job Card Date", "Item Name", "Process Route"], (item) => [
+               item.docId || "-", fmtExcelDate(item.docDate), getDocItemName(item), formatProcessRoute(item.processRoute)
+            ], "E0E7FF", "312E81");
+
+            injectTable("Sale Orders", saleOrders, ["Sale Order No", "Sale Order Date", "Item Name"], (item) => [
+               item.docId || "-", fmtExcelDate(item.docDate), getDocItemName(item)
+            ], "DCFCE7", "14532D");
+
+            injectTable("Packing", packing, ["Packing No", "Packing Date", "Job Card No", "Item Name"], (item) => [
+               item.docId || "-", fmtExcelDate(item.docDate), item.JobCard?.docId || "-", getDocItemName(item)
+            ], "FFEDD5", "7C2D12");
+
+            injectTable("Sales Deliveries", salesDeliveries, ["Delivery No", "Delivery Date", "Sale Order No", "Item Name"], (item) => [
+               item.docId || "-", fmtExcelDate(item.docDate), item.SaleOrderNo || "-", getDocItemName(item)
+            ], "FCE7F3", "831843");
+
+            // Merge base columns vertically
+            if (blockRows > 1) {
+              for (let c = 0; c < allKeys.length; c++) {
+                 customMerges.push({ s: { r: startRowIndex, c: c }, e: { r: startRowIndex + blockRows - 1, c: c } });
+              }
+            }
+        }
+
+        rows.forEach(row => allSheetRows.push(row));
+        
+        // Divider row between orders (ensure it spans all columns!)
+        const totalCols = allKeys.length + 6 + 4 + 3 + 4 + 4;
+        const dividerCells = Array(totalCols).fill(0).map(() => cell("", { fgColor: "D1D5DB" }));
+        allSheetRows.push({ cells: dividerCells, isGroup: false, isDivider: true });
       }
     }
 
@@ -791,66 +637,68 @@ export default function OrderEntryReport() {
     const headerRow = allLabels.map((label, i) =>
       cell(label, {
         bold: true,
-        fgColor: "F3F4F6", // ← change this
-        fontColor: "000000",
+        fgColor: "1E3A8A",
+        fontColor: "FFFFFF",
         align:
           RIGHT_KEYS.has(allKeys[i]) || allKeys[i] === "sno"
             ? "center"
             : "left",
         fontSize: 10,
         indent: 1,
-      }),
+      })
     );
 
     const wsData = [headerRow, ...allSheetRows.map((r) => r.cells)];
     const ws = XLSXStyle.utils.aoa_to_sheet(
-      wsData.map((row) => row.map((c) => c.v)),
+      wsData.map((row) => row.map((c) => (c ? c.v : "")))
     );
 
+    // re-apply styles
     wsData.forEach((row, ri) => {
       row.forEach((c, ci) => {
+        if (!c) return;
         const addr = XLSXStyle.utils.encode_cell({ r: ri, c: ci });
         ws[addr] = { ...(ws[addr] || {}), ...c };
+        if (c.s && c.s.alignment) {
+          ws[addr].s.alignment.wrapText = true;
+        }
         if (c.z) ws[addr].z = c.z;
       });
     });
 
-    const merges = [];
-    allSheetRows.forEach((row, i) => {
-      if (row.isGroup) {
-        const ri = i + 1;
-        merges.push({
-          s: { r: ri, c: row.depth },
-          e: { r: ri, c: allKeys.length - 1 },
-        });
-      }
-    });
-    if (merges.length > 0) ws["!merges"] = merges;
+    if (customMerges.length > 0) ws["!merges"] = customMerges;
 
     const COL_WIDTHS = {
       sno: 6,
       docId: 20,
       docDate: 14,
-      dueDate: 14,
-      dueStatus: 16,
-      supplier: 55,
-      poType: 16,
-      inwardType: 30,
-      branch: 18,
-      poQty: 13,
-      inwardQty: 15,
-      cancelQty: 13,
-      returnQty: 13,
-      billedQty: 13,
-      balanceQty: 15,
-      pendingInward: 16,
-      status: 30,
+      deliveryDate: 14,
+      deliveryStatus: 18,
+      customerName: 50,
+      orderType: 16,
+      productionType: 18,
+      orderQty: 12,
     };
-    ws["!cols"] = allKeys.map((k) => ({ wch: COL_WIDTHS[k] || 14 }));
+    
+    ws["!cols"] = [
+      ...allKeys.map((k) => ({ wch: COL_WIDTHS[k] || 14 })),
+      // Order Items (6 columns)
+      { wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 10 }, { wch: 15 }, { wch: 30 },
+      // Job Cards (4 columns)
+      { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 30 },
+      // Sale Orders (3 columns)
+      { wch: 15 }, { wch: 15 }, { wch: 25 },
+      // Packing (4 columns)
+      { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 25 },
+      // Sales Deliveries (4 columns)
+      { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 25 }
+    ];
+    
     ws["!rows"] = [
       { hpt: 24 },
-      ...allSheetRows.map((r) => ({ hpt: r.isGroup ? 18 : 17 })),
+      ...allSheetRows.map((r) => ({ hpt: r.isDivider ? 3 : r.isGroup ? 18 : 36 })),
     ];
+    
     ws["!freeze"] = {
       xSplit: 0,
       ySplit: 1,
@@ -861,7 +709,7 @@ export default function OrderEntryReport() {
     const wb = XLSXStyle.utils.book_new();
     XLSXStyle.utils.book_append_sheet(wb, ws, "Order Entry Report");
     const today = new Date().toLocaleDateString("en-IN").replace(/\//g, "-");
-    XLSXStyle.writeFile(wb, `Purchase_Report_${today}.xlsx`);
+    XLSXStyle.writeFile(wb, `Order_Entry_Report_${today}.xlsx`);
   }
 
   // ─── JSX ───────────────────────────────────────────────────────────────────
@@ -958,7 +806,7 @@ export default function OrderEntryReport() {
 
     td.col-qty { text-align: right !important; }
 
-    @page { size: A4 landscape; margin: 8mm 10mm; }
+    @page { size: A4 ; margin: 8mm 10mm; }
   }
 
   @media screen {
@@ -985,7 +833,7 @@ export default function OrderEntryReport() {
             >
               Download Excel
             </button>
-            <button
+            {/* <button
               onClick={() => {
                 const today = new Date()
                   .toLocaleDateString("en-IN", {
@@ -1002,7 +850,7 @@ export default function OrderEntryReport() {
               className="h-8 px-3 text-xs border border-red-300 rounded-lg text-red-600 hover:bg-red-50"
             >
               Print PDF
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -1045,7 +893,7 @@ export default function OrderEntryReport() {
           </div>
         </div>
         {/* print-only inward type legend */}
-        <div
+        {/* <div
           className="print-only-block mb-2 p-2"
           style={{
             border: "1px solid #e5e7eb",
@@ -1059,12 +907,12 @@ export default function OrderEntryReport() {
               <strong>{short}</strong> = {full}
             </span>
           ))}
-        </div>
+        </div> */}
         {/* summary cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 no-print">
+        {/* <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 no-print">
           {[
             {
-              label: "Total POs",
+              label: "Total Orders",
               val: metrics.total,
               color: "text-gray-700",
               bg: "bg-gray-100",
@@ -1081,86 +929,6 @@ export default function OrderEntryReport() {
                   <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
                   <rect x="9" y="3" width="6" height="4" rx="1" />
                   <path d="M9 12h6M9 16h4" />
-                </svg>
-              ),
-            },
-            {
-              label: "Overdue",
-              val: metrics.overdue,
-              color: "text-red-700",
-              bg: "bg-red-50",
-              icon: (
-                <svg
-                  className="w-5 h-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 8v4M12 16h.01" />
-                </svg>
-              ),
-            },
-            {
-              label: "Due soon",
-              val: metrics.soon,
-              color: "text-amber-700",
-              bg: "bg-amber-50",
-              icon: (
-                <svg
-                  className="w-5 h-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
-              ),
-            },
-            {
-              label: "Fully received",
-              val: metrics.fullR,
-              color: "text-green-700",
-              bg: "bg-green-50",
-              icon: (
-                <svg
-                  className="w-5 h-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-                  <path d="M22 4L12 14.01l-3-3" />
-                </svg>
-              ),
-            },
-            {
-              label: "Total balance qty",
-              val: fmt2(metrics.totalBal),
-              color: "text-red-700",
-              bg: "bg-red-50",
-              icon: (
-                <svg
-                  className="w-5 h-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                  <path d="M3.3 7l8.7 5 8.7-5M12 22V12" />
                 </svg>
               ),
             },
@@ -1186,7 +954,7 @@ export default function OrderEntryReport() {
               </div>
             </div>
           ))}
-        </div>
+        </div> */}
 
         {/* active filter chips */}
         {Object.keys(colFilters).length > 0 && (
@@ -1263,7 +1031,7 @@ export default function OrderEntryReport() {
         >
           <table
             className="w-full table-fixed border-collapse"
-            style={{ width: "1740px" }}
+            style={{ width: "1600px" }}
           >
             <thead className="bg-gray-100 sticky top-0 z-10">
               <tr>
@@ -1409,9 +1177,10 @@ export default function OrderEntryReport() {
         {/* ── pagination + footer ──────────────────────────────────────────── */}
         <div className="flex items-center justify-between flex-wrap gap-3 text-xs text-gray-600 no-print">
           <span>
-            Showing {sorted.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}–
-            {Math.min(safePage * PAGE_SIZE, sorted.length)} of {sorted.length}{" "}
-            records
+            Showing{" "}
+            {apiData?.totalCount === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}-
+            {Math.min(safePage * PAGE_SIZE, apiData?.totalCount || 0)} of{" "}
+            {apiData?.totalCount || 0} records
             {filtered.length < allData.length &&
               ` (filtered from ${allData.length})`}
           </span>

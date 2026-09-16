@@ -985,7 +985,7 @@ export default function PurchaseReport() {
             >
               Download Excel
             </button>
-            <button
+            {/* <button
               onClick={() => {
                 const today = new Date()
                   .toLocaleDateString("en-IN", {
@@ -1002,7 +1002,7 @@ export default function PurchaseReport() {
               className="h-8 px-3 text-xs border border-red-300 rounded-lg text-red-600 hover:bg-red-50"
             >
               Print PDF
-            </button>
+            </button> */}
           </div>
         </div>
 
