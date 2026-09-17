@@ -82,6 +82,7 @@ import {
   packing,
   PackingControl,
   salesBillEntry,
+  productionReport,
 } from "./src/routes/index.js";
 import { setIo } from "./src/utils/notificationHelper.js";
 import { socketMain } from "./src/sockets/socket.js";
@@ -209,7 +210,7 @@ app.use("/packing", packing);
 app.use("/salesOrder", salesOrder);
 app.use("/packingControl", PackingControl);
 app.use("/salesBillEntry", salesBillEntry);
-
+app.use("/productionReport", productionReport);
 
 app.get("/retreiveFile/:fileName", (req, res) => {
   const { fileName } = req.params;
