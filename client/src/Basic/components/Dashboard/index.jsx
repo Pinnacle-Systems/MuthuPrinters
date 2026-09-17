@@ -35,7 +35,7 @@ import {
 import secureLocalStorage from "react-secure-storage";
 import { Login } from "../../pages";
 import moment from "moment";
-import { useGetDailyProductionReportQuery } from "../../../redux/services/productionReportApi";
+import { useGetDailyProductionReportQuery } from "../../../redux/services/ProductionReportApi";
 import { useGetFinYearByIdQuery } from "../../../redux/services/FinYearMasterService";
 export default function Form() {
   ChartJS.register(
@@ -57,10 +57,12 @@ export default function Form() {
     new Date().toISOString().split("T")[0],
   );
   const [selectedMonth, setSelectedMonth] = useState(
-    moment().format("YYYY-MM")
+    moment().format("YYYY-MM"),
   );
 
-  const { data: finYearData } = useGetFinYearByIdQuery(finYearId, { skip: !finYearId });
+  const { data: finYearData } = useGetFinYearByIdQuery(finYearId, {
+    skip: !finYearId,
+  });
 
   const monthsList = useMemo(() => {
     let start, end;
@@ -113,7 +115,6 @@ export default function Form() {
       },
     ],
   };
-
 
   const barData = {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
@@ -393,7 +394,6 @@ export default function Form() {
               </h4>
             </header>
 
-            
             {/* Cards Section */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               {cardsData.map((card, index) => (
@@ -494,7 +494,8 @@ export default function Form() {
                       scales: {
                         y: {
                           beginAtZero: true,
-                          suggestedMax: Math.max(uniqueJobCardNos.length, 5) + 2,
+                          suggestedMax:
+                            Math.max(uniqueJobCardNos.length, 5) + 2,
                         },
                       },
                     }}
@@ -502,7 +503,6 @@ export default function Form() {
                 </div>
               </div>
 
-              
               {/* Bar Chart - Monthly Revenue */}
               <div className="bg-white p-4 rounded-lg shadow md:col-span-2">
                 <h6 className="text-lg font-semibold mb-2">Monthly Revenue</h6>
