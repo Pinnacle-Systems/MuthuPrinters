@@ -130,6 +130,7 @@ async function getPurchaseReport({
         select: {
           id: true,
           qty: true,
+          quoteVersion: true,
           price: true,
           discountType: true,
           discountValue: true,

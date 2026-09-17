@@ -90,6 +90,7 @@ import {
   SalesDelivery,
   SaleOrder,
   Packing,
+  OrderEntryReport,
 } from "../../../HostelStore/Components";
 
 const ActiveTabList = () => {
@@ -145,7 +146,7 @@ const ActiveTabList = () => {
     "DELIVERY CHALLAN": <DeliveryChallan />,
     "STYLE MASTER": <StyleMaster />,
     "ITEM MASTER": <StyleItemMaster />,
-    "INVOICE": <DeliveryInvoice />,
+    INVOICE: <DeliveryInvoice />,
     "COLOR MASTER": <ColorMaster />,
     "TAX TERM MASTER": <TaxTermMaster />,
     "TAX TEMPLATE": <TaxTemplate />,
@@ -182,8 +183,9 @@ const ActiveTabList = () => {
     "PROCESS BILL": <ProcessBill />,
     "SALES DELIVERY": <SalesDelivery />,
     "ITEM SUB GROUP MASTER": <ItemSubGroupMaster />,
-    "PACKING": <Packing />,
+    PACKING: <Packing />,
     "SALES ORDER": <SaleOrder />,
+    "ORDER ENTRY REPORT": <OrderEntryReport />,
     "PAYMENTS": <PaymentDetail />,
 
   };

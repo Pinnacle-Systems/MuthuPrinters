@@ -569,14 +569,17 @@ async function getStock(req, res) {
       grouped[key].netQty += s.qty ?? 0;
     }
 
-    const data = Object.values(grouped);
+    const rawData = Object.values(grouped);
+
+    // Filter to only include actual goods currently in stock (netQty > 0)
+    const data = rawData.filter((r) => r.netQty > 0);
 
     // ── summary ──────────────────────────────────────────────────────────────
     const summary = {
       totalItems: data.length,
-      negativeQty: data.filter((r) => r.netQty < 0).length,
-      zeroQty: data.filter((r) => r.netQty === 0).length,
-      positiveQty: data.filter((r) => r.netQty > 0).length,
+      negativeQty: rawData.filter((r) => r.netQty < 0).length,
+      zeroQty: rawData.filter((r) => r.netQty === 0).length,
+      positiveQty: data.length,
       totalNetQty: data.reduce((s, r) => s + r.netQty, 0),
     };
 
