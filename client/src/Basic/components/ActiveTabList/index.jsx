@@ -184,6 +184,7 @@ const ActiveTabList = () => {
     "ITEM SUB GROUP MASTER": <ItemSubGroupMaster />,
     "PACKING": <Packing />,
     "SALES ORDER": <SaleOrder />,
+    "PAYMENTS": <PaymentDetail />,
 
   };
   const innerWidth = window.innerWidth;
