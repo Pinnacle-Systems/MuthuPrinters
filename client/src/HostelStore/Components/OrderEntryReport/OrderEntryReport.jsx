@@ -525,7 +525,8 @@ export default function OrderEntryReport() {
            }
         });
 
-        const maxChildRows = Math.max(0, orderItems.length, jobCards.length, saleOrders.length, packing.length, salesDeliveries.length);
+        // Commented out child tabs in Excel as per request
+        const maxChildRows = 0; // Math.max(0, orderItems.length, jobCards.length, saleOrders.length, packing.length, salesDeliveries.length);
         const blockRows = maxChildRows > 0 ? maxChildRows + 2 : 1;
         const startRowIndex = allSheetRows.length + 1; // +1 because row 0 is the sheet headers
         
@@ -602,8 +603,8 @@ export default function OrderEntryReport() {
                let prodStatus = "Not Started";
                if (matchingJc && matchingJc.processRoute?.length > 0) {
                  const routes = matchingJc.processRoute;
-                 const allCompleted = routes.every(pr => pr.status?.toLowerCase() === "completed");
-                 const anyStarted = routes.some(pr => pr.status && pr.status.toLowerCase() !== "pending");
+                   const allCompleted = routes.every(pr => pr.status?.toLowerCase() === "completed");
+                   const anyStarted = routes.some(pr => pr.status && !["pending", "not_started"].includes(pr.status.toLowerCase()));
                  
                  if (allCompleted) {
                    prodStatus = "Completed";
@@ -652,7 +653,7 @@ export default function OrderEntryReport() {
         rows.forEach(row => allSheetRows.push(row));
         
         // Divider row between orders (ensure it spans all columns!)
-        const totalCols = allKeys.length + 6 + 4 + 3 + 4 + 4;
+        const totalCols = allKeys.length; // + 6 + 4 + 3 + 4 + 4;
         const dividerCells = Array(totalCols).fill(0).map(() => cell("", { fgColor: "D1D5DB" }));
         allSheetRows.push({ cells: dividerCells, isGroup: false, isDivider: true });
       }
@@ -714,6 +715,7 @@ export default function OrderEntryReport() {
     
     ws["!cols"] = [
       ...allKeys.map((k) => ({ wch: COL_WIDTHS[k] || 14 })),
+      /*
       // Order Items (9 columns)
       { wch: 25 }, { wch: 15 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 30 },
       // Job Cards (4 columns)
@@ -724,6 +726,7 @@ export default function OrderEntryReport() {
       { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 25 },
       // Sales Deliveries (4 columns)
       { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 25 }
+      */
     ];
     
     ws["!rows"] = [

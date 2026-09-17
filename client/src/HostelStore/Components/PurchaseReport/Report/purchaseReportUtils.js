@@ -27,14 +27,20 @@ export function daysUntil(d) {
 }
 
 export function getPOStatus({ poQty = 0, inwardQty = 0, cancelQty = 0 }) {
-  const processed = inwardQty + cancelQty;
-  if (inwardQty === 0 && cancelQty === 0) return "Pending";
-  if (cancelQty >= poQty) return "Cancelled";
-  if (inwardQty >= poQty) return "Fully Received";
-  if (processed >= poQty) return "Closed (Inward + Cancelled)";
-  if (inwardQty > 0 && cancelQty > 0) return "Partially Received & Cancelled";
-  if (inwardQty > 0) return "Partially Received";
-  if (cancelQty > 0) return "Partially Cancelled";
+  const po = Number(poQty) || 0;
+  const inw = Number(inwardQty) || 0;
+  const can = Number(cancelQty) || 0;
+  
+  const processed = inw + can;
+  const epsilon = 0.0001;
+
+  if (inw === 0 && can === 0) return "Pending";
+  if (can >= po - epsilon) return "Cancelled";
+  if (inw >= po - epsilon) return "Fully Received";
+  if (processed >= po - epsilon) return "Closed (Inward + Cancelled)";
+  if (inw > 0 && can > 0) return "Partially Received & Cancelled";
+  if (inw > 0) return "Partially Received";
+  if (can > 0) return "Partially Cancelled";
   return "Pending";
 }
 
@@ -73,15 +79,19 @@ export function getDueInfo(dueDate, status) {
 // ─────────────────────────────────────────────────────────────────────────────
 export function computePORow(r) {
   // Use backend-provided qty values — do NOT recalculate from raw docs
-  const poQty = r.poQty ?? 0;
-  const inwardQty = r.inwardQty ?? 0;
-  const cancelQty = r.cancelQty ?? 0;
-  const returnQty = r.returnQty ?? 0;
-  const billedQty = r.billedQty ?? 0; // ✅ trust backend — includes Against Invoice logic
+  const poQty = Number(r.poQty ?? 0);
+  const inwardQty = Number(r.inwardQty ?? 0);
+  const cancelQty = Number(r.cancelQty ?? 0);
+  const returnQty = Number(r.returnQty ?? 0);
+  const billedQty = Number(r.billedQty ?? 0); // ✅ trust backend — includes Against Invoice logic
   const balanceQty =
-    r.balanceQty ?? Math.max(0, poQty - inwardQty - cancelQty + returnQty);
+    r.balanceQty !== undefined
+      ? Number(r.balanceQty)
+      : Math.max(0, poQty - inwardQty - cancelQty + returnQty);
   const pendingInward =
-    r.pendingInward ?? Math.max(0, poQty - inwardQty - cancelQty);
+    r.pendingInward !== undefined
+      ? Number(r.pendingInward)
+      : Math.max(0, poQty - inwardQty - cancelQty);
 
   // Recalculate status from qty fields (cheap, no DB needed)
   const status = getPOStatus({ poQty, inwardQty, cancelQty });

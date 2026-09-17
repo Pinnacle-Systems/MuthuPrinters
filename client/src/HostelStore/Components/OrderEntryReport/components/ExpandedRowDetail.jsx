@@ -130,7 +130,7 @@ function OrderItemsTab({ items, jobCards, salesDeliveries = [] }) {
             if (matchingJobCard && matchingJobCard.processRoute?.length > 0) {
               const routes = matchingJobCard.processRoute;
               const allCompleted = routes.every(pr => pr.status?.toLowerCase() === "completed");
-              const anyStarted = routes.some(pr => pr.status && pr.status.toLowerCase() !== "pending");
+              const anyStarted = routes.some(pr => pr.status && !["pending", "not_started"].includes(pr.status.toLowerCase()));
               
               if (allCompleted) {
                 prodStatus = "Completed";
