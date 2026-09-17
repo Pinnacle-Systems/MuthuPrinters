@@ -129,7 +129,7 @@ const ProformaInvoiceForm = ({
   const [selectedQuoteVersion, setSelectedQuoteVersion] = useState("Latest");
   const [availableVersions, setAvailableVersions] = useState([]);
   const [bankId, setBankId] = useState("");
-  const [conversionType, setConversionType] = useState("DOZEN");
+  const [conversionType, setConversionType] = useState("PCS");
   const [carriageTax, setCarriageTax] = useState("");
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
   const childRecord = useRef(0);
@@ -219,7 +219,7 @@ const ProformaInvoiceForm = ({
       );
       setWeightInKg(parseFloat(data.weightInKg).toFixed(3) || "");
       setBankId(data.bankId || "");
-      setConversionType(data.conversionType || "DOZEN");
+      setConversionType(data.conversionType || "PCS");
       setCarriageTax(data.carriageTax || "");
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
 
@@ -249,11 +249,11 @@ const ProformaInvoiceForm = ({
         sizeBreakup:
           item?.pisizeBreakups?.length > 0
             ? item.pisizeBreakups.map((val) => {
-              return {
-                ...val,
-                sizeId: val.sizeId || "",
-              };
-            })
+                return {
+                  ...val,
+                  sizeId: val.sizeId || "",
+                };
+              })
             : [{ sizeId: "", qty: "" }],
       }));
       console.log(mappedItems, "mappedItems");
@@ -299,14 +299,15 @@ const ProformaInvoiceForm = ({
         styleBreakup:
           item?.PIStyleBreakup?.length > 0
             ? item.PIStyleBreakup.map((st) => ({
-              styleId: st.styleId || "",
-              sizeBreakup: st.PISizeBreakup?.length > 0
-                ? st.PISizeBreakup.map(sz => ({
-                  sizeId: sz.sizeId || "",
-                  qty: sz.qty || ""
-                }))
-                : [{ sizeId: "", qty: "" }]
-            }))
+                styleId: st.styleId || "",
+                sizeBreakup:
+                  st.PISizeBreakup?.length > 0
+                    ? st.PISizeBreakup.map((sz) => ({
+                        sizeId: sz.sizeId || "",
+                        qty: sz.qty || "",
+                      }))
+                    : [{ sizeId: "", qty: "" }],
+              }))
             : [{ styleId: "", sizeBreakup: [{ sizeId: "", qty: "" }] }],
       }));
 
@@ -506,6 +507,16 @@ const ProformaInvoiceForm = ({
       Swal.fire({
         title: "Warning",
         text: "Delivery Date is required",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
+
+    if (deliveryDate < docDate) {
+      Swal.fire({
+        title: "Warning",
+        text: "Delivery Date cannot be smaller than Doc Date",
         icon: "warning",
         confirmButtonColor: "#3085d6",
       });
@@ -714,8 +725,9 @@ const ProformaInvoiceForm = ({
           Other Details
         </span>
         <svg
-          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${accordionOpen ? "rotate-180" : ""
-            }`}
+          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${
+            accordionOpen ? "rotate-180" : ""
+          }`}
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
@@ -732,7 +744,7 @@ const ProformaInvoiceForm = ({
       {/* Accordion Body */}
       {accordionOpen && (
         <div className="px-3 pb-2 border-t border-slate-100">
-          <div className="flex gap-2 gap-x-4 w-fit">
+          <div className="flex gap-2 gap-x-4 w-fit ml-6">
             {isCustomerExport && (
               <>
                 <div className="w-60">
@@ -772,6 +784,7 @@ const ProformaInvoiceForm = ({
                 setValue={setDeliveryDate}
                 disabled={effectiveReadOnly}
                 type="date"
+                min={docDate}
                 required={true}
               />
             </div>
@@ -940,8 +953,8 @@ const ProformaInvoiceForm = ({
                     id
                       ? customerList?.data?.filter((item) => item?.isCustomer)
                       : customerList?.data?.filter(
-                        (item) => item?.active && item?.isCustomer,
-                      ),
+                          (item) => item?.active && item?.isCustomer,
+                        ),
                     "name",
                     "id",
                   )}
@@ -1171,10 +1184,10 @@ const ProformaInvoiceForm = ({
             renderValue: () => {
               const taxTotals = !isCustomerExport
                 ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
-                  const type = curr?.tax?.split(" ")[0];
-                  acc[type] = (acc[type] || 0) + curr.amount;
-                  return acc;
-                }, {})
+                    const type = curr?.tax?.split(" ")[0];
+                    acc[type] = (acc[type] || 0) + curr.amount;
+                    return acc;
+                  }, {})
                 : {};
 
               return (
@@ -1193,7 +1206,7 @@ const ProformaInvoiceForm = ({
                             enrichedData.overallDiscount >
                             0
                             ? enrichedData.itemDiscount +
-                            enrichedData.overallDiscount
+                                enrichedData.overallDiscount
                             : 0,
                           currencyCode || isCurrencySymbol,
                         )}
@@ -1215,7 +1228,7 @@ const ProformaInvoiceForm = ({
                     </div>
 
                     {taxTotals.CGST !== undefined &&
-                      taxTotals.SGST !== undefined ? (
+                    taxTotals.SGST !== undefined ? (
                       <div className="flex items-center justify-between w-full max-w-[210px]">
                         <div className="flex items-center gap-1">
                           <span className="text-slate-800 w-[32px]">CGST</span>
@@ -1270,11 +1283,11 @@ const ProformaInvoiceForm = ({
                       <span className="font-medium text-slate-800 text-right w-[65px]">
                         {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                         {!isNaN(parseFloat(carriageFinalAmt)) &&
-                          carriageFinalAmt !== ""
+                        carriageFinalAmt !== ""
                           ? formatCurrencyAmount(
-                            carriageFinalAmt,
-                            currencyCode || isCurrencySymbol,
-                          )
+                              carriageFinalAmt,
+                              currencyCode || isCurrencySymbol,
+                            )
                           : "0.00"}
                       </span>
                     </div>
@@ -1304,16 +1317,16 @@ const ProformaInvoiceForm = ({
                           (!isCustomerExport
                             ? enrichedData.net
                             : (enrichedData.items?.reduce(
-                              (sum, item) =>
-                                sum + (parseFloat(item.amount) || 0),
-                              0,
-                            ) || 0) -
-                            (enrichedData.itemDiscount +
-                              enrichedData.overallDiscount >
+                                (sum, item) =>
+                                  sum + (parseFloat(item.amount) || 0),
+                                0,
+                              ) || 0) -
+                              (enrichedData.itemDiscount +
+                                enrichedData.overallDiscount >
                               0
-                              ? enrichedData.itemDiscount +
-                              enrichedData.overallDiscount
-                              : 0)) + (parseFloat(carriageFinalAmt) || 0),
+                                ? enrichedData.itemDiscount +
+                                  enrichedData.overallDiscount
+                                : 0)) + (parseFloat(carriageFinalAmt) || 0),
                           currencyCode || isCurrencySymbol,
                         )}
                       </span>
@@ -1424,7 +1437,7 @@ const ProformaInvoiceForm = ({
     </>
   );
 
-  console.log(items, "ITEMS")
+  console.log(items, "ITEMS");
 
   return (
     <>
