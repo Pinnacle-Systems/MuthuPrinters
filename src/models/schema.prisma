@@ -1040,6 +1040,7 @@ model Payment {
   discount        Int?     @default(0)
   paymentRefNo    String?
   totalAmount     Int?
+  Leder           Ledger[]
 }
 
 model Style {
@@ -1273,6 +1274,8 @@ model Ledger {
   salesBillEntryId  Int?
   Currency          Currency?        @relation(fields: [currencyId], references: [id])
   currencyId        Int?
+  Payment           Payment?         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentId         Int?
 }
 
 model TaxTerm {
@@ -2945,6 +2948,8 @@ model SalesDelivery {
   Delivery               City?                @relation("delivery", fields: [deliveryId], references: [id])
   deliveryId             Int?
   carriageTax            Float?
+  netAmount              String?
+  dispatchThrough        String?
   salesDeliveryItems     SalesDeliveryItems[]
   Ledger                 Ledger[]
   Stock                  Stock[]
@@ -3088,9 +3093,9 @@ model SalesOrder {
   bankId                 Int?
   Bank                   Bank?               @relation(fields: [bankId], references: [id])
   conversionType         String?
-
-  SalesOrderItems SalesOrderItems[]
-  SalesDelivery   SalesDelivery[]
+  dispatchThrough        String?
+  SalesOrderItems        SalesOrderItems[]
+  SalesDelivery          SalesDelivery[]
 }
 
 model SalesOrderItems {
@@ -3355,6 +3360,7 @@ model SalesBillEntry {
   carriageTax         Float?
   bankId              Int?
   Bank                Bank?                 @relation(fields: [bankId], references: [id])
+  netAmount           String?
   Ledger              Ledger[]
   SalesBillEntryItems SalesBillEntryItems[]
 }

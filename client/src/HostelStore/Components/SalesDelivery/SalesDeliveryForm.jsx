@@ -125,6 +125,8 @@ const SalesDeliveryForm = ({
   const [deliveryTaxValue, setDeliveryTaxValue] = useState("");
   const [deliveryTaxType, setDeliveryTaxType] = useState("Flat");
   const [requirements, setRequirements] = useState("");
+  const [deliveryTo, setDeliveryTo] = useState("");
+  const [netAmout, setNetAmount] = useState("");
 
   const effectiveReadOnly = readOnly || childRecord.current > 0;
   const isCumInvoice = deliveryType === "AGAINST_INVOICE";
@@ -161,7 +163,7 @@ const SalesDeliveryForm = ({
 
 
 
-  const { data: salesOrderData, } = useGetSalesOrderQuery({ params: { branchId } });
+  const { data: salesOrderData, } = useGetSalesOrderQuery({ params: { branchId, pendingSalesOrders: true } });
   const { data: singleSaleOrderData, refetch: refetchSalesOrderData, isFetching: isSingleorderFetching, isLoading: isSingleorderLoading } = useGetSalesOrderByIdQuery(salesOrderId, { skip: !salesOrderId || id });
 
 
@@ -218,7 +220,11 @@ const SalesDeliveryForm = ({
   const syncFormWithDbForOrder = useCallback(
     (data) => {
       setCustomerId(data?.customerId ? data?.customerId : "")
-      setItems(padRows(data?.SalesOrderItems || []));
+      setItems(padRows(
+        data?.SalesOrderItems?.map((item) => ({
+          ...item,
+          amount: 0
+        })) || []));
       setSalesOrderId(data?.id || "");
       setPayTermId(data?.payTermId ? data?.payTermId : "");
       setCurrencyId(data?.currencyId ? (data?.currencyId) : "");
@@ -337,7 +343,8 @@ const SalesDeliveryForm = ({
     loadingId,
     carriageFinalAmt,
     deliveryId,
-    carriageTax
+    carriageTax,
+    netAmout
   };
 
   useEffect(() => {
@@ -419,6 +426,8 @@ const SalesDeliveryForm = ({
 
     return errors;
   };
+
+
   const handleSave = async (pendingAction = null) => {
     if (!customerId) {
       Swal.fire({
@@ -512,6 +521,32 @@ const SalesDeliveryForm = ({
       }
     }
 
+    const expectedNetAmount =
+      (!isCustomerExport
+        ? enrichedData.net
+        : (enrichedData.items?.reduce(
+          (sum, item) => sum + (parseFloat(item.amount) || 0),
+          0,
+        ) || 0) -
+        (enrichedData.itemDiscount + enrichedData.overallDiscount > 0
+          ? enrichedData.itemDiscount + enrichedData.overallDiscount
+          : 0)) +
+      (parseFloat(carriageFinalAmt) || 0)
+      ;
+
+    console.log(parseFloat(netAmout) !== parseFloat(expectedNetAmount), parseFloat(netAmout), "netAmout", parseFloat(expectedNetAmount))
+
+    if (deliveryType == "AGAINST_INVOICE") {
+      if (parseFloat(netAmout) !== parseFloat(expectedNetAmount)) {
+        Swal.fire({
+          title: "Warning",
+          text: "Net Amount is incorrect. Please verify the Net Amount before saving.",
+          icon: "warning",
+          confirmButtonColor: "#3085d6",
+        });
+        return;
+      }
+    }
 
 
     try {
@@ -674,10 +709,85 @@ const SalesDeliveryForm = ({
         </svg>
       </button>
 
-      {/* Accordion Body */}
       {accordionOpen && (
         <div className="px-3 pb-2 border-t border-slate-100">
-          <div className="flex gap-2 gap-x-4 w-fit">
+
+          <div className="flex flex-wrap gap-2 gap-x-4">
+            <div className="w-60">
+              <DropdownInput
+                name="Receipt Basis"
+                options={receiptTypes}
+                value={deliveryType}
+                setValue={(value) => setDeliveryType(value)}
+                required={true}
+                readOnly={readOnly}
+                disabled={childRecord.current > 0 || readOnly}
+                ref={customerRef}
+              />
+            </div>
+
+            {isCumInvoice && (
+              <>
+                <div className="w-60">
+                  <DropdownWithModal
+                    name="Pay Term"
+                    options={dropDownListObject(
+                      id
+                        ? payTermList?.data
+                        : payTermList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={payTermId}
+                    setValue={setPayTermId}
+                    required={true}
+                    readOnly={readOnly}
+                    className="w-full max-w-none"
+                    dropdownMinWidth={240}
+                    addNewLabel="+ Add New Pay Term"
+                    childComponent={PayTermMaster}
+                    addNewModalWidth="w-[40%] h-[66%]"
+                  />
+                </div>
+                <div className="w-60">
+                  <DropdownInput
+                    name="Tax Type"
+                    options={dropDownListObject(
+                      taxTypeList ? taxTypeList?.data : [],
+                      "name",
+                      "id",
+                    )}
+                    value={taxTemplateId}
+                    setValue={setTaxTemplateId}
+                    required={!isCustomerExport}
+                    readOnly={effectiveReadOnly}
+                  />
+                </div>
+                {isCustomerExport && (
+                  <div className="w-60">
+                    <DropdownWithModal
+                      name="Currency"
+                      options={dropDownListObject(
+                        id
+                          ? currencyList?.data
+                          : currencyList?.data?.filter((item) => item?.active),
+                        "name",
+                        "id",
+                      )}
+                      value={currencyId}
+                      setValue={setCurrencyId}
+                      required={true}
+                      readOnly={readOnly}
+                      className={`w-full max-w-none`}
+                      dropdownMinWidth={240}
+                      addNewLabel="+ Add New Currency"
+                      childComponent={CurrencyMaster}
+                      addNewModalWidth="w-[40%] h-[66%]"
+                    />
+                  </div>
+                )}
+              </>
+            )}
             {isCustomerExport && (
               <>
                 <div className="w-60">
@@ -822,6 +932,15 @@ const SalesDeliveryForm = ({
                 disabled={readOnly}
               />
             </div>
+            {deliveryType == "AGAINST_INVOICE" && (
+              <TextInput
+                name="Net Amount"
+                value={netAmout}
+                setValue={setNetAmount}
+                readOnly={readOnly}
+              />
+            )}
+
           </div>
         </div>
       )}
@@ -861,6 +980,25 @@ const SalesDeliveryForm = ({
             Customer Details
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="md:col-span-1">
+              <DropdownWithModal
+                name="Sale Order No"
+                options={dropDownListObject(
+                  id
+                    ? salesOrderData?.data
+                    : salesOrderData?.data,
+                  "docId",
+                  "id",
+                )}
+                value={salesOrderId}
+                setValue={setSalesOrderId}
+                required={true}
+                readOnly={readOnly}
+                className="w-[150px]"
+                disabled={readOnly || childRecord.current > 0}
+                openOnFocus={true}
+              />
+            </div>
             <div className="md:col-span-2">
               <DropdownWithModal
                 name="Customer"
@@ -885,27 +1023,7 @@ const SalesDeliveryForm = ({
                 openOnFocus={true}
               />
             </div>
-            <div className="md:col-span-1">
-              <DropdownWithModal
-                name="Sale Order No"
-                options={dropDownListObject(
-                  id
-                    ? salesOrderData?.data?.filter((item) => item?.customerId === customerId)
-                    : salesOrderData?.data?.filter(
-                      (item) => item?.customerId === customerId,
-                    ),
-                  "docId",
-                  "id",
-                )}
-                value={salesOrderId}
-                setValue={setSalesOrderId}
-                required={true}
-                readOnly={readOnly}
-                className="w-[150px]"
-                disabled={readOnly || childRecord.current > 0}
-                openOnFocus={true}
-              />
-            </div>
+
             <div className="md:col-span-1">
               <TextInput
                 name="Contact Person"
@@ -937,109 +1055,49 @@ const SalesDeliveryForm = ({
             Delivery Details
           </h2>
           <div className="grid grid-cols-4  gap-2">
-            {/* <div className="">
-            <DateInputNew
-              name="Delivery Date"
-              value={deliveryDate}
-              setValue={setDeliveryDate}
-              disabled={effectiveReadOnly}
-              required={true}
-              type="date"
-            />
-          </div>
-          <div className="">
-            <TextInput
-              name="DC No"
-              value={dcNo}
-              setValue={setDcNo}
-              disabled={effectiveReadOnly}
-            />
-          </div> */}
-            <div className="md:col-span-1">
-              <DropdownInput
-                name="Receipt Basis"
-                options={receiptTypes}
-                value={deliveryType}
-                setValue={(value) => setDeliveryType(value)}
+
+            <div className="md:col-span-2">
+              <DropdownWithModal
+                name="Delivery To"
+                options={dropDownListObject(
+                  id
+                    ? customerList?.data?.filter((item) => item?.isCustomer)
+                    : customerList?.data?.filter(
+                      (item) => item?.active && item?.isCustomer,
+                    ),
+                  "name",
+                  "id",
+                )}
+                value={deliveryTo}
+                setValue={setDeliveryTo}
                 required={true}
                 readOnly={readOnly}
-                disabled={childRecord.current > 0 || readOnly}
-                ref={customerRef}
+                className="w-[150px]"
+                addNewLabel="+ Add New Customer"
+                childComponent={PartyMaster}
+                addNewModalWidth="w-[90%] h-[95%]"
+                disabled={readOnly || childRecord.current > 0}
+                openOnFocus={true}
               />
             </div>
-            {/* <div className="w-28">
-              <DropdownInput
-                name="Conversion"
-                options={conversionTypes}
-                value={conversionType}
-                setValue={(value) => setConversionType(value)}
-                required={true}
-                readOnly={readOnly}
-                disabled={childRecord.current > 0 || readOnly}
-              />
-            </div> */}
-            {isCumInvoice && (
-              <>
-                <div className="md:col-span-1">
-                  <DropdownWithModal
-                    name="Pay Term"
-                    options={dropDownListObject(
-                      id
-                        ? payTermList?.data
-                        : payTermList?.data?.filter((item) => item?.active),
-                      "name",
-                      "id",
-                    )}
-                    value={payTermId}
-                    setValue={setPayTermId}
-                    required={true}
-                    readOnly={readOnly}
-                    className="w-full max-w-none"
-                    dropdownMinWidth={240}
-                    addNewLabel="+ Add New Pay Term"
-                    childComponent={PayTermMaster}
-                    addNewModalWidth="w-[40%] h-[66%]"
-                  />
-                </div>
-                <div className="md:col-span-1">
-                  <DropdownInput
-                    name="Tax Type"
-                    options={dropDownListObject(
-                      taxTypeList ? taxTypeList?.data : [],
-                      "name",
-                      "id",
-                    )}
-                    value={taxTemplateId}
-                    setValue={setTaxTemplateId}
-                    required={!isCustomerExport}
-                    readOnly={effectiveReadOnly}
-                  />
-                </div>
-                {isCustomerExport && (
-                  <div className="md:col-span-1">
-                    <DropdownWithModal
-                      name="Currency"
-                      options={dropDownListObject(
-                        id
-                          ? currencyList?.data
-                          : currencyList?.data?.filter((item) => item?.active),
-                        "name",
-                        "id",
-                      )}
-                      value={currencyId}
-                      setValue={setCurrencyId}
-                      required={true}
-                      readOnly={readOnly}
-                      className={`w-full max-w-none`}
-                      dropdownMinWidth={240}
-                      addNewLabel="+ Add New Currency"
-                      childComponent={CurrencyMaster}
-                      addNewModalWidth="w-[40%] h-[66%]"
-                    />
-                  </div>
-                )}
-              </>
-            )}
+            <TextInput
+              name="GST No"
+              value={findFromList(
+                deliveryTo,
+                customerList?.data,
+                "gstNo",
+              )}
+              disabled={true}
+            />
+            <TextInput
+              name="Phone"
+              value={findFromList(
+                deliveryTo,
+                customerList?.data,
+                "contactNumber",
+              )}
+              disabled={true}
+            />
 
           </div>
         </div>
