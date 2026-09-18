@@ -16,6 +16,8 @@ import { useGetBranchByIdQuery } from '../../../redux/services/BranchMasterServi
 import { FaPlus } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { useGetFinYearByIdQuery } from '../../../redux/services/FinYearMasterService';
+import { DropdownWithModal } from '../../../Inputs/Reuseable';
+import { dropDownListObject } from '../../../Utils/contructObject';
 
 
 const Ledger = () => {
@@ -28,13 +30,14 @@ const Ledger = () => {
     const [printModalOpen, setPrintModalOpen] = useState(false);
     const { data } = useGetPartyQuery({ params: { isPartyLedgerReport: true, partyId, startDate, endDate } }, { skip: !partyId || !startDate || !endDate })
     const { token, ...params } = getCommonParams();
+    const { data: customerList } = useGetPartyQuery({ params: { ...params, isAddessCombined: true } });
 
 
-    const { branchId , finYearId } = getCommonParams()
+    const { branchId, finYearId } = getCommonParams()
     const { data: partyList } = useGetPartyQuery({ params: { ...params } });
 
     const { data: branchData } = useGetBranchByIdQuery(branchId, { skip: !branchId });
-        const { data: finYearData } = useGetFinYearByIdQuery(finYearId, { skip: !finYearId });
+    const { data: finYearData } = useGetFinYearByIdQuery(finYearId, { skip: !finYearId });
 
 
     console.log(finYearData, "finYearData")
@@ -46,7 +49,7 @@ const Ledger = () => {
         const currentTabPreviewId = openTabs.tabs.find(i => i.name === "CUSTOMER LEDGER")?.previewId
         const currentTabPreviewDate = openTabs.tabs.find(i => i.name === "CUSTOMER LEDGER")?.date
 
-        console.log(openTabs.tabs.find(i => i.name === "CUSTOMER LEDGER"), "currentTabPreviewDate",currentTabPreviewId)
+        console.log(openTabs.tabs.find(i => i.name === "CUSTOMER LEDGER"), "currentTabPreviewDate", currentTabPreviewId)
         if (!currentTabPreviewId) return
         setPartyId(currentTabPreviewId);
         setStartDate(moment(finYearData?.data?.from).format("YYYY-MM-DD"))
@@ -94,11 +97,32 @@ const Ledger = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 bg-gray-200 p-2 rounded">
                         {/* Customer */}
                         <div className="sm:col-span-2">
-                            <PartyDropdownSearchCus
+                            {/* <PartyDropdownSearchCus
                                 name="Customer"
                                 selected={partyId}
                                 setSelected={setPartyId}
                                 required={true}
+                            /> */}
+                            <DropdownWithModal
+                                name="Customer"
+                                options={dropDownListObject(
+                                    customerList?.data?.filter(
+                                        (item) => item?.active && item?.isCustomer,
+                                    ),
+                                    "name",
+                                    "id",
+                                )}
+                                value={partyId}
+                                setValue={setPartyId}
+                                required={true}
+                                // readOnly={readOnly}
+                                className={`w-full`}
+                                addNewLabel="+ Add New Customer"
+                                // childComponent={PartyMaster}
+                                addNewModalWidth="w-[90%] h-[95%]"
+                            // disabled={childRecord.current > 0 || readOnly}
+                            // ref={customerRef}
+                            // openOnFocus={true}
                             />
                         </div>
 

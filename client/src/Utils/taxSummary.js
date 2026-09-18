@@ -22,6 +22,7 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
   };
 
   console.log(qtyField, "qtyFieldqtyField")
+  console.log(result?.slabBreakup, "slabBreakup")
 
 
   const slabMap = {};

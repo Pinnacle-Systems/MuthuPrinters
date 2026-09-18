@@ -130,6 +130,7 @@ async function get(req) {
     searchOrderType,
     finYearId,
     searchCustomer,
+    pendingSalesOrders
   } = req.query;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -207,6 +208,13 @@ async function get(req) {
       pageNumber * parseInt(dataPerPage),
     );
   }
+
+
+  if (pendingSalesOrders) {
+
+  }
+
+
 
   return {
     statusCode: 0,
@@ -597,7 +605,18 @@ async function create(body) {
 
 
   });
-  return { statusCode: 0, data };
+  let saleOrderUpdation
+  if (orderId) {
+    saleOrderUpdation = await prisma.OrderEntry.update({
+      where: { id: parseInt(orderId) },
+      data: {
+        isSaleOrderTaken: true,
+      },
+    });
+  }
+
+
+  return { statusCode: 0, data, saleOrderUpdation };
 }
 
 async function update(id, body, files) {
@@ -736,24 +755,47 @@ async function update(id, body, files) {
 }
 
 async function remove(id) {
-  const orderEntryId = parseInt(id);
+  const salesOrderId = parseInt(id, 10);
 
-  const dataFound = await prisma.SalesOrder.findUnique({
-    where: { id: orderEntryId },
-    include: {
-      attachments: { select: { filePath: true } },
-      SalesOrderItems: { select: { id: true } },
-    },
-  });
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const dataFound = await tx.SalesOrder.findUnique({
+        where: {
+          id: salesOrderId,
+        },
+      });
 
-  const data = await prisma.SalesOrder.delete({
-    where: {
-      id: orderEntryId,
-    },
-  });
+      if (!dataFound) {
+        throw new Error("Sales Order not found");
+      }
 
-  return { statusCode: 0, data };
+      const data = await tx.SalesOrder.delete({
+        where: {
+          id: salesOrderId,
+        },
+      });
+
+      if (dataFound.orderId) {
+        await tx.OrderEntry.update({
+          where: {
+            id: parseInt(dataFound.orderId, 10),
+          },
+          data: {
+            isSaleOrderTaken: false,
+          },
+        });
+      }
+
+      return data;
+    });
+
+    return {
+      statusCode: 0,
+      data: result,
+    };
+  } catch (error) {
+    throw error;
+  }
 }
-
 
 export { get, getOne, create, update, remove, getRefList, geOrderItemsList };

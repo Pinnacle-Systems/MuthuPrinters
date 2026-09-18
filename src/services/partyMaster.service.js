@@ -105,9 +105,8 @@ async function get(req) {
       ?.filter((i) => i.isCustomer)
       .map((i) => ({
         ...i,
-        name: `${i.name}${
-          i?.BranchType?.name ? ` / ${i.BranchType.name}` : ""
-        }${i?.City?.name ? ` / ${i.City.name}` : ""}`,
+        name: `${i.name}${i?.BranchType?.name ? ` / ${i.BranchType.name}` : ""
+          }${i?.City?.name ? ` / ${i.City.name}` : ""}`,
       }));
   }
   return {
@@ -468,14 +467,14 @@ async function create(body) {
       attachments:
         JSON.parse(attachments)?.length > 0
           ? {
-              createMany: {
-                data: JSON.parse(attachments).map((sub) => ({
-                  date: sub?.date ? new Date(sub?.date) : undefined,
-                  filePath: sub?.filePath ? sub?.filePath : undefined,
-                  name: sub?.name ? sub?.name : undefined,
-                })),
-              },
-            }
+            createMany: {
+              data: JSON.parse(attachments).map((sub) => ({
+                date: sub?.date ? new Date(sub?.date) : undefined,
+                filePath: sub?.filePath ? sub?.filePath : undefined,
+                name: sub?.name ? sub?.name : undefined,
+              })),
+            },
+          }
           : undefined,
     },
   });

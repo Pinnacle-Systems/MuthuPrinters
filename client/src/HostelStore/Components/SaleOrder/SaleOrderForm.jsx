@@ -173,7 +173,7 @@ const SaleOrderForm = ({
     isLoading: isSingleLoading,
   } = useGetSalesOrderByIdQuery(id, { params, skip: !id, });
 
-  const { data: orderData, isFetching, isLoading } = useGetOrderEntryQuery({ params: { branchId, }, });
+  const { data: orderData, isFetching, isLoading } = useGetOrderEntryQuery({ params: { branchId, pendingSaleOrder: true }, });
   const {
     data: singleorderData,
     isFetching: isSingleorderFetching,
@@ -1558,6 +1558,7 @@ const SaleOrderForm = ({
                         childRecord ||
                         readOnly
                       }
+
                     />
                   </div>
                   <div className="col-span-1">
@@ -1572,12 +1573,11 @@ const SaleOrderForm = ({
                       )}
                       value={termsId}
                       setValue={setTermsId}
-                      required={false}
+                      required={true}
                       readOnly={readOnly}
                       className={`w-full max-w-none`}
                       dropdownMinWidth={240}
                       addNewLabel="+ Add New Terms & Condtions"
-                      // childComponent={TermsAndCondtionMaster}
                       addNewModalWidth="w-[40%] h-[66%]"
                       disabled={
                         childRecord ||
@@ -1626,16 +1626,7 @@ const SaleOrderForm = ({
                       />
                     </div>
                   )}
-                  {/* <div className="w-[105px]">
-                    <DateInputNew
-                      name="Valid To"
-                      value={validityTo}
-                      setValue={setValidityTo}
-                      disabled={effectiveReadOnly}
-                      required={true}
-                      type="date"
-                    />
-                  </div> */}
+
                 </div>
               </div>
 
@@ -1804,7 +1795,7 @@ const SaleOrderForm = ({
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center justify-between w-full max-w-[210px]">
                             <div className="flex justify-between w-[130px] text-slate-800">
-                              <span>Carriage Charges</span>
+                              <span>Carriage and Air Freight</span>
                               <span>:</span>
                             </div>
                             <span className="font-medium text-slate-800 text-right w-[65px]">

@@ -326,14 +326,16 @@ const SaleOrderItems = ({
                     <div
                       key={styleRow.rowId || styleIdx}
                       onClick={() => setActiveStyleIndex(styleIdx)}
-                      className={`p-3 rounded border cursor-pointer transition-colors flex flex-col gap-2 ${activeStyleIndex === styleIdx
-                        ? "bg-indigo-50 border-indigo-300 shadow-sm"
-                        : "bg-white border-gray-200 hover:bg-gray-100"
-                        }`}
+                      className={`p-3 rounded border cursor-pointer transition-colors flex flex-col gap-2 
+                        ${activeStyleIndex === styleIdx
+                          ? "bg-indigo-50 border-indigo-300 shadow-sm"
+                          : "bg-white border-gray-200 hover:bg-gray-100"
+                        }
+                        `}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-gray-600 text-xs"></span>
-                        {!readOnly && orderType !== "AGAINSTPI" && (
+                        <span className="font-semibold text-gray-600 text-xs">Style {styleIdx + 1}</span>
+                        {/* {!readOnly && orderType !== "AGAINSTPI" && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -348,7 +350,7 @@ const SaleOrderItems = ({
                           >
                             <FaTrash size={10} />
                           </button>
-                        )}
+                        )} */}
                       </div>
                       <div className="w-full" onClick={(e) => e.stopPropagation()}>
                         <FxSelectWithAdd
@@ -362,12 +364,13 @@ const SaleOrderItems = ({
                           addNew={true}
                           childComponent={StyleMaster}
                           addNewModalWidth="w-[50%] h-[57%]"
+                          disabled
                         />
                       </div>
                     </div>
                   ))}
 
-                  {!readOnly && orderType !== "AGAINSTPI" && (
+                  {/* {!readOnly && orderType !== "AGAINSTPI" && (
                     <button
                       onClick={() => {
                         addStyleRow(activeModalRowIndex);
@@ -378,7 +381,7 @@ const SaleOrderItems = ({
                     >
                       <Plus size={14} /> Add Style
                     </button>
-                  )}
+                  )} */}
                 </div>
               </div>
 
@@ -414,6 +417,7 @@ const SaleOrderItems = ({
                                 addNew={true}
                                 childComponent={Size}
                                 addNewModalWidth="w-[38%] h-[50%]"
+                                disabled
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1">
@@ -425,7 +429,7 @@ const SaleOrderItems = ({
                                 value={sizeRow.qty}
                                 onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "qty", e.target.value)}
                                 onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "qty", parseFloat(e.target.value || 0))}
-                                disabled={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                                disabled
                               />
                             </td>
                             {/* <td className="border border-gray-300 px-2 py-1 text-center">
@@ -521,9 +525,9 @@ const SaleOrderItems = ({
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
                 Breakup
               </th>
-              <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
+              {/* <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
                 Actions
-              </th>
+              </th> */}
             </tr>
           </thead>
 
@@ -535,11 +539,12 @@ const SaleOrderItems = ({
                 <tr
                   key={row.rowId || index}
                   className={`${rowBg} border-b border-gray-200 h-7 cursor-pointer`}
-                  onContextMenu={(e) => {
-                    if (!readOnly && orderType !== "AGAINSTPI") {
-                      handleRightClick(e, index);
-                    }
-                  }}
+                // onContextMenu={(e) => {
+                //   if (!readOnly && orderType !== "AGAINSTPI") {
+                //     handleRightClick(e, index);
+                //   }
+                // }}
+
                 >
                   <td className="w-10 border border-gray-300 text-[11px] text-center items-center pt-2">
                     {index + 1}
@@ -561,6 +566,7 @@ const SaleOrderItems = ({
                       childComponent={ItemGroup}
                       addNewModalWidth="w-[38%] h-[50%]"
                       nextRef={requirementRef}
+                      disabled
                     />
                   </td>
                   <td className="border border-gray-300 text-[11px] items-center pt-2">
@@ -582,6 +588,7 @@ const SaleOrderItems = ({
                       childComponent={ItemSubGroupMaster}
                       addNewModalWidth="w-[38%] h-[50%]"
                       nextRef={requirementRef}
+                      disabled
                     />
                   </td>
                   <td className="text-[11px] border border-gray-300 text-left items-center pt-2">
@@ -605,6 +612,7 @@ const SaleOrderItems = ({
                       addNew={true}
                       childComponent={StyleItemMaster}
                       addNewModalWidth="w-[50%] h-[57%]"
+                      disabled
                     />
                   </td>
                   <td className="border border-gray-300 text-[11px] items-center pt-2 text-center">
@@ -627,6 +635,7 @@ const SaleOrderItems = ({
                       onChange={(e) => handleInputChange(e.target.value, index, "labelWidth")}
                       className="w-full text-left px-1 bg-transparent text-[11px] outline-none focus:bg-white"
                       readOnly={readOnly || orderType === "AGAINSTPI"}
+                      disabled
                     />
                   </td>
                   <td className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium">
@@ -713,7 +722,7 @@ const SaleOrderItems = ({
                   {!isCustomerExport && (
                     <td className="text-[11px] border border-gray-300 text-center items-center pt-2 font-medium">
                       <button
-                        disabled={!row.styleItemId}
+                        // disabled={!row.styleItemId}
                         className="text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
                         onClick={() => {
                           if (!taxTemplateId) {
@@ -737,11 +746,12 @@ const SaleOrderItems = ({
                       className="text-indigo-600 hover:text-indigo-800"
                       onClick={() => setActiveModalRowIndex(index)}
                       title="View Style & Size Breakup"
+
                     >
                       <FaEye size={16} className="mx-auto" />
                     </button>
                   </td>
-                  <td className="w-12 border border-gray-300 align-top pt-1 bg-gray-50 text-center">
+                  {/* <td className="w-12 border border-gray-300 align-top pt-1 bg-gray-50 text-center">
                     {!readOnly && orderType !== "AGAINSTPI" && (
                       <div className="flex items-center justify-center">
                         <button
@@ -754,7 +764,7 @@ const SaleOrderItems = ({
                         </button>
                       </div>
                     )}
-                  </td>
+                  </td> */}
                 </tr>
               );
             })}

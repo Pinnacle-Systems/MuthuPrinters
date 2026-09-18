@@ -190,6 +190,10 @@ const useInvalidateTags = () => {
       type: `bankMaster/invalidateTags`,
       payload: ["bank"],
     },
+    {
+      type: `orderEntry/invalidateTags`,
+      payload: ["orderEntry"],
+    },
   ];
 
   function dispatchInvalidate() {

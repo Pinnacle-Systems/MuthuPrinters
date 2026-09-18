@@ -145,8 +145,22 @@ async function create(body) {
                     cvv: cvv ? new Date(cvv) : null,
                     paymentType,
                     totalBillAmount: totalBillAmount ? parseInt(totalBillAmount) : undefined,
-                    totalAmount: totalAmount ? parseInt(totalAmount) : undefined
+                    totalAmount: totalAmount ? parseInt(totalAmount) : undefined,
+
                 }
+            });
+            await tx.ledger.create({
+                data: {
+                    partyId: parseInt(supplierId),
+                    creditOrDebit: "Credit",
+                    // branchId: parseInt(branchId),
+                    amount: parseFloat(paidAmount),
+                    partyBillDate: dateOnly ? new Date(dateOnly) : undefined,
+                    partyBillNo: newDocId,
+                    EntryType: "Customer_Payment",
+                    LedgerType: "Customer",
+                    paymentId: data?.id
+                },
             });
         });
 
