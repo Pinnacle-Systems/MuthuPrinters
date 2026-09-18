@@ -107,14 +107,13 @@ const ProformaInvoiceForm = ({
   const [docDate, setDocDate] = useState(moment().format("YYYY-MM-DD"));
   const [userDate, setUserDate] = useState(moment().format("YYYY-MM-DD"));
   const [customerId, setCustomerId] = useState("");
-  const [orderEntryId, setOrderEntryId] = useState("");
   const [remarks, setRemarks] = useState("");
   const [termsAndCondition, setTermsAndCondition] = useState("");
   const [termsId, setTermsId] = useState("");
   const [items, setItems] = useState(padItems([]));
   const [taxTemplateId, setTaxTemplateId] = useState("");
   const [summary, setSummary] = useState(false);
-  const [discountType, setDiscountType] = useState("Percentage");
+  const [discountType, setDiscountType] = useState("");
   const [discountValue, setDiscountValue] = useState(0);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [payTermId, setPayTermId] = useState("");
@@ -167,8 +166,9 @@ const ProformaInvoiceForm = ({
   });
   const [dispatchInvalidate] = useInvalidateTags();
 
-  const [addData] = useAddProformaInvoiceMutation();
-  const [updateData] = useUpdateProformaInvoiceMutation();
+  const [addData, { isLoading: isSaving }] = useAddProformaInvoiceMutation();
+  const [updateData, { isLoading: isUpdating }] =
+    useUpdateProformaInvoiceMutation();
   const [removeData] = useDeleteProformaInvoiceMutation();
 
   const isCustomerExport = supplierData?.data?.isCustomerExport;
@@ -195,13 +195,12 @@ const ProformaInvoiceForm = ({
           : moment().format("YYYY-MM-DD"),
       );
       setCustomerId(data.customerId);
-      setOrderEntryId(data.orderEntryId || "");
       setRemarks(data.remarks || "");
       setTermsAndCondition(data.termsAndCondition || "");
       setTermsId(data.termsId || "");
       setTaxTemplateId(data.taxTemplateId || "");
       setPayTermId(data.payTermId || "");
-      setDiscountType(data.discountType || "Percentage");
+      setDiscountType(data.discountType || "");
       setDiscountValue(data.discountValue || 0);
       setValidityTo(
         data.validityTo ? moment(data.validityTo).format("YYYY-MM-DD") : "",
@@ -256,10 +255,8 @@ const ProformaInvoiceForm = ({
               })
             : [{ sizeId: "", qty: "" }],
       }));
-      console.log(mappedItems, "mappedItems");
 
       setItems(padItems(mappedItems));
-      console.log(items, "aftermapped");
 
       const cust = data.customer || data.OrderEntry?.customer;
       if (cust) {
@@ -667,7 +664,6 @@ const ProformaInvoiceForm = ({
     setDocDate(moment().format("YYYY-MM-DD"));
     setUserDate(moment().format("YYYY-MM-DD"));
     setCustomerId("");
-    // setOrderEntryId("");
     setRemarks("");
     setTermsAndCondition("");
     setTermsId("");
@@ -936,16 +932,6 @@ const ProformaInvoiceForm = ({
               Customer Details
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-8 gap-2">
-              {/* <div className="md:col-span-1">
-                        <DropdownInput
-                            name="Order No"
-                            options={dropDownListObject(orderList?.data, "docId", "id")}
-                            value={orderEntryId}
-                            setValue={setOrderEntryId}
-                            readOnly={effectiveReadOnly}
-                            required={true}
-                        />
-                    </div> */}
               <div className="md:col-span-2">
                 <DropdownWithModal
                   name="Customer"
@@ -1343,40 +1329,44 @@ const ProformaInvoiceForm = ({
       <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
         {/* Left Buttons */}
         <div className="flex gap-2 flex-wrap">
-          {!effectiveReadOnly && (
-            <>
-              <button
-                onClick={() => handleSave("close")}
-                disabled={effectiveReadOnly}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSave("close");
-                    e.stopPropagation();
-                  }
-                }}
-                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-              >
-                <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                {id ? "Update & Close" : "Save & Close"}
-              </button>
-              <button
-                onClick={() => handleSave("new")}
-                disabled={effectiveReadOnly}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSave("new");
-                  }
-                }}
-                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-              >
-                <FiSave className="w-4 h-4 mr-2" />
-                {id ? "Update & New" : " Save & New"}
-              </button>
-            </>
-          )}
+          <button
+            onClick={() => handleSave("close")}
+            disabled={effectiveReadOnly || isSaving || isUpdating}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSave("close");
+                e.stopPropagation();
+              }
+            }}
+            className={`bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs ${
+              effectiveReadOnly || isSaving || isUpdating
+                ? "cursor-not-allowed opacity-50"
+                : "cursor-pointer"
+            }`}
+          >
+            <HiOutlineRefresh className="w-4 h-4 mr-2" />
+            {id ? "Update & Close" : "Save & Close"}
+          </button>
+          <button
+            onClick={() => handleSave("new")}
+            disabled={effectiveReadOnly || isSaving || isUpdating}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSave("new");
+              }
+            }}
+            className={`bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs ${
+              effectiveReadOnly || isSaving || isUpdating
+                ? "cursor-not-allowed opacity-50"
+                : "cursor-pointer"
+            }`}
+          >
+            <FiSave className="w-4 h-4 mr-2" />
+            {id ? "Update & New" : " Save & New"}
+          </button>
           <button
             onClick={() => {
               if (!taxTemplateId) {
