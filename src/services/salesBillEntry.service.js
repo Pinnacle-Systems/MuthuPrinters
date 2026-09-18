@@ -494,7 +494,8 @@ async function create(body) {
     salesDeliveryId,
     deliveryTaxType,
     deliveryTaxValue,
-    amount
+    amount,
+    netAmount
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
@@ -505,43 +506,42 @@ async function create(body) {
   let data;
 
   const parsedOrderItems = typeof orderItems === "string" ? JSON.parse(orderItems) : orderItems;
-  const safeOrderItems = parsedOrderItems?.length > 0
-    ? parsedOrderItems.map((item) => ({
-      styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
-      deliveryQty: item?.deliveryQty ? parseInt(item?.deliveryQty) : null,
-      sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
-      uomId: item?.uomId ? parseInt(item.uomId) : null,
-      gsmId: item?.gsmId ? parseInt(item.gsmId) : null,
-      itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
-      hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
-      trackingType: item?.trackingType,
-      itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
-      labelWidth: item?.labelWidth ?? "",
-      price: item?.price ? parseFloat(item.price) : null,
-      dozen: item?.dozen ? parseFloat(item.dozen) : null,
-      taxPercent: item?.taxPercent && !isNaN(Number(item.taxPercent)) ? parseFloat(item.taxPercent) : null,
-      discountType: item?.discountType || null,
-      discountValue: item?.discountValue && !isNaN(Number(item.discountValue)) ? parseFloat(item.discountValue) : null,
+  const safeOrderItems = parsedOrderItems?.length > 0 ? parsedOrderItems.map((item) => ({
+    styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
+    deliveryQty: item?.deliveryQty ? parseInt(item?.deliveryQty) : null,
+    sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
+    uomId: item?.uomId ? parseInt(item.uomId) : null,
+    gsmId: item?.gsmId ? parseInt(item.gsmId) : null,
+    itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+    hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
+    trackingType: item?.trackingType,
+    itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
+    labelWidth: item?.labelWidth ?? "",
+    price: item?.price ? parseFloat(item.price) : null,
+    dozen: item?.dozen ? parseFloat(item.dozen) : null,
+    taxPercent: item?.taxPercent && !isNaN(Number(item.taxPercent)) ? parseFloat(item.taxPercent) : null,
+    discountType: item?.discountType || null,
+    discountValue: item?.discountValue && !isNaN(Number(item.discountValue)) ? parseFloat(item.discountValue) : null,
 
-      SaleBillEntryStyleBreakup:
-        item?.styleBreakup?.length > 0
-          ? {
-            create: item.styleBreakup.map((st) => ({
-              styleId: st.styleId ? parseInt(st.styleId) : null,
-              SaleBillEntrySizeBreakup: st?.sizeBreakup?.length > 0
-                ? {
-                  create: st.sizeBreakup.map((s) => ({
-                    sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                    billQty: s.billQty ? parseInt(s.billQty) : null,
-                    deliveryQty: s.deliveryQty ? parseInt(s.deliveryQty) : null,
-                    SalesSizeBreakupId: s.id ? parseInt(s.id) : null,
+    SaleBillEntryStyleBreakup:
+      item?.styleBreakup?.length > 0
+        ? {
+          create: item.styleBreakup.map((st) => ({
+            styleId: st.styleId ? parseInt(st.styleId) : null,
+            SaleBillEntrySizeBreakup: st?.sizeBreakup?.length > 0
+              ? {
+                create: st.sizeBreakup.map((s) => ({
+                  sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+                  billQty: s.billQty ? parseInt(s.billQty) : null,
+                  deliveryQty: s.deliveryQty ? parseInt(s.deliveryQty) : null,
+                  SalesSizeBreakupId: s.id ? parseInt(s.id) : null,
 
-                  }))
-                } : undefined
-            })),
-          }
-          : undefined,
-    }))
+                }))
+              } : undefined
+          })),
+        }
+        : undefined,
+  }))
     : [];
 
 
@@ -565,21 +565,22 @@ async function create(body) {
         taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
         discountType: discountType || null,
         discountValue: discountValue ? parseFloat(discountValue) : null,
+
+
+        conversionType: conversionType ? conversionType : 'DOZEN',
         payTermId: payTermId ? parseInt(payTermId) : null,
+        currencyId: currencyId ? parseInt(currencyId) : null,
 
-
-        termsAndCondition,
         deliveryTaxType: deliveryTaxType ? deliveryTaxType : null,
         deliveryTaxValue: deliveryTaxValue ? parseFloat(deliveryTaxValue) : null,
 
-        currencyId: currencyId ? parseInt(currencyId) : null,
+        weightInKg: weightInKg ? parseFloat(weightInKg) : null,
         loadingId: loadingId ? parseInt(loadingId) : null,
         deliveryId: deliveryId ? parseInt(deliveryId) : null,
-        weightInKg: weightInKg ? parseFloat(weightInKg) : null,
         carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
-        conversionType: conversionType ? conversionType : 'DOZEN',
         carriageTax: carriageTax ? parseFloat(carriageTax) : null,
         bankId: bankId ? parseInt(bankId) : null,
+        netAmount: netAmount ? String(netAmount) : null,
 
         SalesBillEntryItems:
           safeOrderItems.length > 0
@@ -597,9 +598,8 @@ async function create(body) {
         LedgerType: "Customer",
         creditOrDebit: "Debit",
         partyId: customerId ? parseInt(customerId) : null,
-        amount: amount ? parseFloat(amount) : null,
+        amount: netAmount ? parseFloat(netAmount) : null,
         dcDate: docDate ? new Date(docDate) : null,
-        // createdById: parseInt(userId),
         salesBillEntryId: data?.id ? parseInt(data.id) : null,
         currencyId: currencyId ? parseInt(currencyId) : null,
 
@@ -610,22 +610,13 @@ async function create(body) {
   return { statusCode: 0, data };
 }
 
-async function update(id, body, files) {
-  const {
-    userId,
-    attachments,
-
-    orderItems,
-
-  } = await body;
 
 
 
-  const parseAttachments = JSON.parse(attachments || "[]");
-  const incomingIds = parseAttachments
-    ?.filter((i) => i.id)
-    .map((i) => parseInt(i.id));
 
+async function update(id, body) {
+
+  const { orderItems } = await body;
   const parsedItems = typeof orderItems === "string" ? JSON.parse(orderItems || "[]") : (orderItems || []);
   const incomingItemIds = parsedItems
     ?.filter((i) => i.id)
@@ -635,32 +626,24 @@ async function update(id, body, files) {
 
   let data;
 
-  const dataFound = await prisma.SalesOrder.findUnique({
+  const dataFound = await prisma.SalesBillEntry.findUnique({
     where: {
       id: parseInt(id),
     },
     include: {
-      SalesOrderItems: true,
+      SalesBillEntryItems: true,
     },
   });
-  if (!dataFound) return NoRecordFound("Sales Order");
-
-  const removedItemIds = dataFound.SalesOrderItems
-    .filter((item) => !incomingItemIds.includes(item.id))
-    .map((item) => item.id);
-
-
-
-
+  if (!dataFound) return NoRecordFound("Sales Bill Entry");
 
   await prisma.$transaction(async (tx) => {
 
-    data = await tx.SalesOrder.update({
+    data = await tx.SalesBillEntry.update({
       where: {
         id: parseInt(id),
       },
       data: {
-        SalesOrderItems: {
+        SalesBillEntryItems: {
           deleteMany: incomingItemIds.length
             ? { id: { notIn: incomingItemIds } }
             : {},

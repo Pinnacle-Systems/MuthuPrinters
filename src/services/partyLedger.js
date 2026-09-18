@@ -237,207 +237,14 @@ export async function getPartyLedgerReport(partyId, startDate, endDate) {
     const startDateFormatted = moment(startDate).format("YYYY-MM-DD");
     const endDateFormatted = moment(endDate).format("YYYY-MM-DD");
 
-    //   AND DATE(createdAt) BETWEEN '${startDateFormatted}' AND '${endDateFormatted}'
-    // ${partyId} 
 
-
-    //     const sql = `
-    // WITH opening AS (
-
-
-
-    //     SELECT
-    //     p.id AS partyId,
-    //     COALESCE(p.coa, 0)
-    //     + COALESCE(ld.totalLedger, 0)
-    //     - COALESCE(pmt.totalPaid, 0) AS openingBalance
-    // FROM Party p
-    // LEFT JOIN (
-    //     SELECT partyId, SUM(amount) AS totalLedger
-    //     FROM Ledger
-    //     WHERE DATE(createdAt) < '${startDateFormatted}'
-    //     GROUP BY partyId
-    // ) ld ON ld.partyId = p.id
-    // LEFT JOIN (
-    //     SELECT partyId, SUM(totalAmount) AS totalPaid
-    //     FROM Payment
-    //     WHERE DATE(createdAt) < '${endDateFormatted}'
-    //     GROUP BY partyId
-    // ) pmt ON pmt.partyId = p.id
-    // WHERE p.id = ${partyId} 
-    // ),
-
-    // txns AS (
-    //     -- Ledger transactions (DEBIT)
-    //     SELECT
-    //         id AS transactionId,
-    //         createdAt AS txnDate,
-    //         'INVOICE' AS txnType,
-    //         amount AS debit,
-    //         0 AS credit,
-    //         partyId
-    //     FROM Ledger
-    //     WHERE partyId = ${partyId} 
-    //       AND DATE(createdAt) BETWEEN  '${startDateFormatted}' AND  '${endDateFormatted}'
-
-    //     UNION ALL
-
-    //     -- Payment transactions (CREDIT)
-    //     SELECT
-    //         docId AS transactionId,
-    //         createdAt AS txnDate,
-    //         'PAYMENT' AS txnType,
-    //         0 AS debit,
-    //         totalAmount AS credit,
-    //         partyId
-    //     FROM Payment
-    //     WHERE partyId = ${partyId} 
-    //       AND DATE(createdAt) BETWEEN  '${startDateFormatted}' AND  '${endDateFormatted}'
-    // )
-
-    // -- 🔹 Opening Balance row (ALWAYS DEBIT)
-    // SELECT
-    //     NULL AS transactionId,
-    //     DATE_SUB('${startDateFormatted}', INTERVAL 1 DAY) AS txnDate,
-    //     'OPENING BALANCE' AS txnType,
-    //     ABS(openingBalance) AS debit,
-    //     NULL AS credit,
-    //     openingBalance AS runningBalance
-    // FROM opening
-
-    // UNION ALL
-
-    // -- 🔹 Transaction rows with running balance
-    // SELECT
-    //     t.transactionId,
-    //     t.txnDate,
-    //     t.txnType,
-    //     t.debit,
-    //     t.credit,
-    //     o.openingBalance
-    //     + SUM(t.credit - t.debit)
-    //         OVER (
-    //             ORDER BY t.txnDate, t.transactionId
-    //             ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-    //         ) AS runningBalance
-    // FROM txns t
-    // CROSS JOIN opening o
-
-    // ORDER BY
-    //     txnDate,
-    //     transactionId;
-
-
-
-
-
-
-    //     SELECT
-    //     id AS transactionId,
-    //     createdAt AS txnDate,
-    //     'INVOICE' AS txnType,
-    //     amount AS debit,
-    //     0 AS credit
-    // FROM Ledger
-    // WHERE partyId = ${partyId} 
-    //   AND createdAt >=  '${startDateFormatted}' 
-    //   AND createdAt <  DATE_ADD('${endDateFormatted}', INTERVAL 1 DAY)
-    //         `
-
-    //     const sql = `
-    // WITH opening AS (
-    //     SELECT
-    //         p.id AS partyId,
-    //         COALESCE(p.coa, 0)
-    //         + COALESCE(ld.totalLedger, 0)
-    //         - COALESCE(pmt.totalPaid, 0) AS openingBalance
-    //     FROM Party p
-    //     LEFT JOIN (
-    //         SELECT partyId, SUM(amount) AS totalLedger
-    //         FROM Ledger
-    //         WHERE createdAt <  '${startDateFormatted}' 
-    //         GROUP BY partyId
-    //     ) ld ON ld.partyId = p.id
-    //     LEFT JOIN (
-    //         SELECT partyId, SUM(totalAmount) AS totalPaid
-    //         FROM Payment
-    //         WHERE cvv <  '${startDateFormatted}' 
-    //         GROUP BY partyId
-    //     ) pmt ON pmt.partyId = p.id
-    //     WHERE p.id = ${partyId} 
-    // ),
-
-    // txns AS (
-    //     -- 🔹 INVOICE / LEDGER (DEBIT)
-
-
-
-    //           SELECT
-    //         I.docId AS transactionId,
-    //         L.createdAt AS txnDate,
-    //         'INVOICE' AS txnType,
-    //         L.amount AS debit,
-    //         0 AS credit
-    //     FROM Ledger L
-    //     LEFT JOIN deliveryinvoice I
-    //            ON I.id = L.deliveryInvoiceId
-    //     WHERE L.partyId =  ${partyId} 
-    //       AND L.createdAt >='${startDateFormatted}' 
-    //       AND L.createdAt < DATE_ADD('${endDateFormatted}', INTERVAL 1 DAY)
-
-    //     UNION ALL
-
-    //     -- 🔹 PAYMENT (CREDIT)
-    //     SELECT
-    //         docId AS transactionId,
-    //         cvv AS txnDate,
-    //         'PAYMENT' AS txnType,
-    //         0 AS debit,
-    //         totalAmount AS credit
-    //     FROM Payment
-    //     WHERE partyId = ${partyId} 
-    //       AND cvv >=  '${startDateFormatted}' 
-    //       AND cvv <  DATE_ADD('${endDateFormatted}', INTERVAL 1 DAY)
-    // )
-
-    // -- 🔹 OPENING BALANCE ROW
-    // SELECT
-    //     NULL AS transactionId,
-    //     DATE_SUB('${startDateFormatted}', INTERVAL 1 DAY) AS txnDate,
-    //     'OPENING BALANCE' AS txnType,
-    //     CASE WHEN openingBalance > 0 THEN openingBalance ELSE 0 END AS debit,
-    //     CASE WHEN openingBalance < 0 THEN ABS(openingBalance) ELSE 0 END AS credit,
-    //     openingBalance AS runningBalance
-    // FROM opening
-
-    // UNION ALL
-
-    // -- 🔹 TRANSACTIONS WITH RUNNING BALANCE
-    // SELECT
-    //     t.transactionId,
-    //     t.txnDate,
-    //     t.txnType,
-    //     t.debit,
-    //     t.credit,
-    //     o.openingBalance
-    //     + SUM(t.debit - t.credit)
-    //         OVER (
-    //             ORDER BY t.txnDate, t.transactionId
-    //             ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-    //         ) AS runningBalance
-    // FROM txns t
-    // CROSS JOIN opening o
-
-    // ORDER BY txnDate, transactionId
-
-    // `
     const data = await prisma.$queryRaw`
         WITH opening AS (
             SELECT
                 p.id AS "partyId",
                 COALESCE(p."coa", 0) + COALESCE(opl."openingBalanceAmount", 0)
                 + COALESCE(ld."totalLedger", 0)
-                - COALESCE(pmt."totalPaid", 0) AS "openingBalance"
+                - COALESCE(ld."totalPaid", 0) AS "openingBalance"
             FROM "Party" p
             LEFT JOIN (
                 SELECT "partyId", SUM("amount") AS "openingBalanceAmount"
@@ -446,45 +253,33 @@ export async function getPartyLedgerReport(partyId, startDate, endDate) {
                 GROUP BY "partyId"
             ) opl ON opl."partyId" = p.id
             LEFT JOIN (
-                SELECT "partyId", SUM("amount") AS "totalLedger"
+                SELECT 
+                    "partyId", 
+                    SUM(CASE WHEN "creditOrDebit" = 'Debit' THEN "amount" ELSE 0 END) AS "totalLedger",
+                    SUM(CASE WHEN "creditOrDebit" = 'Credit' THEN "amount" ELSE 0 END) AS "totalPaid"
                 FROM "Ledger"
                 WHERE "createdAt" < ${startDateFormatted}
                 GROUP BY "partyId"
             ) ld ON ld."partyId" = p.id
-            LEFT JOIN (
-                SELECT "partyId", SUM("totalAmount") AS "totalPaid"
-                FROM "Payment"
-                WHERE "cvv" < ${startDateFormatted}
-                GROUP BY "partyId"
-            ) pmt ON pmt."partyId" = p.id
             WHERE p.id = ${partyId}
         ),
         txns AS (
             SELECT
-                I."docId" AS "transactionId",
+                COALESCE(I."docId", P."docId") AS "transactionId",
                 L."createdAt" AS "txnDate",
-                'INVOICE' AS "txnType",
-                L."amount" AS "debit",
-                0 AS "credit"
+                CASE 
+                    WHEN L."creditOrDebit" = 'Debit' THEN 'INVOICE'
+                    WHEN L."creditOrDebit" = 'Credit' THEN 'PAYMENT'
+                    ELSE 'OTHER' 
+                END AS "txnType",
+                CASE WHEN L."creditOrDebit" = 'Debit' THEN L."amount" ELSE 0 END AS "debit",
+                CASE WHEN L."creditOrDebit" = 'Credit' THEN L."amount" ELSE 0 END AS "credit"
             FROM "Ledger" L
-            LEFT JOIN "DeliveryInvoice" I
-                ON I.id = L."deliveryInvoiceId"
+            LEFT JOIN "DeliveryInvoice" I ON I.id = L."deliveryInvoiceId"
+            LEFT JOIN "Payment" P ON P.id = L."paymentId"
             WHERE L."partyId" = ${partyId}
               AND L."createdAt" >= ${startDateFormatted}
               AND L."createdAt" < (${endDateFormatted}::date + INTERVAL '1 day')
-
-            UNION ALL
-
-            SELECT
-                "docId" AS "transactionId",
-                "cvv" AS "txnDate",
-                'PAYMENT' AS "txnType",
-                0 AS "debit",
-                "totalAmount" AS "credit"
-            FROM "Payment"
-            WHERE "partyId" = ${partyId}
-              AND "cvv" >= ${startDateFormatted}
-              AND "cvv" < (${endDateFormatted}::date + INTERVAL '1 day')
         )
         SELECT
             NULL AS "transactionId",
@@ -530,113 +325,7 @@ export async function getPartyOverAllReport(searchPartyName, date) {
     const searchPattern = `%${searchPartyName}%`;
 
 
-    //     const sql = `
-    // SELECT
-    //     p.id,
-    //     p.name,
 
-    //     -- Opening balance
-    //     COALESCE(p.coa, 0) AS openingBalance,
-
-    //     -- Ledger amount (all previous + selected date)
-    //     COALESCE(l.ledgerAmount, 0) AS ledgerAmount,
-
-    //     -- Paid amount (all previous + selected date)
-    //     COALESCE(pay.paidAmount, 0) AS paidAmount,
-
-    //     -- Outstanding = Opening + Ledger - Payment
-    //     (
-    //         COALESCE(p.coa, 0)
-    //         + COALESCE(l.ledgerAmount, 0)
-    //         - COALESCE(pay.paidAmount, 0)
-    //     ) AS outstandingAmount
-
-    // FROM party p
-
-    // -- 🔹 Ledger (all invoices till selected date)
-    // LEFT JOIN (
-    //     SELECT
-    //         partyId,
-    //         SUM(amount) AS ledgerAmount
-    //     FROM Ledger
-    //     WHERE creditOrDebit = 'Credit'
-    //       AND createdAt < DATE_ADD('${DateFormatted}', INTERVAL 1 DAY)
-    //     GROUP BY partyId
-    // ) l ON p.id = l.partyId
-
-    // -- 🔹 Payment (all payments till selected date)
-    // LEFT JOIN (
-    //     SELECT
-    //         partyId,
-    //         SUM(totalAmount) AS paidAmount
-    //     FROM Payment
-    //     WHERE cvv < DATE_ADD('${DateFormatted}', INTERVAL 1 DAY)
-    //     GROUP BY partyId
-    // ) pay ON p.id = pay.partyId
-
-    // WHERE p.name LIKE '%${searchPartyName}%'
-    // ORDER BY p.name;
-
-    // `
-
-    //     const sql = `
-    // SELECT
-    //     p.id,
-
-    //     TRIM(
-    //         CONCAT(
-    //             p.name,
-    //             IF(bt.name IS NOT NULL, CONCAT(' / ', bt.name), ''),
-    //             IF(c.name IS NOT NULL, CONCAT(' / ', c.name), '')
-    //         )
-    //     ) AS name,
-
-    //     COALESCE(p.coa, 0) AS openingBalance,
-
-    //     COALESCE(l.ledgerAmount, 0) AS ledgerAmount,
-
-    //     COALESCE(pay.paidAmount, 0) AS paidAmount,
-
-    //     (
-    //         COALESCE(p.coa, 0)
-    //         + COALESCE(l.ledgerAmount, 0)
-    //         - COALESCE(pay.paidAmount, 0)
-    //     ) AS outstandingAmount
-
-    // FROM party p
-
-    // -- 🔹 Branch Type
-    // LEFT JOIN BranchType bt ON bt.id = p.branchTypeId
-
-    // -- 🔹 City
-    // LEFT JOIN City c ON c.id = p.cityId
-
-    // -- 🔹 Ledger
-    // LEFT JOIN (
-    //     SELECT
-    //         partyId,
-    //         SUM(amount) AS ledgerAmount
-    //     FROM Ledger
-    //     WHERE creditOrDebit = 'Credit'
-    //       AND createdAt < DATE_ADD('${DateFormatted}', INTERVAL 1 DAY)
-    //     GROUP BY partyId
-    // ) l ON p.id = l.partyId
-
-    // -- 🔹 Payment
-    // LEFT JOIN (
-    //     SELECT
-    //         partyId,
-    //         SUM(totalAmount) AS paidAmount
-    //     FROM Payment
-    //     WHERE cvv <  DATE_ADD('${DateFormatted}', INTERVAL 1 DAY)
-    //     GROUP BY partyId
-    // ) pay ON p.id = pay.partyId
-
-    // WHERE p.name LIKE '%${searchPartyName}%'
-    // ORDER BY name;
-
-
-    // `
     return await prisma.$queryRaw`
         SELECT
             p.id,
@@ -650,11 +339,11 @@ export async function getPartyOverAllReport(searchPartyName, date) {
             COALESCE(p."coa", 0) AS "openingBalance",
             COALESCE(opl."openingBalanceAmount", 0) AS "openingBalanceAmount",
             COALESCE(l."ledgerAmount", 0) AS "ledgerAmount",
-            COALESCE(pay."paidAmount", 0) AS "paidAmount",
+            COALESCE(l."paidAmount", 0) AS "paidAmount",
             (
                 COALESCE(p."coa", 0) + COALESCE(opl."openingBalanceAmount", 0)
                 + COALESCE(l."ledgerAmount", 0)
-                - COALESCE(pay."paidAmount", 0) 
+                - COALESCE(l."paidAmount", 0) 
             ) AS "outstandingAmount"
         FROM "Party" p
         LEFT JOIN "BranchType" bt ON bt.id = p."branchTypeId"
@@ -670,21 +359,14 @@ export async function getPartyOverAllReport(searchPartyName, date) {
         LEFT JOIN (
             SELECT
                 "partyId",
-                SUM("amount") AS "ledgerAmount"
+                SUM(CASE WHEN "creditOrDebit" = 'Debit' THEN "amount" ELSE 0 END) AS "ledgerAmount",
+                SUM(CASE WHEN "creditOrDebit" = 'Credit' THEN "amount" ELSE 0 END) AS "paidAmount"
             FROM "Ledger"
-            WHERE "creditOrDebit" = 'Credit'
-              AND "createdAt" < (${DateFormatted}::date + INTERVAL '1 day')
+            WHERE "createdAt" < (${DateFormatted}::date + INTERVAL '1 day')
             GROUP BY "partyId"
         ) l ON p.id = l."partyId"
-        LEFT JOIN (
-            SELECT
-                "partyId",
-                SUM("totalAmount") AS "paidAmount"
-            FROM "Payment"
-            WHERE "cvv" < (${DateFormatted}::date + INTERVAL '1 day')
-            GROUP BY "partyId"
-        ) pay ON p.id = pay."partyId"
         WHERE p."name" LIKE ${searchPattern}
-        ORDER BY name;
+        ORDER BY name
+        ;
     `
 }

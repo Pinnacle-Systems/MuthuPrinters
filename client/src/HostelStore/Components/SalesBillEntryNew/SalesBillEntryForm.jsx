@@ -125,6 +125,7 @@ const SalesBillEntryForm = ({
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
   const [loadingId, setLoadingId] = useState("");
   const [deliveryId, setDeliveryId] = useState("");
+  const [netAmount, setNetAmount] = useState("");
 
 
   const effectiveReadOnly = readOnly || childRecord.current > 0;
@@ -196,6 +197,7 @@ const SalesBillEntryForm = ({
       setSalesDeliveryId(data?.salesDeliveryId ? data?.salesDeliveryId : "");
       setDeliveryId(data?.deliveryId ? data?.deliveryId : "");
       setLoadingId(data?.loadingId ? data?.loadingId : "");
+      setNetAmount(data?.netAmount ? data?.netAmount : 0)
     },
     [id],
   );
@@ -339,7 +341,8 @@ const SalesBillEntryForm = ({
     loadingId,
     carriageFinalAmt,
     deliveryId,
-    carriageTax
+    carriageTax,
+    netAmount
 
   };
 
@@ -508,7 +511,29 @@ const SalesBillEntryForm = ({
       }
     }
 
+    const expectedNetAmount =
+      (!isCustomerExport
+        ? enrichedData.net
+        : (enrichedData.items?.reduce(
+          (sum, item) => sum + (parseFloat(item.amount) || 0),
+          0,
+        ) || 0) -
+        (enrichedData.itemDiscount + enrichedData.overallDiscount > 0
+          ? enrichedData.itemDiscount + enrichedData.overallDiscount
+          : 0)) +
+      (parseFloat(carriageFinalAmt) || 0)
+      ;
 
+
+    if (parseFloat(netAmount) !== parseFloat(expectedNetAmount)) {
+      Swal.fire({
+        title: "Warning",
+        text: "Net Amount is incorrect. Please verify the Net Amount before saving.",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
 
     try {
       let savedId = id;
@@ -811,6 +836,12 @@ const SalesBillEntryForm = ({
                 disabled={readOnly}
               />
             </div>
+            <TextInput
+              name="Net Amount"
+              value={netAmount}
+              setValue={setNetAmount}
+              readOnly={readOnly}
+            />
           </div>
         </div>
       )}

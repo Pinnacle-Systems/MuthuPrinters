@@ -125,7 +125,7 @@ const TaxDetailsFullTemplate = ({
               <select
                 autoFocus
                 ref={discountTypeRef}
-                disabled={readOnly}
+                disabled={true}
                 className="text-left w-full rounded h-8 new-data-input"
                 value={discountType}
                 onChange={(e) =>
@@ -134,6 +134,7 @@ const TaxDetailsFullTemplate = ({
                 onKeyDown={(event) =>
                   focusNextEditableField(event, "discountType")
                 }
+
               >
                 <option value={""}>Select</option>
                 {discountTypes.map((option, index) => (

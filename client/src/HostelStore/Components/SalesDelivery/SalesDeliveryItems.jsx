@@ -356,7 +356,7 @@ const SalesDeliveryItems = ({
                     <div
                       key={styleRow.rowId || styleIdx}
                       onClick={() => setActiveStyleIndex(styleIdx)}
-                      className={`p-3 rounded border cursor-pointer transition-colors flex flex-col gap-2 ${activeStyleIndex === styleIdx
+                      className={`p-3 rounded border cursor-pointer transition-colors flex flex-col gap-2    ${activeStyleIndex === styleIdx
                         ? "bg-indigo-50 border-indigo-300 shadow-sm"
                         : "bg-white border-gray-200 hover:bg-gray-100"
                         }`}
@@ -387,17 +387,18 @@ const SalesDeliveryItems = ({
                           options={(styleList?.data || [])
                             .filter((i) => (id ? true : i.active))
                             .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly || childRecord?.current > 0 || false}
+                          // readOnly={readOnly || childRecord?.current > 0 || false}
                           placeholder="Select Style"
                           addNew={true}
                           childComponent={StyleMaster}
                           addNewModalWidth="w-[50%] h-[57%]"
+                          readOnly={true}
                         />
                       </div>
                     </div>
                   ))}
 
-                  {!readOnly && true && (
+                  {/* {!readOnly && true && (
                     <button
                       onClick={() => {
                         addStyleRow(activeModalRowIndex);
@@ -408,7 +409,7 @@ const SalesDeliveryItems = ({
                     >
                       <Plus size={14} /> Add Style
                     </button>
-                  )}
+                  )} */}
                 </div>
               </div>
 
@@ -443,7 +444,7 @@ const SalesDeliveryItems = ({
                                 options={(sizeList?.data || [])
                                   .filter((i) => (id ? true : i.active))
                                   .map((i) => ({ label: i.name, value: i.id }))}
-                                readOnly={readOnly || childRecord?.current > 0 || false}
+                                disabled={true}
                                 placeholder="Select Size"
                                 addNew={true}
                                 childComponent={Size}
@@ -459,11 +460,11 @@ const SalesDeliveryItems = ({
                                 value={sizeRow.qty}
                                 onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "qty", e.target.value)}
                                 onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "qty", parseFloat(e.target.value || 0))}
-                                disabled={readOnly || childRecord?.current > 0 || false}
+                                disabled={true}
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1 text-right">
-                              {parseFloat(sizeRow.alreadyDeliveryQty)}
+                              {parseFloat(sizeRow.alreadyDeliveryQty || 0)}
                             </td>
                             <td className="border border-gray-300 px-2 py-1">
                               <input
@@ -474,15 +475,15 @@ const SalesDeliveryItems = ({
                                 value={sizeRow.deliveryQty}
                                 onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "deliveryQty", e.target.value)}
                                 onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "deliveryQty", parseFloat(e.target.value || 0))}
-                                disabled={readOnly || childRecord?.current > 0 || false}
+                                disabled={readOnly || childRecord?.current > 0 || !sizeRow.id}
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1 text-center">
                               {!readOnly && !childRecord?.current > 0 && true && (
                                 <div className="flex items-center justify-center gap-1">
-                                  <button onClick={() => addNestedSizeRow(activeModalRowIndex, activeStyleIndex)} className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200" title="Add size row">
+                                  {/* <button onClick={() => addNestedSizeRow(activeModalRowIndex, activeStyleIndex)} className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200" title="Add size row">
                                     <Plus size={12} />
-                                  </button>
+                                  </button> */}
                                   <button onClick={() => deleteNestedSizeRow(activeModalRowIndex, activeStyleIndex, sizeIdx)} className="p-1 bg-red-100 rounded text-red-700 hover:bg-red-200" title="Delete size row">
                                     <FaTrash size={10} />
                                   </button>
@@ -573,9 +574,9 @@ const SalesDeliveryItems = ({
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
                 Breakup
               </th>
-              <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
+              {/* <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
                 Actions
-              </th>
+              </th> */}
             </tr>
           </thead>
 
@@ -613,6 +614,7 @@ const SalesDeliveryItems = ({
                       childComponent={ItemGroup}
                       addNewModalWidth="w-[38%] h-[50%]"
                       nextRef={termsRef}
+                      disabled={!row.id}
                     />
                   </td>
                   <td className="border border-gray-300 text-[11px] items-center pt-2">
@@ -634,6 +636,8 @@ const SalesDeliveryItems = ({
                       childComponent={ItemSubGroupMaster}
                       addNewModalWidth="w-[38%] h-[50%]"
                       nextRef={termsRef}
+                      disabled={!row.id}
+
                     />
                   </td>
                   <td className="text-[11px] border border-gray-300 text-left items-center pt-2">
@@ -657,6 +661,8 @@ const SalesDeliveryItems = ({
                       addNew={true}
                       childComponent={StyleItemMaster}
                       addNewModalWidth="w-[50%] h-[57%]"
+                      disabled={!row.id}
+
                     />
                   </td>
                   <td className="border border-gray-300 text-[11px] items-center pt-2 text-center">
@@ -682,6 +688,8 @@ const SalesDeliveryItems = ({
                       onChange={(e) => handleInputChange(e.target.value, index, "labelWidth")}
                       className="w-full text-left px-1 bg-transparent text-[11px] outline-none focus:bg-white"
                       readOnly={readOnly || false}
+                      disabled={!row.id}
+
                     />
                   </td>
                   <td className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium">
@@ -741,6 +749,8 @@ const SalesDeliveryItems = ({
                         e.target.select();
                         setFocusedField(`price-${index}`);
                       }}
+                      disabled={!row.id}
+
                       onBlur={(e) => {
                         const num = parseFloat(e.target.value);
                         handleInputChange(
@@ -749,6 +759,7 @@ const SalesDeliveryItems = ({
                           "price",
                         );
                         setFocusedField(null);
+
                       }}
                     />
                   </td>
@@ -796,7 +807,7 @@ const SalesDeliveryItems = ({
                       <FaEye size={16} className="mx-auto" />
                     </button>
                   </td>
-                  <td className="w-12 border border-gray-300 align-top pt-1 bg-gray-50 text-center">
+                  {/* <td className="w-12 border border-gray-300 align-top pt-1 bg-gray-50 text-center">
                     {!readOnly && true && (
                       <div className="flex items-center justify-center">
                         <button
@@ -809,7 +820,7 @@ const SalesDeliveryItems = ({
                         </button>
                       </div>
                     )}
-                  </td>
+                  </td> */}
                 </tr>
               );
             })}

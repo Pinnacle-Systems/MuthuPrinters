@@ -327,7 +327,8 @@ async function create(body) {
     deliveryTaxValue,
     loadingId,
     deliveryId,
-    carriageTax
+    carriageTax,
+    netAmout
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -465,6 +466,7 @@ async function create(body) {
         conversionType: conversionType ? conversionType : 'DOZEN',
         carriageTax: carriageTax ? parseFloat(carriageTax) : null,
         bankId: bankId ? parseInt(bankId) : null,
+        netAmount: netAmout ? (netAmout) : null,
 
         salesDeliveryItems: {
           create: (salesDeliveryItems || []).map((item) => ({
@@ -532,7 +534,7 @@ async function create(body) {
           LedgerType: "Customer",
           creditOrDebit: "Debit",
           partyId: customerId ? parseInt(customerId) : null,
-          amount: amount ? parseFloat(amount) : null,
+          amount: netAmout ? parseFloat(netAmout) : null,
           dcDate: docDate ? new Date(docDate) : null,
           currencyId: currencyId ? parseInt(currencyId) : null,
           salesDeliveryId: data?.id ? parseInt(data.id) : null,
@@ -583,7 +585,8 @@ async function update(id, body, files) {
     deliveryTaxValue,
     deliveryId,
     loadingId,
-    carriageTax
+    carriageTax,
+    netAmout
   } = body;
 
 
@@ -735,6 +738,8 @@ async function update(id, body, files) {
         conversionType: conversionType ? conversionType : 'DOZEN',
         carriageTax: carriageTax ? parseFloat(carriageTax) : null,
         bankId: bankId ? parseInt(bankId) : null,
+        netAmount: netAmout ? (netAmout) : null,
+
         salesDeliveryItems: {
           deleteMany: incomingItemIds.length
             ? { id: { in: incomingItemIds } }
