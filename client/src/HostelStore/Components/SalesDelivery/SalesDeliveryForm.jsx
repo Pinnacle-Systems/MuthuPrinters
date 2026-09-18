@@ -203,6 +203,7 @@ const SalesDeliveryForm = ({
       setDeliveryId(data?.deliveryId ? data?.deliveryId : "");
       setLoadingId(data?.loadingId ? data?.loadingId : "");
       setSalesOrderId(data?.salesOrderId ? data?.salesOrderId : "");
+      setNetAmount(data?.netAmount ? data?.netAmount : 0)
 
     },
     [id],

@@ -738,7 +738,7 @@ async function update(id, body, files) {
         conversionType: conversionType ? conversionType : 'DOZEN',
         carriageTax: carriageTax ? parseFloat(carriageTax) : null,
         bankId: bankId ? parseInt(bankId) : null,
-        netAmout: netAmout ? String(netAmout) : null,
+        netAmount: netAmout ? (netAmout) : null,
 
         salesDeliveryItems: {
           deleteMany: incomingItemIds.length

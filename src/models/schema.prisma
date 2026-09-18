@@ -3345,7 +3345,7 @@ model SalesBillEntry {
   PayTerm                PayTerm?       @relation(fields: [payTermId], references: [id])
   payTermId              Int?
   Currency               Currency?      @relation(fields: [currencyId], references: [id])
-  currencyId             Int
+  currencyId             Int?
   deliveryCharge         Int?
   isDeliveryTaxInclusive Boolean?       @default(false)
   deliveryTaxType        String?
