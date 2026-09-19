@@ -54,6 +54,7 @@ import { useDispatch } from "react-redux";
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
 import { useGetStyleMasterQuery } from "../../../redux/services/StyleMasterService.js";
+import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 
 const EMPTY_ROW = {
   styleItemId: "",
@@ -132,6 +133,7 @@ const ProformaInvoiceForm = ({
   const [carriageTax, setCarriageTax] = useState("");
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
   const childRecord = useRef(0);
+  console.log(availableVersions, selectedQuoteVersion, "selectedQuoteVersion");
 
   const customerRef = useRef(null);
   const termsRef = useRef(null);
@@ -162,6 +164,9 @@ const ProformaInvoiceForm = ({
   const { data: itemGroupList } = useGetItemGroupMasterQuery({});
   const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({});
   const { data: styleList } = useGetStyleMasterQuery({
+    params: { companyId },
+  });
+  const { data: sizeList } = useGetSizeMasterQuery({
     params: { companyId },
   });
   const [dispatchInvalidate] = useInvalidateTags();
@@ -1263,6 +1268,46 @@ const ProformaInvoiceForm = ({
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between w-full max-w-[210px]">
                       <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Round Off</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                        {formatCurrencyAmount(
+                          enrichedData.roundOff || 0,
+                          currencyCode || isCurrencySymbol,
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                        <span>Net Amount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-bold text-indigo-700 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                        {formatCurrencyAmount(
+                          !isCustomerExport
+                            ? enrichedData.net
+                            : (enrichedData.items?.reduce(
+                                (sum, item) =>
+                                  sum + (parseFloat(item.amount) || 0),
+                                0,
+                              ) || 0) -
+                                (enrichedData.itemDiscount +
+                                  enrichedData.overallDiscount >
+                                0
+                                  ? enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount
+                                  : 0),
+                          currencyCode || isCurrencySymbol,
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
                         <span>Carriage Charges</span>
                         <span>:</span>
                       </div>
@@ -1279,22 +1324,8 @@ const ProformaInvoiceForm = ({
                     </div>
 
                     <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
-                        <span>Round Off</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-medium text-slate-800 text-right w-[65px]">
-                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                        {formatCurrencyAmount(
-                          enrichedData.roundOff || 0,
-                          currencyCode || isCurrencySymbol,
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
                       <div className="flex justify-between w-[130px] text-slate-800 font-bold">
-                        <span>Net Amount</span>
+                        <span>Grand Total</span>
                         <span>:</span>
                       </div>
                       <span className="font-bold text-indigo-700 text-right w-[65px]">
@@ -1454,7 +1485,12 @@ const ProformaInvoiceForm = ({
           <ProformaInvoicePrintFormat
             data={{
               ...singleData?.data,
-              items: items.filter((i) => i.styleItemId), // ✅ only current version's filled items
+              items: items.filter(
+                (i) =>
+                  i.styleItemId ||
+                  (i.styleBreakup && i.styleBreakup.length > 0) ||
+                  i.itemGroupId,
+              ),
               quoteVersion:
                 selectedQuoteVersion !== "Latest"
                   ? parseInt(selectedQuoteVersion.replace("V", ""))
@@ -1466,6 +1502,8 @@ const ProformaInvoiceForm = ({
             currencyList={currencyList}
             payTermList={payTermList}
             carriageFinalAmt={carriageFinalAmt}
+            styleItemList={styleList}
+            sizeList={sizeList}
           />
         </PDFViewer>
       </Modal>
