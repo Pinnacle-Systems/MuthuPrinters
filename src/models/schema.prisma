@@ -308,21 +308,24 @@ model Employee {
 }
 
 model FinYear {
-  id                  Int                 @id @default(autoincrement())
-  from                DateTime
-  to                  DateTime
-  Company             Company?            @relation(fields: [companyId], references: [id])
-  companyId           Int?
-  active              Boolean             @default(true)
-  DeliveryChallan     DeliveryChallan[]
-  DeliveryInvoice     DeliveryInvoice[]
-  openingBalances     OpeningBalance[]
-  purchaseBillEntries PurchaseBillEntry[]
-  proformaInvoices    ProformaInvoice[]
-  SalesOrder          SalesOrder[]
-  Packing             Packing[]
-  SalesDelivery       SalesDelivery[]
-  pos                 Po[]
+  id                    Int                    @id @default(autoincrement())
+  from                  DateTime
+  to                    DateTime
+  Company               Company?               @relation(fields: [companyId], references: [id])
+  companyId             Int?
+  active                Boolean                @default(true)
+  DeliveryChallan       DeliveryChallan[]
+  DeliveryInvoice       DeliveryInvoice[]
+  openingBalances       OpeningBalance[]
+  purchaseBillEntries   PurchaseBillEntry[]
+  proformaInvoices      ProformaInvoice[]
+  SalesOrder            SalesOrder[]
+  Packing               Packing[]
+  SalesDelivery         SalesDelivery[]
+  pos                   Po[]
+  purchaseInwards       PurchaseInward[]
+  purchaseInwardReturns PurchaseInwardReturn[]
+  purchaseCancels       PurchaseCancel[]
 }
 
 model EmployeeCategory {
@@ -1508,6 +1511,9 @@ model PurchaseInward {
   updatedById            Int?
   Branch                 Branch?                  @relation(fields: [branchId], references: [id])
   branchId               Int?
+  FinYear                FinYear?                 @relation(fields: [finYearId], references: [id])
+  finYearId              Int?
+  orderEntryId           Int?
   dcNo                   String?
   dcDate                 DateTime?                @db.Date
   supplier               Party?                   @relation(fields: [supplierId], references: [id])
@@ -1564,6 +1570,8 @@ model InwardItems {
   taxPercent       Float?
   Gsm              Gsm?            @relation(fields: [gsmId], references: [id])
   gsmId            Int?
+  orderEntryId     Int?
+  OrderEntry       OrderEntry?     @relation(fields: [orderEntryId], references: [id])
 }
 
 model Location {
@@ -1597,6 +1605,9 @@ model PurchaseInwardReturn {
   updatedById         Int?
   Branch              Branch?               @relation(fields: [branchId], references: [id])
   branchId            Int?
+  FinYear             FinYear?              @relation(fields: [finYearId], references: [id])
+  finYearId           Int?
+  orderEntryId        Int?
   dcNo                String?
   dcDate              DateTime?             @db.Date
   supplier            Party?                @relation(fields: [supplierId], references: [id])
@@ -1656,6 +1667,9 @@ model PurchaseCancel {
   updatedById         Int?
   Branch              Branch?               @relation(fields: [branchId], references: [id])
   branchId            Int?
+  FinYear             FinYear?              @relation(fields: [finYearId], references: [id])
+  finYearId           Int?
+  orderEntryId        Int?
   supplier            Party?                @relation(fields: [supplierId], references: [id])
   supplierId          Int?
   active              Boolean               @default(true)
@@ -2071,6 +2085,7 @@ model OrderEntry {
   Stock             Stock[]
   SalesBillEntry    SalesBillEntry[]
   pos               Po[]
+  inwardItems       InwardItems[]
 }
 
 model Process {

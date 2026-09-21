@@ -1282,7 +1282,15 @@ async function getPoItemById(id) {
   const data = await prisma.poItems.findUnique({
     where: { id: parseInt(id) },
     include: {
-      Po: { select: { docId: true, dueDate: true, docDate: true, id: true } },
+      Po: {
+        select: {
+          docId: true,
+          dueDate: true,
+          docDate: true,
+          id: true,
+          OrderEntry: { select: { id: true, docId: true } },
+        },
+      },
       Uom: { select: { name: true } },
       StyleItem: { select: { name: true } },
       Hsn: { select: { name: true } },
