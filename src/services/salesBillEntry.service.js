@@ -495,7 +495,8 @@ async function create(body) {
     deliveryTaxType,
     deliveryTaxValue,
     amount,
-    netAmount
+    netAmount,
+    deliveryTo
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
@@ -581,6 +582,7 @@ async function create(body) {
         carriageTax: carriageTax ? parseFloat(carriageTax) : null,
         bankId: bankId ? parseInt(bankId) : null,
         netAmount: netAmount ? String(netAmount) : null,
+        deliveryTo: deliveryTo ? parseInt(deliveryTo) : null,
 
         SalesBillEntryItems:
           safeOrderItems.length > 0
@@ -616,7 +618,45 @@ async function create(body) {
 
 async function update(id, body) {
 
-  const { orderItems } = await body;
+  const { userId,
+    branchId,
+    docDate,
+    customerId,
+    orderType,
+    deliveryDate,
+    remarks,
+    requirements,
+    finYearId,
+    orderQty,
+    attachments,
+    draftSave,
+    termsAndCondition,
+    termsId,
+    orderItems,
+    productionType,
+    proFormaId,
+    refNo,
+    isRepeatedPI,
+    validDays,
+    taxTemplateId,
+    discountType,
+    discountValue,
+    conversionType,
+    payTermId,
+    bankId,
+    currencyId,
+    weightInKg,
+    carriageCharge,
+    loadingId,
+    deliveryId,
+    carriageTax,
+    orderId,
+    salesDeliveryId,
+    deliveryTaxType,
+    deliveryTaxValue,
+    amount,
+    netAmount,
+    deliveryTo } = await body;
   const parsedItems = typeof orderItems === "string" ? JSON.parse(orderItems || "[]") : (orderItems || []);
   const incomingItemIds = parsedItems
     ?.filter((i) => i.id)
@@ -643,6 +683,11 @@ async function update(id, body) {
         id: parseInt(id),
       },
       data: {
+
+
+
+
+
         SalesBillEntryItems: {
           deleteMany: incomingItemIds.length
             ? { id: { notIn: incomingItemIds } }

@@ -208,7 +208,7 @@ const SalesDeliveryForm = ({
       setSalesOrderId(data?.salesOrderId ? data?.salesOrderId : "");
       setNetAmount(data?.netAmount ? data?.netAmount : 0)
       setDispatchThrough(data?.dispatchThrough ? data?.dispatchThrough : "")
-
+      setDeliveryTo(data?.deliveryTo ? data?.deliveryTo : "")
     },
     [id],
   );
@@ -351,7 +351,8 @@ const SalesDeliveryForm = ({
     carriageFinalAmt,
     deliveryId,
     carriageTax,
-    netAmout
+    netAmout,
+    deliveryTo
   };
 
   useEffect(() => {
