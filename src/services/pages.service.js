@@ -9,7 +9,7 @@ async function get(req) {
       active: active ? Boolean(active) : undefined,
     },
     orderBy: {
-      id: "asc",
+      order: "asc",
     },
   });
   return { statusCode: 0, data };
@@ -56,12 +56,15 @@ async function getSearch(req) {
         },
       ],
     },
+    orderBy: {
+      order: "asc",
+    },
   });
   return { statusCode: 0, data: data };
 }
 
 async function create(body) {
-  const { name, link, active, type, pageGroupId } = await body;
+  const { name, link, active, type, pageGroupId, order } = await body;
   const data = await prisma.page.create({
     data: {
       name,
@@ -69,13 +72,14 @@ async function create(body) {
       active,
       type,
       pageGroupId: parseInt(pageGroupId),
+      order,
     },
   });
   return { statusCode: 0, data };
 }
 
 async function update(id, body) {
-  const { name, link, active, type, pageGroupId } = await body;
+  const { name, link, active, type, pageGroupId, order } = await body;
   const dataFound = await prisma.page.findUnique({
     where: {
       id: parseInt(id),
@@ -92,6 +96,7 @@ async function update(id, body) {
       active,
       type,
       pageGroupId: parseInt(pageGroupId),
+      order,
     },
   });
   return { statusCode: 0, data };

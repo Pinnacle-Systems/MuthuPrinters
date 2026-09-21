@@ -405,6 +405,8 @@ const ProformaInvoicePrintFormat = ({
   currencyList,
   payTermList,
   carriageFinalAmt,
+  styleItemList,
+  sizeList,
 }) => {
   if (!data) return null;
   console.log(data, "data");
@@ -433,22 +435,90 @@ const ProformaInvoicePrintFormat = ({
   const bank = data?.Bank || {};
 
   // Filter only real items
-  const allItems = (data?.items || []).filter((i) => i.styleItemId);
-  const getSizeBreakupText = (row) => {
-    const breakup = row?.pisizeBreakups?.filter(
+  const allItems = (data?.items || []).filter(
+    (i) =>
+      i.styleItemId ||
+      (i.pistyleBreakups && i.pistyleBreakups.length > 0) ||
+      i.itemGroupId,
+  );
+  console.log(allItems, "allItems");
+
+  const renderStyleBreakups = (row) => {
+    // Merge DB state and form state
+    const styleBreakups = row?.pistyleBreakups || row?.styleBreakup || [];
+
+    // Multiple styles format
+    if (styleBreakups && styleBreakups.length > 0) {
+      return styleBreakups.map((st, idx) => {
+        // Resolve style name
+        let styleName = st?.StyleItem?.name;
+        if (!styleName && st?.styleId) {
+          const foundStyle = styleItemList?.data?.find(
+            (s) => s.id === st.styleId,
+          );
+          if (foundStyle) styleName = foundStyle.name;
+        }
+
+        const sizeBreakup = st?.pisizeBreakups || st?.sizeBreakup || [];
+        const validSizes = sizeBreakup.filter(
+          (sb) => (Number(sb.qty) || 0) > 0,
+        );
+
+        const sizesText =
+          validSizes && validSizes.length > 0
+            ? validSizes
+                .map((sb) => {
+                  let sName = sb?.Size?.name || "All";
+                  if (!sb?.Size?.name && sb?.sizeId) {
+                    const foundSize = sizeList?.data?.find(
+                      (s) => s.id === sb.sizeId,
+                    );
+                    if (foundSize) sName = foundSize.name;
+                  }
+                  return `${sName}: ${Number(sb.qty)}`;
+                })
+                .join("  |  ")
+            : "";
+
+        return (
+          <View key={idx} style={{ marginBottom: 4 }}>
+            {styleName ? (
+              <Text style={{ textAlign: "left" }}>{styleName}</Text>
+            ) : null}
+            {sizesText ? (
+              <Text style={{ fontSize: 6.5, color: "#555", marginTop: 2 }}>
+                {sizesText}
+              </Text>
+            ) : null}
+          </View>
+        );
+      });
+    }
+
+    // Old single style format
+    const breakup = (row?.pisizeBreakups || row?.sizeBreakup || [])?.filter(
       (sb) => (Number(sb.qty) || 0) > 0,
     );
-    if (!breakup || breakup.length === 0) return null;
+    const sizesText =
+      breakup && breakup.length > 0
+        ? breakup
+            .map((sb) => {
+              const sName =
+                sb?.Size?.name || sb?.sizeName || sb?.sizeId || "All";
+              return `${sName}: ${Number(sb.qty)}`;
+            })
+            .join("  |  ")
+        : "";
 
-    return breakup
-      .map((sb) => {
-        const size = sb?.Size?.name;
-        const qty = Number(sb.qty);
-
-        return `${size || "All"}: ${qty}`;
-      })
-      .filter(Boolean)
-      .join("  |  ");
+    return (
+      <View style={{ marginBottom: 4 }}>
+        {sizesText ? (
+          <Text style={{ fontSize: 6.5, color: "#555", marginTop: 2 }}>
+            {sizesText}
+          </Text>
+        ) : null}
+      </View>
+    );
   };
   // Totals
   const totalQty = allItems?.reduce((s, i) => s + (parseFloat(i?.qty) || 0), 0);
@@ -478,34 +548,43 @@ const ProformaInvoicePrintFormat = ({
   );
 
   const consolidatedTaxSlabs = (() => {
-    const gstMap = {};
+    const taxMap = {};
     const others = [];
     taxSlabBreakup.forEach((slab) => {
       const cgstMatch = slab.tax.match(/^CGST\s+([\d.]+)%$/i);
       const sgstMatch = slab.tax.match(/^SGST\s+([\d.]+)%$/i);
       const igstMatch = slab.tax.match(/^IGST\s+([\d.]+)%$/i);
 
-      if (cgstMatch || sgstMatch) {
-        const rate = parseFloat((cgstMatch || sgstMatch)[1]);
-        const totalRate = rate * 2;
-        const key = `GST @${totalRate}%`;
-        if (!gstMap[key]) {
-          gstMap[key] = { tax: key, amount: 0, order: totalRate };
+      if (cgstMatch) {
+        const rate = parseFloat(cgstMatch[1]);
+        const key = `CGST @${rate}%`;
+        if (!taxMap[key]) {
+          taxMap[key] = { tax: key, amount: 0, type: "CGST", rate };
         }
-        gstMap[key].amount += slab.amount;
+        taxMap[key].amount += slab.amount;
+      } else if (sgstMatch) {
+        const rate = parseFloat(sgstMatch[1]);
+        const key = `SGST @${rate}%`;
+        if (!taxMap[key]) {
+          taxMap[key] = { tax: key, amount: 0, type: "SGST", rate };
+        }
+        taxMap[key].amount += slab.amount;
       } else if (igstMatch) {
         const rate = parseFloat(igstMatch[1]);
         const key = `IGST @${rate}%`;
-        if (!gstMap[key]) {
-          gstMap[key] = { tax: key, amount: 0, order: rate };
+        if (!taxMap[key]) {
+          taxMap[key] = { tax: key, amount: 0, type: "IGST", rate };
         }
-        gstMap[key].amount += slab.amount;
+        taxMap[key].amount += slab.amount;
       } else {
         others.push(slab);
       }
     });
 
-    const combined = Object.values(gstMap).sort((a, b) => a.order - b.order);
+    const combined = Object.values(taxMap).sort((a, b) => {
+      if (a.rate !== b.rate) return a.rate - b.rate;
+      return a.type.localeCompare(b.type);
+    });
     return [...combined, ...others];
   })();
 
@@ -514,20 +593,32 @@ const ProformaInvoicePrintFormat = ({
     : netAmount + carriageCharge;
   const netInt = Math.floor(finalAmountForWords);
   const netDecimal = Math.round((finalAmountForWords - netInt) * 100);
-  const amountWords =
-    numberToWords
-      .toWords(netInt || 0)
+
+  const getAmountInWords = (intVal, decVal, currCode) => {
+    const intWords = numberToWords
+      .toWords(intVal || 0)
       .replace(/,/g, "")
       .replace(/-/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase()) +
-    (netDecimal > 0
-      ? " And " +
-        numberToWords
-          .toWords(netDecimal)
-          .replace(/\b\w/g, (c) => c.toUpperCase()) +
-        " Paise"
-      : "") +
-    " Only";
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+    const decWords =
+      decVal > 0
+        ? numberToWords.toWords(decVal).replace(/\b\w/g, (c) => c.toUpperCase())
+        : "Zero";
+
+    const code = (currCode || "").toUpperCase().trim();
+
+    if (code === "USD" || code === "US") {
+      return `${intWords} Dollars And ${decWords} Cents Only`;
+    } else if (code === "EUR" || code === "EU" || code === "EURO") {
+      return `${intWords} Euros And ${decWords} Cents Only`;
+    } else {
+      // Default to INR
+      return `${intWords} Rupees${decVal > 0 ? ` And ${decWords} Paise` : ""} Only`;
+    }
+  };
+
+  const amountWords = getAmountInWords(netInt, netDecimal, currencyCode);
 
   const loadingPort =
     findFromList(data?.loadingId, cityList?.data, "name") || "";
@@ -827,7 +918,6 @@ const ProformaInvoicePrintFormat = ({
                   const gross = parseFloat(row.amount) || 0;
                   const taxPct = parseFloat(row.taxPercent) || 0;
                   const netAmt = gross + (gross * taxPct) / 100;
-                  const breakupText = getSizeBreakupText(row);
 
                   return (
                     <View key={globalOffset + index} style={rowStyle}>
@@ -845,20 +935,23 @@ const ProformaInvoicePrintFormat = ({
                           },
                         ]}
                       >
-                        <Text style={{ textAlign: "left" }}>
-                          {row?.StyleItem?.name || ""}
+                        {/* Description of Goods */}
+                        <Text
+                          style={{
+                            textAlign: "left",
+                            marginBottom: 4,
+                            fontFamily: "Helvetica-Bold",
+                          }}
+                        >
+                          {row?.StyleItem?.name ||
+                            (row?.styleItemId &&
+                              styleItemList?.data?.find(
+                                (s) => s.id === row.styleItemId,
+                              )?.name) ||
+                            ""}
                         </Text>
-                        {breakupText ? (
-                          <Text
-                            style={{
-                              fontSize: 6.5,
-                              color: "#555",
-                              marginTop: 2,
-                            }}
-                          >
-                            {breakupText}
-                          </Text>
-                        ) : null}
+                        {/* Style and Size breakups */}
+                        {renderStyleBreakups(row)}
                       </View>
                       <Text
                         style={[styles.td, { flex: 1.6, textAlign: "left" }]}
@@ -921,30 +1014,6 @@ const ProformaInvoicePrintFormat = ({
                           : ""}
                       </Text>
                       {/* Tax % and Net Amount — domestic only */}
-                    </View>
-                  );
-                })}
-
-                {/* Empty filler rows */}
-                {Array.from({ length: emptyCount }).map((_, i) => {
-                  const rowStyle =
-                    (chunkRows.length + i) % 2 === 0
-                      ? styles.trOdd
-                      : styles.trEven;
-                  return (
-                    <View key={`empty-${i}`} style={rowStyle}>
-                      {cols.map(({ flex }, ci) => (
-                        <Text
-                          key={ci}
-                          style={[
-                            styles.td,
-                            { flex },
-                            ci === cols.length - 1 && { borderRight: "none" },
-                          ]}
-                        >
-                          {" "}
-                        </Text>
-                      ))}
                     </View>
                   );
                 })}
@@ -1142,21 +1211,17 @@ const ProformaInvoicePrintFormat = ({
                         </View>
                       )}
 
-                      {((!isExport && data?.discountValue > 0) || isExport) && (
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>
-                            {isExport ? "Net Amount" : "Taxable Amount"}
-                          </Text>
-                          <Text style={styles.summaryColon}>:</Text>
-                          <Text style={styles.summaryValue}>
-                            {currencySymbol}{" "}
-                            {formatCurrencyAmount(
-                              taxableTotal,
-                              currencyCode || currencySymbol,
-                            )}
-                          </Text>
-                        </View>
-                      )}
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>Taxable Amount</Text>
+                        <Text style={styles.summaryColon}>:</Text>
+                        <Text style={styles.summaryValue}>
+                          {currencySymbol}{" "}
+                          {formatCurrencyAmount(
+                            taxableTotal,
+                            currencyCode || currencySymbol,
+                          )}
+                        </Text>
+                      </View>
 
                       {!isExport &&
                         consolidatedTaxSlabs.map((slab) => (
@@ -1172,6 +1237,46 @@ const ProformaInvoicePrintFormat = ({
                             </Text>
                           </View>
                         ))}
+                      {!isExport && taxDetails?.roundOff !== 0 && (
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>Round Off</Text>
+                          <Text style={styles.summaryColon}>:</Text>
+                          <Text style={styles.summaryValue}>
+                            {taxDetails?.roundOff > 0 ? "+" : ""}
+                            {currencySymbol}{" "}
+                            {formatCurrencyAmount(
+                              Math.abs(taxDetails?.roundOff || 0),
+                              currencyCode || currencySymbol,
+                            )}
+                          </Text>
+                        </View>
+                      )}
+
+                      {!isExport && (
+                        <View style={styles.summaryRow}>
+                          <Text
+                            style={[
+                              styles.summaryLabel,
+                              { fontFamily: "Helvetica-Bold" },
+                            ]}
+                          >
+                            Net Amount
+                          </Text>
+                          <Text style={styles.summaryColon}>:</Text>
+                          <Text
+                            style={[
+                              styles.summaryValue,
+                              { fontFamily: "Helvetica-Bold" },
+                            ]}
+                          >
+                            {currencySymbol}{" "}
+                            {formatCurrencyAmount(
+                              netAmount,
+                              currencyCode || currencySymbol,
+                            )}
+                          </Text>
+                        </View>
+                      )}
 
                       {carriageCharge > 0 && (
                         <View style={styles.summaryRow}>
@@ -1183,21 +1288,6 @@ const ProformaInvoicePrintFormat = ({
                             {currencySymbol}{" "}
                             {formatCurrencyAmount(
                               carriageCharge,
-                              currencyCode || currencySymbol,
-                            )}
-                          </Text>
-                        </View>
-                      )}
-
-                      {!isExport && taxDetails?.roundOff !== 0 && (
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>Round Off</Text>
-                          <Text style={styles.summaryColon}>:</Text>
-                          <Text style={styles.summaryValue}>
-                            {taxDetails?.roundOff > 0 ? "+" : ""}
-                            {currencySymbol}{" "}
-                            {formatCurrencyAmount(
-                              Math.abs(taxDetails?.roundOff || 0),
                               currencyCode || currencySymbol,
                             )}
                           </Text>
@@ -1221,7 +1311,7 @@ const ProformaInvoicePrintFormat = ({
                             { color: "#ccc", fontFamily: "Helvetica-Bold" },
                           ]}
                         >
-                          {isExport ? "Grand Total" : "Net Amount"}
+                          Grand Total
                         </Text>
                         <Text
                           style={[
@@ -1407,17 +1497,6 @@ const ProformaInvoicePrintFormat = ({
                   if (pageNumber === totalPages) {
                     return (
                       <View>
-                        <Text
-                          style={{
-                            textAlign: "right",
-                            fontSize: 8,
-                            fontFamily: "Helvetica-Bold",
-                            color: DARK,
-                            marginBottom: 30,
-                          }}
-                        >
-                          For {branch?.branchName || "MUTHU PRINTERS"}
-                        </Text>
                         <View
                           style={{
                             flexDirection: "row",

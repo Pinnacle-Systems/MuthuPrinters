@@ -1,4 +1,4 @@
-import { Bar, Doughnut, Line } from "react-chartjs-2";
+import { Bar, Doughnut, Line, Pie } from "react-chartjs-2";
 import "./Dashboard.css";
 import {
   Chart as ChartJS,
@@ -13,7 +13,9 @@ import {
   ArcElement,
 } from "chart.js";
 import { useState, useMemo } from "react";
-import { getCommonParams } from "../../../Utils/helper";
+import { useDispatch } from "react-redux";
+import { push } from "../../../redux/features/opentabs";
+import { getCommonParams, getYearShortCode } from "../../../Utils/helper";
 import {
   FaTimes,
   FaChevronLeft,
@@ -36,8 +38,10 @@ import secureLocalStorage from "react-secure-storage";
 import { Login } from "../../pages";
 import moment from "moment";
 import { useGetDailyProductionReportQuery } from "../../../redux/services/ProductionReportApi";
-import { useGetFinYearByIdQuery } from "../../../redux/services/FinYearMasterService";
+import { useGetFinYearByIdQuery, useGetFinYearQuery } from "../../../redux/services/FinYearMasterService";
+import { useGetSalesReportQuery, useGetYearWiseSalesReportQuery } from "../../../redux/services/salesReportApi";
 export default function Form() {
+  const dispatch = useDispatch();
   ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -63,6 +67,9 @@ export default function Form() {
   const { data: finYearData } = useGetFinYearByIdQuery(finYearId, {
     skip: !finYearId,
   });
+
+  const finYear = finYearData?.data || finYearData;
+  const shortCode = (finYear?.from && finYear?.to) ? getYearShortCode(finYear.from, finYear.to) : "";
 
   const monthsList = useMemo(() => {
     let start, end;
@@ -94,6 +101,14 @@ export default function Form() {
     branchId: branchId,
   });
 
+  const { data: salesReportResponse } = useGetYearWiseSalesReportQuery(
+    {
+      branchId: branchId,
+    },
+    { skip: !branchId },
+  );
+  const salesReportData = salesReportResponse?.data || [];
+
   const reportData = reportResponse?.data || [];
   console.log(reportData, "reportData");
   const uniqueJobCardNos = [...new Set(reportData.map((d) => d.jobCardNo))];
@@ -115,14 +130,93 @@ export default function Form() {
       },
     ],
   };
+  console.log(salesReportData, "salesReportData");
+  const topLabelsPlugin = {
+    id: "topLabels",
+    afterDatasetsDraw(chart, args, pluginOptions) {
+      const { ctx, data } = chart;
+      ctx.save();
+      chart.getDatasetMeta(0).data.forEach((datapoint, index) => {
+        const value = data.datasets[0].data[index];
+        if (value !== undefined) {
+          const formattedValue = new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(value);
+          
+          ctx.font = "bold 12px sans-serif";
+          ctx.fillStyle = "black";
+          ctx.textAlign = "center";
+          ctx.fillText(formattedValue, datapoint.x, datapoint.y - 10);
+        }
+      });
+      ctx.restore();
+    },
+  };
 
-  const barData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+  const pieLabelsPlugin = {
+    id: "pieLabels",
+    afterDatasetsDraw(chart, args, pluginOptions) {
+      const { ctx, data } = chart;
+      ctx.save();
+      chart.getDatasetMeta(0).data.forEach((datapoint, index) => {
+        const value = data.datasets[0].data[index];
+        if (value !== undefined && value > 0) {
+          let formattedValue;
+          if (value >= 10000000) {
+            formattedValue = `₹ ${(value / 10000000).toFixed(2)} Cr`;
+          } else if (value >= 100000) {
+            formattedValue = `₹ ${(value / 100000).toFixed(2)} L`;
+          } else if (value >= 1000) {
+            formattedValue = `₹ ${(value / 1000).toFixed(2)} K`;
+          } else {
+            formattedValue = new Intl.NumberFormat('en-IN', {
+              style: 'currency',
+              currency: 'INR',
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }).format(value);
+          }
+          
+          const position = datapoint.tooltipPosition();
+          
+          ctx.font = "bold 16px sans-serif";
+          ctx.fillStyle = "white";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.shadowColor = "rgba(0,0,0,0.6)";
+          ctx.shadowBlur = 4;
+          
+          ctx.fillText(formattedValue, position.x, position.y);
+        }
+      });
+      ctx.restore();
+    },
+  };
+
+  const pieData = {
+    labels:
+      salesReportData.length > 0 ? salesReportData.map((d) => d.label) : [],
     datasets: [
       {
-        label: "Revenue ($)",
-        data: [12000, 19000, 3000, 5000, 2000, 3000],
-        backgroundColor: "#5CB338",
+        label: "Revenue (₹)",
+        data:
+          salesReportData.length > 0
+            ? salesReportData.map((d) => d.revenue)
+            : [],
+        backgroundColor: [
+          "#3b82f6",
+          "#ef4444", // red
+          "#f59e0b",
+          "#10b981",
+          "#8b5cf6",
+          "#06b6d4",
+          "#14b8a6",
+          "#f97316",
+        ],
+        borderWidth: 1,
       },
     ],
   };
@@ -503,20 +597,47 @@ export default function Form() {
                 </div>
               </div>
 
-              {/* Bar Chart - Monthly Revenue */}
+              {/* Bar Chart - Yearly Revenue */}
               <div className="bg-white p-4 rounded-lg shadow md:col-span-2">
-                <h6 className="text-lg font-semibold mb-2">Monthly Revenue</h6>
-                <Bar data={barData} className="mt-4" />
+                <div className="flex justify-between items-center mb-2">
+                  <h6 className="text-lg font-semibold">
+                    Year-Wise Sales Report
+                  </h6>
+                </div>
+                <div className="h-[400px] w-full flex justify-center mt-4">
+                  <Pie 
+                    data={pieData} 
+                    plugins={[pieLabelsPlugin]}
+                    options={{ 
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      onClick: (evt, element) => {
+                        if (element.length > 0) {
+                          const index = element[0].index;
+                          const clickedData = salesReportData[index];
+                          if (clickedData) {
+                            dispatch(push({ 
+                              name: "MONTH WISE SALES REPORT", 
+                              finYearId: clickedData.finYearId, 
+                              shortCode: clickedData.shortCode 
+                            }));
+                          }
+                        }
+                      }
+                    }} 
+                    className="cursor-pointer hover:opacity-90 transition" 
+                  />
+                </div>
               </div>
 
               {/* Line Chart - User Growth */}
-              <div className="bg-white p-4 rounded-lg shadow md:col-span-2">
+              {/* <div className="bg-white p-4 rounded-lg shadow md:col-span-2">
                 <h6 className="text-lg font-semibold mb-2">Business Growth</h6>
                 <Line data={lineData} className="mt-4" />
-              </div>
+              </div> */}
 
               {/* Doughnut Chart - Chat Analytics */}
-              <div className="bg-white p-4 rounded-lg shadow md:col-span-2">
+              {/* <div className="bg-white p-4 rounded-lg shadow md:col-span-2">
                 <div className="flex items-center">
                   <PieChart className="w-6 h-6 text-indigo-600 mr-2" />
                   <h6 className="text-xl font-bold text-gray-800">
@@ -526,13 +647,13 @@ export default function Form() {
                 <div className="mt-3">
                   <Doughnut data={chatData} options={options} />
                 </div>
-              </div>
+              </div> */}
 
               {/* Bar Chart - Monthly Sales */}
-              <div className="bg-white p-4 rounded-lg shadow md:col-span-2">
+              {/* <div className="bg-white p-4 rounded-lg shadow md:col-span-2">
                 <h6 className="text-lg font-semibold mb-2">Monthly Sales</h6>
                 <Bar data={data2} options={options2} className="h-full mt-4" />
-              </div>
+              </div> */}
             </div>
 
             {/* Dashboard Overview Table Section */}

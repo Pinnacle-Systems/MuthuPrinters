@@ -49,6 +49,7 @@ import {
   MachineMasterApi,
   ItemSubGroupMasterApi,
   ProductionReportApi,
+  salesReportApi,
 } from "./services";
 import paymentApi from "./services/PaymentService";
 import StyleMasterApi from "./services/StyleMasterService";
@@ -155,6 +156,7 @@ const commonReducers = {
   [PackingControlApi.reducerPath]: PackingControlApi.reducer,
   SalesBillEntry: SalesBillEntryApi.reducer,
   [ProductionReportApi.reducerPath]: ProductionReportApi.reducer,
+  [salesReportApi.reducerPath]: salesReportApi.reducer,
 };
 const commonMiddleware = [
   countryMasterApi.middleware,
@@ -231,6 +233,7 @@ const commonMiddleware = [
   PackingControlApi.middleware,
   SalesBillEntryApi.middleware,
   ProductionReportApi.middleware,
+  salesReportApi.middleware,
 ];
 
 const store = configureStore({
