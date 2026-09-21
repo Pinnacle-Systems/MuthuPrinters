@@ -8,7 +8,7 @@ import { useDispatch } from "react-redux";
 import JobCardApi, { useGetJobCardQuery } from "../../../redux/uniformService/JobCardService";
 import { ApprovalBadge } from "../../../Utils/ApprovalHelper";
 import Modal from "../../../UiComponents/Modal";
-import { useAddApprovalStausMutation } from "../../../redux/uniformService/PoServices";
+import { useAddApprovalStausMutation, useAddPackingCompletedMutation } from "../../../redux/uniformService/PoServices";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { FiCheck } from "react-icons/fi";
 import { toast } from "react-toastify";
@@ -45,6 +45,7 @@ const JobCardReport = ({
 
   const dispatch = useDispatch();
   const [addApprovalStatus] = useAddApprovalStausMutation();
+  const [packingCompletedMutation] = useAddPackingCompletedMutation();
 
   const searchFields = {
     searchDocNo,
@@ -216,18 +217,14 @@ const JobCardReport = ({
       setActionLoading(false);
     }
   };
-  const handleApproveJobCard = async () => {
+  const handleUpdatePacking = async (dataObj) => {
 
 
     setActionLoading(true);
     try {
-      const result = await addApprovalStatus({
-        userId: userData?.id,
-        remarks: remarks || null,
-        actionType, // "APPROVE" or "REJECT"
-        referenceId: selectedJobCard?.id,
-        referencePage: "JOB CARD",
-        recordData: {},
+      const result = await packingCompletedMutation({
+        id: dataObj?.id,
+
       }).unwrap();
 
       if (result.statusCode === 0) {
@@ -251,6 +248,8 @@ const JobCardReport = ({
       setActionLoading(false);
     }
   };
+
+
   return (
     <>
       <Modal
@@ -605,7 +604,7 @@ const JobCardReport = ({
                             <Tooltip title="Packing Completed" arrow>
                               <button
                                 onClick={() =>
-                                  handleApprovalAction(dataObj, "APPROVE")
+                                  handleUpdatePacking(dataObj)
                                 }
                                 className="p-1.5 rounded-md bg-green-200 text-green-700 hover:bg-green-300 transition"
                               >

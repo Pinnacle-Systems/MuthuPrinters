@@ -118,6 +118,14 @@ const PoApi = createApi({
       }),
       invalidatesTags: ["po"],
     }),
+    addPackingCompleted: builder.mutation({
+      query: (payload) => ({
+        url: `${PO_API}/packingCompleted`,
+        method: "POST",
+        body: payload,
+      }),
+      invalidatesTags: ["po"],
+    }),
   }),
 });
 
@@ -131,6 +139,7 @@ export const {
   useAddApprovalStausMutation,
   useUpdatePoMutation,
   useDeletePoMutation,
+  useAddPackingCompletedMutation,
 } = PoApi;
 
 export default PoApi;

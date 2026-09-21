@@ -49,6 +49,7 @@ import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGr
 import { useGetSalesOrderByIdQuery, useGetSalesOrderQuery } from "../../../redux/uniformService/SalesOrderService.js";
 import { padRows } from "../OrderEntry/OrderItemsUtils.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
+import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
 
 const EMPTY_ROW = {
   itemGroupId: "",
@@ -127,6 +128,7 @@ const SalesDeliveryForm = ({
   const [requirements, setRequirements] = useState("");
   const [deliveryTo, setDeliveryTo] = useState("");
   const [netAmout, setNetAmount] = useState("");
+  const [dispatchThrough, setDispatchThrough] = useState("")
 
   const effectiveReadOnly = readOnly || childRecord.current > 0;
   const isCumInvoice = deliveryType === "AGAINST_INVOICE";
@@ -153,6 +155,7 @@ const SalesDeliveryForm = ({
   const { data: itemGroupList } = useGetItemGroupMasterQuery({ params: { companyId } });
   const { data: itemSubGroupList } = useGetItemSubGroupMasterQuery({ params: { companyId } });
   const [dispatchInvalidate] = useInvalidateTags();
+  const { data: termsList } = useGetTermsandCondtionsQuery({ params: { companyId } });
 
   const currencyCode = currencyList?.data?.find(
     (item) => item?.id === currencyId,
@@ -204,7 +207,8 @@ const SalesDeliveryForm = ({
       setLoadingId(data?.loadingId ? data?.loadingId : "");
       setSalesOrderId(data?.salesOrderId ? data?.salesOrderId : "");
       setNetAmount(data?.netAmount ? data?.netAmount : 0)
-
+      setDispatchThrough(data?.dispatchThrough ? data?.dispatchThrough : "")
+      setDeliveryTo(data?.deliveryTo ? data?.deliveryTo : "")
     },
     [id],
   );
@@ -237,6 +241,8 @@ const SalesDeliveryForm = ({
       setBankId(data?.bankId ? data?.bankId : "");
       setConversionType(data?.conversionType ? data?.conversionType : "");
       setTaxTemplateId(data?.taxTemplateId ? data?.taxTemplateId : "");
+      setDispatchThrough(data?.dispatchThrough ? data?.dispatchThrough : "")
+      setTermsAndCondition(data?.termsAndCondition ? data?.termsAndCondition : "")
     },
     [id],
   );
@@ -345,7 +351,8 @@ const SalesDeliveryForm = ({
     carriageFinalAmt,
     deliveryId,
     carriageTax,
-    netAmout
+    netAmout,
+    deliveryTo
   };
 
   useEffect(() => {
@@ -933,6 +940,18 @@ const SalesDeliveryForm = ({
                 disabled={readOnly}
               />
             </div>
+            <div className="col-span-2">
+              <TextInput
+                name="Dispatch Through"
+                placeholder="Dispatch Through"
+                value={dispatchThrough}
+                setValue={setDispatchThrough}
+                required={true}
+                readOnly={readOnly}
+                className={`w-full max-w-none`}
+              // dropdownMinWidth={240}
+              />
+            </div>
             {deliveryType == "AGAINST_INVOICE" && (
               <TextInput
                 name="Net Amount"
@@ -1347,6 +1366,12 @@ const SalesDeliveryForm = ({
                   placeholder: "Enter Terms & Condtions...",
                   readOnly: readOnly || childRecord,
                   ref: requirementRef,
+                  hasTemplate: true,
+                  options: termsList?.data?.map(term => ({
+                    value: term.description,
+                    label: term.name,
+                    templateText: term.description
+                  }))
                 },
                 {
                   title: "Remarks",

@@ -81,6 +81,7 @@ const ProductionInwardForm = ({
   supplierList,
   taxTypeList,
   hasPermission,
+  dispatchInvalidate
 }) => {
   const today = new Date();
   const [docDate, setDocDate] = useState(
@@ -99,7 +100,6 @@ const ProductionInwardForm = ({
   const [dcDate, setDcDate] = useState("");
   const supplierRef = useRef(null);
   const childRecord = useRef(0);
-  const [dispatchInvalidate] = useInvalidateTags();
   const { userId, finYearId, branchId, companyId } = getCommonParams();
   const params = { branchId, companyId, finYearId };
   const [searchDocId, setSearchDocId] = useState("");
@@ -183,13 +183,13 @@ const ProductionInwardForm = ({
       setReceiptType(data?.receiptType || "");
       const inwardRows = data?.inwardDetails?.length
         ? data.inwardDetails.map((item) => ({
-            ...item,
+          ...item,
 
-            // convert inwardProcessDtls -> processes array
-            processes:
-              item?.inwardProcessDtls?.map((process) => process.processId) ||
-              [],
-          }))
+          // convert inwardProcessDtls -> processes array
+          processes:
+            item?.inwardProcessDtls?.map((process) => process.processId) ||
+            [],
+        }))
         : [];
 
       setInwardDetails(padItems(inwardRows));
@@ -260,7 +260,7 @@ const ProductionInwardForm = ({
           showConfirmButton: false,
           timer: 2000,
           didClose: () => {
-            // dispatchInvalidate();
+            dispatchInvalidate();
             invalidateJobCardModule();
 
             if (returnData.statusCode === 0) {
@@ -485,8 +485,8 @@ const ProductionInwardForm = ({
                       id
                         ? supplierList?.data?.filter((item) => item?.isSupplier)
                         : supplierList?.data?.filter(
-                            (item) => item?.active && item?.isSupplier,
-                          ),
+                          (item) => item?.active && item?.isSupplier,
+                        ),
                       "name",
                       "id",
                     )}

@@ -331,6 +331,49 @@ const SalesBillEntryItems = ({
     });
   };
 
+  const handleAutoFillBillQty = (isChecked) => {
+    if (activeModalRowIndex === null || activeStyleIndex === null) return;
+
+    setItems((prev) => {
+      const rows = [...prev];
+      const row = { ...rows[activeModalRowIndex] };
+      const styleBreakup = [...(row.styleBreakup || [])];
+      const styleObj = { ...styleBreakup[activeStyleIndex] };
+      const sizeBreakup = [...(styleObj.sizeBreakup || [])];
+
+      const newSizeBreakup = sizeBreakup.map(sizeRow => {
+        let newBillQty = 0;
+        if (isChecked) {
+          const deliveryQty = Number(sizeRow.deliveryQty) || 0;
+          const alreadyBilledQty = Number(sizeRow.alreadyBilledQty) || 0;
+          newBillQty = Math.max(0, deliveryQty - alreadyBilledQty);
+        }
+        return { ...sizeRow, billQty: newBillQty };
+      });
+
+      styleObj.sizeBreakup = newSizeBreakup;
+      styleBreakup[activeStyleIndex] = styleObj;
+      row.styleBreakup = styleBreakup;
+
+      if (true) {
+        row.orderQty = recalculateOrderQty(styleBreakup);
+        row.billQty = recalculateDeliveryQty(styleBreakup);
+        const qty = row.billQty;
+        const price = row.price;
+        const dozen = qty / 12;
+        row.dozen = dozen ? dozen.toFixed(2) : "";
+        if (conversionType === "DOZEN") {
+          row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
+        } else {
+          row.amount = qty && price ? (qty * price).toFixed(2) : "";
+        }
+      }
+
+      rows[activeModalRowIndex] = row;
+      return rows;
+    });
+  };
+
   const handleRightClick = (e, rowIndex) => {
     e.preventDefault();
     setContextMenu({ mouseX: e.clientX, mouseY: e.clientY, rowId: rowIndex });
@@ -396,12 +439,13 @@ const SalesBillEntryItems = ({
                           addNew={true}
                           childComponent={StyleMaster}
                           addNewModalWidth="w-[50%] h-[57%]"
+                          disabled={true}
                         />
                       </div>
                     </div>
                   ))}
 
-                  {!readOnly && true && (
+                  {/* {!readOnly && true && (
                     <button
                       onClick={() => {
                         addStyleRow(activeModalRowIndex);
@@ -412,7 +456,7 @@ const SalesBillEntryItems = ({
                     >
                       <Plus size={14} /> Add Style
                     </button>
-                  )}
+                  )} */}
                 </div>
               </div>
 
@@ -431,7 +475,19 @@ const SalesBillEntryItems = ({
                           <th className="border border-gray-300 px-2 py-1.5 w-32">Sales Delivery Qty</th>
                           <th className="border border-gray-300 px-2 py-1.5 w-32">Already Billed Qty</th>
 
-                          <th className="border border-gray-300 px-2 py-1.5 w-32">Billing Qty</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-32">
+                            <div className="flex items-center gap-2">
+                              <span>Billing Qty</span>
+                              {!readOnly && !(childRecord?.current > 0) && (
+                                <input
+                                  type="checkbox"
+                                  onChange={(e) => handleAutoFillBillQty(e.target.checked)}
+                                  className="cursor-pointer"
+                                  title="Auto-fill Billing Qty"
+                                />
+                              )}
+                            </div>
+                          </th>
 
                           <th className="border border-gray-300 px-2 py-1.5 w-20 text-center">Actions</th>
                         </tr>
@@ -452,6 +508,8 @@ const SalesBillEntryItems = ({
                                 addNew={true}
                                 childComponent={Size}
                                 addNewModalWidth="w-[38%] h-[50%]"
+                                disabled={true}
+
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1">
@@ -463,7 +521,9 @@ const SalesBillEntryItems = ({
                                 value={sizeRow.deliveryQty}
                                 onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "deliveryQty", e.target.value)}
                                 onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "deliveryQty", parseFloat(e.target.value || 0))}
-                                disabled={readOnly || childRecord?.current > 0 || false}
+                                // disabled={readOnly || childRecord?.current > 0 || false}
+                                disabled={true}
+
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1 text-right">
@@ -478,15 +538,17 @@ const SalesBillEntryItems = ({
                                 value={sizeRow.billQty}
                                 onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "billQty", e.target.value)}
                                 onBlur={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "billQty", parseFloat(e.target.value || 0))}
-                                disabled={readOnly || childRecord?.current > 0 || false}
+                              // disabled={readOnly || childRecord?.current > 0 || false}
+                              // disabled={true}
+
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1 text-center">
                               {!readOnly && !childRecord?.current > 0 && true && (
                                 <div className="flex items-center justify-center gap-1">
-                                  <button onClick={() => addNestedSizeRow(activeModalRowIndex, activeStyleIndex)} className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200" title="Add size row">
+                                  {/* <button onClick={() => addNestedSizeRow(activeModalRowIndex, activeStyleIndex)} className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200" title="Add size row">
                                     <Plus size={12} />
-                                  </button>
+                                  </button> */}
                                   <button onClick={() => deleteNestedSizeRow(activeModalRowIndex, activeStyleIndex, sizeIdx)} className="p-1 bg-red-100 rounded text-red-700 hover:bg-red-200" title="Delete size row">
                                     <FaTrash size={10} />
                                   </button>
@@ -577,9 +639,9 @@ const SalesBillEntryItems = ({
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
                 Breakup
               </th>
-              <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
+              {/* <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
                 Actions
-              </th>
+              </th> */}
             </tr>
           </thead>
 
@@ -617,6 +679,7 @@ const SalesBillEntryItems = ({
                       childComponent={ItemGroup}
                       addNewModalWidth="w-[38%] h-[50%]"
                       nextRef={termsRef}
+                      disabled={true}
                     />
                   </td>
                   <td className="border border-gray-300 text-[11px] items-center pt-2">
@@ -638,6 +701,8 @@ const SalesBillEntryItems = ({
                       childComponent={ItemSubGroupMaster}
                       addNewModalWidth="w-[38%] h-[50%]"
                       nextRef={termsRef}
+                      disabled={true}
+
                     />
                   </td>
                   <td className="text-[11px] border border-gray-300 text-left items-center pt-2">
@@ -661,6 +726,8 @@ const SalesBillEntryItems = ({
                       addNew={true}
                       childComponent={StyleItemMaster}
                       addNewModalWidth="w-[50%] h-[57%]"
+                      disabled={true}
+
                     />
                   </td>
                   <td className="border border-gray-300 text-[11px] items-center pt-2 text-center">
@@ -686,6 +753,8 @@ const SalesBillEntryItems = ({
                       onChange={(e) => handleInputChange(e.target.value, index, "labelWidth")}
                       className="w-full text-left px-1 bg-transparent text-[11px] outline-none focus:bg-white"
                       readOnly={readOnly || false}
+                      disabled={true}
+
                     />
                   </td>
                   <td className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium">
@@ -754,6 +823,8 @@ const SalesBillEntryItems = ({
                         );
                         setFocusedField(null);
                       }}
+                      disabled={!row.id}
+
                     />
                   </td>
                     <td className="text-[11px] border border-gray-300 text-right items-center pt-2 pr-1 font-medium text-black">
@@ -800,7 +871,7 @@ const SalesBillEntryItems = ({
                       <FaEye size={16} className="mx-auto" />
                     </button>
                   </td>
-                  <td className="w-12 border border-gray-300 align-top pt-1 bg-gray-50 text-center">
+                  {/* <td className="w-12 border border-gray-300 align-top pt-1 bg-gray-50 text-center">
                     {!readOnly && true && (
                       <div className="flex items-center justify-center">
                         <button
@@ -808,12 +879,14 @@ const SalesBillEntryItems = ({
                           className="flex items-center justify-center p-0.5 bg-blue-50 hover:bg-blue-100 rounded"
                           title="Add row"
                           tabIndex={-1}
+                          disabled={}
+
                         >
                           <Plus size={13} className="text-blue-700" />
                         </button>
                       </div>
                     )}
-                  </td>
+                  </td> */}
                 </tr>
               );
             })}

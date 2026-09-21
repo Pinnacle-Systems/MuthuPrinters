@@ -536,6 +536,9 @@ model Party {
   salesDeliveries          SalesDelivery[]
   SalesOrder               SalesOrder[]
   SalesBillEntry           SalesBillEntry[]
+  SalesDelivery            SalesDelivery[]           @relation(name: "deliveryTo")
+  SalesOrderDeliveryTo     SalesOrder[]              @relation(name: "deliveryTo")
+  SalesBillDeliveryTo      SalesBillEntry[]          @relation(name: "deliveryTo")
 }
 
 model PartyBranch {
@@ -2900,26 +2903,28 @@ model BillingProcess {
 }
 
 model SalesDelivery {
-  id                     Int                  @id @default(autoincrement())
+  id                     Int                 @id @default(autoincrement())
   docId                  String
   docDate                DateTime?
   deliveryDate           DateTime?
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
   createdById            Int?
-  createdBy              User?                @relation("createdBy", fields: [createdById], references: [id])
+  createdBy              User?               @relation("createdBy", fields: [createdById], references: [id])
   updatedById            Int?
-  updatedBy              User?                @relation("updatedBy", fields: [updatedById], references: [id])
+  updatedBy              User?               @relation("updatedBy", fields: [updatedById], references: [id])
   branchId               Int?
-  Branch                 Branch?              @relation(fields: [branchId], references: [id])
-  customerId             Int?
-  finYear                FinYear?             @relation(fields: [finYearId], references: [id])
+  Branch                 Branch?             @relation(fields: [branchId], references: [id])
+  finYear                FinYear?            @relation(fields: [finYearId], references: [id])
   finYearId              Int?
-  Customer               Party?               @relation(fields: [customerId], references: [id])
+  customerId             Int?
+  Customer               Party?              @relation(fields: [customerId], references: [id])
+  deliveryTo             Int?
+  DeliveryTo             Party?              @relation("deliveryTo", fields: [deliveryTo], references: [id])
   orderEntryId           Int?
-  OrderEntry             OrderEntry?          @relation(fields: [orderEntryId], references: [id])
+  OrderEntry             OrderEntry?         @relation(fields: [orderEntryId], references: [id])
   salesOrderId           Int?
-  SalesOrder             SalesOrder?          @relation(fields: [salesOrderId], references: [id])
+  SalesOrder             SalesOrder?         @relation(fields: [salesOrderId], references: [id])
   dcNo                   String?
   vehicleNo              String?
   deliveryType           String?
@@ -2927,35 +2932,36 @@ model SalesDelivery {
   discountType           String?
   discountValue          Float?
   validityTo             DateTime?
-  TaxTemplate            TaxTemplate?         @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
+  TaxTemplate            TaxTemplate?        @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
   taxTemplateId          Int?
   termsAndCondition      String?
-  Terms                  TermsAndConditions?  @relation(fields: [termsId], references: [id])
+  Terms                  TermsAndConditions? @relation(fields: [termsId], references: [id])
   termsId                Int?
-  PayTerm                PayTerm?             @relation(fields: [payTermId], references: [id])
+  PayTerm                PayTerm?            @relation(fields: [payTermId], references: [id])
   payTermId              Int?
-  Bank                   Bank?                @relation(fields: [bankId], references: [id])
+  Bank                   Bank?               @relation(fields: [bankId], references: [id])
   bankId                 Int?
   conversionType         String?
   weightInKg             Float?
   carriageCharge         Float?
   currencyId             Int?
-  Currency               Currency?            @relation(fields: [currencyId], references: [id])
-  isDeliveryTaxInclusive Boolean?             @default(false)
+  Currency               Currency?           @relation(fields: [currencyId], references: [id])
+  isDeliveryTaxInclusive Boolean?            @default(false)
   deliveryTaxType        String?
   deliveryTaxValue       Float?
-  Loading                City?                @relation("loading", fields: [loadingId], references: [id])
+  Loading                City?               @relation("loading", fields: [loadingId], references: [id])
   loadingId              Int?
-  Delivery               City?                @relation("delivery", fields: [deliveryId], references: [id])
+  Delivery               City?               @relation("delivery", fields: [deliveryId], references: [id])
   deliveryId             Int?
   carriageTax            Float?
   netAmount              String?
   dispatchThrough        String?
-  salesDeliveryItems     SalesDeliveryItems[]
-  Ledger                 Ledger[]
-  Stock                  Stock[]
-  SalesReturn            SalesReturn[]
-  SalesBillEntry         SalesBillEntry[]
+
+  salesDeliveryItems SalesDeliveryItems[]
+  Ledger             Ledger[]
+  Stock              Stock[]
+  SalesReturn        SalesReturn[]
+  SalesBillEntry     SalesBillEntry[]
 }
 
 model SalesDeliveryItems {
@@ -3058,6 +3064,8 @@ model SalesOrder {
   branchId               Int?
   customer               Party?              @relation(fields: [customerId], references: [id])
   customerId             Int?
+  deliveryTo             Int?
+  DeliveryTo             Party?              @relation("deliveryTo", fields: [deliveryTo], references: [id])
   finYear                FinYear?            @relation(fields: [finYearId], references: [id])
   finYearId              Int?
   remarks                String?
@@ -3327,6 +3335,8 @@ model SalesBillEntry {
   branchId               Int?
   customer               Party?         @relation(fields: [customerId], references: [id])
   customerId             Int?
+  deliveryTo             Int?
+  DeliveryTo             Party?         @relation("deliveryTo", fields: [deliveryTo], references: [id])
   OrderEntry             OrderEntry?    @relation(fields: [orderId], references: [id])
   orderId                Int?
   SalesDelivery          SalesDelivery? @relation(fields: [salesDeliveryId], references: [id])

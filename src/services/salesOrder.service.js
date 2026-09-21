@@ -499,7 +499,8 @@ async function create(body) {
     loadingId,
     deliveryId,
     carriageTax,
-    orderId
+    orderId,
+    dispatchThrough
   } = await body;
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
 
@@ -592,6 +593,7 @@ async function create(body) {
         conversionType: conversionType ? conversionType : 'DOZEN',
         carriageTax: carriageTax ? parseFloat(carriageTax) : null,
         bankId: bankId ? parseInt(bankId) : null,
+        dispatchThrough: dispatchThrough ? dispatchThrough : null,
 
         SalesOrderItems:
           safeOrderItems.length > 0

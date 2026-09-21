@@ -128,19 +128,19 @@ function getPOApprovalStatus(log, isApprovalConfigured = false) {
   if (!log) {
     return isApprovalConfigured
       ? {
-          status: "NOTAPPROVED",
-          label: "Not Approved",
-          color: "orange",
-          currentLevel: 1,
-          levelLogs: [],
-        }
+        status: "NOTAPPROVED",
+        label: "Not Approved",
+        color: "orange",
+        currentLevel: 1,
+        levelLogs: [],
+      }
       : {
-          status: "NOT_CONFIGURED",
-          label: "No Approval",
-          color: "gray",
-          currentLevel: null,
-          levelLogs: [],
-        };
+        status: "NOT_CONFIGURED",
+        label: "No Approval",
+        color: "gray",
+        currentLevel: null,
+        levelLogs: [],
+      };
   }
   const base = {
     currentLevel: log.currentLevel,
@@ -219,9 +219,9 @@ async function get(req) {
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-        finYearDate?.startDateStartTime,
-        finYearDate?.endDateEndTime,
-      )
+      finYearDate?.startDateStartTime,
+      finYearDate?.endDateEndTime,
+    )
     : "";
 
   let data = await prisma.po.findMany({
@@ -230,26 +230,26 @@ async function get(req) {
         {
           AND: finYearDate
             ? [
-                {
-                  createdAt: {
-                    gte: finYearDate.startDateStartTime,
-                  },
+              {
+                createdAt: {
+                  gte: finYearDate.startDateStartTime,
                 },
-                {
-                  createdAt: {
-                    lte: finYearDate.endDateEndTime,
-                  },
+              },
+              {
+                createdAt: {
+                  lte: finYearDate.endDateEndTime,
                 },
-              ]
+              },
+            ]
             : undefined,
         },
         {
           AND:
             startDate && endDate
               ? [
-                  { createdAt: { gte: startDateStartTime } },
-                  { createdAt: { lte: endDateEndTime } },
-                ]
+                { createdAt: { gte: startDateStartTime } },
+                { createdAt: { lte: endDateEndTime } },
+              ]
               : undefined,
         },
       ],
@@ -259,13 +259,13 @@ async function get(req) {
       OR:
         supplierId || Boolean(filterParties)
           ? [
-              { supplierId: supplierId ? parseInt(supplierId) : undefined },
-              {
-                supplierId: Boolean(filterParties)
-                  ? { in: filterParties.split(",").map((i) => parseInt(i)) }
-                  : undefined,
-              },
-            ]
+            { supplierId: supplierId ? parseInt(supplierId) : undefined },
+            {
+              supplierId: Boolean(filterParties)
+                ? { in: filterParties.split(",").map((i) => parseInt(i)) }
+                : undefined,
+            },
+          ]
           : undefined,
       Supplier: {
         aliasName: Boolean(searchSupplierAliasName)
@@ -323,31 +323,31 @@ async function get(req) {
   const activeConfigs =
     hasApproval && module
       ? await prisma.approvalConfig.findMany({
-          where: {
-            moduleId: module.id,
-            branchId: parseInt(branchId),
-            active: true,
+        where: {
+          moduleId: module.id,
+          branchId: parseInt(branchId),
+          active: true,
+        },
+        include: {
+          ConfigConditions: {
+            include: { Field: true, Operator: true, CompareField: true },
           },
-          include: {
-            ConfigConditions: {
-              include: { Field: true, Operator: true, CompareField: true },
-            },
-            approvalLevels: {
-              include: { LevelUsers: true },
-              orderBy: { levelNo: "asc" },
-            },
+          approvalLevels: {
+            include: { LevelUsers: true },
+            orderBy: { levelNo: "asc" },
           },
-          // orderBy: { priority: "asc" },
-        })
+        },
+        // orderBy: { priority: "asc" },
+      })
       : [];
 
   const nextDocId = finYearDate
     ? await getNextDocId(
-        branchId,
-        shortCode,
-        finYearDate?.startDateStartTime,
-        finYearDate?.endDateEndTime,
-      )
+      branchId,
+      shortCode,
+      finYearDate?.startDateStartTime,
+      finYearDate?.endDateEndTime,
+    )
     : "";
 
   // purchaseOrder.service.js — FIX in get()
@@ -593,9 +593,9 @@ async function create(body) {
     let finYearDate = await getFinYearStartTimeEndTime(finYearId);
     const shortCode = finYearDate
       ? getYearShortCodeForFinYear(
-          finYearDate?.startDateStartTime,
-          finYearDate?.endDateEndTime,
-        )
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
       : "";
     let newDocId = await getNextDocId(
       branchId,
@@ -823,21 +823,21 @@ async function update(id, body) {
     const coreFieldsChanged =
       parseInt(dataFound.supplierId || 0) !== parseInt(supplierId || 0) ||
       moment(dataFound.docDate).format("YYYY-MM-DD") !==
-        moment(docDate).format("YYYY-MM-DD") ||
+      moment(docDate).format("YYYY-MM-DD") ||
       moment(dataFound.dueDate).format("YYYY-MM-DD") !==
-        moment(dueDate).format("YYYY-MM-DD") ||
+      moment(dueDate).format("YYYY-MM-DD") ||
       dataFound.poType !== poType ||
       parseInt(dataFound.taxTemplateId || 0) !== parseInt(taxTemplateId || 0) ||
       dataFound.deliveryType !== deliveryType ||
       (deliveryType === "ToParty" &&
         parseInt(dataFound.deliveryToId || 0) !==
-          parseInt(deliveryToId || 0)) ||
+        parseInt(deliveryToId || 0)) ||
       (deliveryType === "ToSelf" &&
         parseInt(dataFound.deliveryBranchId || 0) !==
-          parseInt(deliveryToId || 0)) ||
+        parseInt(deliveryToId || 0)) ||
       dataFound.discountType !== discountType ||
       parseFloat(dataFound.discountValue || 0) !==
-        parseFloat(discountValue || 0) ||
+      parseFloat(discountValue || 0) ||
       parseFloat(dataFound.taxPercent || 0) !== parseFloat(taxPercent || 0) ||
       parseInt(dataFound.termsId || 0) !== parseInt(termsId || 0) ||
       parseInt(dataFound.payTermId || 0) !== parseInt(payTermId || 0);
@@ -853,7 +853,7 @@ async function update(id, body) {
         if (!oldItem) return true; // new item
         return (
           parseInt(newItem.styleItemId || 0) !==
-            parseInt(oldItem.styleItemId || 0) ||
+          parseInt(oldItem.styleItemId || 0) ||
           parseFloat(newItem.qty || 0) !== parseFloat(oldItem.qty || 0) ||
           parseFloat(newItem.price || 0) !== parseFloat(oldItem.price || 0)
         );
@@ -1324,9 +1324,9 @@ async function getPoItems(req) {
     // ✅ Fetch approval logs for these POs
     const approvalLogs = hasApproval
       ? await prisma.approvalLog.findMany({
-          where: { referencePage: REFERENCE_PAGE, referenceId: { in: poIds } },
-          select: { referenceId: true, status: true, currentLevel: true },
-        })
+        where: { referencePage: REFERENCE_PAGE, referenceId: { in: poIds } },
+        select: { referenceId: true, status: true, currentLevel: true },
+      })
       : [];
 
     const approvalLogMap = approvalLogs.reduce((acc, log) => {
@@ -1338,22 +1338,22 @@ async function getPoItems(req) {
     const activeConfigs =
       hasApproval && module
         ? await prisma.approvalConfig.findMany({
-            where: {
-              moduleId: module.id,
-              branchId: parseInt(branchId),
-              active: true,
+          where: {
+            moduleId: module.id,
+            branchId: parseInt(branchId),
+            active: true,
+          },
+          include: {
+            ConfigConditions: {
+              include: { Field: true, Operator: true, CompareField: true },
             },
-            include: {
-              ConfigConditions: {
-                include: { Field: true, Operator: true, CompareField: true },
-              },
-              approvalLevels: {
-                include: { LevelUsers: true },
-                orderBy: { levelNo: "asc" },
-              },
+            approvalLevels: {
+              include: { LevelUsers: true },
+              orderBy: { levelNo: "asc" },
             },
-            orderBy: { priority: "asc" },
-          })
+          },
+          orderBy: { priority: "asc" },
+        })
         : [];
 
     // ✅ Need full PO records to evaluate conditions (poItems has only Po.id)
@@ -1364,9 +1364,9 @@ async function getPoItems(req) {
     const fullPoRecords =
       poIds.length > 0
         ? await prisma.po.findMany({
-            where: { id: { in: poIds } },
-            include: { ...includeClause, poItems: true },
-          })
+          where: { id: { in: poIds } },
+          include: { ...includeClause, poItems: true },
+        })
         : [];
 
     const fullPoMap = fullPoRecords.reduce((acc, po) => {
@@ -1455,6 +1455,29 @@ async function createApproveStatus(body) {
   }
 }
 
+async function packingCompleted(body) {
+  try {
+    const { id } = body;
+
+    if (!id) return { statusCode: 1, message: "Job Card ID is required" };
+
+    const data = await prisma.JobCard.update({
+      where: {
+        id: parseInt(id),
+      },
+      data: {
+        isPackingComplted: "Completed"
+      },
+    });
+
+
+    return { statusCode: 0, message: "Packing Completed" };
+  } catch (err) {
+    return { statusCode: 400, message: err.message };
+  }
+}
+
+
 export {
   get,
   getOne,
@@ -1464,4 +1487,5 @@ export {
   remove,
   getPoItems,
   createApproveStatus,
+  packingCompleted
 };

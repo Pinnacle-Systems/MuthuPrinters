@@ -126,10 +126,11 @@ const SalesBillEntryForm = ({
   const [loadingId, setLoadingId] = useState("");
   const [deliveryId, setDeliveryId] = useState("");
   const [netAmount, setNetAmount] = useState("");
+  const [deliveryTo, setDeliveryTo] = useState("");
 
 
   const effectiveReadOnly = readOnly || childRecord.current > 0;
-  const isCumInvoice = deliveryType === "AGAINST_INVOICE";
+  const isCumInvoice = true;
 
 
   const { data: singleData, isFetching: isSingleFetching, isLoading: isSingleLoading } = useGetSalesBillEntryByIdQuery(id, { skip: !id });
@@ -198,6 +199,7 @@ const SalesBillEntryForm = ({
       setDeliveryId(data?.deliveryId ? data?.deliveryId : "");
       setLoadingId(data?.loadingId ? data?.loadingId : "");
       setNetAmount(data?.netAmount ? data?.netAmount : 0)
+      setDeliveryTo(data?.deliveryTo ? data?.deliveryTo : "")
     },
     [id],
   );
@@ -225,6 +227,7 @@ const SalesBillEntryForm = ({
       setBankId(data?.bankId ? data?.bankId : "");
       setConversionType(data?.conversionType ? data?.conversionType : "");
       setTaxTemplateId(data?.taxTemplateId ? data?.taxTemplateId : "");
+      setDeliveryTo(data?.deliveryTo ? data?.deliveryTo : "");
     },
     [id],
   );
@@ -342,7 +345,8 @@ const SalesBillEntryForm = ({
     carriageFinalAmt,
     deliveryId,
     carriageTax,
-    netAmount
+    netAmount,
+    deliveryTo
 
   };
 
@@ -706,6 +710,7 @@ const SalesBillEntryForm = ({
                     setValue={setLoadingId}
                     readOnly={effectiveReadOnly}
                     required={true}
+                    disabled={id ? true : false}
                   />
                 </div>
                 <div className="w-60">
@@ -720,6 +725,8 @@ const SalesBillEntryForm = ({
                     setValue={setDeliveryId}
                     readOnly={effectiveReadOnly}
                     required={true}
+                    disabled={id ? true : false}
+
                   />
                 </div>
               </>
@@ -729,9 +736,11 @@ const SalesBillEntryForm = ({
                 name="Delivery Date"
                 value={deliveryDate}
                 setValue={setDeliveryDate}
-                disabled={effectiveReadOnly}
+                readOnly={effectiveReadOnly}
                 type="date"
                 required={true}
+                disabled={id ? true : false}
+
               />
             </div>
             <div className="w-32">
@@ -742,7 +751,7 @@ const SalesBillEntryForm = ({
                 setValue={(value) => setConversionType(value)}
                 required={true}
                 readOnly={effectiveReadOnly}
-                disabled={childRecord.current > 0 || readOnly}
+                disabled={id ? true : false}
               />
             </div>
             <div className="w-24">
@@ -750,7 +759,7 @@ const SalesBillEntryForm = ({
                 name="WeightInKg (KG)"
                 value={weightInKg}
                 setValue={setWeightInKg}
-                disabled={effectiveReadOnly}
+                readOnly={effectiveReadOnly}
                 type="number"
                 min="0"
                 className="text-right"
@@ -763,6 +772,8 @@ const SalesBillEntryForm = ({
                 onFocus={(e) => {
                   e.target.select();
                 }}
+                disabled={id ? true : false}
+
               />
             </div>
 
@@ -770,7 +781,7 @@ const SalesBillEntryForm = ({
               name={`Carriage and Air Freight ${currencyId ? `(${isCurrencySymbol})` : ""}`}
               value={carriageCharge}
               setValue={setCarriageCharge}
-              disabled={effectiveReadOnly}
+              readOnly={effectiveReadOnly}
               type="number"
               min="0"
               className="text-right"
@@ -782,13 +793,15 @@ const SalesBillEntryForm = ({
               onFocus={(e) => {
                 e.target.select();
               }}
+              disabled={id ? true : false}
+
             />
             <div className="w-24">
               <TextInput
                 name="Carriage Tax%"
                 value={carriageTax}
                 setValue={setCarriageTax}
-                disabled={effectiveReadOnly}
+                readOnly={effectiveReadOnly}
                 type="number"
                 min="0"
                 className="text-right"
@@ -815,6 +828,68 @@ const SalesBillEntryForm = ({
                 }}
               />
             </div>
+            {isCumInvoice && (
+              <>
+                <div className="md:col-span-1">
+                  <DropdownWithModal
+                    name="Pay Term"
+                    options={dropDownListObject(
+                      id
+                        ? payTermList?.data
+                        : payTermList?.data?.filter((item) => item?.active),
+                      "name",
+                      "id",
+                    )}
+                    value={payTermId}
+                    setValue={setPayTermId}
+                    required={true}
+                    readOnly={readOnly}
+                    className="w-full max-w-none"
+                    dropdownMinWidth={240}
+                    addNewLabel="+ Add New Pay Term"
+                    childComponent={PayTermMaster}
+                    addNewModalWidth="w-[40%] h-[66%]"
+                  />
+                </div>
+                <div className="md:col-span-1">
+                  <DropdownInput
+                    name="Tax Type"
+                    options={dropDownListObject(
+                      taxTypeList ? taxTypeList?.data : [],
+                      "name",
+                      "id",
+                    )}
+                    value={taxTemplateId}
+                    setValue={setTaxTemplateId}
+                    required={!isCustomerExport}
+                    readOnly={effectiveReadOnly}
+                  />
+                </div>
+                {isCustomerExport && (
+                  <div className="md:col-span-1">
+                    <DropdownWithModal
+                      name="Currency"
+                      options={dropDownListObject(
+                        id
+                          ? currencyList?.data
+                          : currencyList?.data?.filter((item) => item?.active),
+                        "name",
+                        "id",
+                      )}
+                      value={currencyId}
+                      setValue={setCurrencyId}
+                      required={true}
+                      readOnly={readOnly}
+                      className={`w-full max-w-none`}
+                      dropdownMinWidth={240}
+                      addNewLabel="+ Add New Currency"
+                      childComponent={CurrencyMaster}
+                      addNewModalWidth="w-[40%] h-[66%]"
+                    />
+                  </div>
+                )}
+              </>
+            )}
             <div className="w-72">
               <DropdownWithModal
                 name="Advising Bank"
@@ -899,7 +974,7 @@ const SalesBillEntryForm = ({
                 addNewLabel="+ Add New Customer"
                 childComponent={PartyMaster}
                 addNewModalWidth="w-[90%] h-[95%]"
-                disabled={readOnly || childRecord.current > 0}
+                disabled={id || readOnly || childRecord.current > 0}
                 openOnFocus={true}
               />
             </div>
@@ -920,7 +995,7 @@ const SalesBillEntryForm = ({
                 required={true}
                 readOnly={readOnly}
                 className="w-[150px]"
-                disabled={readOnly || childRecord.current > 0}
+                disabled={id || readOnly || childRecord.current > 0}
                 openOnFocus={true}
               />
             </div>
@@ -950,7 +1025,7 @@ const SalesBillEntryForm = ({
 
           </div>
         </div>
-        <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+        {/* <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
           <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
             Delivery Details
 
@@ -1021,8 +1096,58 @@ const SalesBillEntryForm = ({
 
 
           </div>
-        </div>
+        </div> */}
+        <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+          <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+            Delivery Details
+          </h2>
+          <div className="grid grid-cols-4  gap-2">
 
+            <div className="md:col-span-2">
+              <DropdownWithModal
+                name="Delivery To"
+                options={dropDownListObject(
+                  id
+                    ? customerList?.data?.filter((item) => item?.isCustomer)
+                    : customerList?.data?.filter(
+                      (item) => item?.active && item?.isCustomer,
+                    ),
+                  "name",
+                  "id",
+                )}
+                value={deliveryTo}
+                setValue={setDeliveryTo}
+                required={true}
+                readOnly={readOnly}
+                className="w-[150px]"
+                addNewLabel="+ Add New Customer"
+                childComponent={PartyMaster}
+                addNewModalWidth="w-[90%] h-[95%]"
+                disabled={id || readOnly || childRecord.current > 0}
+                openOnFocus={true}
+              />
+            </div>
+            <TextInput
+              name="GST No"
+              value={findFromList(
+                deliveryTo,
+                customerList?.data,
+                "gstNo",
+              )}
+              disabled={true}
+            />
+            <TextInput
+              name="Phone"
+              value={findFromList(
+                deliveryTo,
+                customerList?.data,
+                "contactNumber",
+              )}
+              disabled={true}
+            />
+
+          </div>
+        </div>
       </div>
       <div>
         {shippingAccordion}

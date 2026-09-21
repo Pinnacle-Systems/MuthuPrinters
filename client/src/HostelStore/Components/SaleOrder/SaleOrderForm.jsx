@@ -148,6 +148,8 @@ const SaleOrderForm = ({
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
   const [childRecord, setChildRecord] = useState(0);
   const [orderId, setOrderId] = useState("")
+  const [dispatchThrough, setDispatchThrough] = useState("")
+
 
   const dispatch = useDispatch();
   const qrRef = useRef(null);
@@ -173,7 +175,14 @@ const SaleOrderForm = ({
     isLoading: isSingleLoading,
   } = useGetSalesOrderByIdQuery(id, { params, skip: !id, });
 
-  const { data: orderData, isFetching, isLoading } = useGetOrderEntryQuery({ params: { branchId, pendingSaleOrder: true }, });
+  const { data: orderData, isFetching, isLoading } = useGetOrderEntryQuery({
+    params: {
+      branchId,
+      ...(id ? {} : { pendingSaleOrder: true }),
+      id
+    },
+  });
+
   const {
     data: singleorderData,
     isFetching: isSingleorderFetching,
@@ -229,6 +238,7 @@ const SaleOrderForm = ({
 
   const syncFormWithDb = useCallback(
     (data) => {
+      // setId(data?.id ? data?.id : "")
       setDocId(data?.docId ? data?.docId : "New");
       setOrderId(data?.orderId ? data?.orderId : "");
       setDocDate(
@@ -268,6 +278,7 @@ const SaleOrderForm = ({
       setLoadingId(data?.loadingId || "");
       setDeliveryId(data?.deliveryId || "");
       setChildRecord(data?.childRecord || 0);
+      setDispatchThrough(data?.dispatchThrough ? data?.dispatchThrough : "")
     },
     [id],
   );
@@ -342,11 +353,12 @@ const SaleOrderForm = ({
     deliveryId,
     loadingId,
     carriageTax,
-    orderId
+    orderId,
+    dispatchThrough
   };
 
 
-  console.log(orderItems, "orderItemsorderItems")
+  console.log(orderData, "orderData", id)
 
 
 
@@ -528,7 +540,7 @@ const SaleOrderForm = ({
 
 
       { condition: !data.payTermId, title: "Pay Term is required!" },
-      { condition: !data.termsId, title: "Terms & condtions is required!" },
+      { condition: !data.termsAndCondition, title: "Terms & condtions is required!" },
       { condition: !data.taxTemplateId, title: "Tax Type is required!" },
     ];
 
@@ -968,6 +980,8 @@ const SaleOrderForm = ({
       )}
     </div>
   );
+
+  console.log(orderId, "orderIdorderId", id)
 
   return (
     <>
@@ -1493,7 +1507,7 @@ const SaleOrderForm = ({
                   {id ?
                     <div className="col-span-1">
                       <TextInput
-                        name="Order No"
+                        name="Order No / Customer Po No "
                         value={findFromList(
                           orderId,
                           orderData?.data,
@@ -1506,7 +1520,7 @@ const SaleOrderForm = ({
                     :
                     <div className="col-span-1">
                       <DropdownNew
-                        name="Order No"
+                        name="Order No / Customer Po No "
                         dataList={orderData?.data}
                         value={orderId}
                         setValue={setOrderId}
@@ -1561,7 +1575,7 @@ const SaleOrderForm = ({
 
                     />
                   </div>
-                  <div className="col-span-1">
+                  {/* <div className="col-span-1">
                     <DropdownWithModal
                       name="Terms & Condtions"
                       options={dropDownListObject(
@@ -1584,7 +1598,7 @@ const SaleOrderForm = ({
                         readOnly
                       }
                     />
-                  </div>
+                  </div> */}
                   <div className="w-28">
                     <DropdownInput
                       name="Tax Type"
@@ -1626,6 +1640,19 @@ const SaleOrderForm = ({
                       />
                     </div>
                   )}
+
+                  <div className="col-span-2">
+                    <TextInput
+                      name="Dispatch Through"
+                      placeholder="Dispatch Through"
+                      value={dispatchThrough}
+                      setValue={setDispatchThrough}
+                      required={true}
+                      readOnly={readOnly}
+                      className={`w-full max-w-none`}
+                    // dropdownMinWidth={240}
+                    />
+                  </div>
 
                 </div>
               </div>
@@ -1671,11 +1698,17 @@ const SaleOrderForm = ({
               sections={[
                 {
                   title: "Terms & Condtions",
-                  value: requirements,
-                  onChange: setRequirements,
+                  value: termsAndCondition,
+                  onChange: setTermsAndCondition,
                   placeholder: "Enter Terms & Condtions...",
-                  readOnly: readOnly || childRecord,
+                  readOnly: false || readOnly || childRecord,
                   ref: requirementRef,
+                  hasTemplate: true,
+                  options: termsList?.data?.map(term => ({
+                    value: term.description,
+                    label: term.name,
+                    templateText: term.description
+                  }))
                 },
                 {
                   title: "Remarks",

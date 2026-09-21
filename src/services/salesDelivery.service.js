@@ -328,7 +328,8 @@ async function create(body) {
     loadingId,
     deliveryId,
     carriageTax,
-    netAmout
+    netAmout,
+    deliveryTo
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -467,6 +468,7 @@ async function create(body) {
         carriageTax: carriageTax ? parseFloat(carriageTax) : null,
         bankId: bankId ? parseInt(bankId) : null,
         netAmount: netAmout ? (netAmout) : null,
+        deliveryTo: deliveryTo ? parseInt(deliveryTo) : null,
 
         salesDeliveryItems: {
           create: (salesDeliveryItems || []).map((item) => ({
@@ -586,7 +588,8 @@ async function update(id, body, files) {
     deliveryId,
     loadingId,
     carriageTax,
-    netAmout
+    netAmout,
+    deliveryTo
   } = body;
 
 
@@ -739,6 +742,7 @@ async function update(id, body, files) {
         carriageTax: carriageTax ? parseFloat(carriageTax) : null,
         bankId: bankId ? parseInt(bankId) : null,
         netAmount: netAmout ? (netAmout) : null,
+        deliveryTo: deliveryTo ? parseInt(deliveryTo) : null,
 
         salesDeliveryItems: {
           deleteMany: incomingItemIds.length
