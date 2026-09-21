@@ -279,7 +279,7 @@ async function getPurchaseReport({
         },
       },
     },
-    orderBy: { docId: "desc" },
+    orderBy: { id: "desc" },
   });
 
   // ── STEP 2: collect all non-null purchaseInwardIds ─────────────────────────

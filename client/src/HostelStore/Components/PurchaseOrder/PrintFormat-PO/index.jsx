@@ -9,7 +9,10 @@ import {
 } from "@react-pdf/renderer";
 import Logo from "../../../../../src/assets/mplogo.png";
 import { numberToWords } from "number-to-words";
-import { findFromList, getDateFromDateTimeToDisplay } from "../../../../Utils/helper";
+import {
+  findFromList,
+  getDateFromDateTimeToDisplay,
+} from "../../../../Utils/helper";
 
 // ─── COLOR PALETTE ────────────────────────────────────────────────────────────
 // Primary Dark  : #1a1a2e   (deep charcoal navy)
@@ -28,6 +31,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   page: {
+    flex: 1,
     fontFamily: "Helvetica",
     fontSize: 8,
     padding: 0,
@@ -108,7 +112,7 @@ const styles = StyleSheet.create({
   // ── PO META PILLS ──
   metaRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "flex-start",
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 4,
@@ -444,7 +448,7 @@ const PurchaseOrderPrintFormat = ({
   uomList,
   sizeList,
   styleItemList,
-  quoteVersion
+  quoteVersion,
 }) => {
   if (!singleData) return null;
 
@@ -457,7 +461,7 @@ const PurchaseOrderPrintFormat = ({
   const poItems = singleData?.poItems || [];
 
   const filledPoItems = poItems.filter(
-    (i) => i.styleItemId && i.quoteVersion === quoteVersion
+    (i) => i.styleItemId && i.quoteVersion === quoteVersion,
   );
 
   // Amount in words
@@ -471,7 +475,11 @@ const PurchaseOrderPrintFormat = ({
       .replace(/-/g, " ")
       .replace(/\b\w/g, (c) => c.toUpperCase()) +
     (netDecimal > 0
-      ? " And " + numberToWords.toWords(netDecimal).replace(/\b\w/g, (c) => c.toUpperCase()) + " Paise"
+      ? " And " +
+        numberToWords
+          .toWords(netDecimal)
+          .replace(/\b\w/g, (c) => c.toUpperCase()) +
+        " Paise"
       : "") +
     " Only";
 
@@ -505,37 +513,44 @@ const PurchaseOrderPrintFormat = ({
         return (
           <Page key={pageIndex} size="A4" style={styles.borderBox}>
             <View style={styles.page}>
-
               {/* ── TOP ACCENT BAR ── */}
               <View style={styles.topBar} />
 
+              <View style={{ flex: 1 }}>
+                {/* ── HEADER ── */}
               {/* ── HEADER ── */}
               <View style={styles.header}>
-                <Image src={Logo} style={styles.logo} />
-
-                <View style={styles.companyCenter}>
-                  <Text style={styles.companyName}>{branchData?.branchName || ""}</Text>
-                  {/* <Text style={styles.companySub}>Garment Manufacturing &amp; Exports</Text> */}
+                <View style={{ width: 60 }}>
+                  <Image src={Logo} style={styles.logo} />
                 </View>
 
-                <View style={styles.companyRight}>
-                  <Text style={{ fontSize: 7.5, color: "#555", marginBottom: 2, textAlign: "right" }}>
+                <View style={[styles.companyCenter, { flex: 1 }]}>
+                  <Text style={styles.companyName}>
+                    {branchData?.branchName || "MUTHU PRINTERS"}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 7.5,
+                      color: "#555",
+                      textAlign: "center",
+                      marginTop: 2,
+                    }}
+                  >
                     {branchData?.address || ""}
                   </Text>
-                  {[
-                    { label: "Mobile", value: branchData?.contactMobile },
-                    { label: "GST No", value: branchData?.company?.gstNo },
-                    { label: "Email", value: branchData?.contactEmail },
-                  ].map(({ label, value }) =>
-                    value ? (
-                      <View key={label} style={styles.companyRightRow}>
-                        <Text style={styles.companyLabel}>{label}</Text>
-                        <Text style={styles.companyColon}> : </Text>
-                        <Text style={styles.companyValue}>{value}</Text>
-                      </View>
-                    ) : null
-                  )}
+                  {branchData?.contactEmail ? (
+                    <Text
+                      style={{ fontSize: 7.5, color: "#555", marginTop: 1 }}
+                    >
+                      {branchData.contactEmail}
+                      {branchData?.contactMobile
+                        ? `  |  ${branchData.contactMobile}`
+                        : ""}
+                    </Text>
+                  ) : null}
                 </View>
+
+                <View style={{ width: 60 }} />
               </View>
 
               {/* ── TITLE BAND ── */}
@@ -545,8 +560,14 @@ const PurchaseOrderPrintFormat = ({
               <View style={styles.metaRow}>
                 {[
                   { label: "PO No", value: poNumber },
-                  { label: "PO Date", value: getDateFromDateTimeToDisplay(poDate) },
-                  { label: "Due Date", value: getDateFromDateTimeToDisplay(dueDate) },
+                  {
+                    label: "PO Date",
+                    value: getDateFromDateTimeToDisplay(poDate),
+                  },
+                  {
+                    label: "Due Date",
+                    value: getDateFromDateTimeToDisplay(dueDate),
+                  },
                 ].map(({ label, value }) => (
                   <View key={label} style={styles.metaPill}>
                     <Text style={styles.metaLabel}>{label}:</Text>
@@ -567,19 +588,29 @@ const PurchaseOrderPrintFormat = ({
                 <View style={[styles.colHalf, { borderRight: "1 solid #ddd" }]}>
                   <Text style={styles.sectionHeader}>SUPPLIER DETAILS</Text>
                   <View style={styles.sectionBody}>
-                    <Text style={styles.supplierName}>{supplierDetails?.name}</Text>
-                    <Text style={styles.supplierAddr}>{supplierDetails?.address}</Text>
+                    <Text style={styles.supplierName}>
+                      {supplierDetails?.name}
+                    </Text>
+                    <Text style={styles.supplierAddr}>
+                      {supplierDetails?.address}
+                    </Text>
                     {[
-                      { label: "Mobile No", value: supplierDetails?.contactNumber },
+                      {
+                        label: "Mobile No",
+                        value: supplierDetails?.contactNumber,
+                      },
                       { label: "GST No", value: supplierDetails?.gstNo },
-                      { label: "Email", value: supplierDetails?.contactPersonEmail },
+                      {
+                        label: "Email",
+                        value: supplierDetails?.contactPersonEmail,
+                      },
                     ].map(({ label, value }) =>
                       value ? (
                         <View key={label} style={styles.supplierRow}>
                           <Text style={styles.supplierLabel}>{label}</Text>
                           <Text style={styles.supplierValue}>: {value}</Text>
                         </View>
-                      ) : null
+                      ) : null,
                     )}
                   </View>
                 </View>
@@ -589,20 +620,30 @@ const PurchaseOrderPrintFormat = ({
                   <Text style={styles.sectionHeader}>DELIVERY TO</Text>
                   <View style={styles.sectionBody}>
                     <Text style={styles.supplierName}>
-                      {deliveryType === "ToSelf" ? deliveryTo?.branchName : deliveryTo?.name}
+                      {deliveryType === "ToSelf"
+                        ? deliveryTo?.branchName
+                        : deliveryTo?.name}
                     </Text>
-                    <Text style={styles.supplierAddr}>{deliveryTo?.address}</Text>
+                    <Text style={styles.supplierAddr}>
+                      {deliveryTo?.address}
+                    </Text>
                     {[
                       { label: "Mobile No", value: deliveryTo?.contactMobile },
                       { label: "GST No", value: deliveryTo?.gstNo },
-                      { label: "Email", value: deliveryType === "ToSelf" ? deliveryTo?.contactEmail : deliveryTo?.email },
+                      {
+                        label: "Email",
+                        value:
+                          deliveryType === "ToSelf"
+                            ? deliveryTo?.contactEmail
+                            : deliveryTo?.email,
+                      },
                     ].map(({ label, value }) =>
                       value ? (
                         <View key={label} style={styles.supplierRow}>
                           <Text style={styles.supplierLabel}>{label}</Text>
                           <Text style={styles.supplierValue}>: {value}</Text>
                         </View>
-                      ) : null
+                      ) : null,
                     )}
                   </View>
                 </View>
@@ -613,7 +654,9 @@ const PurchaseOrderPrintFormat = ({
                 {/* Header */}
                 <View style={styles.tableHeader}>
                   {COLUMNS.map(({ label, flex }) => (
-                    <Text key={label} style={[styles.th, { flex }]}>{label}</Text>
+                    <Text key={label} style={[styles.th, { flex }]}>
+                      {label}
+                    </Text>
                   ))}
                 </View>
 
@@ -621,12 +664,20 @@ const PurchaseOrderPrintFormat = ({
                 {(() => {
                   return chunk.map((val, chunkIndex) => {
                     const index = pageIndex * MAX_ROWS_PER_PAGE + chunkIndex;
-                    const rowStyle = index % 2 === 0 ? styles.trOdd : styles.trEven;
+                    const rowStyle =
+                      index % 2 === 0 ? styles.trOdd : styles.trEven;
 
                     if (val.isEmpty) {
                       return (
                         <View key={`empty-${index}`} style={rowStyle}>
-                          <Text style={[styles.td, { flex: 0.5, color: "transparent" }]}> </Text>
+                          <Text
+                            style={[
+                              styles.td,
+                              { flex: 0.5, color: "transparent" },
+                            ]}
+                          >
+                            {" "}
+                          </Text>
                           <Text style={[styles.td, { flex: 4 }]}> </Text>
                           <Text style={[styles.td, { flex: 1.5 }]}> </Text>
                           <Text style={[styles.td, { flex: 1.5 }]}> </Text>
@@ -634,7 +685,14 @@ const PurchaseOrderPrintFormat = ({
                           <Text style={[styles.td, { flex: 1 }]}> </Text>
                           <Text style={[styles.td, { flex: 1 }]}> </Text>
                           <Text style={[styles.td, { flex: 1 }]}> </Text>
-                          <Text style={[styles.td, { flex: 1.2, borderRight: "none" }]}> </Text>
+                          <Text
+                            style={[
+                              styles.td,
+                              { flex: 1.2, borderRight: "none" },
+                            ]}
+                          >
+                            {" "}
+                          </Text>
                         </View>
                       );
                     }
@@ -644,29 +702,65 @@ const PurchaseOrderPrintFormat = ({
                       : "";
                     return (
                       <View key={index} style={rowStyle}>
-                        <Text style={[styles.td, { flex: 0.5 }]}>{index + 1}</Text>
-                        <Text style={[styles.td, { flex: 4, textAlign: "left" }]}>
-                          {findFromList(val.styleItemId, styleItemList?.data, "name")}
+                        <Text style={[styles.td, { flex: 0.5 }]}>
+                          {index + 1}
                         </Text>
-                        <Text style={[styles.td, { flex: 1.5, textAlign: "left" }]}>
-                          {val.Size?.name || findFromList(val.sizeId, sizeList?.data, "name")}
+                        <Text
+                          style={[styles.td, { flex: 4, textAlign: "left" }]}
+                        >
+                          {findFromList(
+                            val.styleItemId,
+                            styleItemList?.data,
+                            "name",
+                          )}
                         </Text>
-                        <Text style={[styles.td, { flex: 1.5, textAlign: "left" }]}>
-                          {val.Color?.name || findFromList(val.colorId, colorList?.data, "name")}
+                        <Text
+                          style={[styles.td, { flex: 1.5, textAlign: "left" }]}
+                        >
+                          {val.Size?.name ||
+                            findFromList(val.sizeId, sizeList?.data, "name")}
                         </Text>
-                        <Text style={[styles.td, { flex: 1, textAlign: "left" }]}>
-                          {val.Uom?.name || findFromList(val.uomId, uomList?.data, "name")}
+                        <Text
+                          style={[styles.td, { flex: 1.5, textAlign: "left" }]}
+                        >
+                          {val.Color?.name ||
+                            findFromList(val.colorId, colorList?.data, "name")}
                         </Text>
-                        <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
+                        <Text
+                          style={[styles.td, { flex: 1, textAlign: "left" }]}
+                        >
+                          {val.Uom?.name ||
+                            findFromList(val.uomId, uomList?.data, "name")}
+                        </Text>
+                        <Text
+                          style={[styles.td, { flex: 1, textAlign: "right" }]}
+                        >
                           {isNaN(val.qty) ? "" : parseFloat(val.qty).toFixed(3)}
                         </Text>
-                        <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
-                          {isNaN(val.price) ? "" : parseFloat(val.price).toFixed(2)}
+                        <Text
+                          style={[styles.td, { flex: 1, textAlign: "right" }]}
+                        >
+                          {isNaN(val.price)
+                            ? ""
+                            : parseFloat(val.price).toFixed(2)}
                         </Text>
-                        <Text style={[styles.td, { flex: 1, textAlign: "right" }]}>
-                          {isNaN(val.taxPercent) ? "" : parseFloat(val.taxPercent).toFixed(2)}
+                        <Text
+                          style={[styles.td, { flex: 1, textAlign: "right" }]}
+                        >
+                          {isNaN(val.taxPercent)
+                            ? ""
+                            : parseFloat(val.taxPercent).toFixed(2)}
                         </Text>
-                        <Text style={[styles.td, { flex: 1.2, textAlign: "right", borderRight: "none" }]}>
+                        <Text
+                          style={[
+                            styles.td,
+                            {
+                              flex: 1.2,
+                              textAlign: "right",
+                              borderRight: "none",
+                            },
+                          ]}
+                        >
                           {gross}
                         </Text>
                       </View>
@@ -681,12 +775,12 @@ const PurchaseOrderPrintFormat = ({
                   {(() => {
                     const totalQty = filledPoItems.reduce(
                       (sum, v) => sum + (isNaN(v.qty) ? 0 : parseFloat(v.qty)),
-                      0
+                      0,
                     );
                     const totalAmount = filledPoItems.reduce(
                       (sum, v) =>
                         sum + (!isNaN(v.qty * v.price) ? v.qty * v.price : 0),
-                      0
+                      0,
                     );
                     return (
                       <View
@@ -701,7 +795,18 @@ const PurchaseOrderPrintFormat = ({
                         }}
                       >
                         {/* S.No cell */}
-                        <Text style={{ flex: 0.5, fontSize: 8, color: "transparent", paddingVertical: 5, paddingHorizontal: 2, borderRight: "1 solid #bbbbc8" }}> </Text>
+                        <Text
+                          style={{
+                            flex: 0.5,
+                            fontSize: 8,
+                            color: "transparent",
+                            paddingVertical: 5,
+                            paddingHorizontal: 2,
+                            borderRight: "1 solid #bbbbc8",
+                          }}
+                        >
+                          {" "}
+                        </Text>
                         {/* Item + Size + Color + UOM merged label */}
                         <Text
                           style={{
@@ -825,22 +930,31 @@ const PurchaseOrderPrintFormat = ({
 
                   {/* ── SIGNATURES ── */}
                   <View style={styles.sigArea}>
-                    <Text style={styles.sigCompany}>For {branchData?.branchName}</Text>
+                    <Text style={styles.sigCompany}>
+                      For {branchData?.branchName}
+                    </Text>
                     <View style={styles.sigRow}>
-                      {["Prepared By", "Verified By", "Received By", "Approved By"].map((role) => (
-                        <Text key={role} style={styles.sigItem}>{role}</Text>
+                      {[
+                        "Prepared By",
+                        "Verified By",
+                        "Received By",
+                        "Approved By",
+                      ].map((role) => (
+                        <Text key={role} style={styles.sigItem}>
+                          {role}
+                        </Text>
                       ))}
                     </View>
                   </View>
-
                 </>
               )}
+              </View>
 
               {/* ── FOOTER BAR ── */}
-              <View style={[styles.footerBar, !isLastPage && { marginTop: 20 }]}>
-                <Text style={styles.footerLeft}>
-
-                </Text>
+              <View
+                style={[styles.footerBar, !isLastPage && { marginTop: 20 }]}
+              >
+                <Text style={styles.footerLeft}></Text>
                 <Text
                   style={styles.footerRight}
                   render={({ pageNumber, totalPages }) =>
@@ -848,7 +962,6 @@ const PurchaseOrderPrintFormat = ({
                   }
                 />
               </View>
-
             </View>
           </Page>
         );
