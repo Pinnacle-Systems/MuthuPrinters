@@ -60,6 +60,7 @@ import {
   validatePurchaseOrderData,
 } from "./purchaseOrder.module";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
+import { useGetOrderEntryQuery } from "../../../redux/uniformService/OrderEntryService";
 
 const PurchaseOrderForm = ({
   onClose,
@@ -82,7 +83,6 @@ const PurchaseOrderForm = ({
   branchData,
   gsmList,
   userData,
-  hasPermission,
 }) => {
   const today = new Date();
   const [pendingAction, setPendingAction] = useState(null);
@@ -98,7 +98,7 @@ const PurchaseOrderForm = ({
   const [termsAndCondtion, setTermsAndCondtion] = useState("");
   const [termsId, setTermsId] = useState("");
   const [poItems, setPoItems] = useState([]);
-  const [discountType, setDiscountType] = useState("Percentage");
+  const [discountType, setDiscountType] = useState("");
   const [discountValue, setDiscountValue] = useState();
   const [taxPercent, setTaxPercent] = useState();
   const [orderId, setOrderId] = useState("");
@@ -119,7 +119,7 @@ const PurchaseOrderForm = ({
   const [isPostApprovalLock, setIsPostApprovalLock] = useState(false);
   const [isDeliveryThresholdPassed, setIsDeliveryThresholdPassed] =
     useState(false);
-
+  const [orderEntryId, setOrderEntryId] = useState("");
   const supplierRef = useRef(null);
   const termsRef = useRef(null);
   const [dispatchInvalidate] = useInvalidateTags();
@@ -143,9 +143,12 @@ const PurchaseOrderForm = ({
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
   } = useGetPoByIdQuery(id, { skip: !id });
-  console.log("termsRef:", termsRef.current);
+
   const childRecordCount =
     singleData?.data?.childRecordInward + singleData?.data?.childRecordCancel;
+
+  const { data: orderData } = useGetOrderEntryQuery({ params });
+  console.log(orderData, "orderData");
 
   const [addApprovalStatus] = useAddApprovalStausMutation();
   const [addData] = useAddPoMutation();
@@ -174,9 +177,9 @@ const PurchaseOrderForm = ({
           ? moment.utc(data.docDate).format("YYYY-MM-DD")
           : moment.utc(new Date()).format("YYYY-MM-DD"),
       );
-
+      setOrderEntryId(data?.orderEntryId || "");
       setDocId(data?.docId ? data?.docId : "New");
-      setDiscountType(data?.discountType || "Percentage");
+      setDiscountType(data?.discountType || "");
       setTaxPercent(data?.taxPercent ? data?.taxPercent : "");
       setDiscountValue(data?.discountValue || "0");
       setSupplierId(data?.supplierId || "");
@@ -218,14 +221,27 @@ const PurchaseOrderForm = ({
       setQuoteVersion(resolvedQuoteVersion);
 
       // ✅ Pass quoteVersion directly to filter correctly
-      setPoItems(
-        data?.poItems
-          ? data.poItems // ← use raw DB items, isVisibleRow will filter by quoteVersion
-          : createPurchaseOrderRows(
-              DEFAULT_PURCHASE_ORDER_ROWS,
-              resolvedQuoteVersion,
-            ),
-      );
+      let finalPoItems = [];
+      if (data?.poItems) {
+        finalPoItems = [...data.poItems];
+        const visibleItems = finalPoItems.filter((i) => {
+          if (!resolvedQuoteVersion) return i.quoteVersion !== "New";
+          return parseInt(i.quoteVersion) === parseInt(resolvedQuoteVersion);
+        });
+        const missing = DEFAULT_PURCHASE_ORDER_ROWS - visibleItems.length;
+        if (missing > 0) {
+          finalPoItems = [
+            ...finalPoItems,
+            ...createPurchaseOrderRows(missing, resolvedQuoteVersion),
+          ];
+        }
+      } else {
+        finalPoItems = createPurchaseOrderRows(
+          DEFAULT_PURCHASE_ORDER_ROWS,
+          resolvedQuoteVersion,
+        );
+      }
+      setPoItems(finalPoItems);
       setPayTermId(data?.payTermId ? data?.payTermId : "");
     },
     [id],
@@ -391,20 +407,15 @@ const PurchaseOrderForm = ({
       taxTemplateId,
       termsAndCondtion,
       termsId,
-      // isNewVersion:
-      //   (status === "APPROVED" && !isAdmin) ||
-      //   (status === "REJECTED" && !isAdmin)
-      //     ? true
-      //     : isNewVersion || (status === "PENDING" && isAdmin)
-      //       ? true
-      //       : isNewVersion,
-      isNewVersion: id ? true : isNewVersion,
+      isNewVersion,
       quoteVersion,
       payTermId,
       pageId: currentPageId,
       totalNetAmount: totals?.net,
       submitApproval: submitApprovalFlag,
+      orderEntryId,
     });
+    console.log(orderEntryId, "orderEntryId");
 
     if (!validateData(payload)) {
       return;
@@ -553,9 +564,18 @@ const PurchaseOrderForm = ({
       ])
       .filter(([_, arr]) => arr.length > 0),
   );
-
-  const taxBreakdownSummary =
-    totals?.slabBreakup?.filter((row) => (row?.amount || 0) > 0) || [];
+  const taxBreakdownSummaryRaw = totals?.slabBreakup || [];
+  const aggregatedTaxBreakdown = taxBreakdownSummaryRaw?.reduce((acc, row) => {
+    const taxType = row?.tax?.split(" ")[0];
+    if (!acc[taxType]) {
+      acc[taxType] = { tax: taxType, amount: 0 };
+    }
+    acc[taxType].amount += parseFloat(row?.amount || 0);
+    return acc;
+  }, {});
+  // const taxBreakdownSummary =
+  //   totals?.slabBreakup?.filter((row) => (row?.amount || 0) > 0) || [];
+  const taxBreakdownSummary = Object.values(aggregatedTaxBreakdown);
 
   const taxBreakdownContent =
     taxBreakdownSummary.length > 0 ? (
@@ -584,6 +604,18 @@ const PurchaseOrderForm = ({
         .filter((n) => n > 0),
     ),
   ].sort((a, b) => a - b);
+
+  const maxQuoteVersion =
+    quoteVersionOptions.length > 0
+      ? quoteVersionOptions[quoteVersionOptions.length - 1]
+      : 0;
+
+  const isOldVersion =
+    !isNewVersion &&
+    maxQuoteVersion > 0 &&
+    Number(quoteVersion) < maxQuoteVersion;
+  const effectiveReadOnly = readOnly || isOldVersion;
+
   const versionDropdown = (
     <div className="flex items-center gap-2 ml-2">
       <span className="text-xs text-gray-500 mt-1">Version</span>
@@ -705,7 +737,7 @@ const PurchaseOrderForm = ({
     return null;
   };
   const isFullyLocked =
-    readOnly || (isPostApprovalLock && isDeliveryThresholdPassed);
+    effectiveReadOnly || (isPostApprovalLock && isDeliveryThresholdPassed);
   const isCoreLocked = isFullyLocked || isPostApprovalLock;
   const chip = getModeChip();
 
@@ -721,8 +753,8 @@ const PurchaseOrderForm = ({
             key: "save-close",
             icon: (
               <span className={actionIconPairClass}>
-                <FiSave className="h-3.5 w-3.5" />
-                <HiX className="h-3.5 w-3.5" />
+                <FiSave className="h-4 w-4" />
+                <HiX className="h-4 w-4" />
               </span>
             ),
             hoverLabel: "Save & Close",
@@ -735,8 +767,12 @@ const PurchaseOrderForm = ({
                 e.stopPropagation();
               }
             },
-            disabled: readOnly,
-            className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass}`,
+            disabled: readOnly || status === "APPROVED",
+            className: `bg-indigo-500 hover:bg-indigo-600 ${actionButtonClass} ${
+              readOnly || status === "APPROVED"
+                ? "opacity-50 cursor-not-allowed"
+                : ""
+            }`,
           },
           ...(status === "APPROVED"
             ? []
@@ -745,8 +781,8 @@ const PurchaseOrderForm = ({
                   key: "save-new",
                   icon: (
                     <span className={actionIconPairClass}>
-                      <FiSave className="h-3.5 w-3.5" />
-                      <HiOutlineRefresh className="h-3.5 w-3.5" />
+                      <FiSave className="h-4 w-4" />
+                      <HiOutlineRefresh className="h-4 w-4" />
                     </span>
                   ),
                   hoverLabel: "Save & New",
@@ -773,7 +809,7 @@ const PurchaseOrderForm = ({
       : [
           {
             key: "submit-approval",
-            icon: <FiSend className="h-3.5 w-3.5" />,
+            icon: <FiSend className="h-4 w-4" />,
             hoverLabel: "Submit Approval",
             iconOnly: true,
             onClick: () => {
@@ -793,7 +829,7 @@ const PurchaseOrderForm = ({
       ? [
           {
             key: "send-back",
-            icon: <MdKeyboardDoubleArrowLeft className="h-3.5 w-3.5" />,
+            icon: <MdKeyboardDoubleArrowLeft className="h-4 w-4" />,
             hoverLabel: "Send Back for Review",
             iconOnly: true,
             onClick: () => handleApprovalAction("REJECT"),
@@ -808,7 +844,7 @@ const PurchaseOrderForm = ({
           },
           {
             key: "approve",
-            icon: <FiCheck className="h-3.5 w-3.5" />,
+            icon: <FiCheck className="h-4 w-4" />,
             hoverLabel: "Approve",
             iconOnly: true,
             onClick: () => handleApprovalAction("APPROVE"),
@@ -831,16 +867,17 @@ const PurchaseOrderForm = ({
       : [
           {
             key: "edit",
-            icon: <FiEdit2 className="h-3.5 w-3.5" />,
+            icon: <FiEdit2 className="h-4 w-4" />,
             hoverLabel: "Edit",
             iconOnly: true,
-            onClick: () => hasPermission(() => setReadOnly(false), "edit"),
+            onClick: () => setReadOnly(false),
             className: `bg-yellow-600 hover:bg-yellow-700 ${actionButtonClass}`,
+            hidden: !readOnly || !id || isOldVersion,
           },
         ]),
     {
       key: "summary",
-      icon: <FiEye className="h-3.5 w-3.5" />,
+      icon: <FiEye className="h-4 w-4" />,
       hoverLabel: "View PO Summary",
       iconOnly: true,
       onClick: () => {
@@ -872,7 +909,7 @@ const PurchaseOrderForm = ({
     },
     {
       key: "print",
-      icon: <FiPrinter className="h-3.5 w-3.5" />,
+      icon: <FiPrinter className="h-4 w-4" />,
       hoverLabel: "Print",
       iconOnly: true,
       onClick: () => {
@@ -891,24 +928,21 @@ const PurchaseOrderForm = ({
 
   const approvalStatusBanner = (() => {
     if (!isPostApprovalLock) return null;
+    console.log(isPostApprovalLock, "isPostApprovalLock");
+
     return (
       <div
-        className={`text-[11px] px-3 py-1.5 rounded border flex items-center gap-2 mb-2 ${
+        className={`text-[11px] px-3 py-1 rounded border flex items-center gap-2 ${
           isDeliveryThresholdPassed
             ? "bg-red-50 border-red-200 text-red-700"
-            : "bg-amber-50 border-amber-200 text-amber-700"
+            : ""
         }`}
       >
-        <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-        {isDeliveryThresholdPassed ? (
+        {/* <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" /> */}
+        {isDeliveryThresholdPassed && (
           <span>
             <strong>PO FULLY LOCKED:</strong> Approved & within 2-day delivery
             window. No edits allowed.
-          </span>
-        ) : (
-          <span>
-            <strong>LIMITED EDIT MODE:</strong> Approved PO. Only{" "}
-            <strong>Remarks</strong> can be updated.
           </span>
         )}
       </div>
@@ -929,7 +963,7 @@ const PurchaseOrderForm = ({
   const supplierCompactGridClass =
     "grid grid-cols-1 gap-1 items-end md:grid-cols-2 xl:grid-cols-[172px_minmax(0,1.15fr)_minmax(0,0.8fr)]";
   const deliveryCompactGridClass =
-    "grid grid-cols-1 gap-1 items-end md:grid-cols-[76px_minmax(0,1fr)_104px] xl:grid-cols-[76px_minmax(0,1fr)_104px]";
+    "grid grid-cols-1 gap-1 items-end md:grid-cols-[100px_minmax(0,1fr)_110px] xl:grid-cols-[100px_minmax(0,1fr)_110px]";
   const sidebarSectionGridClass = "grid grid-cols-1 gap-1";
   const sidebarTwoColumnGridClass = "grid grid-cols-2 gap-1";
 
@@ -937,7 +971,7 @@ const PurchaseOrderForm = ({
     <>
       <div className={narrowFieldWrap}>
         <ReusableInput
-          label="Order No"
+          label="Po No"
           readOnly
           value={docId}
           className={`${compactFieldClass} ${fieldWidthMedium}`}
@@ -945,7 +979,7 @@ const PurchaseOrderForm = ({
       </div>
       <div className={narrowFieldWrap}>
         <ReusableInput
-          label="Order Date"
+          label=" Date"
           value={docDate}
           type={"date"}
           required={true}
@@ -961,6 +995,9 @@ const PurchaseOrderForm = ({
           value={poType}
           setValue={(value) => {
             setPoType(value);
+            if (value !== "ORDER") {
+              setOrderEntryId("");
+            }
           }}
           required={true}
           readOnly={isCoreLocked}
@@ -970,6 +1007,21 @@ const PurchaseOrderForm = ({
           autoFocus={true}
         />
       </div>
+      <div className={narrowFieldWrap}>
+        <DropdownInput
+          name="Order No"
+          options={dropDownListObject(
+            orderData ? orderData?.data : [],
+            "docId",
+            "id",
+          )}
+          value={orderEntryId}
+          setValue={setOrderEntryId}
+          readOnly={isCoreLocked || poType !== "ORDER"}
+          className={`${compactFieldClass} w-full max-w-none`}
+        />
+      </div>
+      {console.log(orderEntryId, "orderEntryId")}
       <div className={narrowFieldWrap}>
         <DropdownInput
           name="Tax Type"
@@ -1133,7 +1185,7 @@ const PurchaseOrderForm = ({
   const basicDetailsCompactSection = (
     <div className={compactCardClass}>
       <h2 className={compactSectionTitleClass}>Basic Details</h2>
-      <div className="grid grid-cols-2 gap-1 items-end md:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_100px_104px_minmax(0,1fr)]">
+      <div className="grid grid-cols-2 gap-1 items-end md:grid-cols-3 xl:grid-cols-[minmax(0,1fr)_95px_100px_130px_100px]">
         {basicDetailsFields}
       </div>
     </div>
@@ -1359,11 +1411,6 @@ const PurchaseOrderForm = ({
 
   const headerContent = (
     <div className="grid grid-cols-1 gap-1 xl:grid-cols-[minmax(0,5fr)_minmax(0,3.6fr)_minmax(0,3.4fr)]">
-      {/* ✅ Add lock warning banner */}
-      {approvalStatusBanner && (
-        <div className="xl:col-span-3">{approvalStatusBanner}</div>
-      )}
-
       {basicDetailsCompactSection}
       {supplierDetailsCompactSection}
       {deliveryDetailsCompactSection}
@@ -1377,11 +1424,13 @@ const PurchaseOrderForm = ({
         setRemarks={setRemarks}
         terms={termsAndCondtion}
         setTerms={setTermsAndCondtion}
-        readOnly={isCoreLocked}
+        readOnly={isCoreLocked || childRecordCount > 0}
         remarksReadOnly={isFullyLocked}
         showTermSelect={true}
         termValue={termsId}
         onTermChange={(value) => setTermsId(value)}
+        twoColumnRightSummary={true}
+        rightSummaryTitle="Summary"
         termOptions={
           (id
             ? termsData?.data
@@ -1392,132 +1441,46 @@ const PurchaseOrderForm = ({
             templateText: item?.description || "",
           })) || []
         }
-        hasSummaryTitle={
-          <span className="block text-center w-full">Summary</span>
-        }
-        sectionColClass="md:col-span-4"
-        summaryColClass="md:col-span-4"
         totalsRows={[
           {
-            key: "summary_grid",
-            label: "",
-            valueContainerClassName: "w-full",
-            renderValue: () => {
-              const taxTotals = (totals?.slabBreakup || []).reduce(
-                (acc, curr) => {
-                  const type = curr?.tax?.split(" ")[0] || curr?.tax;
-                  acc[type] = (acc[type] || 0) + (curr.amount || 0);
-                  return acc;
-                },
-                {},
-              );
-
-              return (
-                <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1 text-[11px]">
-                  {/* Left Column */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between w-full max-w-[280px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
-                        <span>Total Gross</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-medium text-slate-800 text-right w-[110px]">
-                        {`Rs. ${parseFloat(totals?.gross || 0).toFixed(2)}`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full max-w-[280px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
-                        <span>Total Discount</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-medium text-slate-800 text-right w-[110px]">
-                        {`Rs. ${parseFloat(
-                          (totals?.itemDiscount || 0) +
-                            (totals?.overallDiscount || 0) >
-                            0
-                            ? (totals?.itemDiscount || 0) +
-                                (totals?.overallDiscount || 0)
-                            : 0,
-                        ).toFixed(2)}`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full max-w-[280px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
-                        <span>Taxable Amount</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-medium text-slate-800 text-right w-[110px]">
-                        {`Rs. ${parseFloat(totals?.taxable || 0).toFixed(2)}`}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Right Column */}
-                  <div className="flex flex-col gap-1">
-                    {taxTotals.CGST !== undefined &&
-                    taxTotals.SGST !== undefined ? (
-                      <div className="flex items-center justify-between w-full max-w-[280px]">
-                        <div className="flex items-center gap-1">
-                          <span className="text-slate-800 w-[32px]">CGST</span>
-                          <span className="text-slate-800">:</span>
-                          <span className="font-medium text-slate-800">
-                            {`Rs. ${parseFloat(taxTotals.CGST || 0).toFixed(2)}`}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-slate-800 w-[32px]">SGST</span>
-                          <span className="text-slate-800">:</span>
-                          <span className="font-medium text-slate-800 text-right">
-                            {`Rs. ${parseFloat(taxTotals.SGST || 0).toFixed(2)}`}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      Object.keys(taxTotals).map((type) => (
-                        <div
-                          key={type}
-                          className="flex items-center justify-between w-full max-w-[280px]"
-                        >
-                          <div className="flex justify-between w-[130px] text-slate-800">
-                            <span>{type}</span>
-                            <span>:</span>
-                          </div>
-                          <span className="font-medium text-slate-800 text-right w-[110px]">
-                            {`Rs. ${parseFloat(taxTotals[type] || 0).toFixed(2)}`}
-                          </span>
-                        </div>
-                      ))
-                    )}
-
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
-                        <span>Round Off</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-medium text-slate-800 text-right w-[72px]">
-                        {`Rs. ${parseFloat(totals?.roundOff || 0).toFixed(2)}`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800 font-bold">
-                        <span>Net Amount</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-bold text-indigo-700 text-right w-[72px]">
-                        {`Rs. ${parseFloat(totals?.net || 0).toFixed(2)}`}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            },
-            summaryColumn: "left",
-            emphasized: false,
+            key: "totalDiscount",
+            label: "Total Discount",
+            value: `Rs.${parseFloat((totals?.itemDiscount || 0) + (totals?.overallDiscount || 0)).toFixed(2)}`,
+            summaryColumn: "right",
+          },
+          {
+            key: "taxableAmount",
+            label: "Taxable Amount",
+            value: `Rs.${parseFloat(totals?.taxable || 0).toFixed(2)}`,
+            summaryColumn: "right",
+          },
+          ...taxBreakdownSummary.map((row, index) => ({
+            key: `${row.tax}-${row.amount}`,
+            label: row.tax,
+            value: `Rs.${parseFloat(row.amount || 0).toFixed(2)}`,
+            summaryColumn: "right",
+            labelClassName: "!text-slate-500 font-normal",
+            valueClassName: "text-slate-700",
+            className: index === 0 ? "border-t border-slate-100 pt-1" : "",
+          })),
+          {
+            key: "roundOff",
+            label: "Round Off",
+            value: `Rs.${parseFloat(totals?.roundOff || 0).toFixed(2)}`,
+            summaryColumn: "right",
+            labelClassName: "!text-slate-500 font-normal",
+            valueClassName: "text-slate-700",
+          },
+          {
+            key: "netAmount",
+            label: "Net Amount",
+            value: `Rs.${parseFloat(totals?.net || 0).toFixed(2)}`,
+            summaryColumn: "right",
+            emphasized: true,
           },
         ]}
+        // extraTotalsContent={taxBreakdownContent}
+        // extraTotalsContentColumn="right"
       />
       <TransactionActions
         leftActions={leftActions}
@@ -1536,7 +1499,6 @@ const PurchaseOrderForm = ({
         readOnly={isCoreLocked}
         remarksReadOnly={isFullyLocked}
         showTermSelect={true}
-        termsRef={termsRef}
         termValue={termsId}
         onTermChange={(value) => setTermsId(value)}
         termOptions={
@@ -1549,132 +1511,23 @@ const PurchaseOrderForm = ({
             templateText: item?.description || "",
           })) || []
         }
-        hasSummaryTitle={
-          <span className="block text-center w-full">Summary</span>
-        }
-        sectionColClass="md:col-span-4"
-        summaryColClass="md:col-span-4"
         totalsRows={[
           {
-            key: "summary_grid",
-            label: "",
-            valueContainerClassName: "w-full",
-            renderValue: () => {
-              const taxTotals = (totals?.slabBreakup || []).reduce(
-                (acc, curr) => {
-                  const type = curr?.tax?.split(" ")[0] || curr?.tax;
-                  acc[type] = (acc[type] || 0) + (curr.amount || 0);
-                  return acc;
-                },
-                {},
-              );
-
-              return (
-                <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1 text-[11px]">
-                  {/* Left Column */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between w-full max-w-[280px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
-                        <span>Total Gross</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-medium text-slate-800 text-right w-[110px]">
-                        {`Rs. ${parseFloat(totals?.gross || 0).toFixed(2)}`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full max-w-[280px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
-                        <span>Total Discount</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-medium text-slate-800 text-right w-[110px]">
-                        {`Rs. ${parseFloat(
-                          (totals?.itemDiscount || 0) +
-                            (totals?.overallDiscount || 0) >
-                            0
-                            ? (totals?.itemDiscount || 0) +
-                                (totals?.overallDiscount || 0)
-                            : 0,
-                        ).toFixed(2)}`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full max-w-[280px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
-                        <span>Taxable Amount</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-medium text-slate-800 text-right w-[110px]">
-                        {`Rs. ${parseFloat(totals?.taxable || 0).toFixed(2)}`}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Right Column */}
-                  <div className="flex flex-col gap-1">
-                    {taxTotals.CGST !== undefined &&
-                    taxTotals.SGST !== undefined ? (
-                      <div className="flex items-center justify-between w-full max-w-[280px]">
-                        <div className="flex items-center gap-1">
-                          <span className="text-slate-800 w-[32px]">CGST</span>
-                          <span className="text-slate-800">:</span>
-                          <span className="font-medium text-slate-800">
-                            {`Rs. ${parseFloat(taxTotals.CGST || 0).toFixed(2)}`}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-slate-800 w-[32px]">SGST</span>
-                          <span className="text-slate-800">:</span>
-                          <span className="font-medium text-slate-800 text-right">
-                            {`Rs. ${parseFloat(taxTotals.SGST || 0).toFixed(2)}`}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      Object.keys(taxTotals).map((type) => (
-                        <div
-                          key={type}
-                          className="flex items-center justify-between w-full max-w-[280px]"
-                        >
-                          <div className="flex justify-between w-[130px] text-slate-800">
-                            <span>{type}</span>
-                            <span>:</span>
-                          </div>
-                          <span className="font-medium text-slate-800 text-right w-[110px]">
-                            {`Rs. ${parseFloat(taxTotals[type] || 0).toFixed(2)}`}
-                          </span>
-                        </div>
-                      ))
-                    )}
-
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
-                        <span>Round Off</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-medium text-slate-800 text-right w-[65px]">
-                        {`Rs. ${parseFloat(totals?.roundOff || 0).toFixed(2)}`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800 font-bold">
-                        <span>Net Amount</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-bold text-indigo-700 text-right w-[65px]">
-                        {`Rs. ${parseFloat(totals?.net || 0).toFixed(2)}`}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            },
-            summaryColumn: "left",
-            emphasized: false,
+            key: "taxableAmount",
+            label: "Taxable Amount",
+            value: `Rs.${parseFloat(totals?.taxable || 0).toFixed(2)}`,
+            summaryColumn: "right",
+          },
+          {
+            key: "netAmount",
+            label: "Net Amount",
+            value: `Rs.${parseFloat(totals?.net || 0).toFixed(2)}`,
+            summaryColumn: "right",
+            emphasized: true,
           },
         ]}
+        extraTotalsContent={taxBreakdownContent}
+        extraTotalsContentColumn="right"
         stacked={true}
       />
       <TransactionActions
@@ -1978,11 +1831,17 @@ const PurchaseOrderForm = ({
       </Modal>
       <TransactionLayout
         title="Purchase Order"
-        badge={<ModeChip id={id} readOnly={readOnly} />}
+        badge={<ModeChip id={id} readOnly={effectiveReadOnly} />}
         closeIcon={<IoArrowBackCircleSharp className="w-7 h-7" />}
         onClose={onClose}
         onKeyDown={handleKeyDown}
         header={headerContent}
+        detailsContent={headerContent}
+        detailsTitle="Transaction Details"
+        detailsSummary={transactionDetailsSummary}
+        sidebarDetailsSections={sidebarDetailsSections}
+        sidebarWidthClass="w-[300px]"
+        sidebarFooter={sidebarFooterContent}
         gridItems={
           <PoItems
             id={id}
@@ -1991,13 +1850,7 @@ const PurchaseOrderForm = ({
             setPoItems={setPoItems}
             uomList={uomList}
             hsnList={hsnList}
-            readOnly={
-              isCoreLocked ||
-              (quoteVersionOptions.length > 0 &&
-                Number(quoteVersion) !==
-                  quoteVersionOptions[quoteVersionOptions.length - 1]) ||
-              childRecordCount > 0
-            }
+            readOnly={effectiveReadOnly}
             styleItemList={styleItemList}
             taxTemplateId={taxTemplateId}
             isNewVersion={isNewVersion}
@@ -2011,7 +1864,12 @@ const PurchaseOrderForm = ({
           />
         }
         footer={footerContent}
-        versionDropdown={id ? versionDropdown : null}
+        versionDropdown={
+          <div className="flex items-center gap-4">
+            {id ? versionDropdown : null}
+            {approvalStatusBanner}
+          </div>
+        }
       />
     </>
   );

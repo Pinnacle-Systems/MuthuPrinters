@@ -128,19 +128,19 @@ function getPOApprovalStatus(log, isApprovalConfigured = false) {
   if (!log) {
     return isApprovalConfigured
       ? {
-        status: "NOTAPPROVED",
-        label: "Not Approved",
-        color: "orange",
-        currentLevel: 1,
-        levelLogs: [],
-      }
+          status: "NOTAPPROVED",
+          label: "Not Approved",
+          color: "orange",
+          currentLevel: 1,
+          levelLogs: [],
+        }
       : {
-        status: "NOT_CONFIGURED",
-        label: "No Approval",
-        color: "gray",
-        currentLevel: null,
-        levelLogs: [],
-      };
+          status: "NOT_CONFIGURED",
+          label: "No Approval",
+          color: "gray",
+          currentLevel: null,
+          levelLogs: [],
+        };
   }
   const base = {
     currentLevel: log.currentLevel,
@@ -219,9 +219,9 @@ async function get(req) {
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
   const shortCode = finYearDate
     ? getYearShortCodeForFinYear(
-      finYearDate?.startDateStartTime,
-      finYearDate?.endDateEndTime,
-    )
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
     : "";
 
   let data = await prisma.po.findMany({
@@ -230,26 +230,26 @@ async function get(req) {
         {
           AND: finYearDate
             ? [
-              {
-                createdAt: {
-                  gte: finYearDate.startDateStartTime,
+                {
+                  createdAt: {
+                    gte: finYearDate.startDateStartTime,
+                  },
                 },
-              },
-              {
-                createdAt: {
-                  lte: finYearDate.endDateEndTime,
+                {
+                  createdAt: {
+                    lte: finYearDate.endDateEndTime,
+                  },
                 },
-              },
-            ]
+              ]
             : undefined,
         },
         {
           AND:
             startDate && endDate
               ? [
-                { createdAt: { gte: startDateStartTime } },
-                { createdAt: { lte: endDateEndTime } },
-              ]
+                  { createdAt: { gte: startDateStartTime } },
+                  { createdAt: { lte: endDateEndTime } },
+                ]
               : undefined,
         },
       ],
@@ -259,13 +259,13 @@ async function get(req) {
       OR:
         supplierId || Boolean(filterParties)
           ? [
-            { supplierId: supplierId ? parseInt(supplierId) : undefined },
-            {
-              supplierId: Boolean(filterParties)
-                ? { in: filterParties.split(",").map((i) => parseInt(i)) }
-                : undefined,
-            },
-          ]
+              { supplierId: supplierId ? parseInt(supplierId) : undefined },
+              {
+                supplierId: Boolean(filterParties)
+                  ? { in: filterParties.split(",").map((i) => parseInt(i)) }
+                  : undefined,
+              },
+            ]
           : undefined,
       Supplier: {
         aliasName: Boolean(searchSupplierAliasName)
@@ -281,7 +281,7 @@ async function get(req) {
       inwardItems: { select: { inwardQty: true } },
       purchaseCancelItems: { select: { cancelQty: true } },
     },
-    orderBy: { docId: "desc" },
+    orderBy: { id: "desc" },
   });
 
   data = manualFilterSearchData(searchDate, searchDueDate, searchPoType, data);
@@ -323,31 +323,31 @@ async function get(req) {
   const activeConfigs =
     hasApproval && module
       ? await prisma.approvalConfig.findMany({
-        where: {
-          moduleId: module.id,
-          branchId: parseInt(branchId),
-          active: true,
-        },
-        include: {
-          ConfigConditions: {
-            include: { Field: true, Operator: true, CompareField: true },
+          where: {
+            moduleId: module.id,
+            branchId: parseInt(branchId),
+            active: true,
           },
-          approvalLevels: {
-            include: { LevelUsers: true },
-            orderBy: { levelNo: "asc" },
+          include: {
+            ConfigConditions: {
+              include: { Field: true, Operator: true, CompareField: true },
+            },
+            approvalLevels: {
+              include: { LevelUsers: true },
+              orderBy: { levelNo: "asc" },
+            },
           },
-        },
-        // orderBy: { priority: "asc" },
-      })
+          // orderBy: { priority: "asc" },
+        })
       : [];
 
   const nextDocId = finYearDate
     ? await getNextDocId(
-      branchId,
-      shortCode,
-      finYearDate?.startDateStartTime,
-      finYearDate?.endDateEndTime,
-    )
+        branchId,
+        shortCode,
+        finYearDate?.startDateStartTime,
+        finYearDate?.endDateEndTime,
+      )
     : "";
 
   // purchaseOrder.service.js — FIX in get()
@@ -399,6 +399,12 @@ async function getOne(id) {
       },
       DeliveryBranch: {
         select: { branchName: true, contactName: true, address: true },
+      },
+      OrderEntry: {
+        select: {
+          docId: true,
+          id: true,
+        },
       },
     },
   });
@@ -588,14 +594,15 @@ async function create(body) {
       taxPercent,
       termsId,
       payTermId,
+      orderEntryId,
     } = await body;
 
     let finYearDate = await getFinYearStartTimeEndTime(finYearId);
     const shortCode = finYearDate
       ? getYearShortCodeForFinYear(
-        finYearDate?.startDateStartTime,
-        finYearDate?.endDateEndTime,
-      )
+          finYearDate?.startDateStartTime,
+          finYearDate?.endDateEndTime,
+        )
       : "";
     let newDocId = await getNextDocId(
       branchId,
@@ -621,6 +628,8 @@ async function create(body) {
           branchId: parseInt(branchId),
           createdById: parseInt(userId),
           taxTemplateId: parseInt(taxTemplateId),
+          orderEntryId: orderEntryId ? parseInt(orderEntryId) : null,
+
           deliveryType,
           deliveryBranchId:
             deliveryType === "ToSelf"
@@ -711,10 +720,18 @@ async function createPoItems(tx, poItems, po) {
           sizeId: itemDetails?.sizeId ? parseInt(itemDetails.sizeId) : null,
           colorId: itemDetails?.colorId ? parseInt(itemDetails.colorId) : null,
           gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
-          sheetsPerPacket: itemDetails?.sheetsPerPacket ? parseInt(itemDetails.sheetsPerPacket) : null,
-          weightPerPacket: itemDetails?.weightPerPacket ? parseFloat(itemDetails.weightPerPacket) : null,
-          totalPackets: itemDetails?.totalPackets ? parseInt(itemDetails.totalPackets) : null,
-          pricePerKg: itemDetails?.pricePerKg ? parseInt(itemDetails.pricePerKg) : null,
+          sheetsPerPacket: itemDetails?.sheetsPerPacket
+            ? parseInt(itemDetails.sheetsPerPacket)
+            : null,
+          weightPerPacket: itemDetails?.weightPerPacket
+            ? parseFloat(itemDetails.weightPerPacket)
+            : null,
+          totalPackets: itemDetails?.totalPackets
+            ? parseInt(itemDetails.totalPackets)
+            : null,
+          pricePerKg: itemDetails?.pricePerKg
+            ? parseInt(itemDetails.pricePerKg)
+            : null,
         },
       });
     }),
@@ -751,6 +768,7 @@ async function update(id, body) {
     isNewVersion,
     quoteVersion,
     submitApproval,
+    orderEntryId,
   } = await body;
 
   // ── Always get module setup first to know what fields to include ─────────────
@@ -777,11 +795,18 @@ async function update(id, body) {
   const currentQuoteVersion = Math.max(
     ...new Set(
       dataFound?.poItems
-        .filter((i) => i?.quoteVersion)
-        .map((i) => parseInt(i.quoteVersion)),
+        .filter((i) => i.quoteVersion && i.quoteVersion !== "New")
+        .map((i) => Number(i.quoteVersion)),
     ),
   );
 
+  poItems = poItems.filter((item) => {
+    return (
+      !item.quoteVersion ||
+      item.quoteVersion === "New" ||
+      parseInt(item.quoteVersion) === currentQuoteVersion
+    );
+  });
   // ── Get latest approval log ───────────────────────────────────────────────
   const latestLog = await prisma.approvalLog.findFirst({
     where: { referenceId: parseInt(id), referencePage: REFERENCE_PAGE },
@@ -818,66 +843,126 @@ async function update(id, body) {
   let isRemarksOnlyUpdate = false;
 
   if (isApproved) {
-    // Check if any field OTHER than remarks changed
-    // Core fields: supplierId, docDate, dueDate, poType, taxTemplateId, deliveryType, deliveryToId, discountType, discountValue, taxPercent, termsId, payTermId, and poItems
-    const coreFieldsChanged =
-      parseInt(dataFound.supplierId || 0) !== parseInt(supplierId || 0) ||
-      moment(dataFound.docDate).format("YYYY-MM-DD") !==
-      moment(docDate).format("YYYY-MM-DD") ||
-      moment(dataFound.dueDate).format("YYYY-MM-DD") !==
-      moment(dueDate).format("YYYY-MM-DD") ||
-      dataFound.poType !== poType ||
-      parseInt(dataFound.taxTemplateId || 0) !== parseInt(taxTemplateId || 0) ||
-      dataFound.deliveryType !== deliveryType ||
-      (deliveryType === "ToParty" &&
-        parseInt(dataFound.deliveryToId || 0) !==
-        parseInt(deliveryToId || 0)) ||
-      (deliveryType === "ToSelf" &&
-        parseInt(dataFound.deliveryBranchId || 0) !==
-        parseInt(deliveryToId || 0)) ||
-      dataFound.discountType !== discountType ||
-      parseFloat(dataFound.discountValue || 0) !==
-      parseFloat(discountValue || 0) ||
-      parseFloat(dataFound.taxPercent || 0) !== parseFloat(taxPercent || 0) ||
-      parseInt(dataFound.termsId || 0) !== parseInt(termsId || 0) ||
-      parseInt(dataFound.payTermId || 0) !== parseInt(payTermId || 0);
-
-    // Deep check poItems
-    const oldItems = dataFound.poItems;
-    const itemsChanged =
-      poItems.length !== oldItems.length ||
-      poItems.some((newItem) => {
-        const oldItem = oldItems.find(
-          (o) => parseInt(o.id) === parseInt(newItem.id),
-        );
-        if (!oldItem) return true; // new item
-        return (
-          parseInt(newItem.styleItemId || 0) !==
-          parseInt(oldItem.styleItemId || 0) ||
-          parseFloat(newItem.qty || 0) !== parseFloat(oldItem.qty || 0) ||
-          parseFloat(newItem.price || 0) !== parseFloat(oldItem.price || 0)
-        );
-      });
-
-    if (coreFieldsChanged || itemsChanged) {
-      return {
-        statusCode: 1,
-        message: "This PO is Approved. Only the remarks field can be modified.",
-      };
-    }
-
-    if (dataFound.remarks !== remarks) {
-      isRemarksOnlyUpdate = true;
-    }
+    return {
+      statusCode: 1,
+      message: "This PO is Approved. Edits are not allowed.",
+    };
   }
 
-  // ── (Module setup moved up) ──────────────────────────────────────────────
+  const latestItems = dataFound.poItems
+    .filter(
+      (i) => i.quoteVersion && parseInt(i.quoteVersion) === currentQuoteVersion,
+    )
+    .sort((a, b) => (a.id || 0) - (b.id || 0));
+
+  let isTableChanged = false;
+  if (poItems.length !== latestItems.length) {
+    isTableChanged = true;
+    console.log(
+      "Table changed: length mismatch",
+      poItems.length,
+      latestItems.length,
+    );
+  } else {
+    isTableChanged = poItems.some((newItem, index) => {
+      const oldItem = latestItems[index];
+      if (!oldItem) return true;
+
+      const styleChanged =
+        parseInt(newItem.styleItemId || 0) !==
+        parseInt(oldItem.styleItemId || 0);
+      const qtyChanged =
+        parseFloat(newItem.qty || 0) !== parseFloat(oldItem.qty || 0);
+      const priceChanged =
+        parseFloat(newItem.price || 0) !== parseFloat(oldItem.price || 0);
+      const taxChanged =
+        parseFloat(newItem.taxPercent || 0) !==
+        parseFloat(oldItem.taxPercent || 0);
+      const discTypeChanged =
+        (newItem.discountType || null) !== (oldItem.discountType || null);
+      const discValChanged =
+        parseFloat(newItem.discountValue || 0) !==
+        parseFloat(oldItem.discountValue || 0);
+      const uomChanged =
+        parseInt(newItem.uomId || 0) !== parseInt(oldItem.uomId || 0);
+      const hsnChanged =
+        parseInt(newItem.hsnId || 0) !== parseInt(oldItem.hsnId || 0);
+      const igChanged =
+        parseInt(newItem.itemGroupId || 0) !==
+        parseInt(oldItem.itemGroupId || 0);
+      const sizeChanged =
+        parseInt(newItem.sizeId || 0) !== parseInt(oldItem.sizeId || 0);
+      const colorChanged =
+        parseInt(newItem.colorId || 0) !== parseInt(oldItem.colorId || 0);
+      const gsmChanged =
+        parseInt(newItem.gsmId || 0) !== parseInt(oldItem.gsmId || 0);
+
+      const sheetsPerPacket =
+        parseInt(newItem.sheetsPerPacket || 0) !==
+        parseInt(oldItem.sheetsPerPacket || 0);
+      const weightPerPacket =
+        parseInt(newItem.weightPerPacket || 0) !==
+        parseInt(oldItem.weightPerPacket || 0);
+      const totalPackets =
+        parseInt(newItem.totalPackets || 0) !==
+        parseInt(oldItem.totalPackets || 0);
+      const pricePerKg =
+        parseInt(newItem.pricePerKg || 0) !== parseInt(oldItem.pricePerKg || 0);
+
+      if (
+        styleChanged ||
+        qtyChanged ||
+        priceChanged ||
+        taxChanged ||
+        discTypeChanged ||
+        discValChanged ||
+        uomChanged ||
+        hsnChanged ||
+        igChanged ||
+        sizeChanged ||
+        colorChanged ||
+        gsmChanged ||
+        sheetsPerPacket ||
+        weightPerPacket ||
+        totalPackets ||
+        pricePerKg
+      ) {
+        console.log("Table changed on item", index, {
+          styleChanged,
+          qtyChanged,
+          priceChanged,
+          taxChanged,
+          discTypeChanged,
+          discValChanged,
+          uomChanged,
+          hsnChanged,
+          igChanged,
+          sizeChanged,
+          colorChanged,
+          gsmChanged,
+          sheetsPerPacket,
+          weightPerPacket,
+          totalPackets,
+          pricePerKg,
+        });
+        return true;
+      }
+      return false;
+    });
+  }
+
+  // Auto-detect version change
+  isNewVersion = isTableChanged;
+  console.log(isNewVersion, "isNewVersion", {
+    isTableChanged,
+  });
+
+  const nextQuoteVersion = isNewVersion
+    ? currentQuoteVersion + 1
+    : parseInt(quoteVersion || currentQuoteVersion);
 
   // ── Determine what approval action to take ────────────────────────────────
   let needsFirstApproval = false; // Add this back
-
-  let removedItems = findRemovedItems(dataFound, poItems);
-  let removeItemsIds = removedItems.map((item) => parseInt(item.id));
 
   let data;
   await prisma.$transaction(async (tx) => {
@@ -888,7 +973,6 @@ async function update(id, body) {
     data = await tx.po.update({
       where: { id: parseInt(id) },
       data: {
-        docDate: docDate ? new Date(docDate) : null,
         dueDate: dueDate ? new Date(dueDate) : null,
         branchId: parseInt(branchId),
         poType,
@@ -907,6 +991,8 @@ async function update(id, body) {
               : null
             : null,
         termsAndCondtion,
+        orderEntryId: orderEntryId ? parseInt(orderEntryId) : null,
+
         remarks,
         supplierId: parseInt(supplierId),
         updatedById: parseInt(userId),
@@ -930,22 +1016,13 @@ async function update(id, body) {
       },
     });
 
-    if (isNewVersion) {
+    if (isNewVersion && !isRemarksOnlyUpdate) {
       await createNewVersionItems(
         tx,
         poItems,
         data.id,
-        currentQuoteVersion + 1,
+        nextQuoteVersion,
         currentQuoteVersion,
-      );
-    } else {
-      await updatePoItems(
-        tx,
-        poItems,
-        data,
-        quoteVersion,
-        currentQuoteVersion,
-        isNewVersion,
       );
     }
 
@@ -1065,10 +1142,18 @@ async function updatePoItems(
               ? parseInt(itemDetails.colorId)
               : null,
             gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
-            sheetsPerPacket: itemDetails?.sheetsPerPacket ? parseInt(itemDetails.sheetsPerPacket) : null,
-            weightPerPacket: itemDetails?.weightPerPacket ? parseFloat(itemDetails.weightPerPacket) : null,
-            totalPackets: itemDetails?.totalPackets ? parseInt(itemDetails.totalPackets) : null,
-            pricePerKg: itemDetails?.pricePerKg ? parseInt(itemDetails.pricePerKg) : null,
+            sheetsPerPacket: itemDetails?.sheetsPerPacket
+              ? parseInt(itemDetails.sheetsPerPacket)
+              : null,
+            weightPerPacket: itemDetails?.weightPerPacket
+              ? parseFloat(itemDetails.weightPerPacket)
+              : null,
+            totalPackets: itemDetails?.totalPackets
+              ? parseInt(itemDetails.totalPackets)
+              : null,
+            pricePerKg: itemDetails?.pricePerKg
+              ? parseInt(itemDetails.pricePerKg)
+              : null,
             quoteVersion: isNewVersion
               ? currentQuoteVersion + 1
               : parseInt(quoteVersion),
@@ -1103,10 +1188,18 @@ async function updatePoItems(
               ? parseInt(itemDetails.colorId)
               : null,
             gsmId: itemDetails?.gsmId ? parseInt(itemDetails.gsmId) : null,
-            sheetsPerPacket: itemDetails?.sheetsPerPacket ? parseInt(itemDetails.sheetsPerPacket) : null,
-            weightPerPacket: itemDetails?.weightPerPacket ? parseFloat(itemDetails.weightPerPacket) : null,
-            totalPackets: itemDetails?.totalPackets ? parseInt(itemDetails.totalPackets) : null,
-            pricePerKg: itemDetails?.pricePerKg ? parseInt(itemDetails.pricePerKg) : null,
+            sheetsPerPacket: itemDetails?.sheetsPerPacket
+              ? parseInt(itemDetails.sheetsPerPacket)
+              : null,
+            weightPerPacket: itemDetails?.weightPerPacket
+              ? parseFloat(itemDetails.weightPerPacket)
+              : null,
+            totalPackets: itemDetails?.totalPackets
+              ? parseInt(itemDetails.totalPackets)
+              : null,
+            pricePerKg: itemDetails?.pricePerKg
+              ? parseInt(itemDetails.pricePerKg)
+              : null,
           },
         });
       }
@@ -1139,8 +1232,12 @@ async function createNewVersionItems(
         sizeId: temp.sizeId ? parseInt(temp.sizeId) : null,
         colorId: temp.colorId ? parseInt(temp.colorId) : null,
         gsmId: temp.gsmId ? parseInt(temp.gsmId) : null,
-        sheetsPerPacket: temp.sheetsPerPacket ? parseInt(temp.sheetsPerPacket) : null,
-        weightPerPacket: temp.weightPerPacket ? parseFloat(temp.weightPerPacket) : null,
+        sheetsPerPacket: temp.sheetsPerPacket
+          ? parseInt(temp.sheetsPerPacket)
+          : null,
+        weightPerPacket: temp.weightPerPacket
+          ? parseFloat(temp.weightPerPacket)
+          : null,
         totalPackets: temp.totalPackets ? parseInt(temp.totalPackets) : null,
         pricePerKg: temp.pricePerKg ? parseInt(temp.pricePerKg) : null,
       })),
@@ -1252,6 +1349,7 @@ async function getPoItemById(id) {
     });
     returnQty = returnAgg._sum.returnQty ?? 0;
   }
+  console.log(data.qty, inwardQty, cancelQty, returnQty, "testinfcheck");
 
   return {
     statusCode: 0,
@@ -1261,12 +1359,11 @@ async function getPoItemById(id) {
       alreadyCancelQty: cancelQty,
       alreadyInwardQty: inwardQty,
       alreadyReturnQty: returnQty,
-      balQty: data.qty - (inwardQty + cancelQty),
+      balQty: data.qty + returnQty - (inwardQty + cancelQty),
       balQtyCancel: data.qty - (inwardQty - returnQty),
     },
   };
 }
-console.log("chek");
 
 async function getPoItems(req) {
   const {
@@ -1324,9 +1421,9 @@ async function getPoItems(req) {
     // ✅ Fetch approval logs for these POs
     const approvalLogs = hasApproval
       ? await prisma.approvalLog.findMany({
-        where: { referencePage: REFERENCE_PAGE, referenceId: { in: poIds } },
-        select: { referenceId: true, status: true, currentLevel: true },
-      })
+          where: { referencePage: REFERENCE_PAGE, referenceId: { in: poIds } },
+          select: { referenceId: true, status: true, currentLevel: true },
+        })
       : [];
 
     const approvalLogMap = approvalLogs.reduce((acc, log) => {
@@ -1338,22 +1435,22 @@ async function getPoItems(req) {
     const activeConfigs =
       hasApproval && module
         ? await prisma.approvalConfig.findMany({
-          where: {
-            moduleId: module.id,
-            branchId: parseInt(branchId),
-            active: true,
-          },
-          include: {
-            ConfigConditions: {
-              include: { Field: true, Operator: true, CompareField: true },
+            where: {
+              moduleId: module.id,
+              branchId: parseInt(branchId),
+              active: true,
             },
-            approvalLevels: {
-              include: { LevelUsers: true },
-              orderBy: { levelNo: "asc" },
+            include: {
+              ConfigConditions: {
+                include: { Field: true, Operator: true, CompareField: true },
+              },
+              approvalLevels: {
+                include: { LevelUsers: true },
+                orderBy: { levelNo: "asc" },
+              },
             },
-          },
-          orderBy: { priority: "asc" },
-        })
+            orderBy: { priority: "asc" },
+          })
         : [];
 
     // ✅ Need full PO records to evaluate conditions (poItems has only Po.id)
@@ -1364,9 +1461,9 @@ async function getPoItems(req) {
     const fullPoRecords =
       poIds.length > 0
         ? await prisma.po.findMany({
-          where: { id: { in: poIds } },
-          include: { ...includeClause, poItems: true },
-        })
+            where: { id: { in: poIds } },
+            include: { ...includeClause, poItems: true },
+          })
         : [];
 
     const fullPoMap = fullPoRecords.reduce((acc, po) => {
@@ -1466,17 +1563,15 @@ async function packingCompleted(body) {
         id: parseInt(id),
       },
       data: {
-        isPackingComplted: "Completed"
+        isPackingComplted: "Completed",
       },
     });
-
 
     return { statusCode: 0, message: "Packing Completed" };
   } catch (err) {
     return { statusCode: 400, message: err.message };
   }
 }
-
 
 export {
   get,
@@ -1487,5 +1582,5 @@ export {
   remove,
   getPoItems,
   createApproveStatus,
-  packingCompleted
+  packingCompleted,
 };

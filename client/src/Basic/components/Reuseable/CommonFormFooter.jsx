@@ -61,7 +61,7 @@ const CommonFormFooter = ({
   readOnly = false,
   showTermSelect = false,
   termValue = "",
-  onTermChange = () => { },
+  onTermChange = () => {},
   termOptions = [],
   totalsRows,
   extraTotalsContent = null,
@@ -73,15 +73,16 @@ const CommonFormFooter = ({
   stacked = false,
   hasSummaryTitle = false,
   remarksReadOnly = null,
+  hideTerms = false,
   termsRef = null,
-  sectionColClass = "md:col-span-4",
-  summaryColClass = "md:col-span-4",
+  twoColumnRightSummary = false,
+  rightSummaryTitle = "",
+  termsTitle = "Terms & Conditions",
 }) => {
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const termsTextareaRef = React.useRef(null);
   const templateOptionsRefs = React.useRef([]);
-  const [showTermsHint, setShowTermsHint] = useState(false);
 
   const resolvedTotalsRows =
     totalsRows && totalsRows.length > 0
@@ -166,7 +167,7 @@ const CommonFormFooter = ({
         key={row.key || row.label || index}
         className={[
           "flex items-center justify-between gap-2 py-0.5 text-[12px]",
-          row.emphasized ? "border-t border-slate-100 " : "",
+          row.emphasized ? "border-t border-slate-100 pt-1.5" : "",
           row.className || "",
         ]
           .filter(Boolean)
@@ -175,7 +176,7 @@ const CommonFormFooter = ({
         <span
           className={[
             "shrink-0",
-            row.emphasized ? "font-semibold text-slate-800" : "text-slate-800",
+            row.emphasized ? "font-semibold text-slate-700" : "text-slate-600",
             row.labelClassName || "",
           ]
             .filter(Boolean)
@@ -302,133 +303,69 @@ const CommonFormFooter = ({
       </Modal>
 
       <div
-        className={[
-          "grid grid-cols-1 gap-2",
-          stacked ? "" : "md:grid-cols-12",
-        ]
+        className={["grid grid-cols-1 gap-2", stacked ? "" : "md:grid-cols-12"]
           .filter(Boolean)
           .join(" ")}
       >
-        <div
-          className={[
-            "flex h-full flex-col rounded-md border border-slate-200 bg-white p-1.5 shadow-sm",
-            stacked ? "" : sectionColClass,
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          <div className="flex h-full flex-col gap-1">
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <h2 className="text-[12px] font-bold text-slate-700">
-                Terms & Conditions
-              </h2>
-              {showTermsHint && (
-                <div className="text-[10px] text-indigo-600 font-medium mb-1">
-                  ⌨️ Use <span className="font-semibold">Ctrl + Enter</span> to move next
-                </div>
-              )}
-              {showTemplateControl ? (
-                <button
-                  type="button"
-                  className="shrink-0 text-[11px] font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700"
-                  onClick={() => setIsTemplateModalOpen(true)}
-                >
-                  Apply template
-                </button>
-              ) : null}
+        {!hideTerms && (
+          <div
+            className={[
+              "flex h-full flex-col rounded-md border border-slate-200 bg-white p-1.5 shadow-sm",
+              stacked ? "" : "md:col-span-4",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <div className="flex h-full flex-col gap-1">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <h2 className="text-[12px] font-bold text-slate-700">
+                  Terms & Conditions
+                </h2>
+                {showTemplateControl ? (
+                  <button
+                    type="button"
+                    className="shrink-0 text-[11px] font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700"
+                    onClick={() => setIsTemplateModalOpen(true)}
+                  >
+                    Apply template
+                  </button>
+                ) : null}
+              </div>
+              <textarea
+                id="termsAndCondition"
+                ref={termsTextareaRef}
+                disabled={readOnly}
+                className="min-h-[2.5rem] flex-1 w-full overflow-auto focus:outline-none rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
+                value={terms || ""}
+                onChange={(e) => setTerms(e.target.value)}
+                placeholder={termsPlaceholder}
+              />
             </div>
-
-
-            <textarea
-              ref={(el) => {
-                termsTextareaRef.current = el;
-
-                // ✅ attach external ref
-                if (termsRef) {
-                  if (typeof termsRef === "function") {
-                    termsRef(el);
-                  } else {
-                    termsRef.current = el;
-                  }
-                }
-              }}
-              readOnly={readOnly}
-              className="min-h-[2.5rem] flex-1 w-full overflow-auto focus:outline-none rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
-              value={terms || ""}
-              onChange={(e) => setTerms(e.target.value)}
-              placeholder={termsPlaceholder}
-              onFocus={() => setShowTermsHint(true)}
-              onBlur={() => setShowTermsHint(false)}
-              onKeyDown={(e) => {
-                if (e.ctrlKey && e.key === "Enter") {
-                  e.preventDefault();
-
-                  const textarea = e.target; // ✅ correct
-                  const start = textarea.selectionStart;
-                  const end = textarea.selectionEnd;
-
-                  const newValue =
-                    (terms || "").substring(0, start) +
-                    "\n" +
-                    (terms || "").substring(end);
-
-                  setTerms(newValue);
-
-                  requestAnimationFrame(() => {
-                    textarea.focus();
-                    textarea.setSelectionRange(start + 1, start + 1);
-                  });
-                }
-              }}
-            />
           </div>
-        </div>
+        )}
 
         <div
           className={[
             "flex h-full flex-col rounded-md border border-slate-200 bg-white p-1.5 shadow-sm",
-            stacked ? "" : sectionColClass,
+            stacked ? "" : hideTerms ? "md:col-span-6" : "md:col-span-4",
           ]
             .filter(Boolean)
             .join(" ")}
         >
           <h2 className="mb-1 text-[12px] font-bold text-slate-700">Remarks</h2>
           <textarea
-            readOnly={remarksReadOnly !== null ? remarksReadOnly : readOnly}
+            disabled={readOnly}
             value={remarks || ""}
             onChange={(e) => setRemarks(e.target.value)}
             className="min-h-[2.5rem] focus:outline-none flex-1 w-full overflow-auto rounded-md border border-slate-300 px-2 py-1.5 text-[11px] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-200"
             placeholder={remarksPlaceholder}
-            onKeyDown={(e) => {
-              if (e.ctrlKey && e.key === "Enter") {
-                e.preventDefault();
-
-                const textarea = e.target; // ✅ DOM element
-                const value = textarea.value; // ✅ string value
-
-                const start = textarea.selectionStart;
-                const end = textarea.selectionEnd;
-
-                const newValue =
-                  value.substring(0, start) +
-                  "\n" +
-                  value.substring(end);
-
-                setRemarks(newValue);
-
-                requestAnimationFrame(() => {
-                  textarea.focus();
-                  textarea.setSelectionRange(start + 1, start + 1);
-                });
-              }
-            }}
           />
         </div>
 
-        <div
+        {/* <div
           className={[
             "grid grid-cols-1 gap-2",
-            stacked ? "" : summaryColClass,
+            stacked ? "" : hideTerms ? "md:col-span-6" : "md:col-span-4",
             stacked
               ? ""
               : hasLeftSummaryContent && hasRightSummaryContent
@@ -440,7 +377,11 @@ const CommonFormFooter = ({
         >
           {hasLeftSummaryContent ? (
             <div className="rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              {hasSummaryTitle && <h2 className="mb-1 text-[12px] font-bold text-slate-700">{hasSummaryTitle}</h2>}
+              {hasSummaryTitle && (
+                <h2 className="mb-1 text-[12px] font-bold text-slate-700">
+                  {hasSummaryTitle}
+                </h2>
+              )}
               {renderSummaryRows(leftSummaryRows)}
               {extraTotalsContent && extraTotalsContentColumn === "left" ? (
                 <div className="pt-0.5">{extraTotalsContent}</div>
@@ -449,7 +390,61 @@ const CommonFormFooter = ({
           ) : null}
           {hasRightSummaryContent ? (
             <div className="rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              {hasSummaryTitle && !hasLeftSummaryContent && (
+                <h2 className="mb-1 text-[12px] font-bold text-slate-700">
+                  {hasSummaryTitle}
+                </h2>
+              )}
               {renderSummaryRows(rightSummaryRows)}
+              {extraTotalsContent && extraTotalsContentColumn === "right" ? (
+                <div className="pt-0.5">{extraTotalsContent}</div>
+              ) : null}
+            </div>
+          ) : null}
+        </div> */}
+        <div
+          className={[
+            "grid grid-cols-1 gap-2",
+            stacked ? "" : hideTerms ? "md:col-span-6" : "md:col-span-4",
+            stacked
+              ? ""
+              : hasLeftSummaryContent && hasRightSummaryContent
+                ? "md:grid-cols-2"
+                : "md:grid-cols-1",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {hasLeftSummaryContent ? (
+            <div className="rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              {hasSummaryTitle && (
+                <h2 className="mb-1 text-[12px] font-bold text-slate-700">
+                  {hasSummaryTitle}
+                </h2>
+              )}
+              {renderSummaryRows(leftSummaryRows)}
+              {extraTotalsContent && extraTotalsContentColumn === "left" ? (
+                <div className="pt-0.5">{extraTotalsContent}</div>
+              ) : null}
+            </div>
+          ) : null}
+          {hasRightSummaryContent ? (
+            <div className="rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              {rightSummaryTitle && (
+                <h2 className="mb-1 text-[12px] font-bold text-slate-700">
+                  {rightSummaryTitle}
+                </h2>
+              )}
+              {twoColumnRightSummary ? (
+                <div
+                  className="grid grid-flow-col gap-x-6 gap-y-1"
+                  style={{ gridTemplateRows: `repeat(2, auto)` }}
+                >
+                  {renderSummaryRows(rightSummaryRows)}
+                </div>
+              ) : (
+                renderSummaryRows(rightSummaryRows)
+              )}
               {extraTotalsContent && extraTotalsContentColumn === "right" ? (
                 <div className="pt-0.5">{extraTotalsContent}</div>
               ) : null}

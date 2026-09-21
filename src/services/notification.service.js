@@ -20,7 +20,7 @@ async function checkPendingJobCards(userId) {
       StyleItem: true,
     },
   });
-  console.log(pendingItems, "pendingItems");
+
   const pendingItemIds = pendingItems.map((item) => item.id);
   // Clean up any old "Job Card Pending" notifications that are no longer pending
   // (e.g. Job card was created, or OrderEntry was deleted/expired)

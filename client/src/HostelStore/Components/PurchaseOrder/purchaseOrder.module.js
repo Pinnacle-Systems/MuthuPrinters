@@ -3,7 +3,12 @@ import { findFromList, isGridDatasValid } from "../../../Utils/helper";
 import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary";
 
 export const PURCHASE_ORDER_TRANSACTION_DEFINITION = {
-  headerFields: ["basicDetails", "poDetails", "supplierDetails", "deliveryDetails"],
+  headerFields: [
+    "basicDetails",
+    "poDetails",
+    "supplierDetails",
+    "deliveryDetails",
+  ],
   grid: {
     columns: [
       "serial",
@@ -50,8 +55,7 @@ export const createPurchaseOrderRow = (quoteVersion = "") => ({
 export const createPurchaseOrderRows = (
   count = DEFAULT_PURCHASE_ORDER_ROWS,
   quoteVersion = "",
-) =>
-  Array.from({ length: count }, () => createPurchaseOrderRow(quoteVersion));
+) => Array.from({ length: count }, () => createPurchaseOrderRow(quoteVersion));
 
 export const getVisiblePurchaseOrderRows = ({
   rows = [],
@@ -82,7 +86,12 @@ export const resolveStyleItemPatch = async ({ styleItemId, getStyleItem }) => {
   };
 };
 
-export const findPurchaseOrderDuplicates = ({ items = [], id, isNewVersion, quoteVersion }) => {
+export const findPurchaseOrderDuplicates = ({
+  items = [],
+  id,
+  isNewVersion,
+  quoteVersion,
+}) => {
   const versionFilteredItems = items.filter((row) => {
     if (!id) return true;
     if (isNewVersion) return row.quoteVersion === "New";
@@ -154,12 +163,36 @@ export const validatePurchaseOrderData = ({
   const dup = duplicates[0];
 
   const checks = [
-    { severity: "block", condition: !data.dueDate, message: "Delivery Date is required!" },
-    { severity: "block", condition: !data.poType, message: "PO Type is required!" },
-    { severity: "block", condition: !data.taxTemplateId, message: "Tax Template is required!" },
-    { severity: "block", condition: !data.supplierId, message: "Supplier is required!" },
-    { severity: "block", condition: !data.deliveryType, message: "Delivery Type is required!" },
-    { severity: "block", condition: !data.deliveryToId, message: "Delivery To is required!" },
+    {
+      severity: "block",
+      condition: !data.dueDate,
+      message: "Delivery Date is required!",
+    },
+    {
+      severity: "block",
+      condition: !data.poType,
+      message: "PO Type is required!",
+    },
+    {
+      severity: "block",
+      condition: !data.taxTemplateId,
+      message: "Tax Template is required!",
+    },
+    {
+      severity: "block",
+      condition: !data.supplierId,
+      message: "Supplier is required!",
+    },
+    {
+      severity: "block",
+      condition: !data.deliveryType,
+      message: "Delivery Type is required!",
+    },
+    {
+      severity: "block",
+      condition: !data.deliveryToId,
+      message: "Delivery To is required!",
+    },
     {
       severity: "block",
       condition: filledItems.length === 0,
@@ -185,7 +218,12 @@ export const validatePurchaseOrderData = ({
     },
   ];
 
-  return checks.find((check) => check.condition) || { severity: "ignore", message: "" };
+  return (
+    checks.find((check) => check.condition) || {
+      severity: "ignore",
+      message: "",
+    }
+  );
 };
 
 export const isPurchaseOrderSupplierOutsideTamilNadu = (supplierDetails) => {
@@ -197,7 +235,7 @@ export const isPurchaseOrderSupplierOutsideTamilNadu = (supplierDetails) => {
 };
 
 export const getPurchaseOrderTaxSnapshot = ({
-  poItems,
+  poItems = [],
   supplierDetails,
   discountType,
   discountValue,
@@ -205,29 +243,63 @@ export const getPurchaseOrderTaxSnapshot = ({
   isNewVersion,
   quoteVersion,
 }) => {
-  const supplierOutside = isPurchaseOrderSupplierOutsideTamilNadu(supplierDetails);
-  const enriched = calculateTaxWithHSNBreakupAndInsertIntoPoItems(
-    poItems,
-    supplierOutside,
-    discountType,
-    discountValue,
-  );
-  const visibleRows = getVisiblePurchaseOrderRows({
-    rows: poItems,
-    id,
-    isNewVersion,
-    quoteVersion,
-  }).filter((item) => item.styleItemId);
-  const totals = calculateTaxWithHSNBreakupAndInsertIntoPoItems(
-    visibleRows,
-    supplierOutside,
-    discountType,
-    discountValue,
-  );
+  const supplierOutside =
+    isPurchaseOrderSupplierOutsideTamilNadu(supplierDetails);
+  // const enriched = calculateTaxWithHSNBreakupAndInsertIntoPoItems(
+  //   poItems,
+  //   supplierOutside,
+  //   discountType,
+  //   discountValue,
+  // );
+  // const visibleRows = getVisiblePurchaseOrderRows({
+  //   rows: poItems,
+  //   id,
+  //   isNewVersion,
+  //   quoteVersion,
+  // }).filter((item) => item.styleItemId);
+  const isVisibleRow = (row) => {
+    if (!id) return true;
+    if (isNewVersion) return row.quoteVersion === "New";
+    if (!quoteVersion) return row.quoteVersion !== "New";
+    return parseInt(row.quoteVersion) === parseInt(quoteVersion);
+  };
+  const activeRowsWithIndex = poItems
+    .map((row, originalIndex) => ({ row, originalIndex }))
+    .filter(({ row }) => isVisibleRow(row) && row.styleItemId);
 
+  const activeRows = activeRowsWithIndex.map(({ row }) => row);
+
+  const totals = calculateTaxWithHSNBreakupAndInsertIntoPoItems(
+    activeRows,
+    supplierOutside,
+    discountType,
+    discountValue,
+  );
+  const enrichedPoItems = poItems.map((row, index) => {
+    const activeMatchIndex = activeRowsWithIndex.findIndex(
+      ({ originalIndex }) => originalIndex === index,
+    );
+    if (activeMatchIndex !== -1 && totals.items?.[activeMatchIndex]) {
+      return totals.items[activeMatchIndex];
+    }
+    return {
+      ...row,
+      totals: {
+        gross: 0,
+        itemDiscount: 0,
+        overallDiscountShare: 0,
+        taxable: 0,
+        cgst: 0,
+        sgst: 0,
+        igst: 0,
+        net: 0,
+      },
+    };
+  });
   return {
     isSupplierOutside: supplierOutside,
-    enrichedPoItems: enriched.items,
+    // enrichedPoItems: enriched.items,
+    enrichedPoItems,
     totals,
   };
 };
@@ -257,6 +329,7 @@ export const getPurchaseOrderPayload = ({
   pageId,
   totalNetAmount,
   submitApproval,
+  orderEntryId,
 }) => ({
   supplierId,
   dueDate,
@@ -282,4 +355,5 @@ export const getPurchaseOrderPayload = ({
   pageId,
   totalNetAmount,
   submitApproval,
+  orderEntryId,
 });

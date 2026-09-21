@@ -322,6 +322,7 @@ model FinYear {
   SalesOrder          SalesOrder[]
   Packing             Packing[]
   SalesDelivery       SalesDelivery[]
+  pos                 Po[]
 }
 
 model EmployeeCategory {
@@ -1387,6 +1388,10 @@ model Po {
   createdById            Int?
   updatedBy              User?                    @relation("updatedBy", fields: [updatedById], references: [id])
   updatedById            Int?
+  finYearId              Int?
+  FinYear                FinYear?                 @relation(fields: [finYearId], references: [id])
+  orderEntryId           Int?
+  OrderEntry             OrderEntry?              @relation(fields: [orderEntryId], references: [id])
   poType                 String?
   TaxTemplate            TaxTemplate?             @relation(fields: [taxTemplateId], references: [id], onDelete: Cascade)
   taxTemplateId          Int?
@@ -2065,6 +2070,7 @@ model OrderEntry {
   Packing           Packing[]
   Stock             Stock[]
   SalesBillEntry    SalesBillEntry[]
+  pos               Po[]
 }
 
 model Process {
