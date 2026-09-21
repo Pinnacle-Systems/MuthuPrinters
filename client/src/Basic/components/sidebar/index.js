@@ -233,7 +233,7 @@ const Sidebar = ({
             } rounded-lg py-4 flex flex-col items-center shadow-xl transition-all duration-300`}
         >
           {/* Dashboard Link */}
-          {/* <div
+          <div
             className="text-white hover:text-gray-300 cursor-pointer mb-4 flex flex-col items-center"
 
             onClick={(() => {
@@ -247,7 +247,7 @@ const Sidebar = ({
             })}>
             <LayoutDashboard size={20} />
             <span className="text-[11px] text-center mt-1">Dashboard</span>
-          </div> */}
+          </div>
 
           {/* Main Menu Items */}
           {headers.map((ele, index) => (

@@ -377,7 +377,7 @@ const OrderEntryPrintFormat = ({
   console.log("data", data);
 
   const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
-  let currencySymbol = isCurrencySymbol || currencyCode || "";
+  let currencySymbol = isCurrencySymbol || currencyCode || "Rs.";
   if (currencySymbol.includes("₹"))
     currencySymbol = currencySymbol.replace("₹", "Rs.");
   const loadingPort =
@@ -389,34 +389,40 @@ const OrderEntryPrintFormat = ({
   );
 
   const consolidatedTaxSlabs = (() => {
-    const gstMap = {};
+    const taxMap = {};
     const others = [];
     taxSlabBreakup.forEach((slab) => {
       const cgstMatch = slab.tax.match(/^CGST\s+([\d.]+)%$/i);
       const sgstMatch = slab.tax.match(/^SGST\s+([\d.]+)%$/i);
       const igstMatch = slab.tax.match(/^IGST\s+([\d.]+)%$/i);
 
-      if (cgstMatch || sgstMatch) {
-        const rate = parseFloat((cgstMatch || sgstMatch)[1]);
-        const totalRate = rate * 2;
-        const key = `GST @${totalRate}%`;
-        if (!gstMap[key]) {
-          gstMap[key] = { tax: key, amount: 0, order: totalRate };
+      if (cgstMatch) {
+        const rate = parseFloat(cgstMatch[1]);
+        const key = `CGST @${rate}%`;
+        if (!taxMap[key]) {
+          taxMap[key] = { tax: key, amount: 0, type: "CGST", rate };
         }
-        gstMap[key].amount += slab.amount;
+        taxMap[key].amount += slab.amount;
+      } else if (sgstMatch) {
+        const rate = parseFloat(sgstMatch[1]);
+        const key = `SGST @${rate}%`;
+        if (!taxMap[key]) {
+          taxMap[key] = { tax: key, amount: 0, type: "SGST", rate };
+        }
+        taxMap[key].amount += slab.amount;
       } else if (igstMatch) {
         const rate = parseFloat(igstMatch[1]);
         const key = `IGST @${rate}%`;
-        if (!gstMap[key]) {
-          gstMap[key] = { tax: key, amount: 0, order: rate };
+        if (!taxMap[key]) {
+          taxMap[key] = { tax: key, amount: 0, type: "IGST", rate };
         }
-        gstMap[key].amount += slab.amount;
+        taxMap[key].amount += slab.amount;
       } else {
         others.push(slab);
       }
     });
 
-    const combined = Object.values(gstMap).sort((a, b) => a.order - b.order);
+    const combined = Object.values(taxMap).sort((a, b) => a.rate - b.rate);
     return [...combined, ...others];
   })();
 
@@ -451,22 +457,114 @@ const OrderEntryPrintFormat = ({
   const renderChunks = pageChunks.length === 0 ? [[]] : pageChunks;
 
   // ── Helper: build size breakup label lines ──
-  const getSizeBreakupText = (row) => {
-    const breakup = row?.sizeBreakup?.filter((sb) => (Number(sb.qty) || 0) > 0);
-    if (!breakup || breakup.length === 0) return null;
+  const renderStyleBreakups = (row) => {
+    // Merge DB state and form state
+    const styleBreakups = row?.orderStyleBreakup || row?.styleBreakup || [];
 
-    return breakup
-      .map((sb) => {
-        const size = findFromList(sb.sizeId, sizeList?.data, "name");
-        const qty = Number(sb.qty);
+    // Multiple styles format
+    if (styleBreakups && styleBreakups.length > 0) {
+      return styleBreakups.map((st, idx) => {
+        // Resolve style name
+        let styleName = st?.StyleItem?.name;
+        if (!styleName && st?.styleId) {
+          const foundStyle = styleItemList?.data?.find(
+            (s) => s.id === st.styleId,
+          );
+          if (foundStyle) styleName = foundStyle.name;
+        }
 
-        return `${size || "All"}: ${qty}`;
-      })
-      .filter(Boolean)
-      .join("  |  ");
+        const sizeBreakup = st?.orderSizeBreakup || st?.sizeBreakup || [];
+        const validSizes = sizeBreakup.filter(
+          (sb) => (Number(sb.qty) || 0) > 0,
+        );
+
+        const sizesText =
+          validSizes && validSizes.length > 0
+            ? validSizes
+                .map((sb) => {
+                  let sName = sb?.Size?.name || "All";
+                  if (!sb?.Size?.name && sb?.sizeId) {
+                    const foundSize = sizeList?.data?.find(
+                      (s) => s.id === sb.sizeId,
+                    );
+                    if (foundSize) sName = foundSize.name;
+                  }
+                  return `${sName}: ${Number(sb.qty)}`;
+                })
+                .join("  |  ")
+            : "";
+
+        return (
+          <View key={idx} style={{ marginBottom: 4 }}>
+            {styleName ? (
+              <Text style={{ textAlign: "left", fontSize: 7, fontWeight: "bold" }}>{styleName}</Text>
+            ) : null}
+            {sizesText ? (
+              <Text style={{ fontSize: 6.5, color: "#555", marginTop: 2 }}>
+                {sizesText}
+              </Text>
+            ) : null}
+          </View>
+        );
+      });
+    }
+
+    // Old single style format
+    const breakup = (row?.orderSizeBreakup || row?.sizeBreakup || [])?.filter(
+      (sb) => (Number(sb.qty) || 0) > 0,
+    );
+    const sizesText =
+      breakup && breakup.length > 0
+        ? breakup
+            .map((sb) => {
+              const sName =
+                sb?.Size?.name || sb?.sizeName || sb?.sizeId || "All";
+              return `${sName}: ${Number(sb.qty)}`;
+            })
+            .join("  |  ")
+        : "";
+
+    return (
+      <View style={{ marginBottom: 4 }}>
+        {sizesText ? (
+          <Text style={{ fontSize: 6.5, color: "#555", marginTop: 2 }}>
+            {sizesText}
+          </Text>
+        ) : null}
+      </View>
+    );
   };
   const bank = data?.Bank || {};
   console.log(bank, "bank");
+
+  const getAmountInWords = (intVal, decVal, currCode) => {
+    const intWords = numberToWords
+      .toWords(intVal || 0)
+      .replace(/,/g, "")
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+    const decWords =
+      decVal > 0
+        ? numberToWords.toWords(decVal).replace(/\b\w/g, (c) => c.toUpperCase())
+        : "Zero";
+
+    const code = (currCode || "").toUpperCase().trim();
+
+    if (code === "USD" || code === "US") {
+      return `${intWords} Dollars And ${decWords} Cents Only`;
+    } else if (code === "EUR" || code === "EU" || code === "EURO") {
+      return `${intWords} Euros And ${decWords} Cents Only`;
+    } else {
+      // Default to INR
+      return `${intWords} Rupees${decVal > 0 ? ` And ${decWords} Paise` : ""} Only`;
+    }
+  };
+
+  const finalAmountForWords = isExport ? grandTotalExport : netAmountDomestic;
+  const netInt = Math.floor(finalAmountForWords);
+  const netDecimal = Math.round((finalAmountForWords - netInt) * 100);
+  const amountWords = getAmountInWords(netInt, netDecimal, currencyCode);
 
   return (
     <Document>
@@ -655,7 +753,6 @@ const OrderEntryPrintFormat = ({
                 {chunkRows.map((row, index) => {
                   const rowStyle =
                     index % 2 === 0 ? styles.trOdd : styles.trEven;
-                  const breakupText = getSizeBreakupText(row);
                   return (
                     <View
                       key={globalOffset + index}
@@ -674,6 +771,7 @@ const OrderEntryPrintFormat = ({
                           {
                             flex: 2.5,
                             textAlign: "left",
+                            flexDirection: "column",
                             justifyContent: "center",
                           },
                         ]}
@@ -683,6 +781,7 @@ const OrderEntryPrintFormat = ({
                             fontSize: 7.5,
                             fontWeight: "bold",
                             color: "#1a1a2e",
+                            marginBottom: 2
                           }}
                         >
                           {forceWrap(
@@ -694,17 +793,7 @@ const OrderEntryPrintFormat = ({
                               ),
                           )}
                         </Text>
-                        {breakupText ? (
-                          <Text
-                            style={{
-                              fontSize: 6.5,
-                              color: "#555",
-                              marginTop: 2,
-                            }}
-                          >
-                            {breakupText}
-                          </Text>
-                        ) : null}
+                        {renderStyleBreakups(row)}
                       </View>
 
                       {/* Item Sub Group */}
@@ -787,38 +876,6 @@ const OrderEntryPrintFormat = ({
                         {row?.amount
                           ? `${currencySymbol} ${formatCurrencyAmount(row.amount)}`
                           : ""}
-                      </Text>
-                    </View>
-                  );
-                })}
-
-                {/* Empty filler rows */}
-                {Array.from({ length: emptyCount }).map((_, i) => {
-                  const rowStyle =
-                    (chunkRows.length + i) % 2 === 0
-                      ? styles.trOdd
-                      : styles.trEven;
-                  return (
-                    <View key={`empty-${i}`} style={rowStyle}>
-                      <Text
-                        style={[styles.td, { flex: 0.4, color: "transparent" }]}
-                      >
-                        {" "}
-                      </Text>
-                      <Text style={[styles.td, { flex: 2.5 }]}> </Text>
-                      <Text style={[styles.td, { flex: 1.2 }]}> </Text>
-                      <Text style={[styles.td, { flex: 1.2 }]}> </Text>
-                      <Text style={[styles.td, { flex: 0.8 }]}> </Text>
-                      <Text style={[styles.td, { flex: 0.7 }]}> </Text>
-                      <Text style={[styles.td, { flex: 0.9 }]}> </Text>
-                      <Text style={[styles.td, { flex: 0.9 }]}> </Text>
-                      {!isExport && (
-                        <Text style={[styles.td, { flex: 0.7 }]}> </Text>
-                      )}
-                      <Text
-                        style={[styles.td, { flex: 1.2, borderRight: "none" }]}
-                      >
-                        {" "}
                       </Text>
                     </View>
                   );
@@ -1033,19 +1090,19 @@ const OrderEntryPrintFormat = ({
                             </Text>
                           </View>
                         )}
-                        {((!isExport && totals?.discountValue > 0) ||
-                          isExport) && (
-                          <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>
-                              {isExport ? "Net Amount" : "Taxable Amount"}
-                            </Text>
-                            <Text style={styles.summaryColon}>:</Text>
-                            <Text style={styles.summaryValue}>
-                              {currencySymbol}{" "}
-                              {formatCurrencyAmount(taxableTotal, currencyCode)}
-                            </Text>
-                          </View>
-                        )}
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>
+                            {isExport ? "Net Amount" : "Taxable Amount"}
+                          </Text>
+                          <Text style={styles.summaryColon}>:</Text>
+                          <Text style={styles.summaryValue}>
+                            {currencySymbol}{" "}
+                            {formatCurrencyAmount(
+                              taxableTotal,
+                              currencyCode || currencySymbol,
+                            )}
+                          </Text>
+                        </View>
                         {!isExport &&
                           consolidatedTaxSlabs.map((slab) => (
                             <View key={slab.tax} style={styles.summaryRow}>
@@ -1057,26 +1114,11 @@ const OrderEntryPrintFormat = ({
                                 {currencySymbol}{" "}
                                 {formatCurrencyAmount(
                                   slab.amount || 0,
-                                  currencyCode,
+                                  currencyCode || currencySymbol,
                                 )}
                               </Text>
                             </View>
                           ))}
-                        {carriageCharge > 0 && (
-                          <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>
-                              Carriage & Air Freight
-                            </Text>
-                            <Text style={styles.summaryColon}>:</Text>
-                            <Text style={styles.summaryValue}>
-                              {currencySymbol}{" "}
-                              {formatCurrencyAmount(
-                                carriageCharge,
-                                currencyCode,
-                              )}
-                            </Text>
-                          </View>
-                        )}
                         {!isExport &&
                           totals?.roundOff !== 0 &&
                           totals?.roundOff !== undefined && (
@@ -1088,11 +1130,39 @@ const OrderEntryPrintFormat = ({
                                 {currencySymbol}{" "}
                                 {formatCurrencyAmount(
                                   Math.abs(totals?.roundOff || 0),
-                                  currencyCode,
+                                  currencyCode || currencySymbol,
                                 )}
                               </Text>
                             </View>
                           )}
+                        {!isExport && (
+                          <View style={styles.summaryRow}>
+                            <Text style={[styles.summaryLabel, { fontFamily: "Helvetica-Bold" }]}>Net Amount</Text>
+                            <Text style={styles.summaryColon}>:</Text>
+                            <Text style={[styles.summaryValue, { fontFamily: "Helvetica-Bold" }]}>
+                              {currencySymbol}{" "}
+                              {formatCurrencyAmount(
+                                netAmountDomestic - carriageCharge,
+                                currencyCode || currencySymbol,
+                              )}
+                            </Text>
+                          </View>
+                        )}
+                        {carriageCharge > 0 && (
+                          <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>
+                              Carriage & Air Freight
+                            </Text>
+                            <Text style={styles.summaryColon}>:</Text>
+                            <Text style={styles.summaryValue}>
+                              {currencySymbol}{" "}
+                              {formatCurrencyAmount(
+                                carriageCharge,
+                                currencyCode || currencySymbol,
+                              )}
+                            </Text>
+                          </View>
+                        )}
                         <View
                           style={[
                             styles.summaryRow,
@@ -1110,29 +1180,29 @@ const OrderEntryPrintFormat = ({
                             style={[
                               styles.summaryLabel,
                               {
-                                fontWeight: "bold",
+                                fontFamily: "Helvetica-Bold",
                                 color: "#ccc",
                                 marginLeft: 4,
                               },
                             ]}
                           >
-                            {isExport ? "Grand Total" : "Net Amount"}
+                            Grand Total
                           </Text>
                           <Text
-                            style={[styles.summaryColon, { color: "#ccc" }]}
+                            style={[styles.summaryColon, { color: "#ccc", fontFamily: "Helvetica-Bold" }]}
                           >
                             :
                           </Text>
                           <Text
                             style={[
                               styles.summaryValue,
-                              { fontSize: 9, color: "#fff" },
+                              { fontSize: 9, color: "#fff", fontFamily: "Helvetica-Bold" },
                             ]}
                           >
                             {currencySymbol}{" "}
                             {formatCurrencyAmount(
                               isExport ? grandTotalExport : netAmountDomestic,
-                              currencyCode,
+                              currencyCode || currencySymbol,
                             )}
                           </Text>
                         </View>
@@ -1147,13 +1217,7 @@ const OrderEntryPrintFormat = ({
                         {(currencyCode || currencySymbol || "").trim()}
                         ):{" "}
                         <Text style={styles.wordsValue}>
-                          {numberToWords
-                            .toWords(
-                              Math.round(
-                                isExport ? grandTotalExport : netAmountDomestic,
-                              ),
-                            )
-                            .replace(/\b\w/g, (c) => c.toUpperCase()) + " Only"}
+                          {amountWords}
                         </Text>
                       </Text>
                     </View>

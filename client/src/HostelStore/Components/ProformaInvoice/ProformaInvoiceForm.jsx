@@ -54,6 +54,7 @@ import { useDispatch } from "react-redux";
 import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMasterService.js";
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
 import { useGetStyleMasterQuery } from "../../../redux/services/StyleMasterService.js";
+import { useGetSizeMasterQuery } from "../../../redux/services/SizemasterService.js";
 
 const EMPTY_ROW = {
   styleItemId: "",
@@ -107,14 +108,13 @@ const ProformaInvoiceForm = ({
   const [docDate, setDocDate] = useState(moment().format("YYYY-MM-DD"));
   const [userDate, setUserDate] = useState(moment().format("YYYY-MM-DD"));
   const [customerId, setCustomerId] = useState("");
-  const [orderEntryId, setOrderEntryId] = useState("");
   const [remarks, setRemarks] = useState("");
   const [termsAndCondition, setTermsAndCondition] = useState("");
   const [termsId, setTermsId] = useState("");
   const [items, setItems] = useState(padItems([]));
   const [taxTemplateId, setTaxTemplateId] = useState("");
   const [summary, setSummary] = useState(false);
-  const [discountType, setDiscountType] = useState("Percentage");
+  const [discountType, setDiscountType] = useState("");
   const [discountValue, setDiscountValue] = useState(0);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [payTermId, setPayTermId] = useState("");
@@ -133,6 +133,7 @@ const ProformaInvoiceForm = ({
   const [carriageTax, setCarriageTax] = useState("");
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
   const childRecord = useRef(0);
+  console.log(availableVersions, selectedQuoteVersion, "selectedQuoteVersion");
 
   const customerRef = useRef(null);
   const termsRef = useRef(null);
@@ -165,10 +166,14 @@ const ProformaInvoiceForm = ({
   const { data: styleList } = useGetStyleMasterQuery({
     params: { companyId },
   });
+  const { data: sizeList } = useGetSizeMasterQuery({
+    params: { companyId },
+  });
   const [dispatchInvalidate] = useInvalidateTags();
 
-  const [addData] = useAddProformaInvoiceMutation();
-  const [updateData] = useUpdateProformaInvoiceMutation();
+  const [addData, { isLoading: isSaving }] = useAddProformaInvoiceMutation();
+  const [updateData, { isLoading: isUpdating }] =
+    useUpdateProformaInvoiceMutation();
   const [removeData] = useDeleteProformaInvoiceMutation();
 
   const isCustomerExport = supplierData?.data?.isCustomerExport;
@@ -195,13 +200,12 @@ const ProformaInvoiceForm = ({
           : moment().format("YYYY-MM-DD"),
       );
       setCustomerId(data.customerId);
-      setOrderEntryId(data.orderEntryId || "");
       setRemarks(data.remarks || "");
       setTermsAndCondition(data.termsAndCondition || "");
       setTermsId(data.termsId || "");
       setTaxTemplateId(data.taxTemplateId || "");
       setPayTermId(data.payTermId || "");
-      setDiscountType(data.discountType || "Percentage");
+      setDiscountType(data.discountType || "");
       setDiscountValue(data.discountValue || 0);
       setValidityTo(
         data.validityTo ? moment(data.validityTo).format("YYYY-MM-DD") : "",
@@ -256,10 +260,8 @@ const ProformaInvoiceForm = ({
               })
             : [{ sizeId: "", qty: "" }],
       }));
-      console.log(mappedItems, "mappedItems");
 
       setItems(padItems(mappedItems));
-      console.log(items, "aftermapped");
 
       const cust = data.customer || data.OrderEntry?.customer;
       if (cust) {
@@ -667,7 +669,6 @@ const ProformaInvoiceForm = ({
     setDocDate(moment().format("YYYY-MM-DD"));
     setUserDate(moment().format("YYYY-MM-DD"));
     setCustomerId("");
-    // setOrderEntryId("");
     setRemarks("");
     setTermsAndCondition("");
     setTermsId("");
@@ -936,16 +937,6 @@ const ProformaInvoiceForm = ({
               Customer Details
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-8 gap-2">
-              {/* <div className="md:col-span-1">
-                        <DropdownInput
-                            name="Order No"
-                            options={dropDownListObject(orderList?.data, "docId", "id")}
-                            value={orderEntryId}
-                            setValue={setOrderEntryId}
-                            readOnly={effectiveReadOnly}
-                            required={true}
-                        />
-                    </div> */}
               <div className="md:col-span-2">
                 <DropdownWithModal
                   name="Customer"
@@ -1277,6 +1268,46 @@ const ProformaInvoiceForm = ({
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between w-full max-w-[210px]">
                       <div className="flex justify-between w-[130px] text-slate-800">
+                        <span>Round Off</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                        {formatCurrencyAmount(
+                          enrichedData.roundOff || 0,
+                          currencyCode || isCurrencySymbol,
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                        <span>Net Amount</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-bold text-indigo-700 text-right w-[65px]">
+                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                        {formatCurrencyAmount(
+                          !isCustomerExport
+                            ? enrichedData.net
+                            : (enrichedData.items?.reduce(
+                                (sum, item) =>
+                                  sum + (parseFloat(item.amount) || 0),
+                                0,
+                              ) || 0) -
+                                (enrichedData.itemDiscount +
+                                  enrichedData.overallDiscount >
+                                0
+                                  ? enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount
+                                  : 0),
+                          currencyCode || isCurrencySymbol,
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between w-full max-w-[210px]">
+                      <div className="flex justify-between w-[130px] text-slate-800">
                         <span>Carriage Charges</span>
                         <span>:</span>
                       </div>
@@ -1293,22 +1324,8 @@ const ProformaInvoiceForm = ({
                     </div>
 
                     <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
-                        <span>Round Off</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-medium text-slate-800 text-right w-[65px]">
-                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                        {formatCurrencyAmount(
-                          enrichedData.roundOff || 0,
-                          currencyCode || isCurrencySymbol,
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
                       <div className="flex justify-between w-[130px] text-slate-800 font-bold">
-                        <span>Net Amount</span>
+                        <span>Grand Total</span>
                         <span>:</span>
                       </div>
                       <span className="font-bold text-indigo-700 text-right w-[65px]">
@@ -1343,40 +1360,44 @@ const ProformaInvoiceForm = ({
       <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
         {/* Left Buttons */}
         <div className="flex gap-2 flex-wrap">
-          {!effectiveReadOnly && (
-            <>
-              <button
-                onClick={() => handleSave("close")}
-                disabled={effectiveReadOnly}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSave("close");
-                    e.stopPropagation();
-                  }
-                }}
-                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-              >
-                <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                {id ? "Update & Close" : "Save & Close"}
-              </button>
-              <button
-                onClick={() => handleSave("new")}
-                disabled={effectiveReadOnly}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSave("new");
-                  }
-                }}
-                className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-              >
-                <FiSave className="w-4 h-4 mr-2" />
-                {id ? "Update & New" : " Save & New"}
-              </button>
-            </>
-          )}
+          <button
+            onClick={() => handleSave("close")}
+            disabled={effectiveReadOnly || isSaving || isUpdating}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSave("close");
+                e.stopPropagation();
+              }
+            }}
+            className={`bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs ${
+              effectiveReadOnly || isSaving || isUpdating
+                ? "cursor-not-allowed opacity-50"
+                : "cursor-pointer"
+            }`}
+          >
+            <HiOutlineRefresh className="w-4 h-4 mr-2" />
+            {id ? "Update & Close" : "Save & Close"}
+          </button>
+          <button
+            onClick={() => handleSave("new")}
+            disabled={effectiveReadOnly || isSaving || isUpdating}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSave("new");
+              }
+            }}
+            className={`bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs ${
+              effectiveReadOnly || isSaving || isUpdating
+                ? "cursor-not-allowed opacity-50"
+                : "cursor-pointer"
+            }`}
+          >
+            <FiSave className="w-4 h-4 mr-2" />
+            {id ? "Update & New" : " Save & New"}
+          </button>
           <button
             onClick={() => {
               if (!taxTemplateId) {
@@ -1464,7 +1485,12 @@ const ProformaInvoiceForm = ({
           <ProformaInvoicePrintFormat
             data={{
               ...singleData?.data,
-              items: items.filter((i) => i.styleItemId), // ✅ only current version's filled items
+              items: items.filter(
+                (i) =>
+                  i.styleItemId ||
+                  (i.styleBreakup && i.styleBreakup.length > 0) ||
+                  i.itemGroupId,
+              ),
               quoteVersion:
                 selectedQuoteVersion !== "Latest"
                   ? parseInt(selectedQuoteVersion.replace("V", ""))
@@ -1476,6 +1502,8 @@ const ProformaInvoiceForm = ({
             currencyList={currencyList}
             payTermList={payTermList}
             carriageFinalAmt={carriageFinalAmt}
+            styleItemList={styleList}
+            sizeList={sizeList}
           />
         </PDFViewer>
       </Modal>

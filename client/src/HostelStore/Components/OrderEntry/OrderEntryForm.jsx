@@ -149,6 +149,7 @@ const OrderEntryForm = ({
   const customerRef = useRef(null);
   const childRecord = useRef(0);
   const requirementRef = useRef(null);
+  console.log(childRecord.current, "childRecord.current");
 
   const [dispatchInvalidate] = useInvalidateTags();
   const { userId, finYearId, branchId, companyId } = getCommonParams();
@@ -424,6 +425,10 @@ const OrderEntryForm = ({
         errors.push(`Row ${index + 1}: Order Qty must be greater than 0`);
       }
 
+      if (!item.price || Number(item.price) <= 0) {
+        errors.push(`Row ${index + 1}: Price must be greater than 0`);
+      }
+
       const key = `${item.styleItemId}_${item.uomId}_${item.itemGroupId}`;
       if (seen.has(key)) {
         errors.push(`Row ${index + 1}: Duplicate item found`);
@@ -435,33 +440,43 @@ const OrderEntryForm = ({
         let sizeSum = 0;
         item.styleBreakup.forEach((style, styleIndex) => {
           if (!style.styleId) {
-            errors.push(`Row ${index + 1}, Style Row ${styleIndex + 1}: Style is required`);
+            errors.push(
+              `Row ${index + 1}, Style Row ${styleIndex + 1}: Style is required`,
+            );
           }
 
           if (style.sizeBreakup?.length) {
             const sizeSeen = new Set();
             style.sizeBreakup.forEach((size, sizeIndex) => {
               if (!size.sizeId) {
-                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Size is required`);
+                errors.push(
+                  `Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Size is required`,
+                );
               }
 
               const qty = Number(size.qty || 0);
               sizeSum += qty;
 
               if (qty <= 0) {
-                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`);
+                errors.push(
+                  `Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`,
+                );
               }
 
               if (size.sizeId) {
                 if (sizeSeen.has(size.sizeId)) {
-                  errors.push(`Row ${index + 1}, Style ${styleIndex + 1}: Duplicate size found`);
+                  errors.push(
+                    `Row ${index + 1}, Style ${styleIndex + 1}: Duplicate size found`,
+                  );
                 } else {
                   sizeSeen.add(size.sizeId);
                 }
               }
             });
           } else {
-            errors.push(`Row ${index + 1}, Style Row ${styleIndex + 1}: Size Breakup is required`);
+            errors.push(
+              `Row ${index + 1}, Style Row ${styleIndex + 1}: Size Breakup is required`,
+            );
           }
         });
 
@@ -469,7 +484,9 @@ const OrderEntryForm = ({
           // Relaxing error to match original logic, or strictly checking piQty
         }
       } else {
-        errors.push(`Row ${index + 1}: Style Breakup is required for Order Qty`);
+        errors.push(
+          `Row ${index + 1}: Style Breakup is required for Order Qty`,
+        );
       }
 
       if (isCustomerExport && !loadingId) {
@@ -662,9 +679,9 @@ const OrderEntryForm = ({
       if (result.statusCode === 0) {
         toast.success(
           result.message ||
-          (actionType === "APPROVE"
-            ? "Order Entry Approved!"
-            : "Sent Back for Review!"),
+            (actionType === "APPROVE"
+              ? "Order Entry Approved!"
+              : "Sent Back for Review!"),
         );
         setApprovalModal(false);
         // dispatchInvalidate();
@@ -792,8 +809,9 @@ const OrderEntryForm = ({
       >
         <div className="space-y-4">
           <h2
-            className={`text-base font-semibold ${actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
-              }`}
+            className={`text-base font-semibold ${
+              actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
+            }`}
           >
             {actionType === "APPROVE"
               ? "✅ Approve Order Entry"
@@ -814,14 +832,15 @@ const OrderEntryForm = ({
             <div className="flex justify-between items-center">
               <span className="text-gray-500">Current Approval</span>
               <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${status === "APPROVED"
-                  ? "bg-green-100 text-green-700"
-                  : status === "REJECTED"
-                    ? "bg-red-100 text-red-700"
-                    : status === "SUPERSEDED"
-                      ? "bg-orange-100 text-orange-700" // ✅ NEW
-                      : "bg-orange-100 text-orange-700"
-                  }`}
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                  status === "APPROVED"
+                    ? "bg-green-100 text-green-700"
+                    : status === "REJECTED"
+                      ? "bg-red-100 text-red-700"
+                      : status === "SUPERSEDED"
+                        ? "bg-orange-100 text-orange-700" // ✅ NEW
+                        : "bg-orange-100 text-orange-700"
+                }`}
               >
                 {status === "PENDING"
                   ? "Waiting For Approval"
@@ -875,10 +894,11 @@ const OrderEntryForm = ({
                   handleConfirmAction();
                 }
               }}
-              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${actionType === "APPROVE"
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-blue-600 hover:bg-blue-700"
-                } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
+              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${
+                actionType === "APPROVE"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-blue-600 hover:bg-blue-700"
+              } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
             >
               {actionLoading ? (
                 <>
@@ -1004,12 +1024,13 @@ const OrderEntryForm = ({
                       <tr
                         key={index}
                         onClick={() => setSelectedAttachmentIndex(index)}
-                        className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${index === selectedAttachmentIndex
-                          ? "bg-indigo-100 border-l-2 border-l-indigo-500"
-                          : index % 2 === 0
-                            ? "bg-white hover:bg-gray-50"
-                            : "bg-gray-100 hover:bg-gray-50"
-                          }`}
+                        className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${
+                          index === selectedAttachmentIndex
+                            ? "bg-indigo-100 border-l-2 border-l-indigo-500"
+                            : index % 2 === 0
+                              ? "bg-white hover:bg-gray-50"
+                              : "bg-gray-100 hover:bg-gray-50"
+                        }`}
                       >
                         {/* S.No */}
                         <td className="border-r border-white/50 h-8 text-center">
@@ -1234,11 +1255,11 @@ const OrderEntryForm = ({
                       options={dropDownListObject(
                         id
                           ? customerList?.data?.filter(
-                            (item) => item?.isCustomer,
-                          )
+                              (item) => item?.isCustomer,
+                            )
                           : customerList?.data?.filter(
-                            (item) => item?.active && item?.isCustomer,
-                          ),
+                              (item) => item?.active && item?.isCustomer,
+                            ),
                         "name",
                         "id",
                       )}
@@ -1415,14 +1436,15 @@ const OrderEntryForm = ({
                               styleBreakup:
                                 item?.PIStyleBreakup?.length > 0
                                   ? item.PIStyleBreakup.map((st) => ({
-                                    styleId: st.styleId || "",
-                                    sizeBreakup: st.PISizeBreakup?.length > 0
-                                      ? st.PISizeBreakup.map(sz => ({
-                                        sizeId: sz.sizeId || "",
-                                        qty: sz.qty || ""
-                                      }))
-                                      : [{ sizeId: "", qty: "" }]
-                                  }))
+                                      styleId: st.styleId || "",
+                                      sizeBreakup:
+                                        st.PISizeBreakup?.length > 0
+                                          ? st.PISizeBreakup.map((sz) => ({
+                                              sizeId: sz.sizeId || "",
+                                              qty: sz.qty || "",
+                                            }))
+                                          : [{ sizeId: "", qty: "" }],
+                                    }))
                                   : [],
                               itemGroupId: item.StyleItem?.itemGroupId,
                               itemSubGroupId: item.StyleItem?.itemSubGroupId,
@@ -1505,7 +1527,8 @@ const OrderEntryForm = ({
                 </div>
               </div>
             </div>
-            {/* Other Details */}{console.log(orderItems, "orderItemsorderItems")}
+            {/* Other Details */}
+            {console.log(orderItems, "orderItemsorderItems")}
 
             <div className="border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
               <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
@@ -1831,10 +1854,10 @@ const OrderEntryForm = ({
                   renderValue: () => {
                     const taxTotals = !isCustomerExport
                       ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
-                        const type = curr?.tax?.split(" ")[0];
-                        acc[type] = (acc[type] || 0) + curr.amount;
-                        return acc;
-                      }, {})
+                          const type = curr?.tax?.split(" ")[0];
+                          acc[type] = (acc[type] || 0) + curr.amount;
+                          return acc;
+                        }, {})
                       : {};
 
                     return (
@@ -1853,7 +1876,7 @@ const OrderEntryForm = ({
                                   enrichedData.overallDiscount >
                                   0
                                   ? enrichedData.itemDiscount +
-                                  enrichedData.overallDiscount
+                                      enrichedData.overallDiscount
                                   : 0,
                                 currencyCode || isCurrencySymbol,
                               )}
@@ -1875,7 +1898,7 @@ const OrderEntryForm = ({
                           </div>
 
                           {taxTotals.CGST !== undefined &&
-                            taxTotals.SGST !== undefined ? (
+                          taxTotals.SGST !== undefined ? (
                             <div className="flex items-center justify-between w-full max-w-[210px]">
                               <div className="flex items-center gap-1">
                                 <span className="text-slate-800 w-[32px]">
@@ -1928,23 +1951,6 @@ const OrderEntryForm = ({
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center justify-between w-full max-w-[210px]">
                             <div className="flex justify-between w-[130px] text-slate-800">
-                              <span>Carriage Charges</span>
-                              <span>:</span>
-                            </div>
-                            <span className="font-medium text-slate-800 text-right w-[65px]">
-                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                              {!isNaN(parseFloat(carriageFinalAmt)) &&
-                                carriageFinalAmt !== ""
-                                ? formatCurrencyAmount(
-                                  carriageFinalAmt,
-                                  currencyCode || isCurrencySymbol,
-                                )
-                                : "0.00"}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between w-full max-w-[210px]">
-                            <div className="flex justify-between w-[130px] text-slate-800">
                               <span>Round Off</span>
                               <span>:</span>
                             </div>
@@ -1965,20 +1971,63 @@ const OrderEntryForm = ({
                             <span className="font-bold text-indigo-700 text-right w-[65px]">
                               {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                               {formatCurrencyAmount(
+                                !isCustomerExport
+                                  ? enrichedData.net
+                                  : (enrichedData.items?.reduce(
+                                      (sum, item) =>
+                                        sum + (parseFloat(item.amount) || 0),
+                                      0,
+                                    ) || 0) -
+                                      (enrichedData.itemDiscount +
+                                        enrichedData.overallDiscount >
+                                      0
+                                        ? enrichedData.itemDiscount +
+                                          enrichedData.overallDiscount
+                                        : 0),
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Carriage Charges</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {!isNaN(parseFloat(carriageFinalAmt)) &&
+                              carriageFinalAmt !== ""
+                                ? formatCurrencyAmount(
+                                    carriageFinalAmt,
+                                    currencyCode || isCurrencySymbol,
+                                  )
+                                : "0.00"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                              <span>Grand Total</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-bold text-indigo-700 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
                                 (!isCustomerExport
                                   ? enrichedData.net
                                   : (enrichedData.items?.reduce(
-                                    (sum, item) =>
-                                      sum + (parseFloat(item.amount) || 0),
-                                    0,
-                                  ) || 0) -
-                                  (enrichedData.itemDiscount +
-                                    enrichedData.overallDiscount >
+                                      (sum, item) =>
+                                        sum + (parseFloat(item.amount) || 0),
+                                      0,
+                                    ) || 0) -
+                                    (enrichedData.itemDiscount +
+                                      enrichedData.overallDiscount >
                                     0
-                                    ? enrichedData.itemDiscount +
-                                    enrichedData.overallDiscount
-                                    : 0)) +
-                                (parseFloat(carriageFinalAmt) || 0),
+                                      ? enrichedData.itemDiscount +
+                                        enrichedData.overallDiscount
+                                      : 0)) +
+                                  (parseFloat(carriageFinalAmt) || 0),
                                 currencyCode || isCurrencySymbol,
                               )}
                             </span>
@@ -1995,40 +2044,44 @@ const OrderEntryForm = ({
             <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
               {/* Left Buttons */}
               <div className="flex gap-2 flex-wrap">
-                {!isDisabled && !readOnly && (
-                  <>
-                    <button
-                      onClick={() => saveData("close")}
-                      disabled={isDisabled || readOnly}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          saveData("close");
-                          e.stopPropagation();
-                        }
-                      }}
-                      className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                    >
-                      <HiOutlineRefresh className="w-4 h-4 mr-2" />
-                      {id ? "Update & Close" : "Save & Close"}
-                    </button>
-                    <button
-                      onClick={() => saveData("new")}
-                      disabled={isDisabled || readOnly}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          saveData("new");
-                        }
-                      }}
-                      className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs"
-                    >
-                      <FiSave className="w-4 h-4 mr-2" />
-                      {id ? "Update & New" : " Save & New"}
-                    </button>
-                  </>
-                )}
+                <button
+                  onClick={() => saveData("close")}
+                  disabled={isDisabled || readOnly || childRecord.current > 0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      saveData("close");
+                      e.stopPropagation();
+                    }
+                  }}
+                  className={`bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs ${
+                    isDisabled || readOnly || childRecord.current > 0
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  <HiOutlineRefresh className="w-4 h-4 mr-2" />
+                  {id ? "Update & Close" : "Save & Close"}
+                </button>
+                <button
+                  onClick={() => saveData("new")}
+                  disabled={isDisabled || readOnly || childRecord.current > 0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      saveData("new");
+                    }
+                  }}
+                  className={`bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 flex items-center text-xs ${
+                    isDisabled || readOnly || childRecord.current > 0
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  <FiSave className="w-4 h-4 mr-2" />
+                  {id ? "Update & New" : " Save & New"}
+                </button>
                 <button
                   onClick={() => {
                     if (!taxTemplateId) {

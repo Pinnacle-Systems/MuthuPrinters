@@ -23,6 +23,9 @@ import {
   CurrencyMaster,
   BankMaster,
   ItemSubGroupMaster,
+  MonthWiseSalesReport,
+  SalesReportHome,
+  Dashboard,
 } from "..";
 
 import { CLOSE_ICON, DOUBLE_NEXT_ICON } from "../../../icons";
@@ -103,6 +106,7 @@ const ActiveTabList = () => {
   });
 
   const tabs = {
+    "DASHBOARD": <Dashboard />,
     "PAGE MASTER": <PageMaster />,
     "COUNTRY MASTER": <CountryMaster />,
     "STATE MASTER": <StateMaster />,
@@ -187,7 +191,7 @@ const ActiveTabList = () => {
     "SALES ORDER": <SaleOrder />,
     "ORDER ENTRY REPORT": <OrderEntryReport />,
     "PAYMENTS": <PaymentDetail />,
-
+    "MONTH WISE SALES REPORT": <SalesReportHome />,
   };
   const innerWidth = window.innerWidth;
   const itemsToShow = innerWidth / 130;

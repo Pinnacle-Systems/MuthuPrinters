@@ -79,4 +79,5 @@ export { default as avilableMachine } from "./availableMachine.route.js";
 export { default as processMob } from "./process_mob.route.js";
 export { default as PackingControl } from "./packingControl.route.js";
 export { default as salesBillEntry } from "./salesBillEntry.route.js";
+export { default as salesReport } from "./salesReport.route.js";
 export { default as productionReport } from "./productionReport.route.js";
