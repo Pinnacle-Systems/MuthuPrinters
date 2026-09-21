@@ -212,6 +212,49 @@ const SalesDeliveryItems = ({
     });
   };
 
+  const handleFillAllDeliveryQty = (rowIndex, styleIndex, checked) => {
+    setItems((prev) => {
+      const rows = [...prev];
+      const row = { ...rows[rowIndex] };
+      const styleBreakup = [...(row.styleBreakup || [])];
+      const styleObj = { ...styleBreakup[styleIndex] };
+      const sizeBreakup = [...(styleObj.sizeBreakup || [])];
+
+      sizeBreakup.forEach((sizeRow, idx) => {
+        if (!sizeRow.id) return; // skip if disabled
+        const qty = parseFloat(sizeRow.qty || 0);
+        const alreadyDelivered = parseFloat(sizeRow.alreadyDeliveryQty || 0);
+        const balanceQty = qty - alreadyDelivered;
+
+        sizeBreakup[idx] = {
+          ...sizeRow,
+          deliveryQty: checked ? (balanceQty > 0 ? balanceQty : 0) : ""
+        };
+      });
+
+      styleObj.sizeBreakup = sizeBreakup;
+      styleBreakup[styleIndex] = styleObj;
+      row.styleBreakup = styleBreakup;
+
+      if (true) {
+        row.orderQty = recalculateOrderQty(styleBreakup);
+        row.deliveryQty = recalculateDeliveryQty(styleBreakup);
+        const qty = row.deliveryQty;
+        const price = row.price;
+        const dozen = qty / 12;
+        row.dozen = dozen ? dozen.toFixed(2) : "";
+        if (conversionType === "DOZEN") {
+          row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
+        } else {
+          row.amount = qty && price ? (qty * price).toFixed(2) : "";
+        }
+      }
+
+      rows[rowIndex] = row;
+      return rows;
+    });
+  };
+
   const handleNestedSizeChange = (rowIndex, styleIndex, sizeIndex, field, value) => {
     setItems((prev) => {
       const rows = [...prev];
@@ -428,7 +471,16 @@ const SalesDeliveryItems = ({
                           <th className="border border-gray-300 px-2 py-1.5 w-32">Sale Order Qty</th>
                           <th className="border border-gray-300 px-2 py-1.5 w-32">Already Deliverd Qty</th>
 
-                          <th className="border border-gray-300 px-2 py-1.5 w-32">Delivery Qty</th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-32">
+                            <div className="flex items-center gap-2">
+                              Delivery Qty
+                              <input
+                                type="checkbox"
+                                disabled={readOnly || childRecord?.current > 0}
+                                onChange={(e) => handleFillAllDeliveryQty(activeModalRowIndex, activeStyleIndex, e.target.checked)}
+                              />
+                            </div>
+                          </th>
 
                           <th className="border border-gray-300 px-2 py-1.5 w-20 text-center">Actions</th>
                         </tr>
@@ -614,7 +666,8 @@ const SalesDeliveryItems = ({
                       childComponent={ItemGroup}
                       addNewModalWidth="w-[38%] h-[50%]"
                       nextRef={termsRef}
-                      disabled={!row.id}
+                      disabled={true}
+
                     />
                   </td>
                   <td className="border border-gray-300 text-[11px] items-center pt-2">
@@ -636,7 +689,7 @@ const SalesDeliveryItems = ({
                       childComponent={ItemSubGroupMaster}
                       addNewModalWidth="w-[38%] h-[50%]"
                       nextRef={termsRef}
-                      disabled={!row.id}
+                      disabled={true}
 
                     />
                   </td>
@@ -661,7 +714,7 @@ const SalesDeliveryItems = ({
                       addNew={true}
                       childComponent={StyleItemMaster}
                       addNewModalWidth="w-[50%] h-[57%]"
-                      disabled={!row.id}
+                      disabled={true}
 
                     />
                   </td>
@@ -688,7 +741,7 @@ const SalesDeliveryItems = ({
                       onChange={(e) => handleInputChange(e.target.value, index, "labelWidth")}
                       className="w-full text-left px-1 bg-transparent text-[11px] outline-none focus:bg-white"
                       readOnly={readOnly || false}
-                      disabled={!row.id}
+                      disabled={true}
 
                     />
                   </td>
@@ -749,7 +802,7 @@ const SalesDeliveryItems = ({
                         e.target.select();
                         setFocusedField(`price-${index}`);
                       }}
-                      disabled={!row.id}
+                      disabled={true}
 
                       onBlur={(e) => {
                         const num = parseFloat(e.target.value);

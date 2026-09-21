@@ -9,6 +9,7 @@ import {
   update as _update,
   remove as _remove,
   createApproveStatus as _createApproveStatus,
+  packingCompleted as _packingCompleted
 } from "../services/po.service.js";
 
 async function get(req, res, next) {
@@ -140,6 +141,14 @@ async function getPoItems(req, res, next) {
   }
 }
 
+async function packingCompleted(req, res, next) {
+  try {
+    res.json(await _packingCompleted(req.body));
+  } catch (err) {
+    console.error(`Error`, err.message);
+  }
+}
+
 export {
   get,
   getOne,
@@ -149,4 +158,5 @@ export {
   remove,
   getPoItems,
   createApproveStatus,
+  packingCompleted
 };

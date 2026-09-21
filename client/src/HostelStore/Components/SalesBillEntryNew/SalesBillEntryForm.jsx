@@ -126,6 +126,7 @@ const SalesBillEntryForm = ({
   const [loadingId, setLoadingId] = useState("");
   const [deliveryId, setDeliveryId] = useState("");
   const [netAmount, setNetAmount] = useState("");
+  const [deliveryTo, setDeliveryTo] = useState("");
 
 
   const effectiveReadOnly = readOnly || childRecord.current > 0;
@@ -225,6 +226,7 @@ const SalesBillEntryForm = ({
       setBankId(data?.bankId ? data?.bankId : "");
       setConversionType(data?.conversionType ? data?.conversionType : "");
       setTaxTemplateId(data?.taxTemplateId ? data?.taxTemplateId : "");
+      setDeliveryTo(data?.deliveryTo ? data?.deliveryTo : "");
     },
     [id],
   );
@@ -950,7 +952,7 @@ const SalesBillEntryForm = ({
 
           </div>
         </div>
-        <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+        {/* <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
           <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
             Delivery Details
 
@@ -1021,8 +1023,58 @@ const SalesBillEntryForm = ({
 
 
           </div>
-        </div>
+        </div> */}
+        <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
+          <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
+            Delivery Details
+          </h2>
+          <div className="grid grid-cols-4  gap-2">
 
+            <div className="md:col-span-2">
+              <DropdownWithModal
+                name="Delivery To"
+                options={dropDownListObject(
+                  id
+                    ? customerList?.data?.filter((item) => item?.isCustomer)
+                    : customerList?.data?.filter(
+                      (item) => item?.active && item?.isCustomer,
+                    ),
+                  "name",
+                  "id",
+                )}
+                value={deliveryTo}
+                setValue={setDeliveryTo}
+                required={true}
+                readOnly={readOnly}
+                className="w-[150px]"
+                addNewLabel="+ Add New Customer"
+                childComponent={PartyMaster}
+                addNewModalWidth="w-[90%] h-[95%]"
+                disabled={readOnly || childRecord.current > 0}
+                openOnFocus={true}
+              />
+            </div>
+            <TextInput
+              name="GST No"
+              value={findFromList(
+                deliveryTo,
+                customerList?.data,
+                "gstNo",
+              )}
+              disabled={true}
+            />
+            <TextInput
+              name="Phone"
+              value={findFromList(
+                deliveryTo,
+                customerList?.data,
+                "contactNumber",
+              )}
+              disabled={true}
+            />
+
+          </div>
+        </div>
       </div>
       <div>
         {shippingAccordion}

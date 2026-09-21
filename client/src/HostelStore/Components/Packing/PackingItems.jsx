@@ -639,7 +639,7 @@ const PackingItems = ({
         widthClass="w-[50vw]"
       >
         <div className="p-4 bg-white rounded-lg max-h-[75vh] flex flex-col">
-          <h2 className="text-lg font-bold mb-4">Packing Breakup</h2>
+          <h2 className="text-lg font-bold mb-4">Packing Breakup  {'(Order Qty:- '}{orderItems?.[activePackingBreakupInfo?.rowIndex]?.styleBreakup?.[activePackingBreakupInfo?.styleIndex]?.sizeBreakup?.[activePackingBreakupInfo?.sizeIndex]?.qty}{' )'} </h2>
           {activePackingBreakupInfo !== null && (
             <div className="flex-1 overflow-auto border border-gray-200 rounded">
               <table className="w-full text-left border-collapse border border-gray-300 bg-white text-sm">

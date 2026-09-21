@@ -132,7 +132,8 @@ async function get(req) {
     finYearId,
     searchCustomer,
     isTakeOnlyFinshedJobCards,
-    pendingSaleOrder
+    pendingSaleOrder,
+    id
   } = req.query;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -150,7 +151,7 @@ async function get(req) {
   data = await prisma.orderEntry.findMany({
     where: {
       branchId: branchId ? parseInt(branchId) : undefined,
-      isSaleOrderTaken: pendingSaleOrder ? false : undefined,
+      isSaleOrderTaken: pendingSaleOrder && !id ? false : undefined,
       AND: finYearDate
         ? [
           {
@@ -292,18 +293,18 @@ async function get(req) {
     );
   }
 
-  // if (isTakeOnlyFinshedJobCards) {
-  //   resolvedData = resolvedData.filter((order) => {
-  //     if (!order.JobCard) return false;
-  //     // Check if ANY job card has its LAST process route status as 'COMPLETED'
-  //     return order.JobCard.some((jobCard) => {
-  //       const route = jobCard.processRoute;
-  //       if (!route || route.length === 0) return false;
-  //       const lastProcess = route[route.length - 1];
-  //       return lastProcess.status === "COMPLETED";
-  //     });
-  //   });
-  // }
+  if (isTakeOnlyFinshedJobCards) {
+    resolvedData = resolvedData.filter((order) => {
+      if (!order.JobCard) return false;
+      // Check if ANY job card has its LAST process route status as 'COMPLETED'
+      return order.JobCard.some((jobCard) => {
+        const route = jobCard.processRoute;
+        if (!route || route.length === 0) return false;
+        const lastProcess = route[route.length - 1];
+        return lastProcess.status === "COMPLETED";
+      });
+    });
+  }
 
 
 

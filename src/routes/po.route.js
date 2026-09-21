@@ -8,6 +8,7 @@ import {
   remove,
   getPoItems,
   createApproveStatus,
+  packingCompleted,
 } from "../controllers/po.controller.js";
 
 router.post("/", create);
@@ -17,5 +18,6 @@ router.get("/getPoItemsDetails", getPoItems);
 router.get("/:id", getOne);
 router.put("/:id", update);
 router.delete("/:id", remove);
+router.post("/packingCompleted", packingCompleted);
 
 export default router;
