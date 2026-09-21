@@ -38,8 +38,40 @@ export const salesReportApi = createApi({
       }),
       providesTags: ["SalesReport"],
     }),
+    getYearWiseBreakupReport: builder.query({
+      query: (params) => ({
+        url: `/salesReport/yearWiseBreakup`,
+        method: "GET",
+        params,
+      }),
+      providesTags: ["SalesReport"],
+    }),
+    getMonthWiseBreakupReport: builder.query({
+      query: (params) => ({
+        url: `/salesReport/monthWiseBreakup`,
+        method: "GET",
+        params,
+      }),
+      providesTags: ["SalesReport"],
+    }),
+    getQuarterWiseBreakupReport: builder.query({
+      query: (params) => ({
+        url: `/salesReport/quarterWiseBreakup`,
+        method: "GET",
+        params,
+      }),
+      providesTags: ["SalesReport"],
+    }),
+    getCustomerWiseBreakupReport: builder.query({
+      query: (params) => ({
+        url: `/salesReport/customerWiseBreakup`,
+        method: "GET",
+        params,
+      }),
+      providesTags: ["SalesReport"],
+    }),
   }),
 });
 
-export const { useGetSalesReportQuery, useGetMonthlySalesReportQuery, useGetCustomerWiseSalesReportQuery, useGetYearWiseSalesReportQuery } = salesReportApi;
+export const { useGetSalesReportQuery, useGetMonthlySalesReportQuery, useGetCustomerWiseSalesReportQuery, useGetYearWiseSalesReportQuery, useGetYearWiseBreakupReportQuery, useGetMonthWiseBreakupReportQuery, useGetQuarterWiseBreakupReportQuery, useGetCustomerWiseBreakupReportQuery } = salesReportApi;
 export default salesReportApi;

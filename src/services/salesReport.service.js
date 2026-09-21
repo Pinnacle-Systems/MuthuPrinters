@@ -174,8 +174,6 @@ async function getCustomerWise(req) {
   return { statusCode: 0, data };
 }
 
-export { get, getMonthly, getCustomerWise, getYearWise };
-
 async function getYearWise(req) {
   const { branchId } = req.query;
 
@@ -228,3 +226,300 @@ async function getYearWise(req) {
 
   return { statusCode: 0, data: yearWiseData };
 }
+
+async function getYearWiseBreakup(req) {
+  const { branchId, finYearId } = req.query;
+
+  let finYearDate = null;
+  if (finYearId) {
+    finYearDate = await getFinYearStartTimeEndTime(finYearId);
+  }
+
+  const whereClause = {
+    branchId: branchId ? parseInt(branchId) : undefined,
+  };
+
+  if (finYearDate) {
+    whereClause.AND = [
+      { createdAt: { gte: finYearDate.startDateStartTime } },
+      { createdAt: { lte: finYearDate.endDateEndTime } },
+    ];
+  }
+
+  const salesDeliveries = await prisma.salesDelivery.findMany({
+    where: whereClause,
+    select: {
+      id: true,
+      docId: true,
+      docDate: true,
+      netAmount: true,
+      Customer: { select: { name: true } },
+    },
+    orderBy: { docDate: "desc" },
+  });
+
+  const salesBillEntries = await prisma.salesBillEntry.findMany({
+    where: whereClause,
+    select: {
+      id: true,
+      docId: true,
+      docDate: true,
+      netAmount: true,
+      customer: { select: { name: true } },
+    },
+    orderBy: { docDate: "desc" },
+  });
+
+  const combinedData = [];
+
+  salesDeliveries.forEach((entry) => {
+    combinedData.push({
+      id: `sd-${entry.id}`,
+      type: "Sales Delivery",
+      docId: entry.docId,
+      docDate: entry.docDate,
+      customerName: entry.Customer?.name || "-",
+      netAmount: entry.netAmount || 0,
+    });
+  });
+
+  salesBillEntries.forEach((entry) => {
+    combinedData.push({
+      id: `sb-${entry.id}`,
+      type: "Sales Bill",
+      docId: entry.docId,
+      docDate: entry.docDate,
+      customerName: entry.customer?.name || "-",
+      netAmount: entry.netAmount || 0,
+    });
+  });
+
+  // Sort combined by docDate desc
+  combinedData.sort((a, b) => new Date(b.docDate) - new Date(a.docDate));
+
+  return { statusCode: 0, data: combinedData };
+}
+
+async function getMonthWiseBreakup(req) {
+  const { branchId, monthStr } = req.query;
+
+  let startTime, endTime;
+  if (monthStr) {
+    startTime = new Date(monthStr + "-01T00:00:00.000Z");
+    endTime = new Date(startTime.getFullYear(), startTime.getMonth() + 1, 0, 23, 59, 59, 999);
+  }
+
+  const whereClause = {
+    branchId: branchId ? parseInt(branchId) : undefined,
+  };
+
+  if (startTime && endTime) {
+    whereClause.AND = [
+      { createdAt: { gte: startTime } },
+      { createdAt: { lte: endTime } },
+    ];
+  }
+
+  const salesDeliveries = await prisma.salesDelivery.findMany({
+    where: whereClause,
+    select: {
+      id: true,
+      docId: true,
+      docDate: true,
+      netAmount: true,
+      Customer: { select: { name: true } },
+    },
+    orderBy: { docDate: "desc" },
+  });
+
+  const salesBillEntries = await prisma.salesBillEntry.findMany({
+    where: whereClause,
+    select: {
+      id: true,
+      docId: true,
+      docDate: true,
+      netAmount: true,
+      customer: { select: { name: true } },
+    },
+    orderBy: { docDate: "desc" },
+  });
+
+  const combinedData = [];
+
+  salesDeliveries.forEach((entry) => {
+    combinedData.push({
+      id: `sd-${entry.id}`,
+      type: "Sales Delivery",
+      docId: entry.docId,
+      docDate: entry.docDate,
+      customerName: entry.Customer?.name || "-",
+      netAmount: entry.netAmount || 0,
+    });
+  });
+
+  salesBillEntries.forEach((entry) => {
+    combinedData.push({
+      id: `sb-${entry.id}`,
+      type: "Sales Bill",
+      docId: entry.docId,
+      docDate: entry.docDate,
+      customerName: entry.customer?.name || "-",
+      netAmount: entry.netAmount || 0,
+    });
+  });
+
+  combinedData.sort((a, b) => new Date(b.docDate) - new Date(a.docDate));
+  return { statusCode: 0, data: combinedData };
+}
+
+async function getQuarterWiseBreakup(req) {
+  const { branchId, finYearId, quarterIndex } = req.query;
+
+  let finYearDate = null;
+  if (finYearId) {
+    finYearDate = await getFinYearStartTimeEndTime(finYearId);
+  }
+
+  const whereClause = {
+    branchId: branchId ? parseInt(branchId) : undefined,
+  };
+
+  if (finYearDate && quarterIndex) {
+    const qtr = parseInt(quarterIndex);
+    const startMonthOffset = (qtr - 1) * 3;
+    const fyStart = new Date(finYearDate.startDateStartTime);
+    
+    const startTime = new Date(fyStart.getFullYear(), fyStart.getMonth() + startMonthOffset, 1, 0, 0, 0, 0);
+    const endTime = new Date(startTime.getFullYear(), startTime.getMonth() + 3, 0, 23, 59, 59, 999);
+
+    whereClause.AND = [
+      { createdAt: { gte: startTime } },
+      { createdAt: { lte: endTime } },
+    ];
+  }
+
+  const salesDeliveries = await prisma.salesDelivery.findMany({
+    where: whereClause,
+    select: {
+      id: true,
+      docId: true,
+      docDate: true,
+      netAmount: true,
+      Customer: { select: { name: true } },
+    },
+    orderBy: { docDate: "desc" },
+  });
+
+  const salesBillEntries = await prisma.salesBillEntry.findMany({
+    where: whereClause,
+    select: {
+      id: true,
+      docId: true,
+      docDate: true,
+      netAmount: true,
+      customer: { select: { name: true } },
+    },
+    orderBy: { docDate: "desc" },
+  });
+
+  const combinedData = [];
+
+  salesDeliveries.forEach((entry) => {
+    combinedData.push({
+      id: `sd-${entry.id}`,
+      type: "Sales Delivery",
+      docId: entry.docId,
+      docDate: entry.docDate,
+      customerName: entry.Customer?.name || "-",
+      netAmount: entry.netAmount || 0,
+    });
+  });
+
+  salesBillEntries.forEach((entry) => {
+    combinedData.push({
+      id: `sb-${entry.id}`,
+      type: "Sales Bill",
+      docId: entry.docId,
+      docDate: entry.docDate,
+      customerName: entry.customer?.name || "-",
+      netAmount: entry.netAmount || 0,
+    });
+  });
+
+  combinedData.sort((a, b) => new Date(b.docDate) - new Date(a.docDate));
+  return { statusCode: 0, data: combinedData };
+}
+
+async function getCustomerWiseBreakup(req) {
+  const { branchId, finYearId, customerId } = req.query;
+
+  let finYearDate = null;
+  if (finYearId) {
+    finYearDate = await getFinYearStartTimeEndTime(finYearId);
+  }
+
+  const whereClause = {
+    branchId: branchId ? parseInt(branchId) : undefined,
+    customerId: customerId ? parseInt(customerId) : undefined,
+  };
+
+  if (finYearDate) {
+    whereClause.AND = [
+      { createdAt: { gte: finYearDate.startDateStartTime } },
+      { createdAt: { lte: finYearDate.endDateEndTime } },
+    ];
+  }
+
+  const salesDeliveries = await prisma.salesDelivery.findMany({
+    where: whereClause,
+    select: {
+      id: true,
+      docId: true,
+      docDate: true,
+      netAmount: true,
+      Customer: { select: { name: true } },
+    },
+    orderBy: { docDate: "desc" },
+  });
+
+  const salesBillEntries = await prisma.salesBillEntry.findMany({
+    where: whereClause,
+    select: {
+      id: true,
+      docId: true,
+      docDate: true,
+      netAmount: true,
+      customer: { select: { name: true } },
+    },
+    orderBy: { docDate: "desc" },
+  });
+
+  const combinedData = [];
+
+  salesDeliveries.forEach((entry) => {
+    combinedData.push({
+      id: `sd-${entry.id}`,
+      type: "Sales Delivery",
+      docId: entry.docId,
+      docDate: entry.docDate,
+      customerName: entry.Customer?.name || "-",
+      netAmount: entry.netAmount || 0,
+    });
+  });
+
+  salesBillEntries.forEach((entry) => {
+    combinedData.push({
+      id: `sb-${entry.id}`,
+      type: "Sales Bill",
+      docId: entry.docId,
+      docDate: entry.docDate,
+      customerName: entry.customer?.name || "-",
+      netAmount: entry.netAmount || 0,
+    });
+  });
+
+  combinedData.sort((a, b) => new Date(b.docDate) - new Date(a.docDate));
+  return { statusCode: 0, data: combinedData };
+}
+
+export { get, getMonthly, getCustomerWise, getYearWise, getYearWiseBreakup, getMonthWiseBreakup, getQuarterWiseBreakup, getCustomerWiseBreakup };
