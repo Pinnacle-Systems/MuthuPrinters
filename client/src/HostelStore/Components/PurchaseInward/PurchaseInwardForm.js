@@ -234,7 +234,7 @@ const PurchaseInwardForm = ({
     netBillValue,
     attachments: attachments?.filter((i) => i.filePath),
   };
-
+  console.log("payload", data);
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
     try {
       const formData = new FormData();
