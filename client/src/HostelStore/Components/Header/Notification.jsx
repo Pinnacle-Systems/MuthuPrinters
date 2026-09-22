@@ -9,7 +9,10 @@ import {
   useMarkNotificationAsReadMutation,
 } from "../../../redux/uniformService/ApprovalMasterServices";
 import { TICK_ICON, VIEW } from "../../../icons";
-import { useGetNotificationsQuery, useMarkPendingJobCardAsReadMutation } from "../../../redux/uniformService/NotificationService";
+import {
+  useGetNotificationsQuery,
+  useMarkPendingJobCardAsReadMutation,
+} from "../../../redux/uniformService/NotificationService";
 
 const STATUS_DISPLAY = {
   APPROVED: { label: "✅ Approved", isSelfResult: true },
@@ -57,14 +60,24 @@ const Notification = () => {
     { params: { userId } },
     { skip: !userId },
   );
+  console.log(jobCardNotifications, "jobCardNotifications");
+
   const [markJobCardRead, { isLoading: isMarkingJobCard }] =
     useMarkPendingJobCardAsReadMutation();
 
   const approvalNotifications = data?.data ?? [];
-  const jobCardPending = jobCardNotifications?.data || [];
+  const [dismissedJobs, setDismissedJobs] = useState([]);
 
-  const actionRequired = approvalNotifications.filter(log => !getStatusConfig(log, userId).isResult);
-  const resultNotifications = approvalNotifications.filter(log => getStatusConfig(log, userId).isResult);
+  const jobCardPending = (jobCardNotifications?.data || []).filter(
+    (log) => !dismissedJobs.includes(log.id),
+  );
+
+  const actionRequired = approvalNotifications.filter(
+    (log) => !getStatusConfig(log, userId).isResult,
+  );
+  const resultNotifications = approvalNotifications.filter(
+    (log) => getStatusConfig(log, userId).isResult,
+  );
 
   const totalCount = approvalNotifications.length + jobCardPending.length;
 
@@ -79,32 +92,46 @@ const Notification = () => {
 
   async function handleMarkApprovalRead(e, logId) {
     e.stopPropagation();
-    try { await markApprovalRead({ id: logId, userId }).unwrap(); }
-    catch (err) { console.error("Failed to mark approval as read:", err); }
+    try {
+      await markApprovalRead({ id: logId, userId }).unwrap();
+    } catch (err) {
+      console.error("Failed to mark approval as read:", err);
+    }
   }
 
   async function handleMarkAllApprovalRead(e) {
     e.stopPropagation();
     try {
       await Promise.all(
-        resultNotifications.map(n => markApprovalRead({ id: n.id, userId }).unwrap())
+        resultNotifications.map((n) =>
+          markApprovalRead({ id: n.id, userId }).unwrap(),
+        ),
       );
-    } catch (err) { console.error("Failed to mark all as read:", err); }
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+    }
   }
 
   async function handleMarkJobCardRead(e, logId) {
     e.stopPropagation();
-    try { await markJobCardRead({ id: logId, userId }).unwrap(); }
-    catch (err) { console.error("Failed to mark job card notification as read:", err); }
+    try {
+      await markJobCardRead({ id: logId, userId }).unwrap();
+    } catch (err) {
+      console.error("Failed to mark job card notification as read:", err);
+    }
   }
 
   async function handleMarkAllJobCardRead(e) {
     e.stopPropagation();
     try {
       await Promise.all(
-        jobCardPending.filter(n => !n.isRead).map(n => markJobCardRead({ id: n.id, userId }).unwrap())
+        jobCardPending
+          .filter((n) => !n.isRead)
+          .map((n) => markJobCardRead({ id: n.id, userId }).unwrap()),
       );
-    } catch (err) { console.error("Failed to mark all job card notifications as read:", err); }
+    } catch (err) {
+      console.error("Failed to mark all job card notifications as read:", err);
+    }
   }
 
   return (
@@ -124,8 +151,7 @@ const Notification = () => {
 
       {/* ── Dropdown ─────────────────────────────────────────────── */}
       {open && (
-        <div className="absolute right-0 mt-2 w-[520px] bg-white shadow-xl rounded-xl border z-50 overflow-hidden animate-fadeIn">
-
+        <div className="absolute right-0 mt-2 w-[620px] bg-white shadow-xl rounded-xl border z-50 overflow-hidden animate-fadeIn">
           {/* Header */}
           <div className="px-4 py-3 border-b font-semibold text-gray-700 flex justify-between items-center">
             <span>Notifications</span>
@@ -165,29 +191,46 @@ const Notification = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {actionRequired.map(log => {
+                        {actionRequired.map((log) => {
                           const config = getStatusConfig(log, userId);
-                          const totalLevels = log.ApprovalConfig?.approvalLevels?.length ?? "?";
+                          const totalLevels =
+                            log.ApprovalConfig?.approvalLevels?.length ?? "?";
                           return (
                             <tr
                               key={log.id}
                               className="border-b hover:bg-gray-50 cursor-pointer"
                               onClick={() => openRecord(log)}
                             >
-                              <td className="px-3 py-2.5 font-medium text-gray-700 whitespace-nowrap">{config.label}</td>
-                              <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">{log.referencePage}</td>
-                              <td className="px-3 py-2.5 text-blue-500 font-medium whitespace-nowrap">#{log.referenceDocId ?? log.referenceId}</td>
+                              <td className="px-3 py-2.5 font-medium text-gray-700 whitespace-nowrap">
+                                {config.label}
+                              </td>
+                              <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
+                                {log.referencePage}
+                              </td>
+                              <td className="px-3 py-2.5 text-blue-500 font-medium whitespace-nowrap">
+                                #{log.referenceDocId ?? log.referenceId}
+                              </td>
                               <td className="px-2 py-2.5 whitespace-nowrap">
                                 <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">
                                   {log.currentLevel}/{totalLevels}
                                 </span>
                               </td>
-                              <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{log.RaisedBy?.username ?? "—"}</td>
+                              <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
+                                {log.RaisedBy?.username ?? "—"}
+                              </td>
                               {/* <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
                                 <ReadBadge isRead={log.isRead ?? false} />
                               </td> */}
-                              <td className="px-2 py-2.5" onClick={e => { e.stopPropagation(); openRecord(log); }}>
-                                <button className="text-blue-500 hover:text-blue-700">{VIEW}</button>
+                              <td
+                                className="px-2 py-2.5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openRecord(log);
+                                }}
+                              >
+                                <button className="text-blue-500 hover:text-blue-700">
+                                  {VIEW}
+                                </button>
                               </td>
                             </tr>
                           );
@@ -227,18 +270,25 @@ const Notification = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {resultNotifications.map(log => {
+                        {resultNotifications.map((log) => {
                           const config = getStatusConfig(log, userId);
-                          const totalLevels = log.ApprovalConfig?.approvalLevels?.length ?? "?";
+                          const totalLevels =
+                            log.ApprovalConfig?.approvalLevels?.length ?? "?";
                           return (
                             <tr
                               key={log.id}
                               className="border-b hover:bg-gray-50 cursor-pointer"
                               onClick={() => openRecord(log)}
                             >
-                              <td className="px-3 py-2.5 font-medium text-gray-700 whitespace-nowrap">{config.label}</td>
-                              <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">{log.referencePage}</td>
-                              <td className="px-3 py-2.5 text-blue-500 font-medium whitespace-nowrap">#{log.referenceDocId ?? log.referenceId}</td>
+                              <td className="px-3 py-2.5 font-medium text-gray-700 whitespace-nowrap">
+                                {config.label}
+                              </td>
+                              <td className="px-3 py-2.5 text-gray-500 whitespace-nowrap">
+                                {log.referencePage}
+                              </td>
+                              <td className="px-3 py-2.5 text-blue-500 font-medium whitespace-nowrap">
+                                #{log.referenceDocId ?? log.referenceId}
+                              </td>
                               <td className="px-2 py-2.5 whitespace-nowrap">
                                 <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">
                                   {log.currentLevel}/{totalLevels}
@@ -247,12 +297,25 @@ const Notification = () => {
                               {/* <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
                                 <ReadBadge isRead={log.isRead ?? false} />
                               </td> */}
-                              <td className="px-2 py-2.5" onClick={e => { e.stopPropagation(); openRecord(log); }}>
-                                <button className="text-blue-500 hover:text-blue-700">{VIEW}</button>
+                              <td
+                                className="px-2 py-2.5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openRecord(log);
+                                }}
+                              >
+                                <button className="text-blue-500 hover:text-blue-700">
+                                  {VIEW}
+                                </button>
                               </td>
-                              <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
+                              <td
+                                className="px-2 py-2.5"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <button
-                                  onClick={e => handleMarkApprovalRead(e, log.id)}
+                                  onClick={(e) =>
+                                    handleMarkApprovalRead(e, log.id)
+                                  }
                                   disabled={isMarkingApproval || log.isRead}
                                   title="Mark as read"
                                   className="p-1 rounded-full hover:bg-green-100 text-gray-400 hover:text-green-600 transition disabled:opacity-30"
@@ -273,25 +336,26 @@ const Notification = () => {
                   <>
                     <SectionHeader
                       color="red"
-                      label="Job Card Pending"
+                      label="Job Card / Sample Pending"
                       count={jobCardPending.length}
-                    // action={
-                    //   jobCardPending.some(n => !n.isRead) && (
-                    //     <button
-                    //       onClick={handleMarkAllJobCardRead}
-                    //       disabled={isMarkingJobCard}
-                    //       className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium disabled:opacity-40"
-                    //     >
-                    //       ✓ Mark all read
-                    //     </button>
-                    //   )
-                    // }
+                      // action={
+                      //   jobCardPending.some(n => !n.isRead) && (
+                      //     <button
+                      //       onClick={handleMarkAllJobCardRead}
+                      //       disabled={isMarkingJobCard}
+                      //       className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium disabled:opacity-40"
+                      //     >
+                      //       ✓ Mark all read
+                      //     </button>
+                      //   )
+                      // }
                     />
                     <table className="w-full text-left text-gray-600">
                       <thead className="text-gray-500 uppercase text-[10px] bg-gray-100 sticky top-0">
                         <tr>
                           <th className="px-3 py-2 w-10">Type</th>
-                          <th className="px-3 py-2">Message</th>
+                          <th className="px-3 py-2 w-[800px]">Message</th>
+                          <th className="px-2 py-2">Action</th>
                           {/* <th className="px-3 py-2">Doc ID</th> */}
                           {/* <th className="px-2 py-2">Is Read</th> */}
                           {/* <th className="px-2 py-2">View</th> */}
@@ -299,7 +363,7 @@ const Notification = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {jobCardPending.map(log => (
+                        {jobCardPending.map((log) => (
                           <tr
                             key={log.id}
                             className={`border-b hover:bg-gray-50 cursor-pointer ${!log.isRead ? "bg-red-50/40" : ""}`}
@@ -307,16 +371,37 @@ const Notification = () => {
                           >
                             {/* Type badge */}
                             <td className="px-3 py-2.5 whitespace-nowrap">
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${log.type === "WARNING"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-blue-100 text-blue-700"
-                                }`}>
+                              <span
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                                  log.type === "WARNING"
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-blue-100 text-blue-700"
+                                }`}
+                              >
                                 {log.type}
                               </span>
                             </td>
                             {/* Message */}
-                            <td className="px-3 py-2.5 text-gray-600 max-w-[180px] truncate" title={log.message}>
+                            <td
+                              className="px-3 py-2.5 text-gray-600 max-w-[180px] truncate"
+                              title={log.message}
+                            >
                               {log.message}
+                            </td>
+                            {/* Action / Dismiss */}
+                            <td
+                              className="px-2 py-2.5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDismissedJobs((prev) => [...prev, log.id]);
+                              }}
+                            >
+                              <button
+                                title="Dismiss temporarily"
+                                className="p-1 rounded-full hover:bg-green-100 text-gray-400 hover:text-green-600 transition"
+                              >
+                                {TICK_ICON}
+                              </button>
                             </td>
                             {/* Reference Doc */}
                             {/* <td className="px-3 py-2.5 text-blue-500 font-medium whitespace-nowrap">
@@ -364,7 +449,9 @@ const colorMap = {
 };
 
 const SectionHeader = ({ color, label, count, action }) => (
-  <div className={`px-4 py-1.5 border-b border-t ${colorMap[color]} flex justify-between items-center`}>
+  <div
+    className={`px-4 py-1.5 border-b border-t ${colorMap[color]} flex justify-between items-center`}
+  >
     <span className="text-[10px] font-bold uppercase tracking-wider">
       {label} — {count}
     </span>

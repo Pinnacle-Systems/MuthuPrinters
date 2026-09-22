@@ -336,7 +336,16 @@ async function getOne(id) {
       Store: { select: { locationId: true, storeName: true } },
       Branch: { select: { branchName: true } },
       supplier: { select: { name: true } },
-      inwardItems: { include: { Po: { select: { docId: true } } } },
+      inwardItems: {
+        include: {
+          Po: {
+            select: {
+              docId: true,
+              OrderEntry: { select: { docId: true, id: true } },
+            },
+          },
+        },
+      },
     },
   });
   if (!data) return NoRecordFound("Purchase Inward");
@@ -693,6 +702,9 @@ async function createInwardItems(
           ? parseInt(stockDetail.taxPercent)
           : null,
         gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
+        orderEntryId: stockDetail?.orderEntryId
+          ? parseInt(stockDetail?.orderEntryId)
+          : null,
       },
     });
     await tx.stock.create({
@@ -717,6 +729,9 @@ async function createInwardItems(
         sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
         colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
         gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
+        orderId: stockDetail?.orderEntryId
+          ? parseInt(stockDetail?.orderEntryId)
+          : null,
       },
     });
     return createdItem;
@@ -1127,6 +1142,9 @@ async function updateinwardItems(
             ? parseInt(stockDetail.taxPercent)
             : null,
           gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
+          orderEntryId: stockDetail?.orderEntryId
+            ? parseInt(stockDetail?.orderEntryId)
+            : null,
         },
       });
 
@@ -1158,6 +1176,9 @@ async function updateinwardItems(
               ? parseInt(stockDetail.colorId)
               : null,
             gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
+            orderId: stockDetail?.orderEntryId
+              ? parseInt(stockDetail?.orderEntryId)
+              : null,
           },
         });
       } else {
@@ -1187,6 +1208,9 @@ async function updateinwardItems(
               ? parseInt(stockDetail.colorId)
               : null,
             gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
+            orderId: stockDetail?.orderEntryId
+              ? parseInt(stockDetail?.orderEntryId)
+              : null,
           },
         });
       }
@@ -1222,6 +1246,9 @@ async function updateinwardItems(
             ? parseInt(stockDetail.taxPercent)
             : null,
           gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
+          orderEntryId: stockDetail?.orderEntryId
+            ? parseInt(stockDetail?.orderEntryId)
+            : null,
         },
       });
       await tx.stock.create({
@@ -1246,6 +1273,9 @@ async function updateinwardItems(
           sizeId: stockDetail?.sizeId ? parseInt(stockDetail.sizeId) : null,
           colorId: stockDetail?.colorId ? parseInt(stockDetail.colorId) : null,
           gsmId: stockDetail?.gsmId ? parseInt(stockDetail.gsmId) : null,
+          orderId: stockDetail?.orderEntryId
+            ? parseInt(stockDetail?.orderEntryId)
+            : null,
         },
       });
       return createdItem;

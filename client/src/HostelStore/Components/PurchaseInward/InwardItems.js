@@ -37,6 +37,8 @@ const InwardItems = ({
   gsmList,
   isSupplierOutside,
 }) => {
+  console.log(inwardItems, "inwardItems");
+
   const EMPTY_ROW = {
     styleItemId: "",
     hsnId: "",
@@ -44,6 +46,7 @@ const InwardItems = ({
     inwardQty: "",
     poQty: "",
     poId: "",
+    orderEntryId: "",
     alreadyInwardQty: "",
     alreadyReturnQty: "",
     alreadyCancelQty: "",
@@ -325,6 +328,11 @@ const InwardItems = ({
                     PO No
                   </th>
                 )}
+                {inwardType === "Order Purchase Inward" && (
+                  <th className={`w-24 px-4 py-2 text-center font-medium`}>
+                    Order No
+                  </th>
+                )}
                 <th className={`w-56 px-2 py-2 text-center font-medium`}>
                   Description of Goods<span className="text-red-500">*</span>
                 </th>
@@ -407,6 +415,11 @@ const InwardItems = ({
                   {inwardType !== "Direct Inward" && (
                     <td className="w-16 border border-gray-300 text-[11px] text-left px-1">
                       {row.Po?.docId}
+                    </td>
+                  )}
+                  {inwardType === "Order Purchase Inward" && (
+                    <td className="w-16 border border-gray-300 text-[11px] text-left px-1">
+                      {row.Po?.OrderEntry?.docId || ""}
                     </td>
                   )}
                   <td className=" text-[11px] border border-gray-300 text-left">
@@ -978,7 +991,13 @@ const InwardItems = ({
               <tr className="bg-gray-50 h-6 font-medium text-gray-800 text-[12px]">
                 <td
                   className="text-right px-4 border border-gray-300 font-medium "
-                  colSpan={inwardType !== "Direct Inward" ? 7 : 6}
+                  colSpan={
+                    inwardType === "Order Purchase Inward"
+                      ? 8
+                      : inwardType !== "Direct Inward"
+                        ? 7
+                        : 6
+                  }
                 >
                   Total
                 </td>

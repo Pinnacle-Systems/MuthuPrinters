@@ -9,6 +9,7 @@ const PurchaseInwardItemsSelection = ({
   setSearchDocId,
   searchDocDate,
   setSearchDocDate,
+  inwardType,
 }) => {
   const EMPTY_ROW = {
     styleItemId: "",
@@ -17,6 +18,7 @@ const PurchaseInwardItemsSelection = ({
     inwardQty: "",
     poQty: "",
     poId: "",
+    orderEntryId: "",
     alreadyInwardQty: "",
     alreadyReturnQty: "",
     alreadyCancelQty: "",
@@ -42,6 +44,7 @@ const PurchaseInwardItemsSelection = ({
         hsnId: item.hsnId ?? "",
         poQty: item.poQty ?? "",
         poId: item.poId ?? "",
+        orderEntryId: item?.Po?.OrderEntry?.id ?? "",
         alreadyCancelQty: item?.alreadyCancelQty ?? "",
         balQty: item.balQty ?? "",
         alreadyInwardQty: item.alreadyInwardQty ?? "",
@@ -171,6 +174,11 @@ const PurchaseInwardItemsSelection = ({
                         }}
                       />
                     </th>
+                    {inwardType === "Order Purchase Inward" && (
+                      <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-20">
+                        <label>Order No</label>
+                      </th>
+                    )}
                     <th className="px-1 py-1.5 border border-gray-300 text-center text-xs w-16">
                       <label>Po Date</label>
                       <input
@@ -255,6 +263,11 @@ const PurchaseInwardItemsSelection = ({
                         <td className=" border border-gray-300 text-[11px] py-1.5 px-2">
                           {item?.Po?.docId}
                         </td>
+                        {inwardType === "Order Purchase Inward" && (
+                          <td className=" border border-gray-300 text-[11px] py-1.5 px-2">
+                            {item?.Po?.OrderEntry?.docId || ""}
+                          </td>
+                        )}
                         <td className=" border border-gray-300 px-2 py-1 text-left text-xs">
                           {getDateFromDateTimeToDisplay(item?.Po?.docDate)}
                         </td>

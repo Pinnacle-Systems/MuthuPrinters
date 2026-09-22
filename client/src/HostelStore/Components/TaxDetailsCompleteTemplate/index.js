@@ -2,7 +2,11 @@ import React, { useCallback, useRef } from "react";
 import { discountTypes } from "../../../Utils/DropdownData";
 
 import { Loader } from "../../../Basic/components";
-import { findFromList, substract as s, formatCurrencyAmount } from "../../../Utils/helper";
+import {
+  findFromList,
+  substract as s,
+  formatCurrencyAmount,
+} from "../../../Utils/helper";
 import { useGetTaxTemplateByIdQuery } from "../../../redux/services/TaxTemplateServices";
 import { useGetTaxTermMasterQuery } from "../../../redux/services/TaxTermMasterServices";
 
@@ -23,6 +27,7 @@ const TaxDetailsFullTemplate = ({
   const discountTypeRef = useRef(null);
   const discountValueRef = useRef(null);
   const taxPercentRef = useRef(null);
+  console.log(readOnly, "readOnlyintaxtem");
 
   if (!row) return null;
 
@@ -94,7 +99,14 @@ const TaxDetailsFullTemplate = ({
 
       handleExitToNextRow(event);
     },
-    [discountType, handleExitToNextRow, id, isNewVersion, readOnly, allowTaxEdit],
+    [
+      discountType,
+      handleExitToNextRow,
+      id,
+      isNewVersion,
+      readOnly,
+      allowTaxEdit,
+    ],
   );
 
   return (
@@ -125,7 +137,7 @@ const TaxDetailsFullTemplate = ({
               <select
                 autoFocus
                 ref={discountTypeRef}
-                disabled={true}
+                disabled={readOnly}
                 className="text-left w-full rounded h-8 new-data-input"
                 value={discountType}
                 onChange={(e) =>
@@ -134,7 +146,6 @@ const TaxDetailsFullTemplate = ({
                 onKeyDown={(event) =>
                   focusNextEditableField(event, "discountType")
                 }
-
               >
                 <option value={""}>Select</option>
                 {discountTypes.map((option, index) => (
@@ -184,7 +195,9 @@ const TaxDetailsFullTemplate = ({
                   handleInputChange(e.target.value, index, "taxPercent");
                 }}
                 onFocus={(e) => e.target.select()}
-                onKeyDown={(event) => focusNextEditableField(event, "taxPercent")}
+                onKeyDown={(event) =>
+                  focusNextEditableField(event, "taxPercent")
+                }
               />
             </td>
           </tr>

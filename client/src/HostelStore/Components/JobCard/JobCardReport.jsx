@@ -5,10 +5,15 @@ import secureLocalStorage from "react-secure-storage";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Tooltip } from "@mui/material";
 import { useDispatch } from "react-redux";
-import JobCardApi, { useGetJobCardQuery } from "../../../redux/uniformService/JobCardService";
+import JobCardApi, {
+  useGetJobCardQuery,
+} from "../../../redux/uniformService/JobCardService";
 import { ApprovalBadge } from "../../../Utils/ApprovalHelper";
 import Modal from "../../../UiComponents/Modal";
-import { useAddApprovalStausMutation, useAddPackingCompletedMutation } from "../../../redux/uniformService/PoServices";
+import {
+  useAddApprovalStausMutation,
+  useAddPackingCompletedMutation,
+} from "../../../redux/uniformService/PoServices";
 import { MdKeyboardDoubleArrowLeft } from "react-icons/md";
 import { FiCheck } from "react-icons/fi";
 import { toast } from "react-toastify";
@@ -84,33 +89,35 @@ const JobCardReport = ({
 
   const isLoadingIndicator = isLoading || isFetching;
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math?.ceil(allData?.data?.length / itemsPerPage);
-  const indexOfLastItem = currentPage * parseInt(10);
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = allData?.data?.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(totalCount / parseInt(dataPerPage)) || 1;
+  const indexOfFirstItem = (currentPageNumber - 1) * parseInt(dataPerPage);
+  const indexOfLastItem = Math.min(
+    indexOfFirstItem + parseInt(dataPerPage),
+    totalCount,
+  );
+  const currentItems = allData?.data || [];
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
+      setCurrentPageNumber(newPage);
     }
   };
   const Pagination = () => {
     return (
       <div className="h-10 w-full flex flex-col sm:flex-row justify-between items-center p-2 bg-white border-t border-gray-200 ">
         <div className="text-sm text-gray-600 mb-2 sm:mb-0">
-          Showing {indexOfFirstItem + 1} to{" "}
-          {Math.min(indexOfLastItem, allData?.data?.length)} of{" "}
-          {allData?.length} entries
+          Showing {totalCount === 0 ? 0 : indexOfFirstItem + 1} to{" "}
+          {indexOfLastItem} of {totalCount} entries
         </div>
         <div className="flex gap-1">
           <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className={`px-3 py-1 rounded-md ${currentPage === 1
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-white text-gray-600 hover:bg-gray-100"
-              }`}
+            onClick={() => handlePageChange(currentPageNumber - 1)}
+            disabled={currentPageNumber === 1}
+            className={`px-3 py-1 rounded-md ${
+              currentPageNumber === 1
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-600 hover:bg-gray-100"
+            }`}
           >
             <FaChevronLeft className="inline" />
           </button>
@@ -119,51 +126,54 @@ const JobCardReport = ({
             let pageNum;
             if (totalPages <= 5) {
               pageNum = i + 1;
-            } else if (currentPage <= 3) {
+            } else if (currentPageNumber <= 3) {
               pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
+            } else if (currentPageNumber >= totalPages - 2) {
               pageNum = totalPages - 4 + i;
             } else {
-              pageNum = currentPage - 2 + i;
+              pageNum = currentPageNumber - 2 + i;
             }
 
             return (
               <button
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
-                className={`px-3 py-1 rounded-md ${currentPage === pageNum
-                  ? "bg-indigo-800 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-                  }`}
+                className={`px-3 py-1 rounded-md ${
+                  currentPageNumber === pageNum
+                    ? "bg-indigo-800 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
               >
                 {pageNum}
               </button>
             );
           })}
 
-          {totalPages > 5 && currentPage < totalPages - 2 && (
+          {totalPages > 5 && currentPageNumber < totalPages - 2 && (
             <span className="px-3 py-1">...</span>
           )}
 
-          {totalPages > 5 && currentPage < totalPages - 2 && (
+          {totalPages > 5 && currentPageNumber < totalPages - 2 && (
             <button
               onClick={() => handlePageChange(totalPages)}
-              className={`px-3 py-1 rounded-md ${currentPage === totalPages
-                ? "bg-indigo-800 text-white"
-                : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
+              className={`px-3 py-1 rounded-md ${
+                currentPageNumber === totalPages
+                  ? "bg-indigo-800 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
+              }`}
             >
               {totalPages}
             </button>
           )}
 
           <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className={`px-3 py-1 rounded-md ${currentPage === totalPages
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-white text-gray-600 hover:bg-gray-100"
-              }`}
+            onClick={() => handlePageChange(currentPageNumber + 1)}
+            disabled={currentPageNumber === totalPages}
+            className={`px-3 py-1 rounded-md ${
+              currentPageNumber === totalPages
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-white text-gray-600 hover:bg-gray-100"
+            }`}
           >
             <FaChevronRight className="inline" />
           </button>
@@ -218,13 +228,10 @@ const JobCardReport = ({
     }
   };
   const handleUpdatePacking = async (dataObj) => {
-
-
     setActionLoading(true);
     try {
       const result = await packingCompletedMutation({
         id: dataObj?.id,
-
       }).unwrap();
 
       if (result.statusCode === 0) {
@@ -249,7 +256,6 @@ const JobCardReport = ({
     }
   };
 
-
   return (
     <>
       <Modal
@@ -260,8 +266,9 @@ const JobCardReport = ({
         <div className="space-y-4">
           {/* Header */}
           <h2
-            className={`text-base font-semibold ${actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
-              }`}
+            className={`text-base font-semibold ${
+              actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
+            }`}
           >
             {actionType === "APPROVE"
               ? "✅ Approve Job Card"
@@ -334,10 +341,11 @@ const JobCardReport = ({
                   handleConfirmAction();
                 }
               }}
-              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${actionType === "APPROVE"
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-blue-600 hover:bg-blue-700"
-                } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
+              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${
+                actionType === "APPROVE"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-blue-600 hover:bg-blue-700"
+              } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
             >
               {actionLoading ? (
                 <>
@@ -506,8 +514,9 @@ const JobCardReport = ({
                           }}
                           tabIndex={0}
                           key={dataObj.id}
-                          className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${index % 2 === 0 ? "bg-white" : "bg-gray-100"
-                            }`}
+                          className={`hover:bg-gray-50 transition-colors border-b   border-gray-200 text-[12px] ${
+                            index % 2 === 0 ? "bg-white" : "bg-gray-100"
+                          }`}
                           onClick={() => {
                             onClick(dataObj.id);
                           }}
@@ -561,51 +570,47 @@ const JobCardReport = ({
                                 {["PENDING"].includes(
                                   dataObj?.approvalStatus?.status,
                                 ) && (
-                                    <Tooltip title="Send Back for Review" arrow>
-                                      <button
-                                        onClick={() =>
-                                          handleApprovalAction(dataObj, "REJECT")
-                                        }
-                                        // disabled={dataObj?.approvalStatus?.status === "PENDING"}
-                                        className="p-1.5 rounded-md bg-blue-200 text-blue-700 hover:bg-blue-300 transition"
-                                      >
-                                        <MdKeyboardDoubleArrowLeft size={16} />
-                                      </button>
-                                    </Tooltip>
-                                  )}
+                                  <Tooltip title="Send Back for Review" arrow>
+                                    <button
+                                      onClick={() =>
+                                        handleApprovalAction(dataObj, "REJECT")
+                                      }
+                                      // disabled={dataObj?.approvalStatus?.status === "PENDING"}
+                                      className="p-1.5 rounded-md bg-blue-200 text-blue-700 hover:bg-blue-300 transition"
+                                    >
+                                      <MdKeyboardDoubleArrowLeft size={16} />
+                                    </button>
+                                  </Tooltip>
+                                )}
 
                                 {/* ✅ Approve — show only when PENDING */}
                                 {dataObj?.approvalStatus?.status ===
                                   "PENDING" && (
-                                    <Tooltip title="Approve" arrow>
-                                      <button
-                                        onClick={() =>
-                                          handleApprovalAction(dataObj, "APPROVE")
-                                        }
-                                        className="p-1.5 rounded-md bg-green-200 text-green-700 hover:bg-green-300 transition"
-                                      >
-                                        <FiCheck size={16} />
-                                      </button>
-                                    </Tooltip>
-                                  )}
-
-
+                                  <Tooltip title="Approve" arrow>
+                                    <button
+                                      onClick={() =>
+                                        handleApprovalAction(dataObj, "APPROVE")
+                                      }
+                                      className="p-1.5 rounded-md bg-green-200 text-green-700 hover:bg-green-300 transition"
+                                    >
+                                      <FiCheck size={16} />
+                                    </button>
+                                  </Tooltip>
+                                )}
 
                                 {dataObj?.approvalStatus?.status ===
                                   "NOT_CONFIGURED" && (
-                                    <span className="text-[10px] text-gray-400 italic">
-                                      —
-                                    </span>
-                                  )}
+                                  <span className="text-[10px] text-gray-400 italic">
+                                    —
+                                  </span>
+                                )}
                               </div>
                             </td>
                           )}
                           <td>
                             <Tooltip title="Packing Completed" arrow>
                               <button
-                                onClick={() =>
-                                  handleUpdatePacking(dataObj)
-                                }
+                                onClick={() => handleUpdatePacking(dataObj)}
                                 className="p-1.5 rounded-md bg-green-200 text-green-700 hover:bg-green-300 transition"
                               >
                                 <FiCheck size={16} />
@@ -677,10 +682,11 @@ const JobCardReport = ({
                                     >
                                       <button
                                         className={`flex items-center gap-1 px-1 rounded transition
-       ${dataObj.childRecord > 0
-                                            ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
-                                            : "bg-red-50 text-red-800 hover:bg-red-100"
-                                          }`}
+       ${
+         dataObj.childRecord > 0
+           ? "bg-red-50 text-red-500 opacity-40 cursor-not-allowed"
+           : "bg-red-50 text-red-800 hover:bg-red-100"
+       }`}
                                         onClick={() =>
                                           hasPermission(
                                             () => onDelete(dataObj.id),

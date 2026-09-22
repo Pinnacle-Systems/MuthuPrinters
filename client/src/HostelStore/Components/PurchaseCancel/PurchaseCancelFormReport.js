@@ -86,15 +86,14 @@ const PurchaseCancelFormReport = ({
 
   const isLoadingIndicator = isLoading || isFetching;
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math?.ceil(allData?.data?.length / itemsPerPage);
-  const indexOfLastItem = currentPage * parseInt(10);
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = allData?.data?.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(totalCount / parseInt(dataPerPage)) || 1;
+  const indexOfFirstItem = (currentPageNumber - 1) * parseInt(dataPerPage);
+  const indexOfLastItem = Math.min(indexOfFirstItem + parseInt(dataPerPage), totalCount);
+  const currentItems = allData?.data || [];
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
+      setCurrentPageNumber(newPage);
     }
   };
   const Pagination = () => {
@@ -103,16 +102,15 @@ const PurchaseCancelFormReport = ({
     return (
       <div className="h-10 w-full flex flex-col sm:flex-row justify-between items-center p-2 bg-white border-t border-gray-200 ">
         <div className="text-sm text-gray-600 mb-2 sm:mb-0">
-          Showing {indexOfFirstItem + 1} to{" "}
-          {Math.min(indexOfLastItem, allData?.data?.length)} of{" "}
-          {allData?.length} entries
+          Showing {totalCount === 0 ? 0 : indexOfFirstItem + 1} to{" "}
+          {indexOfLastItem} of {totalCount} entries
         </div>
         <div className="flex gap-1">
           <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
+            onClick={() => handlePageChange(currentPageNumber - 1)}
+            disabled={currentPageNumber === 1}
             className={`px-3 py-1 rounded-md ${
-              currentPage === 1
+              currentPageNumber === 1
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "bg-white text-gray-600 hover:bg-gray-100"
             }`}
@@ -124,12 +122,12 @@ const PurchaseCancelFormReport = ({
             let pageNum;
             if (totalPages <= 5) {
               pageNum = i + 1;
-            } else if (currentPage <= 3) {
+            } else if (currentPageNumber <= 3) {
               pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
+            } else if (currentPageNumber >= totalPages - 2) {
               pageNum = totalPages - 4 + i;
             } else {
-              pageNum = currentPage - 2 + i;
+              pageNum = currentPageNumber - 2 + i;
             }
 
             return (
@@ -137,7 +135,7 @@ const PurchaseCancelFormReport = ({
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
                 className={`px-3 py-1 rounded-md ${
-                  currentPage === pageNum
+                  currentPageNumber === pageNum
                     ? "bg-indigo-800 text-white"
                     : "bg-white text-gray-600 hover:bg-gray-100"
                 }`}
@@ -147,15 +145,15 @@ const PurchaseCancelFormReport = ({
             );
           })}
 
-          {totalPages > 5 && currentPage < totalPages - 2 && (
+          {totalPages > 5 && currentPageNumber < totalPages - 2 && (
             <span className="px-3 py-1">...</span>
           )}
 
-          {totalPages > 5 && currentPage < totalPages - 2 && (
+          {totalPages > 5 && currentPageNumber < totalPages - 2 && (
             <button
               onClick={() => handlePageChange(totalPages)}
               className={`px-3 py-1 rounded-md ${
-                currentPage === totalPages
+                currentPageNumber === totalPages
                   ? "bg-indigo-800 text-white"
                   : "bg-white text-gray-600 hover:bg-gray-100"
               }`}
@@ -165,10 +163,10 @@ const PurchaseCancelFormReport = ({
           )}
 
           <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
+            onClick={() => handlePageChange(currentPageNumber + 1)}
+            disabled={currentPageNumber === totalPages}
             className={`px-3 py-1 rounded-md ${
-              currentPage === totalPages
+              currentPageNumber === totalPages
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "bg-white text-gray-600 hover:bg-gray-100"
             }`}
