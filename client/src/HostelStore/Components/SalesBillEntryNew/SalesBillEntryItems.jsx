@@ -867,6 +867,7 @@ const SalesBillEntryItems = ({
                       className="text-indigo-600 hover:text-indigo-800"
                       onClick={() => setActiveModalRowIndex(index)}
                       title="View Style & Size Breakup"
+                      disabled={!row.id}
                     >
                       <FaEye size={16} className="mx-auto" />
                     </button>

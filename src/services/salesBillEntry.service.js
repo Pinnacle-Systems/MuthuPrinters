@@ -685,6 +685,11 @@ async function update(id, body) {
       data: {
 
 
+        weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+        carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+        carriageTax: carriageTax ? parseFloat(carriageTax) : null,
+        bankId: bankId ? parseInt(bankId) : null,
+        netAmount: netAmount ? String(netAmount) : null,
 
 
 
@@ -699,7 +704,7 @@ async function update(id, body) {
               data: {
                 styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
                 orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
-                sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
+                // sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
                 uomId: item?.uomId ? parseInt(item.uomId) : null,
                 gsmId: item?.gsmId ? parseInt(item.gsmId) : null,
                 itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
@@ -714,18 +719,18 @@ async function update(id, body) {
                 discountType: item?.discountType || null,
                 discountValue: item?.discountValue && !isNaN(Number(item.discountValue)) ? parseFloat(item.discountValue) : null,
 
-                SaleOrderStyleBreakup: {
+                SaleBillEntryStyleBreakup: {
                   deleteMany: {},
                   create: item?.styleBreakup?.length > 0
                     ? item.styleBreakup.map((st) => ({
                       styleId: st.styleId ? parseInt(st.styleId) : null,
-                      SaleOrderSizeBreakup: st?.sizeBreakup?.length > 0
+                      SaleBillEntrySizeBreakup: st?.sizeBreakup?.length > 0
                         ? {
                           create: st.sizeBreakup.map((s) => ({
                             sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                            qty: s.billQty ? parseInt(s.billQty) : null,
+                            billQty: s.billQty ? parseInt(s.billQty) : null,
                             deliveryQty: s.deliveryQty ? parseInt(s.deliveryQty) : null,
-                            SalesSizeBreakupId: s.id ? parseInt(s.id) : null,
+                            // SalesSizeBreakupId: s.id ? parseInt(s.id) : null,
 
                           }))
                         } : undefined
@@ -735,45 +740,45 @@ async function update(id, body) {
               },
             })),
 
-          create: parsedItems
-            .filter((item) => !item.id)
-            .map((item) => ({
-              styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
-              orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
-              sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
-              uomId: item?.uomId ? parseInt(item.uomId) : null,
-              gsmId: item?.gsmId ? parseInt(item.gsmId) : null,
-              itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
-              hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
-              trackingType: item?.trackingType,
-              itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
-              labelWidth: item?.labelWidth ?? "",
-              price: item?.price ? parseFloat(item.price) : null,
+          // create: parsedItems
+          //   .filter((item) => !item.id)
+          //   .map((item) => ({
+          //     styleItemId: item?.styleItemId ? parseInt(item.styleItemId) : null,
+          //     orderQty: item?.orderQty ? parseInt(item?.orderQty) : null,
+          //     sizeId: item?.sizeId ? parseInt(item.sizeId) : null,
+          //     uomId: item?.uomId ? parseInt(item.uomId) : null,
+          //     gsmId: item?.gsmId ? parseInt(item.gsmId) : null,
+          //     itemGroupId: item?.itemGroupId ? parseInt(item.itemGroupId) : null,
+          //     hsnId: item?.hsnId ? parseInt(item.hsnId) : null,
+          //     trackingType: item?.trackingType,
+          //     itemSubGroupId: item?.itemSubGroupId ? parseInt(item?.itemSubGroupId) : null,
+          //     labelWidth: item?.labelWidth ?? "",
+          //     price: item?.price ? parseFloat(item.price) : null,
 
-              dozen: item?.dozen ? parseFloat(item.dozen) : null,
-              taxPercent: item?.taxPercent && !isNaN(Number(item.taxPercent)) ? parseFloat(item.taxPercent) : null,
-              discountType: item?.discountType || null,
-              discountValue: item?.discountValue && !isNaN(Number(item.discountValue)) ? parseFloat(item.discountValue) : null,
+          //     dozen: item?.dozen ? parseFloat(item.dozen) : null,
+          //     taxPercent: item?.taxPercent && !isNaN(Number(item.taxPercent)) ? parseFloat(item.taxPercent) : null,
+          //     discountType: item?.discountType || null,
+          //     discountValue: item?.discountValue && !isNaN(Number(item.discountValue)) ? parseFloat(item.discountValue) : null,
 
-              SaleOrderStyleBreakup:
-                item?.styleBreakup?.length > 0
-                  ? {
-                    create: item.styleBreakup.map((st) => ({
-                      styleId: st.styleId ? parseInt(st.styleId) : null,
-                      SaleOrderSizeBreakup: st?.sizeBreakup?.length > 0
-                        ? {
-                          create: st.sizeBreakup.map((s) => ({
-                            sizeId: s.sizeId ? parseInt(s.sizeId) : null,
-                            qty: s.billQty ? parseInt(s.billQty) : null,
-                            deliveryQty: s.deliveryQty ? parseInt(s.deliveryQty) : null,
-                            SalesSizeBreakupId: s.id ? parseInt(s.id) : null,
+          //     SaleBillEntrySizeBreakup:
+          //       item?.styleBreakup?.length > 0
+          //         ? {
+          //           create: item.styleBreakup.map((st) => ({
+          //             styleId: st.styleId ? parseInt(st.styleId) : null,
+          //             SaleBillEntrySizeBreakup: st?.sizeBreakup?.length > 0
+          //               ? {
+          //                 create: st.sizeBreakup.map((s) => ({
+          //                   sizeId: s.sizeId ? parseInt(s.sizeId) : null,
+          //                   qty: s.billQty ? parseInt(s.billQty) : null,
+          //                   deliveryQty: s.deliveryQty ? parseInt(s.deliveryQty) : null,
+          //                   saleBillEntryStyleBreakupId: s.id ? parseInt(s.id) : null,
 
-                          }))
-                        } : undefined
-                    })),
-                  }
-                  : undefined,
-            })),
+          //                 }))
+          //               } : undefined
+          //           })),
+          //         }
+          //         : undefined,
+          //   })),
         },
 
       },
