@@ -590,8 +590,8 @@ async function create(body) {
         deliveryId: deliveryId ? parseInt(deliveryId) : null,
         weightInKg: weightInKg ? parseFloat(weightInKg) : null,
         carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
-        conversionType: conversionType ? conversionType : 'DOZEN',
         carriageTax: carriageTax ? parseFloat(carriageTax) : null,
+        conversionType: conversionType ? conversionType : 'DOZEN',
         bankId: bankId ? parseInt(bankId) : null,
         dispatchThrough: dispatchThrough ? dispatchThrough : null,
 
@@ -623,11 +623,13 @@ async function create(body) {
 
 async function update(id, body, files) {
   const {
-    userId,
     attachments,
-
+    weightInKg,
+    carriageCharge,
+    carriageTax,
     orderItems,
-
+    bankId,
+    dispatchThrough,
   } = await body;
 
 
@@ -671,6 +673,12 @@ async function update(id, body, files) {
         id: parseInt(id),
       },
       data: {
+        weightInKg: weightInKg ? parseFloat(weightInKg) : null,
+        carriageCharge: carriageCharge ? parseFloat(carriageCharge) : null,
+        carriageTax: carriageTax ? parseFloat(carriageTax) : null,
+        bankId: bankId ? parseInt(bankId) : null,
+        dispatchThrough: dispatchThrough ? dispatchThrough : null,
+
         SalesOrderItems: {
           deleteMany: incomingItemIds.length
             ? { id: { notIn: incomingItemIds } }

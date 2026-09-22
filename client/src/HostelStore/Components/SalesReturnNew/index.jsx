@@ -82,7 +82,7 @@ const SalesReturn = () => {
     setShowForm(true);
   };
 
-  const { data: customerList } = useGetPartyQuery({ params: { ...params } });
+  const { data: customerList } = useGetPartyQuery({ params: { ...params, isAddessCombined: true } });
   const { data: branchList } = useGetBranchQuery({ params: { ...params } });
 
   const handleCreate = () => {

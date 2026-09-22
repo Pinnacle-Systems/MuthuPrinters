@@ -17,10 +17,10 @@ import SalesDeliveryItems from "./SalesDeliveryItems.jsx";
 import moment from "moment";
 import { PDFViewer } from "@react-pdf/renderer";
 import Modal from "../../../UiComponents/Modal";
-import SalesDeliveryPrintFormat from "./SalesDeliveryPrintFormat.jsx";
+import SalesModulePrintFormat from "../SalesModulePrint/index.jsx";
 import tw from "../../../Utils/tailwind-react-pdf";
 import { IoArrowBackCircleSharp } from "react-icons/io5";
-import { FiEdit2, FiSave, FiPrinter, FiEye } from "react-icons/fi";
+import { FiEdit2, FiSave, FiPrinter, FiEye, FiFileText } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
 import {
   CommonFormFooter,
@@ -98,7 +98,7 @@ const SalesDeliveryForm = ({
   const [customerId, setCustomerId] = useState("");
   const [dcNo, setDcNo] = useState("");
   const [vehicleNo, setVehicleNo] = useState("");
-  const [deliveryType, setDeliveryType] = useState("AGAINST_INVOICE");
+  const [deliveryType, setDeliveryType] = useState("WITHOUT_INVOICE");
   const [remarks, setRemarks] = useState("");
   const [termsAndCondition, setTermsAndCondition] = useState("");
   const [termsId, setTermsId] = useState("");
@@ -111,7 +111,7 @@ const SalesDeliveryForm = ({
   const [payTermId, setPayTermId] = useState("");
   const [weightInKg, setWeightInKg] = useState("");
   const [carriageCharge, setCarriageCharge] = useState("");
-  const childRecord = useRef(0);
+  const [childRecord, setChildRecord] = useState(0);
   const [conversionType, setConversionType] = useState("PCS");
   const [currencyId, setCurrencyId] = useState("");
   const [bankId, setBankId] = useState("");
@@ -130,7 +130,7 @@ const SalesDeliveryForm = ({
   const [netAmout, setNetAmount] = useState("");
   const [dispatchThrough, setDispatchThrough] = useState("")
 
-  const effectiveReadOnly = readOnly || childRecord.current > 0;
+  const effectiveReadOnly = readOnly || childRecord
   const isCumInvoice = deliveryType === "AGAINST_INVOICE";
   const requirementRef = useRef(null);
 
@@ -184,7 +184,7 @@ const SalesDeliveryForm = ({
       setCustomerId(data?.customerId ? data?.customerId : "");
       setDcNo(data?.dcNo ? data?.dcNo : "");
       setVehicleNo(data?.vehicleNo ? data?.vehicleNo : "");
-      setDeliveryType(data?.deliveryType ? data?.deliveryType : "AGAINST_INVOICE");
+      setDeliveryType(data?.deliveryType ? data?.deliveryType : "WITHOUT_INVOICE");
       setRemarks(data?.remarks ? data?.remarks : "");
       setTermsAndCondition(data?.termsAndCondition ? data?.termsAndCondition : "");
       setTermsId(data?.termsId ? data?.termsId : "");
@@ -192,7 +192,6 @@ const SalesDeliveryForm = ({
       setPayTermId(data?.payTermId ? data?.payTermId : "");
       setDiscountType(data?.discountType ? data?.discountType : "Percentage");
       setDiscountValue(data?.discountValue ? data?.discountValue : 0);
-      childRecord.current = data?.childRecord ? data?.childRecord : 0;
       setItems(padItems(data?.salesDeliveryItems || []));
       setConversionType(data?.conversionType ? data?.conversionType : "PCS");
       setCurrencyId(data?.currencyId ? data?.currencyId : "");
@@ -209,6 +208,7 @@ const SalesDeliveryForm = ({
       setNetAmount(data?.netAmount ? data?.netAmount : 0)
       setDispatchThrough(data?.dispatchThrough ? data?.dispatchThrough : "")
       setDeliveryTo(data?.deliveryTo ? data?.deliveryTo : "")
+      setChildRecord(data?.childRecord ? data?.childRecord : false)
     },
     [id],
   );
@@ -352,7 +352,8 @@ const SalesDeliveryForm = ({
     deliveryId,
     carriageTax,
     netAmout,
-    deliveryTo
+    deliveryTo,
+    dispatchThrough
   };
 
   useEffect(() => {
@@ -591,8 +592,7 @@ const SalesDeliveryForm = ({
             },
           });
           invalidateTagsDispatch()
-          if (pendingAction === "new") onNew();
-          else if (pendingAction === "close") onClose();
+
           setReadOnly(true);
           dispatchInvalidate();
         } else {
@@ -605,7 +605,8 @@ const SalesDeliveryForm = ({
         }
       }
 
-
+      if (pendingAction === "new") onNew();
+      else if (pendingAction === "close") onClose();
 
     } catch (error) {
       console.log(error, ":error")
@@ -635,7 +636,7 @@ const SalesDeliveryForm = ({
     setCustomerId("");
     setDcNo("");
     setVehicleNo("");
-    setDeliveryType("AGAINST_INVOICE");
+    setDeliveryType("WITHOUT_INVOICE");
     setRemarks("");
     setTermsAndCondition("");
     setTermsId("");
@@ -729,7 +730,7 @@ const SalesDeliveryForm = ({
                 setValue={(value) => setDeliveryType(value)}
                 required={true}
                 readOnly={readOnly}
-                disabled={childRecord.current > 0 || readOnly}
+                disabled={childRecord || readOnly}
                 ref={customerRef}
               />
             </div>
@@ -846,7 +847,7 @@ const SalesDeliveryForm = ({
                 setValue={(value) => setConversionType(value)}
                 required={true}
                 readOnly={effectiveReadOnly}
-                disabled={childRecord.current > 0 || readOnly}
+                disabled={childRecord || readOnly}
               />
             </div>
             <div className="w-24">
@@ -949,7 +950,7 @@ const SalesDeliveryForm = ({
                 required={true}
                 readOnly={readOnly}
                 className={`w-full max-w-none`}
-              // dropdownMinWidth={240}
+                disabled={effectiveReadOnly}
               />
             </div>
             {deliveryType == "AGAINST_INVOICE" && (
@@ -1015,7 +1016,7 @@ const SalesDeliveryForm = ({
                 required={true}
                 readOnly={readOnly}
                 className="w-[150px]"
-                disabled={readOnly || childRecord.current > 0}
+                disabled={id || readOnly || childRecord}
                 openOnFocus={true}
               />
             </div>
@@ -1039,7 +1040,7 @@ const SalesDeliveryForm = ({
                 addNewLabel="+ Add New Customer"
                 childComponent={PartyMaster}
                 addNewModalWidth="w-[90%] h-[95%]"
-                disabled={readOnly || childRecord.current > 0}
+                disabled={true}
                 openOnFocus={true}
               />
             </div>
@@ -1055,19 +1056,6 @@ const SalesDeliveryForm = ({
                 disabled={true}
               />
             </div>
-            {/* <div className="md:col-span-1">
-            <TextInput
-              name="Phone"
-              value={findFromList(
-                customerId,
-                customerList?.data,
-                "contactNumber",
-              )}
-              disabled={true}
-            />
-          </div> */}
-
-
           </div>
         </div>
         <div className="w-fit border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
@@ -1096,7 +1084,7 @@ const SalesDeliveryForm = ({
                 addNewLabel="+ Add New Customer"
                 childComponent={PartyMaster}
                 addNewModalWidth="w-[90%] h-[95%]"
-                disabled={readOnly || childRecord.current > 0}
+                disabled={readOnly || childRecord}
                 openOnFocus={true}
               />
             </div>
@@ -1313,15 +1301,20 @@ const SalesDeliveryForm = ({
         widthClass="w-[90%] h-[90%]"
       >
         <PDFViewer style={tw("w-full h-full")}>
-          <SalesDeliveryPrintFormat
+          <SalesModulePrintFormat
             data={{
               ...singleData?.data,
-              salesDeliveryItems: items.filter((i) => i.styleItemId),
+              items: items.filter((i) => i.styleItemId),
             }}
             taxDetails={enrichedData}
-            isCumInvoice={isCumInvoice}
-            payTermList={payTermList}
             isCustomerExport={isCustomerExport}
+            cityList={cityList}
+            bankList={bankList}
+            currencyCodeProp={currencyCode}
+            currencySymbolProp={isCurrencySymbol}
+            title={isCumInvoice ? "DELIVERY CHALLAN CUM INVOICE" : "DELIVERY CHALLAN"}
+            docLabel="DC"
+            showAmount={isCumInvoice}
           />
         </PDFViewer>
       </Modal>
@@ -1386,6 +1379,7 @@ const SalesDeliveryForm = ({
               }
               sectionColClass="md:col-span-4"
               summaryColClass="md:col-span-4"
+
               totalsRows={[
                 {
                   key: "summary_grid",
@@ -1441,9 +1435,7 @@ const SalesDeliveryForm = ({
                             taxTotals.SGST !== undefined ? (
                             <div className="flex items-center justify-between w-full max-w-[210px]">
                               <div className="flex items-center gap-1">
-                                <span className="text-slate-800 w-[32px]">
-                                  CGST
-                                </span>
+                                <span className="text-slate-800 w-[32px]">CGST</span>
                                 <span className="text-slate-800">:</span>
                                 <span className="font-medium text-slate-800">
                                   {formatCurrencyAmount(
@@ -1453,9 +1445,7 @@ const SalesDeliveryForm = ({
                                 </span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <span className="text-slate-800 w-[32px]">
-                                  SGST
-                                </span>
+                                <span className="text-slate-800 w-[32px]">SGST</span>
                                 <span className="text-slate-800">:</span>
                                 <span className="font-medium text-slate-800 text-right">
                                   {formatCurrencyAmount(
@@ -1491,23 +1481,6 @@ const SalesDeliveryForm = ({
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center justify-between w-full max-w-[210px]">
                             <div className="flex justify-between w-[130px] text-slate-800">
-                              <span>Carriage Charges</span>
-                              <span>:</span>
-                            </div>
-                            <span className="font-medium text-slate-800 text-right w-[65px]">
-                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                              {!isNaN(parseFloat(carriageFinalAmt)) &&
-                                carriageFinalAmt !== ""
-                                ? formatCurrencyAmount(
-                                  carriageFinalAmt,
-                                  currencyCode || isCurrencySymbol,
-                                )
-                                : "0.00"}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between w-full max-w-[210px]">
-                            <div className="flex justify-between w-[130px] text-slate-800">
                               <span>Round Off</span>
                               <span>:</span>
                             </div>
@@ -1528,6 +1501,49 @@ const SalesDeliveryForm = ({
                             <span className="font-bold text-indigo-700 text-right w-[65px]">
                               {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                               {formatCurrencyAmount(
+                                !isCustomerExport
+                                  ? enrichedData.net
+                                  : (enrichedData.items?.reduce(
+                                    (sum, item) =>
+                                      sum + (parseFloat(item.amount) || 0),
+                                    0,
+                                  ) || 0) -
+                                  (enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount >
+                                    0
+                                    ? enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount
+                                    : 0),
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Carriage Charges</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {!isNaN(parseFloat(carriageFinalAmt)) &&
+                                carriageFinalAmt !== ""
+                                ? formatCurrencyAmount(
+                                  carriageFinalAmt,
+                                  currencyCode || isCurrencySymbol,
+                                )
+                                : "0.00"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                              <span>Grand Total</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-bold text-indigo-700 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
                                 (!isCustomerExport
                                   ? enrichedData.net
                                   : (enrichedData.items?.reduce(
@@ -1540,8 +1556,7 @@ const SalesDeliveryForm = ({
                                     0
                                     ? enrichedData.itemDiscount +
                                     enrichedData.overallDiscount
-                                    : 0)) +
-                                (parseFloat(carriageFinalAmt) || 0),
+                                    : 0)) + (parseFloat(carriageFinalAmt) || 0),
                                 currencyCode || isCurrencySymbol,
                               )}
                             </span>
@@ -1629,6 +1644,23 @@ const SalesDeliveryForm = ({
               </div>
 
               <div className="flex gap-2 flex-wrap">
+                {id &&
+                  (
+                    <button
+                      onClick={() => {
+                        // if (qrRef.current) {
+                        //   setQrCodeDataUrl(
+                        //     qrRef.current.toDataURL("image/png"),
+                        //   );
+                        // }
+                        setPrintModalOpen(true);
+                      }}
+                      className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs"
+                    >
+                      <FiFileText className="w-4 h-4 mr-2" />
+                      PDF Export
+                    </button>
+                  )}
                 {!id ||
                   (readOnly && (
                     <button

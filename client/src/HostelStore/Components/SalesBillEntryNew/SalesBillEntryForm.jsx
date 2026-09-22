@@ -17,10 +17,10 @@ import SalesBillEntryItems from "./SalesBillEntryItems.jsx";
 import moment from "moment";
 import { PDFViewer } from "@react-pdf/renderer";
 import Modal from "../../../UiComponents/Modal/index.js";
-import SalesDeliveryPrintFormat from "./SalesDeliveryPrintFormat.jsx";
+import SalesModulePrintFormat from "../SalesModulePrint/index.jsx";
 import tw from "../../../Utils/tailwind-react-pdf.js";
 import { IoArrowBackCircleSharp } from "react-icons/io5";
-import { FiEdit2, FiSave, FiPrinter, FiEye } from "react-icons/fi";
+import { FiEdit2, FiSave, FiPrinter, FiEye, FiFileText } from "react-icons/fi";
 import { HiOutlineRefresh, HiX } from "react-icons/hi";
 import {
   CommonFormFooter,
@@ -50,6 +50,7 @@ import { useGetSalesOrderByIdQuery, useGetSalesOrderQuery } from "../../../redux
 import { padRows } from "../OrderEntry/OrderItemsUtils.js";
 import { useAddSalesBillEntryMutation, useGetSalesBillEntryByIdQuery, useUpdateSalesBillEntryMutation } from "../../../redux/uniformService/SalesBillEntryService.js";
 import ReusableFormFooter from "../../../Basic/components/Reuseable/ReuseableFormFooter.jsx";
+import { toast } from "react-toastify";
 
 const EMPTY_ROW = {
   itemGroupId: "",
@@ -127,6 +128,7 @@ const SalesBillEntryForm = ({
   const [deliveryId, setDeliveryId] = useState("");
   const [netAmount, setNetAmount] = useState("");
   const [deliveryTo, setDeliveryTo] = useState("");
+  const [dispatchThrough, setDispatchThrough] = useState("")
 
 
   const effectiveReadOnly = readOnly || childRecord.current > 0;
@@ -540,40 +542,74 @@ const SalesBillEntryForm = ({
     }
 
     try {
-      let savedId = id;
+      let res;
       if (id && !window.confirm("Are you sure you want to update the details?"))
         return;
+
+
       if (id) {
-        await updateData(data).unwrap();
-        Swal.fire({
-          title: "Success",
-          text: "Sales Delivery updated successfully",
-          icon: "success",
-          timer: 1500,
-          showConfirmButton: false,
-          didClose: () => {
-            customerRef.current?.focus();
-          },
-        });
+        res = await updateData(data).unwrap();
+        // Swal.fire({
+        //   title: "Success",
+        //   text: "Sales Delivery updated successfully",
+        //   icon: "success",
+        //   timer: 1500,
+        //   showConfirmButton: false,
+        //   didClose: () => {
+        //     customerRef.current?.focus();
+        //   },
+        // });
         invalidateTagsDispatch()
 
       } else {
-        const res = await addData(data).unwrap();
-        savedId = res.data.id;
-        setId(savedId);
-        Swal.fire({
-          title: "Success",
-          text: "Sales Delivery created successfully",
-          icon: "success",
-          timer: 1500,
-          showConfirmButton: false,
-          didClose: () => {
-            customerRef.current?.focus();
-          },
-        });
+        res = await addData(data).unwrap();
+        // savedId = res.data.id;
+        // setId(savedId);
+        // Swal.fire({
+        //   title: "Success",
+        //   text: "Sales Delivery created successfully",
+        //   icon: "success",
+        //   timer: 1500,
+        //   showConfirmButton: false,
+        //   didClose: () => {
+        //     customerRef.current?.focus();
+        //   },
+        // });
         invalidateTagsDispatch()
 
       }
+
+      console.log(res, "resres")
+
+      if (res.statusCode === 1) {
+        toast.error(res.message);
+      } else {
+        Swal.fire({
+          icon: "success",
+          title: `${id ? "Updated" : "Saved"} Successfully`,
+          showConfirmButton: false,
+          timer: 2000,
+          didClose: () => {
+            if (res.statusCode === 0) {
+              if (pendingAction == "new") {
+                setId(0);
+                setDocId("New");
+                syncFormWithDb(undefined);
+                setTimeout(() => {
+                  customerRef.current?.focus();
+                }, 100);
+              }
+              if (pendingAction == "close") {
+                onClose();
+              }
+            } else {
+              toast.error(res?.message);
+            }
+          },
+        });
+        dispatchInvalidate();
+      }
+
       setReadOnly(true);
       dispatchInvalidate();
 
@@ -582,7 +618,7 @@ const SalesBillEntryForm = ({
     } catch (error) {
       Swal.fire({
         title: "Error",
-        text: error.data?.message || "Failed to save Sales Delivery",
+        text: error.data?.message || "Failed to save Sales Bill Entry",
         icon: "error",
         confirmButtonColor: "#d33",
       });
@@ -911,6 +947,18 @@ const SalesBillEntryForm = ({
                 disabled={readOnly}
               />
             </div>
+            <div className="col-span-2">
+              <TextInput
+                name="Dispatch Through"
+                placeholder="Dispatch Through"
+                value={dispatchThrough}
+                setValue={setDispatchThrough}
+                required={true}
+                readOnly={readOnly}
+                className={`w-full max-w-none`}
+              // dropdownMinWidth={240}
+              />
+            </div>
             <TextInput
               name="Net Amount"
               value={netAmount}
@@ -1185,15 +1233,22 @@ const SalesBillEntryForm = ({
         widthClass="w-[90%] h-[90%]"
       >
         <PDFViewer style={tw("w-full h-full")}>
-          <SalesDeliveryPrintFormat
+          <SalesModulePrintFormat
             data={{
               ...singleData?.data,
-              salesDeliveryItems: items.filter((i) => i.styleItemId),
+              items: items.filter((i) => i.styleItemId),
             }}
             taxDetails={enrichedData}
-            isCumInvoice={isCumInvoice}
-            payTermList={payTermList}
             isCustomerExport={isCustomerExport}
+            cityList={cityList}
+            bankList={bankList}
+            currencyCodeProp={currencyCode}
+            currencySymbolProp={isCurrencySymbol}
+            title={isCumInvoice ? "DELIVERY CHALLAN CUM INVOICE" : "SALES BILL"}
+            docLabel={isCumInvoice ? "DC" : "SB"}
+            showAmount={true}
+            carriageFinalAmt={carriageFinalAmt}
+
           />
         </PDFViewer>
       </Modal>
@@ -1229,14 +1284,6 @@ const SalesBillEntryForm = ({
           <>
             <ReusableFormFooter
               sections={[
-                //  {
-                //                   title: "Terms & Condtions",
-                //                   value: requirements,
-                //                   onChange: setRequirements,
-                //                   placeholder: "Enter Terms & Condtions...",
-                //                   readOnly: readOnly || childRecord,
-                //                   ref: requirementRef,
-                //                 },
                 {},
                 {
                   title: "Remarks",
@@ -1306,9 +1353,7 @@ const SalesBillEntryForm = ({
                             taxTotals.SGST !== undefined ? (
                             <div className="flex items-center justify-between w-full max-w-[210px]">
                               <div className="flex items-center gap-1">
-                                <span className="text-slate-800 w-[32px]">
-                                  CGST
-                                </span>
+                                <span className="text-slate-800 w-[32px]">CGST</span>
                                 <span className="text-slate-800">:</span>
                                 <span className="font-medium text-slate-800">
                                   {formatCurrencyAmount(
@@ -1318,9 +1363,7 @@ const SalesBillEntryForm = ({
                                 </span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <span className="text-slate-800 w-[32px]">
-                                  SGST
-                                </span>
+                                <span className="text-slate-800 w-[32px]">SGST</span>
                                 <span className="text-slate-800">:</span>
                                 <span className="font-medium text-slate-800 text-right">
                                   {formatCurrencyAmount(
@@ -1356,23 +1399,6 @@ const SalesBillEntryForm = ({
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center justify-between w-full max-w-[210px]">
                             <div className="flex justify-between w-[130px] text-slate-800">
-                              <span>Carriage Charges</span>
-                              <span>:</span>
-                            </div>
-                            <span className="font-medium text-slate-800 text-right w-[65px]">
-                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                              {!isNaN(parseFloat(carriageFinalAmt)) &&
-                                carriageFinalAmt !== ""
-                                ? formatCurrencyAmount(
-                                  carriageFinalAmt,
-                                  currencyCode || isCurrencySymbol,
-                                )
-                                : "0.00"}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between w-full max-w-[210px]">
-                            <div className="flex justify-between w-[130px] text-slate-800">
                               <span>Round Off</span>
                               <span>:</span>
                             </div>
@@ -1393,12 +1419,63 @@ const SalesBillEntryForm = ({
                             <span className="font-bold text-indigo-700 text-right w-[65px]">
                               {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                               {formatCurrencyAmount(
-                                (!isCustomerExport ? enrichedData.net
-                                  :
-                                  (enrichedData.items?.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0,) || 0) -
-                                  (enrichedData.itemDiscount + enrichedData.overallDiscount > 0
-                                    ? enrichedData.itemDiscount + enrichedData.overallDiscount
-                                    : 0)) + (parseFloat(carriageFinalAmt) || 0), currencyCode || isCurrencySymbol,
+                                !isCustomerExport
+                                  ? enrichedData.net
+                                  : (enrichedData.items?.reduce(
+                                    (sum, item) =>
+                                      sum + (parseFloat(item.amount) || 0),
+                                    0,
+                                  ) || 0) -
+                                  (enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount >
+                                    0
+                                    ? enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount
+                                    : 0),
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Carriage Charges</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {!isNaN(parseFloat(carriageFinalAmt)) &&
+                                carriageFinalAmt !== ""
+                                ? formatCurrencyAmount(
+                                  carriageFinalAmt,
+                                  currencyCode || isCurrencySymbol,
+                                )
+                                : "0.00"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                              <span>Grand Total</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-bold text-indigo-700 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                (!isCustomerExport
+                                  ? enrichedData.net
+                                  : (enrichedData.items?.reduce(
+                                    (sum, item) =>
+                                      sum + (parseFloat(item.amount) || 0),
+                                    0,
+                                  ) || 0) -
+                                  (enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount >
+                                    0
+                                    ? enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount
+                                    : 0)) + (parseFloat(carriageFinalAmt) || 0),
+                                currencyCode || isCurrencySymbol,
                               )}
                             </span>
                           </div>
@@ -1485,6 +1562,19 @@ const SalesBillEntryForm = ({
               </div>
 
               <div className="flex gap-2 flex-wrap">
+                {id &&
+                  (
+                    <button
+                      onClick={() => {
+
+                        setPrintModalOpen(true);
+                      }}
+                      className="bg-slate-600 text-white px-2 py-1 rounded hover:bg-slate-700 flex items-center text-xs"
+                    >
+                      <FiFileText className="w-4 h-4 mr-2" />
+                      PDF Export
+                    </button>
+                  )}
                 {!id ||
                   (readOnly && (
                     <button

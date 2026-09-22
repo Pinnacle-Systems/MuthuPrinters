@@ -335,22 +335,7 @@ const SaleOrderItems = ({
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-gray-600 text-xs">Style {styleIdx + 1}</span>
-                        {/* {!readOnly && orderType !== "AGAINSTPI" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteStyleRow(activeModalRowIndex, styleIdx);
-                              if (activeStyleIndex === styleIdx) {
-                                setActiveStyleIndex(Math.max(0, styleIdx - 1));
-                              } else if (activeStyleIndex > styleIdx) {
-                                setActiveStyleIndex(activeStyleIndex - 1);
-                              }
-                            }}
-                            className="text-red-500 hover:bg-red-100 p-1 rounded"
-                          >
-                            <FaTrash size={10} />
-                          </button>
-                        )} */}
+
                       </div>
                       <div className="w-full" onClick={(e) => e.stopPropagation()}>
                         <FxSelectWithAdd
@@ -370,18 +355,7 @@ const SaleOrderItems = ({
                     </div>
                   ))}
 
-                  {/* {!readOnly && orderType !== "AGAINSTPI" && (
-                    <button
-                      onClick={() => {
-                        addStyleRow(activeModalRowIndex);
-                        const newIndex = (orderItems[activeModalRowIndex]?.styleBreakup || []).length;
-                        setActiveStyleIndex(newIndex);
-                      }}
-                      className="w-full mt-2 bg-indigo-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-indigo-700 text-sm flex items-center justify-center gap-1"
-                    >
-                      <Plus size={14} /> Add Style
-                    </button>
-                  )} */}
+
                 </div>
               </div>
 
@@ -722,7 +696,7 @@ const SaleOrderItems = ({
                   {!isCustomerExport && (
                     <td className="text-[11px] border border-gray-300 text-center items-center pt-2 font-medium">
                       <button
-                        // disabled={!row.styleItemId}
+                        disabled={!row.id}
                         className="text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
                         onClick={() => {
                           if (!taxTemplateId) {
@@ -746,6 +720,8 @@ const SaleOrderItems = ({
                       className="text-indigo-600 hover:text-indigo-800"
                       onClick={() => setActiveModalRowIndex(index)}
                       title="View Style & Size Breakup"
+                      disabled={!row.id}
+
 
                     >
                       <FaEye size={16} className="mx-auto" />

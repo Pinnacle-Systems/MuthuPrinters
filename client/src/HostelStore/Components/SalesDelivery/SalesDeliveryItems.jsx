@@ -832,7 +832,7 @@ const SalesDeliveryItems = ({
                     {!isCustomerExport && (
                       <td className="text-[11px] border border-gray-300 text-center items-center pt-2 font-medium">
                         <button
-                          disabled={!row.styleItemId}
+                          disabled={!row.id}
                           className="text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
                           onClick={() => {
                             if (!taxTemplateId) {
@@ -856,6 +856,8 @@ const SalesDeliveryItems = ({
                       className="text-indigo-600 hover:text-indigo-800"
                       onClick={() => setActiveModalRowIndex(index)}
                       title="View Style & Size Breakup"
+                      disabled={!row.id}
+
                     >
                       <FaEye size={16} className="mx-auto" />
                     </button>

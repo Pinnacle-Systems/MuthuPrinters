@@ -84,6 +84,7 @@ import {
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
 import { useAddSalesOrderMutation, useGetSalesOrderByIdQuery, useUpdateSalesOrderMutation } from "../../../redux/uniformService/SalesOrderService.js";
 import { useGetStyleMasterQuery } from "../../../redux/services/StyleMasterService.js";
+import SalesModulePrintFormat from "../SalesModulePrint/index.jsx";
 
 const SaleOrderForm = ({
   onClose,
@@ -797,7 +798,7 @@ const SaleOrderForm = ({
       }),
     );
   };
-  const effectiveReadOnly = readOnly || childRecord.current > 0;
+  const effectiveReadOnly = readOnly || childRecord;
   const [accordionOpen, setAccordionOpen] = useState(true);
 
   const shippingAccordion = (
@@ -1379,27 +1380,19 @@ const SaleOrderForm = ({
           widthClass="w-[90%] h-[90%]"
         >
           <PDFViewer className="w-full h-full border-none">
-            <OrderEntryPrintFormat
-              data={singleData?.data}
-              customerDetails={customerList?.data?.find(
-                (c) => c.id === customerId,
-              )}
-              branchData={branchData?.data}
-              qrCodeDataUrl={qrCodeDataUrl}
-              styleItemList={styleItemList}
-              itemSubGroupList={itemSubGroupList}
-              itemGroupList={itemGroupList}
-              gsmList={gsmList}
-              uomList={uomList}
-              sizeList={sizeList}
-              hsnList={hsnList}
-              totals={enrichedData}
-              discountType={discountType}
-              currencyCode={currencyCode}
-              isCurrencySymbol={isCurrencySymbol}
+            <SalesModulePrintFormat
+              data={{ ...singleData?.data, items: singleData?.data?.SalesOrderItems }}
+              taxDetails={enrichedData}
               isCustomerExport={isCustomerExport}
               cityList={cityList}
               carriageFinalAmt={carriageFinalAmt}
+              styleItemList={styleItemList}
+              sizeList={sizeList}
+              title="SALE ORDER"
+              docLabel="SO"
+              currencyCodeProp={currencyCode}
+              currencySymbolProp={isCurrencySymbol}
+
             />
           </PDFViewer>
         </Modal>
@@ -1650,8 +1643,10 @@ const SaleOrderForm = ({
                       required={true}
                       readOnly={readOnly}
                       className={`w-full max-w-none`}
-                    // dropdownMinWidth={240}
-                    />
+                      disabled={
+                        childRecord ||
+                        readOnly
+                      } />
                   </div>
 
                 </div>
@@ -1723,6 +1718,174 @@ const SaleOrderForm = ({
               }
               sectionColClass="md:col-span-4"
               summaryColClass="md:col-span-4"
+              // totalsRows={[
+              //   {
+              //     key: "summary_grid",
+              //     label: "",
+              //     valueContainerClassName: "w-full",
+              //     renderValue: () => {
+              //       const taxTotals = !isCustomerExport
+              //         ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
+              //           const type = curr?.tax?.split(" ")[0];
+              //           acc[type] = (acc[type] || 0) + curr.amount;
+              //           return acc;
+              //         }, {})
+              //         : {};
+
+              //       return (
+              //         <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1">
+              //           {/* Left Column */}
+              //           <div className="flex flex-col gap-1">
+              //             <div className="flex items-center justify-between w-full max-w-[210px]">
+              //               <div className="flex justify-between w-[130px] text-slate-800">
+              //                 <span>Total Discount</span>
+              //                 <span>:</span>
+              //               </div>
+              //               <span className="font-medium text-slate-800 text-right w-[65px]">
+              //                 {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+              //                 {formatCurrencyAmount(
+              //                   enrichedData.itemDiscount +
+              //                     enrichedData.overallDiscount >
+              //                     0
+              //                     ? enrichedData.itemDiscount +
+              //                     enrichedData.overallDiscount
+              //                     : 0,
+              //                   currencyCode || isCurrencySymbol,
+              //                 )}
+              //               </span>
+              //             </div>
+
+              //             <div className="flex items-center justify-between w-full max-w-[210px]">
+              //               <div className="flex justify-between w-[130px] text-slate-800">
+              //                 <span>Taxable Amount</span>
+              //                 <span>:</span>
+              //               </div>
+              //               <span className="font-medium text-slate-800 text-right w-[65px]">
+              //                 {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+              //                 {formatCurrencyAmount(
+              //                   enrichedData.taxable || 0,
+              //                   currencyCode || isCurrencySymbol,
+              //                 )}
+              //               </span>
+              //             </div>
+
+              //             {taxTotals.CGST !== undefined &&
+              //               taxTotals.SGST !== undefined ? (
+              //               <div className="flex items-center justify-between w-full max-w-[210px]">
+              //                 <div className="flex items-center gap-1">
+              //                   <span className="text-slate-800 w-[32px]">
+              //                     CGST
+              //                   </span>
+              //                   <span className="text-slate-800">:</span>
+              //                   <span className="font-medium text-slate-800">
+              //                     {formatCurrencyAmount(
+              //                       taxTotals.CGST,
+              //                       currencyCode || isCurrencySymbol,
+              //                     )}
+              //                   </span>
+              //                 </div>
+              //                 <div className="flex items-center gap-1">
+              //                   <span className="text-slate-800 w-[32px]">
+              //                     SGST
+              //                   </span>
+              //                   <span className="text-slate-800">:</span>
+              //                   <span className="font-medium text-slate-800 text-right">
+              //                     {formatCurrencyAmount(
+              //                       taxTotals.SGST,
+              //                       currencyCode || isCurrencySymbol,
+              //                     )}
+              //                   </span>
+              //                 </div>
+              //               </div>
+              //             ) : (
+              //               Object.keys(taxTotals).map((type) => (
+              //                 <div
+              //                   key={type}
+              //                   className="flex items-center justify-between w-full max-w-[210px]"
+              //                 >
+              //                   <div className="flex justify-between w-[130px] text-slate-800">
+              //                     <span>{type}</span>
+              //                     <span>:</span>
+              //                   </div>
+              //                   <span className="font-medium text-slate-800 text-right w-[65px]">
+              //                     {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+              //                     {formatCurrencyAmount(
+              //                       taxTotals[type],
+              //                       currencyCode || isCurrencySymbol,
+              //                     )}
+              //                   </span>
+              //                 </div>
+              //               ))
+              //             )}
+              //           </div>
+
+              //           {/* Right Column */}
+              //           <div className="flex flex-col gap-1">
+              //             <div className="flex items-center justify-between w-full max-w-[210px]">
+              //               <div className="flex justify-between w-[130px] text-slate-800">
+              //                 <span>Carriage and Air Freight</span>
+              //                 <span>:</span>
+              //               </div>
+              //               <span className="font-medium text-slate-800 text-right w-[65px]">
+              //                 {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+              //                 {!isNaN(parseFloat(carriageFinalAmt)) &&
+              //                   carriageFinalAmt !== ""
+              //                   ? formatCurrencyAmount(
+              //                     carriageFinalAmt,
+              //                     currencyCode || isCurrencySymbol,
+              //                   )
+              //                   : "0.00"}
+              //               </span>
+              //             </div>
+
+              //             <div className="flex items-center justify-between w-full max-w-[210px]">
+              //               <div className="flex justify-between w-[130px] text-slate-800">
+              //                 <span>Round Off</span>
+              //                 <span>:</span>
+              //               </div>
+              //               <span className="font-medium text-slate-800 text-right w-[65px]">
+              //                 {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+              //                 {formatCurrencyAmount(
+              //                   enrichedData.roundOff || 0,
+              //                   currencyCode || isCurrencySymbol,
+              //                 )}
+              //               </span>
+              //             </div>
+
+              //             <div className="flex items-center justify-between w-full max-w-[210px]">
+              //               <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+              //                 <span>Net Amount</span>
+              //                 <span>:</span>
+              //               </div>
+              //               <span className="font-bold text-indigo-700 text-right w-[65px]">
+              //                 {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+              //                 {formatCurrencyAmount(
+              //                   (!isCustomerExport
+              //                     ? enrichedData.net
+              //                     : (enrichedData.items?.reduce(
+              //                       (sum, item) =>
+              //                         sum + (parseFloat(item.amount) || 0),
+              //                       0,
+              //                     ) || 0) -
+              //                     (enrichedData.itemDiscount +
+              //                       enrichedData.overallDiscount >
+              //                       0
+              //                       ? enrichedData.itemDiscount +
+              //                       enrichedData.overallDiscount
+              //                       : 0)) +
+              //                   (parseFloat(carriageFinalAmt) || 0),
+              //                   currencyCode || isCurrencySymbol,
+              //                 )}
+              //               </span>
+              //             </div>
+              //           </div>
+              //         </div>
+              //       );
+              //     },
+              //     summaryColumn: "left",
+              //     emphasized: false,
+              //   },
+              // ]}
               totalsRows={[
                 {
                   key: "summary_grid",
@@ -1778,9 +1941,7 @@ const SaleOrderForm = ({
                             taxTotals.SGST !== undefined ? (
                             <div className="flex items-center justify-between w-full max-w-[210px]">
                               <div className="flex items-center gap-1">
-                                <span className="text-slate-800 w-[32px]">
-                                  CGST
-                                </span>
+                                <span className="text-slate-800 w-[32px]">CGST</span>
                                 <span className="text-slate-800">:</span>
                                 <span className="font-medium text-slate-800">
                                   {formatCurrencyAmount(
@@ -1790,9 +1951,7 @@ const SaleOrderForm = ({
                                 </span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <span className="text-slate-800 w-[32px]">
-                                  SGST
-                                </span>
+                                <span className="text-slate-800 w-[32px]">SGST</span>
                                 <span className="text-slate-800">:</span>
                                 <span className="font-medium text-slate-800 text-right">
                                   {formatCurrencyAmount(
@@ -1828,23 +1987,6 @@ const SaleOrderForm = ({
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center justify-between w-full max-w-[210px]">
                             <div className="flex justify-between w-[130px] text-slate-800">
-                              <span>Carriage and Air Freight</span>
-                              <span>:</span>
-                            </div>
-                            <span className="font-medium text-slate-800 text-right w-[65px]">
-                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                              {!isNaN(parseFloat(carriageFinalAmt)) &&
-                                carriageFinalAmt !== ""
-                                ? formatCurrencyAmount(
-                                  carriageFinalAmt,
-                                  currencyCode || isCurrencySymbol,
-                                )
-                                : "0.00"}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between w-full max-w-[210px]">
-                            <div className="flex justify-between w-[130px] text-slate-800">
                               <span>Round Off</span>
                               <span>:</span>
                             </div>
@@ -1865,6 +2007,49 @@ const SaleOrderForm = ({
                             <span className="font-bold text-indigo-700 text-right w-[65px]">
                               {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                               {formatCurrencyAmount(
+                                !isCustomerExport
+                                  ? enrichedData.net
+                                  : (enrichedData.items?.reduce(
+                                    (sum, item) =>
+                                      sum + (parseFloat(item.amount) || 0),
+                                    0,
+                                  ) || 0) -
+                                  (enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount >
+                                    0
+                                    ? enrichedData.itemDiscount +
+                                    enrichedData.overallDiscount
+                                    : 0),
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800">
+                              <span>Carriage Charges</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {!isNaN(parseFloat(carriageFinalAmt)) &&
+                                carriageFinalAmt !== ""
+                                ? formatCurrencyAmount(
+                                  carriageFinalAmt,
+                                  currencyCode || isCurrencySymbol,
+                                )
+                                : "0.00"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-[210px]">
+                            <div className="flex justify-between w-[130px] text-slate-800 font-bold">
+                              <span>Grand Total</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-bold text-indigo-700 text-right w-[65px]">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
                                 (!isCustomerExport
                                   ? enrichedData.net
                                   : (enrichedData.items?.reduce(
@@ -1877,8 +2062,7 @@ const SaleOrderForm = ({
                                     0
                                     ? enrichedData.itemDiscount +
                                     enrichedData.overallDiscount
-                                    : 0)) +
-                                (parseFloat(carriageFinalAmt) || 0),
+                                    : 0)) + (parseFloat(carriageFinalAmt) || 0),
                                 currencyCode || isCurrencySymbol,
                               )}
                             </span>
@@ -2034,7 +2218,7 @@ const SaleOrderForm = ({
                     </button>
                   ))}
                 {id &&
-                  (status === "APPROVED" || status === "NOT_CONFIGURED") && (
+                  (
                     <button
                       onClick={() => {
                         if (qrRef.current) {

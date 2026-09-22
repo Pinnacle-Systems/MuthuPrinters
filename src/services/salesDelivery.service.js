@@ -166,7 +166,8 @@ async function get(req) {
       salesDeliveryItems: true,
       _count: {
         select: {
-          SalesReturn: true
+          SalesReturn: true,
+          SalesBillEntry: true
         }
       }
     },
@@ -255,6 +256,12 @@ async function getOne(id) {
           },
         },
       },
+      _count: {
+        select: {
+          SalesReturn: true,
+          SalesBillEntry: true
+        }
+      }
     },
   });
 
@@ -329,7 +336,8 @@ async function create(body) {
     deliveryId,
     carriageTax,
     netAmout,
-    deliveryTo
+    deliveryTo,
+    dispatchThrough
   } = body;
 
   let finYearDate = await getFinYearStartTimeEndTime(finYearId);
@@ -469,7 +477,7 @@ async function create(body) {
         bankId: bankId ? parseInt(bankId) : null,
         netAmount: netAmout ? (netAmout) : null,
         deliveryTo: deliveryTo ? parseInt(deliveryTo) : null,
-
+        dispatchThrough: dispatchThrough ? dispatchThrough : null,
         salesDeliveryItems: {
           create: (salesDeliveryItems || []).map((item) => ({
             styleItemId: item.styleItemId ? parseInt(item.styleItemId) : null,
@@ -589,7 +597,8 @@ async function update(id, body, files) {
     loadingId,
     carriageTax,
     netAmout,
-    deliveryTo
+    deliveryTo,
+    dispatchThrough
   } = body;
 
 
@@ -713,17 +722,10 @@ async function update(id, body, files) {
         id: parseInt(id),
       },
       data: {
-        docDate: docDate ? new Date(docDate) : null,
-        deliveryDate: deliveryDate ? new Date(deliveryDate) : null,
-        branchId: branchId ? parseInt(branchId) : null,
-        customerId: customerId ? parseInt(customerId) : null,
-        salesOrderId: salesOrderId ? parseInt(salesOrderId) : null,
-        deliveryType: deliveryType ? deliveryType : null,
         payTermId: payTermId ? parseInt(payTermId) : null,
         taxTemplateId: taxTemplateId ? parseInt(taxTemplateId) : null,
         vehicleNo,
         createdById: parseInt(userId),
-        orderEntryId: orderEntryId ? parseInt(orderEntryId) : null,
         remarks,
         discountValue: discountValue ? parseFloat(discountValue) : null,
         termsAndCondition,
@@ -743,6 +745,7 @@ async function update(id, body, files) {
         bankId: bankId ? parseInt(bankId) : null,
         netAmount: netAmout ? (netAmout) : null,
         deliveryTo: deliveryTo ? parseInt(deliveryTo) : null,
+        dispatchThrough: dispatchThrough ? dispatchThrough : null,
 
         salesDeliveryItems: {
           deleteMany: incomingItemIds.length
