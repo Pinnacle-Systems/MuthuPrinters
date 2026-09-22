@@ -67,6 +67,8 @@ const Login = () => {
         data: data,
       }).then(
         (result) => {
+          console.log(result, "loginresult");
+
           if (result.status === 200) {
             if (result.data.statusCode === 0) {
               sessionStorage.setItem("sessionId", generateSessionId());

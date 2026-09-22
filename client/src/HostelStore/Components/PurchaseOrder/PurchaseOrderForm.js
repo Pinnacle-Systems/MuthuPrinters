@@ -1176,6 +1176,7 @@ const PurchaseOrderForm = ({
           type={"date"}
           required={true}
           readOnly={isCoreLocked}
+          min={docDate}
           className={`${compactFieldClass} ${fieldWidthDate}`}
         />
       </div>
@@ -1402,6 +1403,7 @@ const PurchaseOrderForm = ({
           type={"date"}
           required={true}
           readOnly={readOnly}
+          min={docDate}
           className={`${compactFieldClass} ${fieldWidthDate}`}
         />
       </div>

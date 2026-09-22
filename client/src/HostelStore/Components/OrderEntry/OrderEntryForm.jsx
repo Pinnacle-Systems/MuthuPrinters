@@ -522,7 +522,15 @@ const OrderEntryForm = ({
         title: "RefNo is required!",
       },
       { condition: !data.deliveryDate, title: "Delivery Date is required!" },
+      {
+        condition: data.deliveryDate < data.docDate,
+        title: "Delivery Date cannot be smaller than Doc Date!",
+      },
       { condition: !data.validDays, title: "Valid To is required!" },
+      {
+        condition: String(data.validDays).length >= 3,
+        title: "Valid To Days cannot be a 3-digit number!",
+      },
       { condition: items.length === 0, title: "Order Items are required!" },
       {},
     ];
@@ -1630,6 +1638,7 @@ const OrderEntryForm = ({
                       readOnly ||
                       orderType === "AGAINSTPI"
                     }
+                    min={docDate}
                     type={"date"}
                   />
                 </div>

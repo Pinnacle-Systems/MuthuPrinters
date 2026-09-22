@@ -436,6 +436,15 @@ const ProformaInvoiceForm = ({
   };
 
   const handleSave = async (pendingAction = null) => {
+    if (userDate < docDate) {
+      Swal.fire({
+        title: "Warning",
+        text: "User Date cannot be smaller than Doc Date",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
     if (!customerId) {
       Swal.fire({
         title: "Warning",
@@ -515,6 +524,15 @@ const ProformaInvoiceForm = ({
       return;
     }
 
+    if (validityTo < docDate) {
+      Swal.fire({
+        title: "Warning",
+        text: "Valid To Date cannot be smaller than Doc Date",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
     if (deliveryDate < docDate) {
       Swal.fire({
         title: "Warning",
@@ -927,6 +945,7 @@ const ProformaInvoiceForm = ({
                   disabled={effectiveReadOnly}
                   required={false}
                   type="date"
+                  min={docDate}
                 />
               </div>
             </div>
@@ -1053,6 +1072,7 @@ const ProformaInvoiceForm = ({
                   disabled={effectiveReadOnly}
                   required={true}
                   type="date"
+                  min={docDate}
                 />
               </div>
             </div>
