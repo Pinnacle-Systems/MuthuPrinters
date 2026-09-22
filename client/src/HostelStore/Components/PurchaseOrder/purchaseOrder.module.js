@@ -170,6 +170,11 @@ export const validatePurchaseOrderData = ({
     },
     {
       severity: "block",
+      condition: data.dueDate < data.docDate,
+      message: "Delivery Date cannot be before Doc Date!",
+    },
+    {
+      severity: "block",
       condition: !data.poType,
       message: "PO Type is required!",
     },
@@ -192,6 +197,11 @@ export const validatePurchaseOrderData = ({
       severity: "block",
       condition: !data.deliveryToId,
       message: "Delivery To is required!",
+    },
+    {
+      severity: "block",
+      condition: !data.payTermId,
+      message: "PayTerm is required!",
     },
     {
       severity: "block",

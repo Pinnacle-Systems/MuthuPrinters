@@ -747,7 +747,7 @@ function findRemovedItems(dataFound, poItems) {
 
 // ── UPDATE ────────────────────────────────────────────────────────────────────
 async function update(id, body) {
-  const {
+  let {
     userId,
     branchId,
     docDate,
@@ -966,10 +966,6 @@ async function update(id, body) {
 
   let data;
   await prisma.$transaction(async (tx) => {
-    if (removeItemsIds.length > 0) {
-      await tx.poItems.deleteMany({ where: { id: { in: removeItemsIds } } });
-    }
-
     data = await tx.po.update({
       where: { id: parseInt(id) },
       data: {
