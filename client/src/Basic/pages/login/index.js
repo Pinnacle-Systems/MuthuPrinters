@@ -11,6 +11,7 @@ import BranchAndFinYearForm from "../../components/BranchAndFinyear";
 import { PRODUCT_ADMIN_HOME_PATH } from "../../../Route/urlPaths";
 import Swal from "sweetalert2";
 import PinnacleLogo from "../../../assets/pinnaclelogo.png";
+import { loginSocket } from "../../../CustomHooks/useLogout";
 
 const BASE_URL = process.env.REACT_APP_SERVER_URL;
 
@@ -71,6 +72,7 @@ const Login = () => {
 
           if (result.status === 200) {
             if (result.data.statusCode === 0) {
+              loginSocket(result?.data?.userInfo?.id);
               sessionStorage.setItem("sessionId", generateSessionId());
               if (!result.data.userInfo.roleId) {
                 secureLocalStorage.setItem(
@@ -123,7 +125,7 @@ const Login = () => {
                   );
                   secureLocalStorage.setItem(
                     sessionStorage.getItem("sessionId") +
-                      "latestActivePlanExpireDate",
+                    "latestActivePlanExpireDate",
                     new Date(
                       result.data.userInfo.role.company.Subscription[0]
                         .expireAt,

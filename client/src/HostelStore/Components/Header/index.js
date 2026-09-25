@@ -25,9 +25,12 @@ import Logout from "../../../Basic/components/LogoutConfirm";
 import PageSearch from "./PageSearch";
 import Notification from "./Notification";
 import { GLOBE_ICON } from "../../../icons";
+import useLogout from "../../../CustomHooks/useLogout";
 const BASE_URL = process.env.REACT_APP_SERVER_URL;
 
 const Header = ({ profile, setProfile, setIsGlobalOpen }) => {
+  useLogout();
+
   const [logout, setLogout] = useState(false);
   const [hideNavBar, sethideNavBar] = useState(true);
 
