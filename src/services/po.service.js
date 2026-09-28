@@ -706,13 +706,13 @@ async function createPoItems(tx, poItems, po) {
           uomId: itemDetails?.uomId ? parseInt(itemDetails.uomId) : null,
           hsnId: itemDetails?.hsnId ? parseInt(itemDetails.hsnId) : null,
           qty,
-          price: itemDetails?.price ? parseInt(itemDetails.price) : null,
+          price: itemDetails?.price ? parseFloat(itemDetails.price) : null,
           discountType: itemDetails?.discountType ?? undefined,
           discountValue: itemDetails?.discountValue
-            ? parseInt(itemDetails.discountValue)
+            ? parseFloat(itemDetails.discountValue)
             : null,
           taxPercent: itemDetails?.taxPercent
-            ? parseInt(itemDetails.taxPercent)
+            ? parseFloat(itemDetails.taxPercent)
             : null,
           itemGroupId: itemDetails?.itemGroupId
             ? parseInt(itemDetails.itemGroupId)
@@ -1353,7 +1353,6 @@ async function getPoItemById(id) {
     });
     returnQty = returnAgg._sum.returnQty ?? 0;
   }
-  console.log(data.qty, inwardQty, cancelQty, returnQty, "testinfcheck");
 
   return {
     statusCode: 0,
