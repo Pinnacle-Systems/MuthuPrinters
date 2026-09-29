@@ -545,7 +545,7 @@ async function getStock(req, res) {
       const key = [
         s.styleItemId ?? "null",
         s.storeId ?? "null",
-        s.itemGroupId ?? "null",
+        // s.itemGroupId ?? "null",
         s.sizeId ?? "null",
         s.colorId ?? "null",
         s.gsmId ?? "null",
@@ -556,6 +556,7 @@ async function getStock(req, res) {
         grouped[key] = {
           id: key,
           store: s.Store?.storeName ?? "—",
+          product: s.Product?.name ?? "—",
           styleItem: s.StyleItem?.name ?? "—",
           itemGroup: s.Itemgroup?.name ?? "—",
           size: s.Size?.name ?? "—",
