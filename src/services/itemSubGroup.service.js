@@ -63,7 +63,7 @@ async function getSearch(req) {
     include: {
       _count: {
         select: {
-          styleItems: true,
+          StyleItem: true,
         },
       },
     },
