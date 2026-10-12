@@ -78,7 +78,7 @@ async function getSearch(req) {
   const { companyId, active } = req.query;
   const data = await prisma.styleItem.findMany({
     where: {
-      companyId: companyId ? parseInt(companyId) : undefined,
+      // companyId: companyId ? parseInt(companyId) : undefined,
       active: active ? Boolean(active) : undefined,
       OR: [
         {

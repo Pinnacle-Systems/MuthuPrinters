@@ -10,7 +10,7 @@ import {
 } from "../../../redux/services/StyleItemMasterService";
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService";
 import Swal from "sweetalert2";
-import { Check, Power } from "lucide-react";
+import { Check, Power, Search, X } from "lucide-react";
 import {
   DropdownInput,
   ReusableTable,
@@ -41,7 +41,7 @@ export default function Form({ onSuccess, defaultName = "" }) {
   const [id, setId] = useState("");
   const [name, setName] = useState(defaultName || "");
   const [accessory, setAccessory] = useState(false);
-  const [active, setActive] = useState(false);
+  const [active, setActive] = useState(true);
   const [aliasName, setAliasName] = useState(defaultName || "");
   const [hsnId, setHsnId] = useState("");
   const [searchValue, setSearchValue] = useState("");
@@ -602,7 +602,30 @@ export default function Form({ onSuccess, defaultName = "" }) {
         <h5 className="text-xl font-bold font-segoe text-gray-800 ">
           Item Master
         </h5>
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
+          <div className="relative flex items-center">
+            <Search
+              className="absolute left-2.5 text-gray-400 pointer-events-none"
+              size={15}
+            />
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value.toUpperCase())}
+              placeholder="Search items..."
+              className="pl-8 pr-7 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 w-56 transition-all duration-200 uppercase"
+            />
+            {searchValue && (
+              <button
+                type="button"
+                onClick={() => setSearchValue("")}
+                className="absolute right-2 text-gray-400 hover:text-gray-600"
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
           <button
             onClick={handleCreate}
             className="bg-white border  border-indigo-600 text-indigo-600 hover:bg-indigo-700 hover:text-white text-xs px-2 py-1 rounded-md shadow transition-colors duration-200 flex items-center gap-2"
@@ -614,7 +637,11 @@ export default function Form({ onSuccess, defaultName = "" }) {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden mt-3">
         <ReusableTable
           columns={columns}
-          data={allData?.data || []}
+          data={(allData?.data || []).filter((item) => {
+            if (!searchValue.trim()) return true;
+            const term = searchValue.trim().toLowerCase();
+            return item?.name?.toLowerCase().includes(term);
+          })}
           onView={handleView}
           onEdit={handleEdit}
           onDelete={handleDelete}

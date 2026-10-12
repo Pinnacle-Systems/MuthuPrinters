@@ -428,8 +428,8 @@ const COLUMNS = [
   { label: "Item", flex: 4, align: "left" },
   { label: "Size", flex: 1.5, align: "left" },
   { label: "Color", flex: 1.5, align: "left" },
-  { label: "UOM", flex: 1, align: "left" },
   { label: "Qty", flex: 1, align: "right" },
+  { label: "UOM", flex: 1, align: "left" },
   { label: "Rate", flex: 1, align: "right" },
   { label: "Tax(%)", flex: 1, align: "right" },
   { label: "Amount", flex: 1.2, align: "right" },
@@ -727,15 +727,15 @@ const PurchaseOrderPrintFormat = ({
                             findFromList(val.colorId, colorList?.data, "name")}
                         </Text>
                         <Text
+                          style={[styles.td, { flex: 1, textAlign: "right" }]}
+                        >
+                          {isNaN(val.qty) ? "" : parseFloat(val.qty).toFixed(3)}
+                        </Text>
+                        <Text
                           style={[styles.td, { flex: 1, textAlign: "left" }]}
                         >
                           {val.Uom?.name ||
                             findFromList(val.uomId, uomList?.data, "name")}
-                        </Text>
-                        <Text
-                          style={[styles.td, { flex: 1, textAlign: "right" }]}
-                        >
-                          {isNaN(val.qty) ? "" : parseFloat(val.qty).toFixed(3)}
                         </Text>
                         <Text
                           style={[styles.td, { flex: 1, textAlign: "right" }]}
@@ -807,10 +807,10 @@ const PurchaseOrderPrintFormat = ({
                         >
                           {" "}
                         </Text>
-                        {/* Item + Size + Color + UOM merged label */}
+                        {/* Item + Size + Color merged label */}
                         <Text
                           style={{
-                            flex: 8,
+                            flex: 7,
                             fontSize: 8,
                             fontWeight: "bold",
                             color: "#1a1a2e",
@@ -836,6 +836,19 @@ const PurchaseOrderPrintFormat = ({
                           }}
                         >
                           {totalQty.toFixed(3)}
+                        </Text>
+                        {/* UOM cell — blank */}
+                        <Text
+                          style={{
+                            flex: 1,
+                            fontSize: 8,
+                            color: "transparent",
+                            paddingVertical: 5,
+                            paddingRight: 3,
+                            borderRight: "1 solid #bbbbc8",
+                          }}
+                        >
+                          {" "}
                         </Text>
                         {/* Rate cell — blank */}
                         <Text
