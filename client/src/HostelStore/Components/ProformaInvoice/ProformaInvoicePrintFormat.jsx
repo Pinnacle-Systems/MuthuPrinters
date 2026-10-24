@@ -682,7 +682,7 @@ const ProformaInvoicePrintFormat = ({
                         <Text
                           style={{ fontSize: 7.5, color: "#555", marginTop: 1 }}
                         >
-                          {branch.contactEmail}
+                          {branch.contactEmail} | muthuprinterss@gmail.com |
                           {branch?.contactMobile
                             ? `  |  ${branch.contactMobile}`
                             : ""}

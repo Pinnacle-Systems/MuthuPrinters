@@ -369,11 +369,38 @@ const ProformaInvoiceForm = ({
       if (!item.qty || Number(item.qty) <= 0) {
         errors.push(`Row ${index + 1}: Qty is required`);
       }
-      const key = `${item.styleItemId}_${item.uomId}`;
-      if (seen.has(key)) {
-        errors.push(`Row ${index + 1}: Duplicate item found`);
+      const childPairs = [];
+      item.styleBreakup?.forEach((style) => {
+        style.sizeBreakup?.forEach((size) => {
+          if (style.styleId && size.sizeId) {
+            childPairs.push(`${style.styleId}_${size.sizeId}`);
+          }
+        });
+      });
+
+      if (childPairs.length > 0) {
+        const rowChildKeys = new Set(
+          childPairs.map((pair) => `${item.styleItemId}_${item.uomId}_${pair}`),
+        );
+        let isDuplicate = false;
+        rowChildKeys.forEach((key) => {
+          if (seen.has(key)) {
+            isDuplicate = true;
+          }
+        });
+
+        if (isDuplicate) {
+          errors.push(`Row ${index + 1}: Duplicate item found`);
+        }
+
+        rowChildKeys.forEach((key) => seen.add(key));
       } else {
-        seen.add(key);
+        const key = `${item.styleItemId}_${item.uomId}`;
+        if (seen.has(key)) {
+          errors.push(`Row ${index + 1}: Duplicate item found`);
+        } else {
+          seen.add(key);
+        }
       }
 
       if (item.styleBreakup?.length) {
@@ -514,16 +541,6 @@ const ProformaInvoiceForm = ({
       return;
     }
 
-    if (!deliveryDate) {
-      Swal.fire({
-        title: "Warning",
-        text: "Delivery Date is required",
-        icon: "warning",
-        confirmButtonColor: "#3085d6",
-      });
-      return;
-    }
-
     if (validityTo < docDate) {
       Swal.fire({
         title: "Warning",
@@ -533,20 +550,10 @@ const ProformaInvoiceForm = ({
       });
       return;
     }
-    if (deliveryDate < docDate) {
+    if (deliveryDate && deliveryDate < docDate) {
       Swal.fire({
         title: "Warning",
         text: "Delivery Date cannot be smaller than Doc Date",
-        icon: "warning",
-        confirmButtonColor: "#3085d6",
-      });
-      return;
-    }
-
-    if (!weightInKg) {
-      Swal.fire({
-        title: "Warning",
-        text: "Weight is required",
         icon: "warning",
         confirmButtonColor: "#3085d6",
       });
@@ -804,7 +811,6 @@ const ProformaInvoiceForm = ({
                 disabled={effectiveReadOnly}
                 type="date"
                 min={docDate}
-                required={true}
               />
             </div>
             <div className="w-32">
@@ -827,7 +833,6 @@ const ProformaInvoiceForm = ({
                 type="number"
                 min="0"
                 className="text-right"
-                required={true}
                 onBlur={(e) =>
                   setWeightInKg(
                     e.target.value ? Number(e.target.value).toFixed(3) : "",
