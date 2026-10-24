@@ -24,12 +24,11 @@ import {
   Size,
   StyleItemMaster,
   UomMaster,
-  StyleMaster
+  StyleMaster,
 } from "..";
 import { ItemSubGroupMaster } from "../../../Basic/components";
 import { Plus } from "lucide-react";
 import { FaEye, FaTrash } from "react-icons/fa";
-
 
 // EMPTY DEFINITIONS
 const EMPTY_SIZE_ROW = () => ({ sizeId: "", qty: "" });
@@ -141,13 +140,16 @@ const ProformaInvoiceItems = ({
         const updatedItems = items.map((item, i) =>
           i === index
             ? {
-              ...item,
-              styleItemId: value,
-              hsnId: hsnId,
-              uomId: response?.data?.uomId,
-              taxPercent: hsnObj ? hsnObj.tax : "",
-              styleBreakup: item.styleBreakup && item.styleBreakup.length > 0 ? item.styleBreakup : [EMPTY_STYLE_ROW()]
-            }
+                ...item,
+                styleItemId: value,
+                hsnId: hsnId,
+                uomId: response?.data?.uomId,
+                taxPercent: hsnObj ? hsnObj.tax : "",
+                styleBreakup:
+                  item.styleBreakup && item.styleBreakup.length > 0
+                    ? item.styleBreakup
+                    : [EMPTY_STYLE_ROW()],
+              }
             : item,
         );
         setItems(updatedItems);
@@ -216,7 +218,13 @@ const ProformaInvoiceItems = ({
     });
   };
 
-  const handleNestedSizeChange = (rowIndex, styleIndex, sizeIndex, field, value) => {
+  const handleNestedSizeChange = (
+    rowIndex,
+    styleIndex,
+    sizeIndex,
+    field,
+    value,
+  ) => {
     setItems((prev) => {
       const rows = [...prev];
       const row = { ...rows[rowIndex] };
@@ -268,7 +276,10 @@ const ProformaInvoiceItems = ({
       const styleBreakup = [...(row.styleBreakup || [])];
       const styleObj = { ...styleBreakup[styleIndex] };
 
-      styleObj.sizeBreakup = [...(styleObj.sizeBreakup || []), EMPTY_SIZE_ROW()];
+      styleObj.sizeBreakup = [
+        ...(styleObj.sizeBreakup || []),
+        EMPTY_SIZE_ROW(),
+      ];
       styleBreakup[styleIndex] = styleObj;
       row.styleBreakup = styleBreakup;
       rows[rowIndex] = row;
@@ -283,8 +294,11 @@ const ProformaInvoiceItems = ({
       const styleBreakup = [...(row.styleBreakup || [])];
       const styleObj = { ...styleBreakup[styleIndex] };
 
-      const sizeBreakup = styleObj.sizeBreakup.filter((_, i) => i !== sizeIndex);
-      styleObj.sizeBreakup = sizeBreakup.length > 0 ? sizeBreakup : [EMPTY_SIZE_ROW()];
+      const sizeBreakup = styleObj.sizeBreakup.filter(
+        (_, i) => i !== sizeIndex,
+      );
+      styleObj.sizeBreakup =
+        sizeBreakup.length > 0 ? sizeBreakup : [EMPTY_SIZE_ROW()];
       styleBreakup[styleIndex] = styleObj;
       row.styleBreakup = styleBreakup;
 
@@ -386,57 +400,78 @@ const ProformaInvoiceItems = ({
           {activeModalRowIndex !== null && (
             <div className="flex-1 flex gap-4 overflow-hidden border border-gray-200 rounded">
               <div className="w-1/3 bg-gray-50 flex flex-col border-r border-gray-200">
-                <div className="p-3 bg-gray-200 font-semibold text-gray-700 text-sm">Styles</div>
+                <div className="p-3 bg-gray-200 font-semibold text-gray-700 text-sm">
+                  Styles
+                </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                  {(items[activeModalRowIndex]?.styleBreakup || []).map((styleRow, styleIdx) => (
-                    <div
-                      key={styleRow.rowId || styleIdx}
-                      onClick={() => setActiveStyleIndex(styleIdx)}
-                      className={`p-3 rounded border cursor-pointer transition-colors flex flex-col gap-2 ${activeStyleIndex === styleIdx
-                        ? "bg-indigo-50 border-indigo-300 shadow-sm"
-                        : "bg-white border-gray-200 hover:bg-gray-100"
+                  {(items[activeModalRowIndex]?.styleBreakup || []).map(
+                    (styleRow, styleIdx) => (
+                      <div
+                        key={styleRow.rowId || styleIdx}
+                        onClick={() => setActiveStyleIndex(styleIdx)}
+                        className={`p-3 rounded border cursor-pointer transition-colors flex flex-col gap-2 ${
+                          activeStyleIndex === styleIdx
+                            ? "bg-indigo-50 border-indigo-300 shadow-sm"
+                            : "bg-white border-gray-200 hover:bg-gray-100"
                         }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-gray-600 text-xs">Style {styleIdx + 1}</span>
-                        {!readOnly && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteStyleRow(activeModalRowIndex, styleIdx);
-                              if (activeStyleIndex === styleIdx) {
-                                setActiveStyleIndex(Math.max(0, styleIdx - 1));
-                              } else if (activeStyleIndex > styleIdx) {
-                                setActiveStyleIndex(activeStyleIndex - 1);
-                              }
-                            }}
-                            className="text-red-500 hover:bg-red-100 p-1 rounded"
-                          >
-                            <FaTrash size={10} />
-                          </button>
-                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-gray-600 text-xs">
+                            Style {styleIdx + 1}
+                          </span>
+                          {!readOnly && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteStyleRow(activeModalRowIndex, styleIdx);
+                                if (activeStyleIndex === styleIdx) {
+                                  setActiveStyleIndex(
+                                    Math.max(0, styleIdx - 1),
+                                  );
+                                } else if (activeStyleIndex > styleIdx) {
+                                  setActiveStyleIndex(activeStyleIndex - 1);
+                                }
+                              }}
+                              className="text-red-500 hover:bg-red-100 p-1 rounded"
+                            >
+                              <FaTrash size={10} />
+                            </button>
+                          )}
+                        </div>
+                        <div
+                          className="w-full"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <FxSelectWithAdd
+                            value={styleRow.styleId}
+                            onChange={(val) =>
+                              handleStyleChange(
+                                activeModalRowIndex,
+                                styleIdx,
+                                "styleId",
+                                val,
+                              )
+                            }
+                            options={(styleList?.data || [])
+                              .filter((i) => (id ? true : i.active))
+                              .map((i) => ({ label: i.name, value: i.id }))}
+                            readOnly={readOnly}
+                            placeholder="Select Style"
+                            addNew={true}
+                            childComponent={StyleMaster}
+                            addNewModalWidth="w-[50%] h-[57%]"
+                          />
+                        </div>
                       </div>
-                      <div className="w-full" onClick={(e) => e.stopPropagation()}>
-                        <FxSelectWithAdd
-                          value={styleRow.styleId}
-                          onChange={(val) => handleStyleChange(activeModalRowIndex, styleIdx, "styleId", val)}
-                          options={(styleList?.data || [])
-                            .filter((i) => (id ? true : i.active))
-                            .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly}
-                          placeholder="Select Style"
-                          addNew={true}
-                          childComponent={StyleMaster}
-                          addNewModalWidth="w-[50%] h-[57%]"
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                   {!readOnly && (
                     <button
                       onClick={() => {
                         addStyleRow(activeModalRowIndex);
-                        const newIndex = (items[activeModalRowIndex]?.styleBreakup || []).length;
+                        const newIndex = (
+                          items[activeModalRowIndex]?.styleBreakup || []
+                        ).length;
                         setActiveStyleIndex(newIndex);
                       }}
                       className="w-full mt-2 bg-indigo-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-indigo-700 text-sm flex items-center justify-center gap-1"
@@ -452,22 +487,45 @@ const ProformaInvoiceItems = ({
                   Sizes for Style {activeStyleIndex + 1}
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
-                  {items[activeModalRowIndex]?.styleBreakup?.[activeStyleIndex] ? (
+                  {items[activeModalRowIndex]?.styleBreakup?.[
+                    activeStyleIndex
+                  ] ? (
                     <table className="w-full text-left border-collapse border border-gray-300 bg-white text-sm">
                       <thead className="bg-gray-100">
                         <tr>
-                          <th className="border border-gray-300 px-2 py-1.5">Size</th>
-                          <th className="border border-gray-300 px-2 py-1.5 w-24">Qty</th>
-                          <th className="border border-gray-300 px-2 py-1.5 w-16 text-center">Actions</th>
+                          <th className="border border-gray-300 px-2 py-1.5">
+                            Size
+                          </th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-24">
+                            Qty
+                          </th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-16 text-center">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {(items[activeModalRowIndex].styleBreakup[activeStyleIndex].sizeBreakup || []).map((sizeRow, sizeIdx) => (
-                          <tr key={sizeRow.rowId || sizeIdx} className="hover:bg-gray-50">
+                        {(
+                          items[activeModalRowIndex].styleBreakup[
+                            activeStyleIndex
+                          ].sizeBreakup || []
+                        ).map((sizeRow, sizeIdx) => (
+                          <tr
+                            key={sizeRow.rowId || sizeIdx}
+                            className="hover:bg-gray-50"
+                          >
                             <td className="border border-gray-300 px-2 py-1">
                               <FxSelectWithAdd
                                 value={sizeRow.sizeId}
-                                onChange={(val) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "sizeId", val)}
+                                onChange={(val) =>
+                                  handleNestedSizeChange(
+                                    activeModalRowIndex,
+                                    activeStyleIndex,
+                                    sizeIdx,
+                                    "sizeId",
+                                    val,
+                                  )
+                                }
                                 options={(sizeList?.data || [])
                                   .filter((i) => (id ? true : i.active))
                                   .map((i) => ({ label: i.name, value: i.id }))}
@@ -484,17 +542,42 @@ const ProformaInvoiceItems = ({
                                 min="0"
                                 className="w-full text-right outline-none bg-transparent"
                                 value={sizeRow.qty}
-                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "qty", e.target.value)}
+                                onChange={(e) =>
+                                  handleNestedSizeChange(
+                                    activeModalRowIndex,
+                                    activeStyleIndex,
+                                    sizeIdx,
+                                    "qty",
+                                    e.target.value,
+                                  )
+                                }
                                 disabled={readOnly}
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1 text-center">
                               {!readOnly && (
                                 <div className="flex items-center justify-center gap-1">
-                                  <button onClick={() => addNestedSizeRow(activeModalRowIndex, activeStyleIndex)} className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200">
+                                  <button
+                                    onClick={() =>
+                                      addNestedSizeRow(
+                                        activeModalRowIndex,
+                                        activeStyleIndex,
+                                      )
+                                    }
+                                    className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200"
+                                  >
                                     <Plus size={12} />
                                   </button>
-                                  <button onClick={() => deleteNestedSizeRow(activeModalRowIndex, activeStyleIndex, sizeIdx)} className="p-1 bg-red-100 rounded text-red-700 hover:bg-red-200">
+                                  <button
+                                    onClick={() =>
+                                      deleteNestedSizeRow(
+                                        activeModalRowIndex,
+                                        activeStyleIndex,
+                                        sizeIdx,
+                                      )
+                                    }
+                                    className="p-1 bg-red-100 rounded text-red-700 hover:bg-red-200"
+                                  >
                                     <FaTrash size={10} />
                                   </button>
                                 </div>
@@ -517,7 +600,7 @@ const ProformaInvoiceItems = ({
       </Modal>
 
       <div className="w-full h-full overflow-y-auto bg-white">
-        <table className=" table-fixed min-h-full bg-white">
+        <table className=" table-fixed min-h-full bg-white w-full">
           <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10 text-[12px]">
             <tr>
               <th className="w-10 px-1 py-2 text-center font-medium border border-gray-300">
@@ -529,10 +612,10 @@ const ProformaInvoiceItems = ({
               <th className="w-36 px-2 py-2 text-center font-medium border border-gray-300">
                 Item Sub Group
               </th>
-              <th className="w-80 px-2 py-2 text-center font-medium border border-gray-300">
+              <th className="flex-1 px-2 py-2 text-center font-medium border border-gray-300">
                 Description of Goods<span className="text-red-500">*</span>
               </th>
-              <th className="w-40 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-28 px-1 py-2 text-center font-medium border border-gray-300">
                 HSN
               </th>
               <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
@@ -547,11 +630,11 @@ const ProformaInvoiceItems = ({
               <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                 Dozen
               </th>
-              <th className="w-32 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-28 px-1 py-2 text-center font-medium border border-gray-300">
                 Price {isCurrencySymbol && `(${isCurrencySymbol})`}
                 <span className="text-red-500">*</span>
               </th>
-              <th className="w-32 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-28 px-1 py-2 text-center font-medium border border-gray-300">
                 Gross
               </th>
               {!isCustomerExport && (
@@ -559,7 +642,7 @@ const ProformaInvoiceItems = ({
                   Tax
                 </th>
               )}
-              <th className="w-20 px-2 py-2 text-center font-medium border border-gray-300">
+              <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
                 Breakup
               </th>
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
@@ -585,7 +668,9 @@ const ProformaInvoiceItems = ({
                   <td className="border border-gray-300 text-[11px] items-center">
                     <FxSelectWithAdd
                       value={item.itemGroupId}
-                      onChange={(val) => handleInputChange(val, index, "itemGroupId")}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "itemGroupId")
+                      }
                       options={(itemGroupList?.data || [])
                         .filter((i) => (id ? true : i.active))
                         .map((i) => ({ label: i.name, value: i.id }))}
@@ -599,7 +684,9 @@ const ProformaInvoiceItems = ({
                   <td className="border border-gray-300 text-[11px] items-center">
                     <FxSelectWithAdd
                       value={item.itemSubGroupId}
-                      onChange={(val) => handleInputChange(val, index, "itemSubGroupId")}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "itemSubGroupId")
+                      }
                       options={(itemSubGroupList?.data || [])
                         .filter(
                           (i) =>
@@ -617,7 +704,9 @@ const ProformaInvoiceItems = ({
                   <td className="border border-gray-300">
                     <FxSelectWithAdd
                       value={item.styleItemId}
-                      onChange={(val) => handleInputChange(val, index, "styleItemId")}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "styleItemId")
+                      }
                       options={(styleItemList?.data || [])
                         .filter(
                           (i) =>
@@ -642,7 +731,7 @@ const ProformaInvoiceItems = ({
                       {findFromList(item.hsnId, hsnList?.data, "name") || ""}
                     </span>
                   </td>
-                  <td className="border border-gray-300 text-[11px] px-2 text-center">
+                  <td className="border border-gray-300 text-[11px] px-2 text-left">
                     <span>
                       {findFromList(item.uomId, uomList?.data, "name") || ""}
                     </span>
@@ -655,7 +744,9 @@ const ProformaInvoiceItems = ({
                       type="text"
                       className="text-left w-full table-data-input"
                       value={item?.labelWidth || ""}
-                      onChange={(e) => handleInputChange(e.target.value, index, "labelWidth")}
+                      onChange={(e) =>
+                        handleInputChange(e.target.value, index, "labelWidth")
+                      }
                       readOnly={readOnly}
                     />
                   </td>
@@ -670,11 +761,20 @@ const ProformaInvoiceItems = ({
                             ? Number(item.dozen).toFixed(2)
                             : ""
                       }
-                      onChange={(e) => handleInputChange(e.target.value, index, "dozen")}
-                      onFocus={(e) => { e.target.select(); setFocusedField(`dozen-${index}`); }}
+                      onChange={(e) =>
+                        handleInputChange(e.target.value, index, "dozen")
+                      }
+                      onFocus={(e) => {
+                        e.target.select();
+                        setFocusedField(`dozen-${index}`);
+                      }}
                       onBlur={(e) => {
                         const val = e.target.value;
-                        handleInputChange(val ? Number(val).toFixed(2) : "", index, "dozen");
+                        handleInputChange(
+                          val ? Number(val).toFixed(2) : "",
+                          index,
+                          "dozen",
+                        );
                         setFocusedField(null);
                       }}
                       disabled={true}
@@ -683,22 +783,36 @@ const ProformaInvoiceItems = ({
                   <td className="text-[11px] border border-gray-300 text-right">
                     <div className="relative w-full">
                       <input
-                        type={focusedField === `price-${index}` ? "number" : "text"}
+                        type={
+                          focusedField === `price-${index}` ? "number" : "text"
+                        }
                         step="0.01"
                         className="text-right px-3 w-full table-data-input"
                         value={
                           focusedField === `price-${index}`
                             ? (item.price ?? "")
                             : item.price
-                              ? formatCurrencyAmount(item.price, currencyCode || isCurrencySymbol)
+                              ? formatCurrencyAmount(
+                                  item.price,
+                                  currencyCode || isCurrencySymbol,
+                                )
                               : ""
                         }
-                        onChange={(e) => handleInputChange(e.target.value, index, "price")}
+                        onChange={(e) =>
+                          handleInputChange(e.target.value, index, "price")
+                        }
                         readOnly={readOnly}
-                        onFocus={(e) => { e.target.select(); setFocusedField(`price-${index}`); }}
+                        onFocus={(e) => {
+                          e.target.select();
+                          setFocusedField(`price-${index}`);
+                        }}
                         onBlur={(e) => {
                           const num = parseFloat(e.target.value);
-                          handleInputChange(num ? Number(num).toFixed(2) : "", index, "price");
+                          handleInputChange(
+                            num ? Number(num).toFixed(2) : "",
+                            index,
+                            "price",
+                          );
                           setFocusedField(null);
                         }}
                         onKeyDown={(e) => {
@@ -711,9 +825,16 @@ const ProformaInvoiceItems = ({
                   </td>
                   <td className="text-[11px] text-right px-1 border border-gray-300 bg-gray-50 bg-transparent gap-x-2">
                     <span className="pr-1">
-                      {isCurrencySymbol && item.styleItemId ? ` ${isCurrencySymbol}` : ""}
+                      {isCurrencySymbol && item.styleItemId
+                        ? ` ${isCurrencySymbol}`
+                        : ""}
                     </span>
-                    {item.styleItemId ? formatCurrencyAmount(item.amount || 0, currencyCode || isCurrencySymbol) : ""}
+                    {item.styleItemId
+                      ? formatCurrencyAmount(
+                          item.amount || 0,
+                          currencyCode || isCurrencySymbol,
+                        )
+                      : ""}
                   </td>
 
                   {!isCustomerExport && (
@@ -738,13 +859,13 @@ const ProformaInvoiceItems = ({
                     </td>
                   )}
 
-                  <td className="border border-gray-300 text-center py-2">
+                  <td className="border border-gray-300 text-center text-[11px]">
                     <button
-                      className="text-indigo-600 hover:text-indigo-800"
+                      className=" text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
                       onClick={() => setActiveModalRowIndex(index)}
                       title="View Style & Size Breakup"
                     >
-                      <FaEye size={16} className="mx-auto" />
+                      <FaEye size={14} className="mx-auto" />
                     </button>
                   </td>
 
@@ -768,32 +889,56 @@ const ProformaInvoiceItems = ({
           </tbody>
           <tfoot className="sticky bottom-0 z-10 shadow-[0_-1px_3px_rgba(0,0,0,0.1)]">
             <tr className="bg-gray-200 h-7 font-bold text-gray-800 text-[12px]">
-              <td className="text-right px-2 border border-gray-300" colSpan={6}>
+              <td
+                className="text-right px-2 border border-gray-300"
+                colSpan={6}
+              >
                 Total
               </td>
               <td className="text-right px-1 border border-gray-300">
-                {items?.reduce((sum, i) => sum + (parseFloat(i.qty) || 0), 0).toFixed(3)}
+                {items
+                  ?.reduce((sum, i) => sum + (parseFloat(i.qty) || 0), 0)
+                  .toFixed(3)}
               </td>
-              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+              <td
+                className="text-right px-2 border border-gray-300"
+                colSpan={1}
+              />
               <td className="text-right px-1  border border-gray-300">
-                {items?.reduce((sum, i) => sum + (parseFloat(i.dozen) || 0), 0).toFixed(2)}
+                {items
+                  ?.reduce((sum, i) => sum + (parseFloat(i.dozen) || 0), 0)
+                  .toFixed(2)}
               </td>
               <td className="text-right px-1  border border-gray-300">
                 {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
-                {items?.reduce((sum, i) => sum + (parseFloat(i.price) || 0), 0).toFixed(2)}
+                {items
+                  ?.reduce((sum, i) => sum + (parseFloat(i.price) || 0), 0)
+                  .toFixed(2)}
               </td>
               <td className="text-right px-1 border border-gray-300 text-black">
                 {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
                 {formatCurrencyAmount(
-                  items?.reduce((sum, i) => sum + (parseFloat(i.amount) || 0), 0),
+                  items?.reduce(
+                    (sum, i) => sum + (parseFloat(i.amount) || 0),
+                    0,
+                  ),
                   currencyCode || isCurrencySymbol,
                 )}
               </td>
               {!isCustomerExport && (
-                <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+                <td
+                  className="text-right px-2 border border-gray-300"
+                  colSpan={1}
+                />
               )}
-              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
-              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+              <td
+                className="text-right px-2 border border-gray-300"
+                colSpan={1}
+              />
+              <td
+                className="text-right px-2 border border-gray-300"
+                colSpan={1}
+              />
             </tr>
           </tfoot>
         </table>

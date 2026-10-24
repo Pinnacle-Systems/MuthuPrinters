@@ -68,7 +68,9 @@ import { useGetItemGroupMasterQuery } from "../../../redux/services/ItemGroupMas
 import { useGetSizeTemplateQuery } from "../../../redux/services/SizeTemplateMaster.js";
 import { useGetHsnMasterQuery } from "../../../redux/services/HsnMasterServices.js";
 import { useDispatch } from "react-redux";
-import JobCardApi, { useGetJobCardByIdQuery } from "../../../redux/uniformService/JobCardService.js";
+import JobCardApi, {
+  useGetJobCardByIdQuery,
+} from "../../../redux/uniformService/JobCardService.js";
 import { useGetItemSubGroupMasterQuery } from "../../../redux/services/ItemSubGroupService.js";
 import PoSummary from "../PurchaseOrder/PoSummary.js";
 import { calculateTaxWithHSNBreakupAndInsertIntoPoItems } from "../../../Utils/taxSummary.js";
@@ -83,8 +85,16 @@ import {
   CurrencyMaster,
 } from "../../../Basic/components/index.js";
 import { useGetTermsandCondtionsQuery } from "../../../redux/uniformService/TermsAndContionService.js";
-import { useAddSalesOrderMutation, useGetSalesOrderByIdQuery, useUpdateSalesOrderMutation } from "../../../redux/uniformService/SalesOrderService.js";
-import { useAddPackingMutation, useGetPackingByIdQuery, useUpdatePackingMutation } from "../../../redux/uniformService/PackingService.js";
+import {
+  useAddSalesOrderMutation,
+  useGetSalesOrderByIdQuery,
+  useUpdateSalesOrderMutation,
+} from "../../../redux/uniformService/SalesOrderService.js";
+import {
+  useAddPackingMutation,
+  useGetPackingByIdQuery,
+  useUpdatePackingMutation,
+} from "../../../redux/uniformService/PackingService.js";
 import ReusableFormFooterNew from "../../../Basic/components/Reuseable/ReuseableFormFooterNew.jsx";
 
 const PackingForm = ({
@@ -148,12 +158,12 @@ const PackingForm = ({
   const [carriageTax, setCarriageTax] = useState("");
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
 
-  const [orderId, setOrderId] = useState("")
-  const [jobCardId, setJobCardId] = useState("")
-  const [actualQty, setActualQty] = useState("")
-  const [completedQty, setCompletedQty] = useState("")
-  const [pendingQty, setPendingQty] = useState("")
-  const [alreadyPackedQty, setAlreadyPackedQty] = useState("")
+  const [orderId, setOrderId] = useState("");
+  const [jobCardId, setJobCardId] = useState("");
+  const [actualQty, setActualQty] = useState("");
+  const [completedQty, setCompletedQty] = useState("");
+  const [pendingQty, setPendingQty] = useState("");
+  const [alreadyPackedQty, setAlreadyPackedQty] = useState("");
   // const [isJobCard,setIsJobCard] = useState("")
 
   const dispatch = useDispatch();
@@ -177,25 +187,32 @@ const PackingForm = ({
     status: queryStatus,
     isFetching: isSingleFetching,
     isLoading: isSingleLoading,
-  } = useGetPackingByIdQuery(id, { params, skip: !id, });
+  } = useGetPackingByIdQuery(id, { params, skip: !id });
 
-  const { data: orderData, isFetching, isLoading } = useGetOrderEntryQuery({ params: { branchId, isTakeOnlyFinshedJobCards: true }, });
+  const {
+    data: orderData,
+    isFetching,
+    isLoading,
+  } = useGetOrderEntryQuery({
+    params: { branchId, isTakeOnlyFinshedJobCards: true },
+  });
   const {
     data: singleorderData,
     isFetching: isSingleorderFetching,
     isLoading: isSingleorderLoading,
-  } = useGetOrderEntryByIdQuery(orderId, { params, skip: !orderId || id, });
+  } = useGetOrderEntryByIdQuery(orderId, { params, skip: !orderId || id });
 
   const {
     data: singlejobCardData,
     isFetching: isSinglejobCardFetching,
     isLoading: isSinglejobCardLoading,
-  } = useGetJobCardByIdQuery(jobCardId, { params, skip: !jobCardId || id, });
+  } = useGetJobCardByIdQuery(jobCardId, { params, skip: !jobCardId || id });
 
-  console.log(orderItems, "orderItems")
+  console.log(orderItems, "orderItems");
 
-
-  const { data: styleItemList } = useGetStyleItemMasterQuery({ params: { ...params }, });
+  const { data: styleItemList } = useGetStyleItemMasterQuery({
+    params: { ...params },
+  });
   const { data: styleList } = useGetStyleMasterQuery({ params: { ...params } });
   const { data: uomList } = useGetUomQuery({ params });
   const { data: sizeList } = useGetSizeMasterQuery({ params });
@@ -249,10 +266,11 @@ const PackingForm = ({
       setOrderId(data?.orderId ? data?.orderId : "");
       setJobCardId(data?.jobCardId ? data?.jobCardId : "");
       setOrderItems(padRows(data?.PackingItems || []));
-      setCustomerId(data?.OrderEntry?.customerId ? data?.OrderEntry?.customerId : "")
+      setCustomerId(
+        data?.OrderEntry?.customerId ? data?.OrderEntry?.customerId : "",
+      );
 
       childRecord.current = data?.childRecord ? data?.childRecord : 0;
-
     },
     [id],
   );
@@ -267,52 +285,67 @@ const PackingForm = ({
 
   const syncFormWithDbForOrder = useCallback(
     (data) => {
-      setCustomerId(data?.customerId ? data?.customerId : "")
+      setCustomerId(data?.customerId ? data?.customerId : "");
       setPayTermId(data?.payTermId || "");
-
     },
     [id],
   );
 
-
   useEffect(() => {
-    if (id) return
+    if (id) return;
     if (orderId && singleorderData?.data) {
       syncFormWithDbForOrder(singleorderData.data);
     }
-  }, [isSingleorderFetching, isSingleorderLoading, orderId, syncFormWithDb, singleorderData]);
+  }, [
+    isSingleorderFetching,
+    isSingleorderLoading,
+    orderId,
+    syncFormWithDb,
+    singleorderData,
+  ]);
 
   const syncFormWithDbForJobCard = useCallback(
     (data) => {
-      const orderItemsRaw = data?.OrderEntry?.orderItems?.filter((i) => i.id === data?.orderItemId) || [];
+      const orderItemsRaw =
+        data?.OrderEntry?.orderItems?.filter(
+          (i) => i.id === data?.orderItemId,
+        ) || [];
       const mappedItems = orderItemsRaw.map((item) => ({
         ...item,
         styleBreakup: (item.OrderStyleBreakup || []).map((style) => ({
           ...style,
           sizeBreakup: (style.OrderSizeBreakup || []).map((size) => ({
             ...size,
-            alreadyPackingQty: size?.PackingSizeBreakup?.reduce((acc, size) => acc + size.packingQty, 0),
+            alreadyPackingQty: size?.PackingSizeBreakup?.reduce(
+              (acc, size) => acc + size.packingQty,
+              0,
+            ),
           })),
         })),
       }));
       setOrderItems(padRows(mappedItems));
-      const lastProcessRoute = data?.processRoute?.[data?.processRoute?.length - 1]
-      setActualQty(lastProcessRoute?.actualQty)
-      setCompletedQty(lastProcessRoute?.completedQty)
-      setPendingQty(lastProcessRoute?.pendingQty)
-      setAlreadyPackedQty(lastProcessRoute?.alreadyPackedQty)
+      const lastProcessRoute =
+        data?.processRoute?.[data?.processRoute?.length - 1];
+      setActualQty(lastProcessRoute?.actualQty);
+      setCompletedQty(lastProcessRoute?.completedQty);
+      setPendingQty(lastProcessRoute?.pendingQty);
+      setAlreadyPackedQty(lastProcessRoute?.alreadyPackedQty);
     },
     [id],
   );
 
-
   useEffect(() => {
-    if (id) return
+    if (id) return;
     if (jobCardId && singlejobCardData?.data) {
       syncFormWithDbForJobCard(singlejobCardData?.data);
-
     }
-  }, [isSinglejobCardFetching, isSinglejobCardLoading, jobCardId, syncFormWithDb, singlejobCardData]);
+  }, [
+    isSinglejobCardFetching,
+    isSinglejobCardLoading,
+    jobCardId,
+    syncFormWithDb,
+    singlejobCardData,
+  ]);
 
   let data = {
     id,
@@ -350,10 +383,7 @@ const PackingForm = ({
     loadingId,
     carriageTax,
     orderId,
-    jobCardId
-
-
-
+    jobCardId,
   };
 
   const handleSubmitCustom = async (callback, data, text, nextProcess) => {
@@ -456,7 +486,6 @@ const PackingForm = ({
     setCarriageFinalAmt(finalAmt ? finalAmt.toFixed(2) : "");
   }, [carriageCharge, carriageTax]);
 
-
   const validateRows = (items) => {
     const errors = [];
     const seen = new Set();
@@ -474,7 +503,6 @@ const PackingForm = ({
         errors.push(`Row ${index + 1}: UOM is required`);
       }
 
-
       const key = `${item.styleItemId}_${item.uomId}_${item.itemGroupId}`;
       if (seen.has(key)) {
         errors.push(`Row ${index + 1}: Duplicate item found`);
@@ -485,26 +513,34 @@ const PackingForm = ({
         let sizeSum = 0;
         item.styleBreakup.forEach((style, styleIndex) => {
           if (!style.styleId) {
-            errors.push(`Row ${index + 1}, Style Row ${styleIndex + 1}: Style is required`);
+            errors.push(
+              `Row ${index + 1}, Style Row ${styleIndex + 1}: Style is required`,
+            );
           }
 
           if (style.sizeBreakup?.length) {
             const sizeSeen = new Set();
             style.sizeBreakup.forEach((size, sizeIndex) => {
               if (!size.sizeId) {
-                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Size is required`);
+                errors.push(
+                  `Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Size is required`,
+                );
               }
 
               const qty = Number(size.qty || 0);
               sizeSum += qty;
 
               if (qty <= 0) {
-                errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`);
+                errors.push(
+                  `Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}: Qty must be greater than 0`,
+                );
               }
 
               if (size.sizeId) {
                 if (sizeSeen.has(size.sizeId)) {
-                  errors.push(`Row ${index + 1}, Style ${styleIndex + 1}: Duplicate size found`);
+                  errors.push(
+                    `Row ${index + 1}, Style ${styleIndex + 1}: Duplicate size found`,
+                  );
                 } else {
                   sizeSeen.add(size.sizeId);
                 }
@@ -513,24 +549,33 @@ const PackingForm = ({
               if (size.packingBreakup?.length) {
                 size.packingBreakup.forEach((pb, pbIndex) => {
                   if (!pb.packingUomId) {
-                    errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: Unit is required`);
+                    errors.push(
+                      `Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: Unit is required`,
+                    );
                   }
                   if (!pb.noOfunits || Number(pb.noOfunits) <= 0) {
-                    errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: No. of Units must be greater than 0`);
+                    errors.push(
+                      `Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: No. of Units must be greater than 0`,
+                    );
                   }
                   if (!pb.qty || Number(pb.qty) <= 0) {
-                    errors.push(`Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: Qty per Unit must be greater than 0`);
+                    errors.push(
+                      `Row ${index + 1}, Style ${styleIndex + 1}, Size Row ${sizeIndex + 1}, Packing Breakup ${pbIndex + 1}: Qty per Unit must be greater than 0`,
+                    );
                   }
                 });
               }
             });
           } else {
-            errors.push(`Row ${index + 1}, Style Row ${styleIndex + 1}: Size Breakup is required`);
+            errors.push(
+              `Row ${index + 1}, Style Row ${styleIndex + 1}: Size Breakup is required`,
+            );
           }
         });
-
       } else {
-        errors.push(`Row ${index + 1}: Style Breakup is required for Order Qty`);
+        errors.push(
+          `Row ${index + 1}: Style Breakup is required for Order Qty`,
+        );
       }
       // if (isCustomerExport && !loadingId) {
       //   errors.push(`Loading Port is required`);
@@ -703,9 +748,9 @@ const PackingForm = ({
       if (result.statusCode === 0) {
         toast.success(
           result.message ||
-          (actionType === "APPROVE"
-            ? "Order Entry Approved!"
-            : "Sent Back for Review!"),
+            (actionType === "APPROVE"
+              ? "Order Entry Approved!"
+              : "Sent Back for Review!"),
         );
         setApprovalModal(false);
         // dispatchInvalidate();
@@ -810,9 +855,12 @@ const PackingForm = ({
     );
   };
 
-  const jobcards = singleorderData?.data?.JobCard?.filter((i) => i.processRoute?.[i.processRoute?.length - 1]?.status == "COMPLETED")
-  console.log(jobcards, "jobcardsjobcards")
-
+  const jobcards = singleorderData?.data?.JobCard?.filter(
+    (i) =>
+      i.processRoute?.[i.processRoute?.length - 1]?.status == "COMPLETED" &&
+      i?.isPackingComplted !== "Completed",
+  );
+  console.log(jobcards, "jobcardsjobcards");
 
   return (
     <>
@@ -837,8 +885,9 @@ const PackingForm = ({
       >
         <div className="space-y-4">
           <h2
-            className={`text-base font-semibold ${actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
-              }`}
+            className={`text-base font-semibold ${
+              actionType === "APPROVE" ? "text-green-700" : "text-blue-700"
+            }`}
           >
             {actionType === "APPROVE"
               ? "✅ Approve Order Entry"
@@ -859,14 +908,15 @@ const PackingForm = ({
             <div className="flex justify-between items-center">
               <span className="text-gray-500">Current Approval</span>
               <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${status === "APPROVED"
-                  ? "bg-green-100 text-green-700"
-                  : status === "REJECTED"
-                    ? "bg-red-100 text-red-700"
-                    : status === "SUPERSEDED"
-                      ? "bg-orange-100 text-orange-700" // ✅ NEW
-                      : "bg-orange-100 text-orange-700"
-                  }`}
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                  status === "APPROVED"
+                    ? "bg-green-100 text-green-700"
+                    : status === "REJECTED"
+                      ? "bg-red-100 text-red-700"
+                      : status === "SUPERSEDED"
+                        ? "bg-orange-100 text-orange-700" // ✅ NEW
+                        : "bg-orange-100 text-orange-700"
+                }`}
               >
                 {status === "PENDING"
                   ? "Waiting For Approval"
@@ -920,10 +970,11 @@ const PackingForm = ({
                   handleConfirmAction();
                 }
               }}
-              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${actionType === "APPROVE"
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-blue-600 hover:bg-blue-700"
-                } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
+              className={`px-4 py-1.5 text-xs rounded text-white font-semibold transition ${
+                actionType === "APPROVE"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-blue-600 hover:bg-blue-700"
+              } disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1`}
             >
               {actionLoading ? (
                 <>
@@ -1049,12 +1100,13 @@ const PackingForm = ({
                       <tr
                         key={index}
                         onClick={() => setSelectedAttachmentIndex(index)}
-                        className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${index === selectedAttachmentIndex
-                          ? "bg-indigo-100 border-l-2 border-l-indigo-500"
-                          : index % 2 === 0
-                            ? "bg-white hover:bg-gray-50"
-                            : "bg-gray-100 hover:bg-gray-50"
-                          }`}
+                        className={`transition-colors border-b border-gray-200 text-[12px] cursor-pointer ${
+                          index === selectedAttachmentIndex
+                            ? "bg-indigo-100 border-l-2 border-l-indigo-500"
+                            : index % 2 === 0
+                              ? "bg-white hover:bg-gray-50"
+                              : "bg-gray-100 hover:bg-gray-50"
+                        }`}
                       >
                         {/* S.No */}
                         <td className="border-r border-white/50 h-8 text-center">
@@ -1252,7 +1304,11 @@ const PackingForm = ({
                 </h2>
                 <div className="flex gap-2">
                   <div className="w-36">
-                    <TextInput name="Packing No" value={docId} disabled={true} />
+                    <TextInput
+                      name="Packing No"
+                      value={docId}
+                      disabled={true}
+                    />
                   </div>
                   <div className="w-24">
                     <DateInputNew
@@ -1267,27 +1323,21 @@ const PackingForm = ({
                 </div>
               </div>
 
-
               <div className="flex-1 border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
                 <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">
                   Job Card Details
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-8 gap-2">
-
-                  {id ?
+                  {id ? (
                     <div className="col-span-1">
                       <TextInput
                         name="Order No / Customer Po No"
-                        value={findFromList(
-                          orderId,
-                          orderData?.data,
-                          "docId",
-                        )}
+                        value={findFromList(orderId, orderData?.data, "docId")}
                         disabled={true}
                         className="w-20"
                       />
                     </div>
-                    :
+                  ) : (
                     <div className="col-span-1">
                       <DropdownNew
                         name="Order No / Customer Po No"
@@ -1295,16 +1345,12 @@ const PackingForm = ({
                         value={orderId}
                         setValue={setOrderId}
                         required={true}
-                        readOnly={
-                          childRecord.current > 0 || readOnly}
+                        readOnly={childRecord.current > 0 || readOnly}
                         otherField={"docId"}
                         disabled={childRecord.current > 0 || readOnly || id}
                       />
-
-
-
                     </div>
-                  }
+                  )}
 
                   <div className="col-span-2">
                     <TextInput
@@ -1319,20 +1365,16 @@ const PackingForm = ({
                       className="w-20"
                     />
                   </div>
-                  {id ?
+                  {id ? (
                     <div className="col-span-1">
                       <TextInput
                         name="Job Card No"
-                        value={findFromList(
-                          orderId,
-                          orderData?.data,
-                          "docId",
-                        )}
+                        value={findFromList(orderId, orderData?.data, "docId")}
                         disabled={true}
                         className="w-20"
                       />
                     </div>
-                    :
+                  ) : (
                     <div className="col-span-1">
                       <DropdownNew
                         name="Job Card No"
@@ -1340,23 +1382,15 @@ const PackingForm = ({
                         value={jobCardId}
                         setValue={setJobCardId}
                         required={true}
-                        readOnly={
-                          childRecord.current > 0 || readOnly}
+                        readOnly={childRecord.current > 0 || readOnly}
                         otherField={"docId"}
                         disabled={childRecord.current > 0 || readOnly || id}
                       />
-
-
-
                     </div>
-                  }
-
-
+                  )}
                 </div>
               </div>
             </div>
-
-
           </div>
         }
         detailsLayout="default"
@@ -1408,7 +1442,6 @@ const PackingForm = ({
                   readOnly: readOnly || childRecord.current > 0,
                 },
               ]}
-
             />
             <div className="flex flex-col md:flex-row gap-2 justify-between mt-4">
               {/* Left Buttons */}
@@ -1536,7 +1569,6 @@ const PackingForm = ({
                       PDF Export
                     </button>
                   )}
-
               </div>
             </div>
           </>

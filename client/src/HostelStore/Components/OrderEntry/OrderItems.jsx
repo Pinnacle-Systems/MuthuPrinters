@@ -51,7 +51,12 @@ const OrderItems = ({
 
   /* ── Pad rows whenever orderItems arrives with fewer than DEFAULT_ROW_COUNT ── */
 
-  console.log(activeModalRowIndex, "activeStyleIndex", orderItems?.[activeModalRowIndex]?.styleBreakup?.[activeStyleIndex]?.sizeBreakup)
+  console.log(
+    activeModalRowIndex,
+    "activeStyleIndex",
+    orderItems?.[activeModalRowIndex]?.styleBreakup?.[activeStyleIndex]
+      ?.sizeBreakup,
+  );
 
   useEffect(() => {
     if (!Array.isArray(orderItems)) return;
@@ -97,7 +102,10 @@ const OrderItems = ({
             uomId: found.uomId || "",
             hsnId: hsnId,
             taxPercent: hsnObj ? hsnObj.tax : "",
-            styleBreakup: id && row.styleBreakup && row.styleBreakup.length > 0 ? [...row.styleBreakup] : [EMPTY_STYLE_ROW()],
+            styleBreakup:
+              id && row.styleBreakup && row.styleBreakup.length > 0
+                ? [...row.styleBreakup]
+                : [EMPTY_STYLE_ROW()],
             orderQty: row.orderQty,
           };
         }
@@ -176,7 +184,8 @@ const OrderItems = ({
       if (conversionType === "DOZEN") {
         row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
       } else {
-        row.amount = row.orderQty && price ? (row.orderQty * price).toFixed(2) : "";
+        row.amount =
+          row.orderQty && price ? (row.orderQty * price).toFixed(2) : "";
       }
 
       rows[rowIndex] = row;
@@ -185,7 +194,13 @@ const OrderItems = ({
   };
 
   /* ── Nested Size helpers ── */
-  const handleNestedSizeChange = (rowIndex, styleIndex, sizeIndex, field, value) => {
+  const handleNestedSizeChange = (
+    rowIndex,
+    styleIndex,
+    sizeIndex,
+    field,
+    value,
+  ) => {
     setOrderItems((prev) => {
       const rows = [...prev];
       const row = { ...rows[rowIndex] };
@@ -210,12 +225,15 @@ const OrderItems = ({
       if (field === "qty") {
         const newValue = Number(value) || 0;
         const currentSum = styleBreakup.reduce((s1, st) => {
-          return s1 + st.sizeBreakup.reduce((s2, sz, idx) => {
-            if (st === styleObj && idx === sizeIndex) {
-              return s2 + newValue;
-            }
-            return s2 + (Number(sz.qty) || 0);
-          }, 0);
+          return (
+            s1 +
+            st.sizeBreakup.reduce((s2, sz, idx) => {
+              if (st === styleObj && idx === sizeIndex) {
+                return s2 + newValue;
+              }
+              return s2 + (Number(sz.qty) || 0);
+            }, 0)
+          );
         }, 0);
 
         if (
@@ -264,7 +282,10 @@ const OrderItems = ({
       const styleBreakup = [...(row.styleBreakup || [])];
       const styleObj = { ...styleBreakup[styleIndex] };
 
-      styleObj.sizeBreakup = [...(styleObj.sizeBreakup || []), EMPTY_SIZE_ROW()];
+      styleObj.sizeBreakup = [
+        ...(styleObj.sizeBreakup || []),
+        EMPTY_SIZE_ROW(),
+      ];
       styleBreakup[styleIndex] = styleObj;
       row.styleBreakup = styleBreakup;
       rows[rowIndex] = row;
@@ -279,8 +300,11 @@ const OrderItems = ({
       const styleBreakup = [...(row.styleBreakup || [])];
       const styleObj = { ...styleBreakup[styleIndex] };
 
-      const sizeBreakup = styleObj.sizeBreakup.filter((_, i) => i !== sizeIndex);
-      styleObj.sizeBreakup = sizeBreakup.length > 0 ? sizeBreakup : [EMPTY_SIZE_ROW()];
+      const sizeBreakup = styleObj.sizeBreakup.filter(
+        (_, i) => i !== sizeIndex,
+      );
+      styleObj.sizeBreakup =
+        sizeBreakup.length > 0 ? sizeBreakup : [EMPTY_SIZE_ROW()];
       styleBreakup[styleIndex] = styleObj;
       row.styleBreakup = styleBreakup;
 
@@ -293,7 +317,8 @@ const OrderItems = ({
       if (conversionType === "DOZEN") {
         row.amount = dozen && price ? (dozen * price).toFixed(2) : "";
       } else {
-        row.amount = row.orderQty && price ? (row.orderQty * price).toFixed(2) : "";
+        row.amount =
+          row.orderQty && price ? (row.orderQty * price).toFixed(2) : "";
       }
 
       rows[rowIndex] = row;
@@ -342,57 +367,82 @@ const OrderItems = ({
           {activeModalRowIndex !== null && (
             <div className="flex-1 flex gap-4 overflow-hidden border border-gray-200 rounded">
               <div className="w-1/3 bg-gray-50 flex flex-col border-r border-gray-200">
-                <div className="p-3 bg-gray-200 font-semibold text-gray-700 text-sm">Styles</div>
+                <div className="p-3 bg-gray-200 font-semibold text-gray-700 text-sm">
+                  Styles
+                </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                  {(orderItems[activeModalRowIndex]?.styleBreakup || []).map((styleRow, styleIdx) => (
-                    <div
-                      key={styleRow.rowId || styleIdx}
-                      onClick={() => setActiveStyleIndex(styleIdx)}
-                      className={`p-3 rounded border cursor-pointer transition-colors flex flex-col gap-2 ${activeStyleIndex === styleIdx
-                        ? "bg-indigo-50 border-indigo-300 shadow-sm"
-                        : "bg-white border-gray-200 hover:bg-gray-100"
+                  {(orderItems[activeModalRowIndex]?.styleBreakup || []).map(
+                    (styleRow, styleIdx) => (
+                      <div
+                        key={styleRow.rowId || styleIdx}
+                        onClick={() => setActiveStyleIndex(styleIdx)}
+                        className={`p-3 rounded border cursor-pointer transition-colors flex flex-col gap-2 ${
+                          activeStyleIndex === styleIdx
+                            ? "bg-indigo-50 border-indigo-300 shadow-sm"
+                            : "bg-white border-gray-200 hover:bg-gray-100"
                         }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-gray-600 text-xs">Style {styleIdx + 1}</span>
-                        {!readOnly && orderType !== "AGAINSTPI" && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteStyleRow(activeModalRowIndex, styleIdx);
-                              if (activeStyleIndex === styleIdx) {
-                                setActiveStyleIndex(Math.max(0, styleIdx - 1));
-                              } else if (activeStyleIndex > styleIdx) {
-                                setActiveStyleIndex(activeStyleIndex - 1);
-                              }
-                            }}
-                            className="text-red-500 hover:bg-red-100 p-1 rounded"
-                          >
-                            <FaTrash size={10} />
-                          </button>
-                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-gray-600 text-xs">
+                            Style {styleIdx + 1}
+                          </span>
+                          {!readOnly && orderType !== "AGAINSTPI" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteStyleRow(activeModalRowIndex, styleIdx);
+                                if (activeStyleIndex === styleIdx) {
+                                  setActiveStyleIndex(
+                                    Math.max(0, styleIdx - 1),
+                                  );
+                                } else if (activeStyleIndex > styleIdx) {
+                                  setActiveStyleIndex(activeStyleIndex - 1);
+                                }
+                              }}
+                              className="text-red-500 hover:bg-red-100 p-1 rounded"
+                            >
+                              <FaTrash size={10} />
+                            </button>
+                          )}
+                        </div>
+                        <div
+                          className="w-full"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <FxSelectWithAdd
+                            value={styleRow.styleId}
+                            onChange={(val) =>
+                              handleStyleChange(
+                                activeModalRowIndex,
+                                styleIdx,
+                                "styleId",
+                                val,
+                              )
+                            }
+                            options={(styleList?.data || [])
+                              .filter((i) => (id ? true : i.active))
+                              .map((i) => ({ label: i.name, value: i.id }))}
+                            readOnly={
+                              readOnly ||
+                              childRecord?.current > 0 ||
+                              orderType === "AGAINSTPI"
+                            }
+                            placeholder="Select Style"
+                            addNew={true}
+                            childComponent={StyleMaster}
+                            addNewModalWidth="w-[50%] h-[57%]"
+                          />
+                        </div>
                       </div>
-                      <div className="w-full" onClick={(e) => e.stopPropagation()}>
-                        <FxSelectWithAdd
-                          value={styleRow.styleId}
-                          onChange={(val) => handleStyleChange(activeModalRowIndex, styleIdx, "styleId", val)}
-                          options={(styleList?.data || [])
-                            .filter((i) => (id ? true : i.active))
-                            .map((i) => ({ label: i.name, value: i.id }))}
-                          readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
-                          placeholder="Select Style"
-                          addNew={true}
-                          childComponent={StyleMaster}
-                          addNewModalWidth="w-[50%] h-[57%]"
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                   {!readOnly && orderType !== "AGAINSTPI" && (
                     <button
                       onClick={() => {
                         addStyleRow(activeModalRowIndex);
-                        const newIndex = (orderItems[activeModalRowIndex]?.styleBreakup || []).length;
+                        const newIndex = (
+                          orderItems[activeModalRowIndex]?.styleBreakup || []
+                        ).length;
                         setActiveStyleIndex(newIndex);
                       }}
                       className="w-full mt-2 bg-indigo-600 text-white px-3 py-1.5 rounded shadow-sm hover:bg-indigo-700 text-sm flex items-center justify-center gap-1"
@@ -408,26 +458,53 @@ const OrderItems = ({
                   Sizes for Style {activeStyleIndex + 1}
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
-                  {orderItems[activeModalRowIndex]?.styleBreakup?.[activeStyleIndex] ? (
+                  {orderItems[activeModalRowIndex]?.styleBreakup?.[
+                    activeStyleIndex
+                  ] ? (
                     <table className="w-full text-left border-collapse border border-gray-300 bg-white text-sm">
                       <thead className="bg-gray-100">
                         <tr>
-                          <th className="border border-gray-300 px-2 py-1.5">Size</th>
-                          <th className="border border-gray-300 px-2 py-1.5 w-24">Qty</th>
-                          <th className="border border-gray-300 px-2 py-1.5 w-16 text-center">Actions</th>
+                          <th className="border border-gray-300 px-2 py-1.5">
+                            Size
+                          </th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-24">
+                            Qty
+                          </th>
+                          <th className="border border-gray-300 px-2 py-1.5 w-16 text-center">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {(orderItems[activeModalRowIndex].styleBreakup[activeStyleIndex].sizeBreakup || []).map((sizeRow, sizeIdx) => (
-                          <tr key={sizeRow.rowId || sizeIdx} className="hover:bg-gray-50">
+                        {(
+                          orderItems[activeModalRowIndex].styleBreakup[
+                            activeStyleIndex
+                          ].sizeBreakup || []
+                        ).map((sizeRow, sizeIdx) => (
+                          <tr
+                            key={sizeRow.rowId || sizeIdx}
+                            className="hover:bg-gray-50"
+                          >
                             <td className="border border-gray-300 px-2 py-1">
                               <FxSelectWithAdd
                                 value={sizeRow.sizeId}
-                                onChange={(val) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "sizeId", val)}
+                                onChange={(val) =>
+                                  handleNestedSizeChange(
+                                    activeModalRowIndex,
+                                    activeStyleIndex,
+                                    sizeIdx,
+                                    "sizeId",
+                                    val,
+                                  )
+                                }
                                 options={(sizeList?.data || [])
                                   .filter((i) => (id ? true : i.active))
                                   .map((i) => ({ label: i.name, value: i.id }))}
-                                readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                                readOnly={
+                                  readOnly ||
+                                  childRecord?.current > 0 ||
+                                  orderType === "AGAINSTPI"
+                                }
                                 placeholder="Select Size"
                                 addNew={true}
                                 childComponent={Size}
@@ -440,21 +517,52 @@ const OrderItems = ({
                                 min="0"
                                 className="w-full text-right outline-none bg-transparent"
                                 value={sizeRow.qty}
-                                onChange={(e) => handleNestedSizeChange(activeModalRowIndex, activeStyleIndex, sizeIdx, "qty", e.target.value)}
-                                disabled={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                                onChange={(e) =>
+                                  handleNestedSizeChange(
+                                    activeModalRowIndex,
+                                    activeStyleIndex,
+                                    sizeIdx,
+                                    "qty",
+                                    e.target.value,
+                                  )
+                                }
+                                disabled={
+                                  readOnly ||
+                                  childRecord?.current > 0 ||
+                                  orderType === "AGAINSTPI"
+                                }
                               />
                             </td>
                             <td className="border border-gray-300 px-2 py-1 text-center">
-                              {!readOnly && !childRecord?.current > 0 && orderType !== "AGAINSTPI" && (
-                                <div className="flex items-center justify-center gap-1">
-                                  <button onClick={() => addNestedSizeRow(activeModalRowIndex, activeStyleIndex)} className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200">
-                                    <Plus size={12} />
-                                  </button>
-                                  <button onClick={() => deleteNestedSizeRow(activeModalRowIndex, activeStyleIndex, sizeIdx)} className="p-1 bg-red-100 rounded text-red-700 hover:bg-red-200">
-                                    <FaTrash size={10} />
-                                  </button>
-                                </div>
-                              )}
+                              {!readOnly &&
+                                !childRecord?.current > 0 &&
+                                orderType !== "AGAINSTPI" && (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      onClick={() =>
+                                        addNestedSizeRow(
+                                          activeModalRowIndex,
+                                          activeStyleIndex,
+                                        )
+                                      }
+                                      className="p-1 bg-blue-100 rounded text-blue-700 hover:bg-blue-200"
+                                    >
+                                      <Plus size={12} />
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        deleteNestedSizeRow(
+                                          activeModalRowIndex,
+                                          activeStyleIndex,
+                                          sizeIdx,
+                                        )
+                                      }
+                                      className="p-1 bg-red-100 rounded text-red-700 hover:bg-red-200"
+                                    >
+                                      <FaTrash size={10} />
+                                    </button>
+                                  </div>
+                                )}
                             </td>
                           </tr>
                         ))}
@@ -473,7 +581,7 @@ const OrderItems = ({
       </Modal>
 
       <div className="w-full h-full overflow-y-auto bg-white">
-        <table className="table-fixed min-h-full bg-white border-collapse">
+        <table className="w-full table-fixed min-h-full bg-white border-collapse">
           <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10 text-[12px]">
             <tr>
               <th className="w-10 px-2 py-2 text-center font-medium border border-gray-300">
@@ -485,16 +593,16 @@ const OrderItems = ({
               <th className="w-36 px-2 py-2 text-center font-medium border border-gray-300">
                 Item Sub Group
               </th>
-              <th className="w-72 px-2 py-2 text-center font-medium border border-gray-300">
+              <th className="flex-1 px-2 py-2 text-center font-medium border border-gray-300">
                 Description of Goods<span className="text-red-500">*</span>
               </th>
               <th className="w-20 px-2 py-2 text-center font-medium border border-gray-300">
                 HSN
               </th>
-              <th className="w-20 px-2 py-2 text-center font-medium border border-gray-300">
+              <th className="w-24 px-2 py-2 text-center font-medium border border-gray-300">
                 UOM
               </th>
-              <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
+              <th className="w-24 px-2 py-2 text-center font-medium border border-gray-300">
                 Qty<span className="text-red-500">*</span>
               </th>
               <th className="w-32 px-2 py-2 text-center font-medium border border-gray-300 ">
@@ -503,11 +611,11 @@ const OrderItems = ({
               <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
                 Dozen
               </th>
-              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-28 px-1 py-2 text-center font-medium border border-gray-300">
                 Price {isCurrencySymbol && `(${isCurrencySymbol})`}
                 <span className="text-red-500">*</span>
               </th>
-              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-28 px-1 py-2 text-center font-medium border border-gray-300">
                 Gross
               </th>
               {!isCustomerExport && (
@@ -515,7 +623,7 @@ const OrderItems = ({
                   Tax
                 </th>
               )}
-              <th className="w-20 px-2 py-2 text-center font-medium border border-gray-300">
+              <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
                 Breakup
               </th>
               <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
@@ -543,15 +651,24 @@ const OrderItems = ({
                   <td className="border border-gray-300 text-[11px] pt-1">
                     <FxSelectWithAdd
                       value={row.itemGroupId}
-                      onChange={(val) => handleInputChange(val, index, "itemGroupId")}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "itemGroupId")
+                      }
                       options={(itemGroupList?.data || [])
                         .filter((i) => (id ? true : i.active))
                         .map((i) => ({ label: i.name, value: i.id }))}
-                      readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                      readOnly={
+                        readOnly ||
+                        childRecord?.current > 0 ||
+                        orderType === "AGAINSTPI"
+                      }
                       placeholder=""
-                      onBlur={() => handleInputChange(row.itemGroupId, index, "itemGroupId")}
+                      onBlur={() =>
+                        handleInputChange(row.itemGroupId, index, "itemGroupId")
+                      }
                       onKeyDown={(e) => {
-                        if (e.key === "Delete") handleInputChange("", index, "itemGroupId");
+                        if (e.key === "Delete")
+                          handleInputChange("", index, "itemGroupId");
                       }}
                       addNew={true}
                       childComponent={ItemGroup}
@@ -562,15 +679,32 @@ const OrderItems = ({
                   <td className="border border-gray-300 text-[11px] pt-1">
                     <FxSelectWithAdd
                       value={row.itemSubGroupId}
-                      onChange={(val) => handleInputChange(val, index, "itemSubGroupId")}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "itemSubGroupId")
+                      }
                       options={(itemSubGroupList?.data || [])
-                        .filter((i) => (id ? true : i.active) && i.itemGroupId === row.itemGroupId)
+                        .filter(
+                          (i) =>
+                            (id ? true : i.active) &&
+                            i.itemGroupId === row.itemGroupId,
+                        )
                         .map((i) => ({ label: i.name, value: i.id }))}
-                      readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                      readOnly={
+                        readOnly ||
+                        childRecord?.current > 0 ||
+                        orderType === "AGAINSTPI"
+                      }
                       placeholder=""
-                      onBlur={() => handleInputChange(row.itemSubGroupId, index, "itemSubGroupId")}
+                      onBlur={() =>
+                        handleInputChange(
+                          row.itemSubGroupId,
+                          index,
+                          "itemSubGroupId",
+                        )
+                      }
                       onKeyDown={(e) => {
-                        if (e.key === "Delete") handleInputChange("", index, "itemSubGroupId");
+                        if (e.key === "Delete")
+                          handleInputChange("", index, "itemSubGroupId");
                       }}
                       addNew={true}
                       childComponent={ItemSubGroupMaster}
@@ -581,20 +715,31 @@ const OrderItems = ({
                   <td className="text-[11px] border border-gray-300 text-left pt-1">
                     <FxSelectWithAdd
                       value={row.styleItemId}
-                      onChange={(val) => handleInputChange(val, index, "styleItemId")}
+                      onChange={(val) =>
+                        handleInputChange(val, index, "styleItemId")
+                      }
                       options={(styleItemList?.data || [])
                         .filter(
                           (i) =>
                             (id ? true : i.active) &&
                             i.itemGroupId === row.itemGroupId &&
-                            (row.itemSubGroupId ? i.itemSubGroupId === row.itemSubGroupId : true),
+                            (row.itemSubGroupId
+                              ? i.itemSubGroupId === row.itemSubGroupId
+                              : true),
                         )
                         .map((i) => ({ label: i.name, value: i.id }))}
-                      readOnly={readOnly || childRecord?.current > 0 || orderType === "AGAINSTPI"}
+                      readOnly={
+                        readOnly ||
+                        childRecord?.current > 0 ||
+                        orderType === "AGAINSTPI"
+                      }
                       placeholder=""
-                      onBlur={() => handleInputChange(row.styleItemId, index, "styleItemId")}
+                      onBlur={() =>
+                        handleInputChange(row.styleItemId, index, "styleItemId")
+                      }
                       onKeyDown={(e) => {
-                        if (e.key === "Delete") handleInputChange("", index, "styleItemId");
+                        if (e.key === "Delete")
+                          handleInputChange("", index, "styleItemId");
                       }}
                       addNew={true}
                       childComponent={StyleItemMaster}
@@ -618,7 +763,9 @@ const OrderItems = ({
                     <input
                       type="text"
                       value={row.labelWidth || ""}
-                      onChange={(e) => handleInputChange(e.target.value, index, "labelWidth")}
+                      onChange={(e) =>
+                        handleInputChange(e.target.value, index, "labelWidth")
+                      }
                       className="w-full text-left px-1 bg-transparent text-[11px] outline-none focus:bg-white"
                       readOnly={readOnly || orderType === "AGAINSTPI"}
                     />
@@ -634,14 +781,20 @@ const OrderItems = ({
                             ? Number(row.dozen).toFixed(2)
                             : ""
                       }
-                      onChange={(e) => handleInputChange(e.target.value, index, "dozen")}
+                      onChange={(e) =>
+                        handleInputChange(e.target.value, index, "dozen")
+                      }
                       onFocus={(e) => {
                         e.target.select();
                         setFocusedField(`dozen-${index}`);
                       }}
                       onBlur={(e) => {
                         const val = e.target.value;
-                        handleInputChange(val ? Number(val).toFixed(2) : "", index, "dozen");
+                        handleInputChange(
+                          val ? Number(val).toFixed(2) : "",
+                          index,
+                          "dozen",
+                        );
                         setFocusedField(null);
                       }}
                       disabled={true}
@@ -649,18 +802,27 @@ const OrderItems = ({
                   </td>
                   <td className="text-[11px] border border-gray-300 text-right pt-1 pr-1 font-medium">
                     <input
-                      type={focusedField === `price-${index}` ? "number" : "text"}
+                      type={
+                        focusedField === `price-${index}` ? "number" : "text"
+                      }
                       step="0.01"
                       className="text-right px-1 w-full table-data-input outline-none bg-transparent focus:bg-white"
                       value={
                         focusedField === `price-${index}`
                           ? (row.price ?? "")
                           : row.price
-                            ? formatCurrencyAmount(row.price, currencyCode || isCurrencySymbol)
+                            ? formatCurrencyAmount(
+                                row.price,
+                                currencyCode || isCurrencySymbol,
+                              )
                             : ""
                       }
                       onChange={(e) => {
-                        handleInputChange(e.target.value === "" ? "" : e.target.value, index, "price");
+                        handleInputChange(
+                          e.target.value === "" ? "" : e.target.value,
+                          index,
+                          "price",
+                        );
                       }}
                       readOnly={readOnly || orderType === "AGAINSTPI"}
                       onFocus={(e) => {
@@ -669,16 +831,27 @@ const OrderItems = ({
                       }}
                       onBlur={(e) => {
                         const num = parseFloat(e.target.value);
-                        handleInputChange(num ? Number(num).toFixed(2) : "", index, "price");
+                        handleInputChange(
+                          num ? Number(num).toFixed(2) : "",
+                          index,
+                          "price",
+                        );
                         setFocusedField(null);
                       }}
                     />
                   </td>
                   <td className="text-[11px] border border-gray-300 text-right pt-1 pr-1 font-medium text-black">
                     <span className="pr-1">
-                      {isCurrencySymbol && row.styleItemId ? ` ${isCurrencySymbol}` : ""}
+                      {isCurrencySymbol && row.styleItemId
+                        ? ` ${isCurrencySymbol}`
+                        : ""}
                     </span>
-                    {row.styleItemId ? formatCurrencyAmount(row.amount || 0, currencyCode || isCurrencySymbol) : ""}
+                    {row.styleItemId
+                      ? formatCurrencyAmount(
+                          row.amount || 0,
+                          currencyCode || isCurrencySymbol,
+                        )
+                      : ""}
                   </td>
                   {!isCustomerExport && (
                     <td className="text-[11px] border border-gray-300 text-center pt-1 font-medium">
@@ -702,14 +875,14 @@ const OrderItems = ({
                       </button>
                     </td>
                   )}
-                  <td className="border border-gray-300 text-center py-1">
+                  <td className="text-[11px] border border-gray-300 text-center pt-1 font-medium">
                     <button
-                      className="text-indigo-600 hover:text-indigo-800"
+                      className="text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
                       onClick={() => setActiveModalRowIndex(index)}
                       title="View Style & Size Breakup"
                       type="button"
                     >
-                      <FaEye size={16} className="mx-auto" />
+                      <FaEye size={14} className="mx-auto" />
                     </button>
                   </td>
                   <td className="w-12 border border-gray-300 align-top pt-1 bg-gray-50 text-center">
@@ -734,17 +907,28 @@ const OrderItems = ({
 
           <tfoot className="sticky bottom-0 z-10 shadow-[0_-1px_2px_rgba(0,0,0,0.1)]">
             <tr className="bg-gray-100 h-7 font-medium text-gray-800 text-[12px]">
-              <td className="text-right px-2 border border-gray-300 font-medium" colSpan={6}>
+              <td
+                className="text-right px-2 border border-gray-300 font-medium"
+                colSpan={6}
+              >
                 Total
               </td>
               <td className="text-right border border-gray-300 px-1 font-medium">
                 {orderItems?.reduce((s, r) => s + (Number(r.orderQty) || 0), 0)}
               </td>
-              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+              <td
+                className="text-right px-2 border border-gray-300 font-medium"
+                colSpan={1}
+              />
               <td className="text-right border border-gray-300 px-1 font-medium">
-                {orderItems?.reduce((s, r) => s + (Number(r.dozen) || 0), 0).toFixed(2)}
+                {orderItems
+                  ?.reduce((s, r) => s + (Number(r.dozen) || 0), 0)
+                  .toFixed(2)}
               </td>
-              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+              <td
+                className="text-right px-2 border border-gray-300 font-medium"
+                colSpan={1}
+              />
               <td className="text-right border border-gray-300 px-1 font-medium text-black">
                 {isCurrencySymbol ? `${isCurrencySymbol} ` : ""}
                 {formatCurrencyAmount(
@@ -753,10 +937,19 @@ const OrderItems = ({
                 )}
               </td>
               {!isCustomerExport && (
-                <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+                <td
+                  className="text-right px-2 border border-gray-300 font-medium"
+                  colSpan={1}
+                />
               )}
-              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
-              <td className="border border-gray-300 bg-gray-50" colSpan={1} />
+              <td
+                className="text-right px-2 border border-gray-300 font-medium"
+                colSpan={1}
+              />
+              <td
+                className="text-right px-2 border border-gray-300 font-medium"
+                colSpan={1}
+              />
             </tr>
           </tfoot>
         </table>

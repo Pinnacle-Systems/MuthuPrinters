@@ -429,11 +429,41 @@ const OrderEntryForm = ({
         errors.push(`Row ${index + 1}: Price must be greater than 0`);
       }
 
-      const key = `${item.styleItemId}_${item.uomId}_${item.itemGroupId}`;
-      if (seen.has(key)) {
-        errors.push(`Row ${index + 1}: Duplicate item found`);
+      const childPairs = [];
+      item.styleBreakup?.forEach((style) => {
+        style.sizeBreakup?.forEach((size) => {
+          if (style.styleId && size.sizeId) {
+            childPairs.push(`${style.styleId}_${size.sizeId}`);
+          }
+        });
+      });
+
+      if (childPairs.length > 0) {
+        const rowChildKeys = new Set(
+          childPairs.map(
+            (pair) =>
+              `${item.styleItemId}_${item.uomId}_${item.itemGroupId}_${pair}`,
+          ),
+        );
+        let isDuplicate = false;
+        rowChildKeys.forEach((key) => {
+          if (seen.has(key)) {
+            isDuplicate = true;
+          }
+        });
+
+        if (isDuplicate) {
+          errors.push(`Row ${index + 1}: Duplicate item found`);
+        }
+
+        rowChildKeys.forEach((key) => seen.add(key));
       } else {
-        seen.add(key);
+        const key = `${item.styleItemId}_${item.uomId}_${item.itemGroupId}`;
+        if (seen.has(key)) {
+          errors.push(`Row ${index + 1}: Duplicate item found`);
+        } else {
+          seen.add(key);
+        }
       }
 
       if (item.styleBreakup?.length) {
@@ -521,9 +551,8 @@ const OrderEntryForm = ({
           !data.refNo,
         title: "RefNo is required!",
       },
-      { condition: !data.deliveryDate, title: "Delivery Date is required!" },
       {
-        condition: data.deliveryDate < data.docDate,
+        condition: data.deliveryDate && data.deliveryDate < data.docDate,
         title: "Delivery Date cannot be smaller than Doc Date!",
       },
       { condition: !data.validDays, title: "Valid To is required!" },
@@ -1279,7 +1308,7 @@ const OrderEntryForm = ({
                       addNewLabel="+ Add New Customer"
                       childComponent={PartyMaster}
                       addNewModalWidth="w-[90%] h-[95%]"
-                      disabled={childRecord.current > 0 || readOnly}
+                      disabled={childRecord.current > 0 || readOnly || id}
                       ref={customerRef}
                       openOnFocus={true}
                     />
@@ -1347,7 +1376,7 @@ const OrderEntryForm = ({
                     }}
                     required={true}
                     readOnly={readOnly}
-                    disabled={childRecord.current > 0 || readOnly}
+                    disabled={childRecord.current > 0 || readOnly || id}
                   />
                   <div className="w-32">
                     <DropdownNew
@@ -1370,7 +1399,8 @@ const OrderEntryForm = ({
                       disabled={
                         childRecord.current > 0 ||
                         readOnly ||
-                        orderType === "GENERAL"
+                        orderType === "GENERAL" ||
+                        id
                       }
                       otherField={"docId"}
                       beforeChange={async (selectedValue) => {
@@ -1409,21 +1439,22 @@ const OrderEntryForm = ({
                         setLoadingId(res?.data?.loadingId || "");
                         setDeliveryId(res?.data?.deliveryId || "");
                         setCarriageTax(res?.data?.carriageTax || "");
+                        const targetVersion =
+                          res?.data?.quoteVersion ||
+                          (res?.data?.items?.length
+                            ? Math.max(
+                                ...res.data.items.map(
+                                  (i) => i.quoteVersion || 1,
+                                ),
+                              )
+                            : 1);
+
+                        const targetItems = (res?.data?.items || []).filter(
+                          (item) => (item.quoteVersion || 1) === targetVersion,
+                        );
+
                         const mappedItems =
-                          Object.values(
-                            (res?.data?.items || []).reduce((acc, item) => {
-                              const key = item.styleItemId;
-
-                              if (
-                                !acc[key] ||
-                                acc[key].quoteVersion < item.quoteVersion
-                              ) {
-                                acc[key] = item;
-                              }
-
-                              return acc;
-                            }, {}),
-                          )
+                          targetItems
                             .sort((a, b) => a.id - b.id)
                             .map((item) => ({
                               styleItemId: item.styleItemId,
@@ -1469,7 +1500,7 @@ const OrderEntryForm = ({
                     setValue={(value) => setProductionType(value)}
                     required={true}
                     readOnly={readOnly}
-                    disabled={childRecord.current > 0 || readOnly}
+                    disabled={childRecord.current > 0 || readOnly || id}
                     beforeChange={() => {
                       setRefNo("");
                     }}
@@ -1632,7 +1663,6 @@ const OrderEntryForm = ({
                     name="Delivery Date"
                     value={deliveryDate}
                     setValue={setDeliveryDate}
-                    required={true}
                     readOnly={
                       childRecord.current > 0 ||
                       readOnly ||
