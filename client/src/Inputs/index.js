@@ -1644,6 +1644,10 @@ export const ReusableTable = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [hoveredDeleteId, setHoveredDeleteId] = useState(null);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [data?.length]);
+
   const totalPages = Math?.ceil(data?.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;

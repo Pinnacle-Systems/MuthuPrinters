@@ -40,7 +40,7 @@ import Modal from "../../../UiComponents/Modal";
 import { CityMaster, Loader } from "../../../Basic/components";
 import { useDispatch, useSelector } from "react-redux";
 import { findFromList, renameFile } from "../../../Utils/helper";
-import { Check, LayoutGrid, Paperclip, Plus, Power, Table } from "lucide-react";
+import { Check, LayoutGrid, Paperclip, Plus, Power, Search, Table, X } from "lucide-react";
 import { statusDropdown } from "../../../Utils/DropdownData";
 import ArtDesignReport from "./ArtDesignReport";
 import Swal from "sweetalert2";
@@ -151,7 +151,7 @@ export default function Form({
     data: allData,
     isLoading,
     isFetching,
-  } = useGetPartyQuery({ params, searchParams: searchValue });
+  } = useGetPartyQuery({ params });
 
   const {
     data: singleData,
@@ -819,6 +819,31 @@ export default function Form({
   }
   if (view == "all") {
     filterParty = allData?.data;
+  }
+
+  if (searchValue?.trim()) {
+    const term = searchValue.trim().toLowerCase();
+    filterParty = (filterParty || []).filter((item) => {
+      const partyName = (item?.name || "").toLowerCase();
+      const partyAlias = (item?.aliasName || "").toLowerCase();
+      const partyCode = (item?.code || "").toLowerCase();
+      const contactPerson = (item?.contactPersonName || "").toLowerCase();
+      const mobile = (item?.contactMobile || "").toLowerCase();
+      const address = (item?.address || "").toLowerCase();
+      const city = (item?.City?.name || item?.city || "").toLowerCase();
+      const branchType = (item?.BranchType?.name || "").toLowerCase();
+
+      return (
+        partyName.includes(term) ||
+        partyAlias.includes(term) ||
+        partyCode.includes(term) ||
+        contactPerson.includes(term) ||
+        mobile.includes(term) ||
+        address.includes(term) ||
+        city.includes(term) ||
+        branchType.includes(term)
+      );
+    });
   }
   //   const { data: currencyList } = useGetCurrencyMasterQuery({ params });
 
@@ -2408,7 +2433,30 @@ export default function Form({
             <h1 className="text-lg font-bold text-gray-800">
               Customer/Supplier Master{" "}
             </h1>
-            <div className="flex items-center gap-4 text-md">
+            <div className="flex items-center gap-3 text-md">
+              <div className="relative flex items-center">
+                <Search
+                  className="absolute left-2.5 text-gray-400 pointer-events-none"
+                  size={15}
+                />
+                <input
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  placeholder="Search by name, city..."
+                  className="pl-8 pr-7 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 w-56 transition-all duration-200 uppercase"
+                />
+                {searchValue && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchValue("")}
+                    className="absolute right-2 text-gray-400 hover:text-gray-600"
+                    title="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
               <button
                 onClick={() => {
                   handleCreate();

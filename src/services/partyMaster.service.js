@@ -353,14 +353,24 @@ async function getSearch(req) {
         {
           name: {
             contains: searchKey,
+            mode: "insensitive",
           },
         },
         {
           code: {
             contains: searchKey,
+            mode: "insensitive",
           },
         },
       ],
+    },
+    include: {
+      BranchType: true,
+      City: {
+        select: {
+          name: true,
+        },
+      },
     },
   });
   return { statusCode: 0, data: data };
