@@ -165,12 +165,7 @@ export const validatePurchaseOrderData = ({
   const checks = [
     {
       severity: "block",
-      condition: !data.dueDate,
-      message: "Delivery Date is required!",
-    },
-    {
-      severity: "block",
-      condition: data.dueDate < data.docDate,
+      condition: data.dueDate && data.dueDate < data.docDate,
       message: "Delivery Date cannot be before Doc Date!",
     },
     {

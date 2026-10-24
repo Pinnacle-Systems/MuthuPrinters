@@ -1174,7 +1174,6 @@ const PurchaseOrderForm = ({
           value={dueDate}
           setValue={setDueDate}
           type={"date"}
-          required={true}
           readOnly={isCoreLocked}
           min={docDate}
           className={`${compactFieldClass} ${fieldWidthDate}`}
