@@ -694,9 +694,7 @@ async function create(body) {
 async function createPoItems(tx, poItems, po) {
   return Promise.all(
     poItems.map(async (itemDetails) => {
-      const qty = itemDetails?.qty
-        ? Math.round(parseFloat(itemDetails.qty))
-        : null;
+      const qty = itemDetails?.qty ? parseFloat(itemDetails.qty) : null;
       return await tx.poItems.create({
         data: {
           poId: parseInt(po.id),
@@ -730,7 +728,7 @@ async function createPoItems(tx, poItems, po) {
             ? parseInt(itemDetails.totalPackets)
             : null,
           pricePerKg: itemDetails?.pricePerKg
-            ? parseInt(itemDetails.pricePerKg)
+            ? parseFloat(itemDetails.pricePerKg)
             : null,
         },
       });
@@ -901,13 +899,14 @@ async function update(id, body) {
         parseInt(newItem.sheetsPerPacket || 0) !==
         parseInt(oldItem.sheetsPerPacket || 0);
       const weightPerPacket =
-        parseInt(newItem.weightPerPacket || 0) !==
-        parseInt(oldItem.weightPerPacket || 0);
+        parseFloat(newItem.weightPerPacket || 0) !==
+        parseFloat(oldItem.weightPerPacket || 0);
       const totalPackets =
         parseInt(newItem.totalPackets || 0) !==
         parseInt(oldItem.totalPackets || 0);
       const pricePerKg =
-        parseInt(newItem.pricePerKg || 0) !== parseInt(oldItem.pricePerKg || 0);
+        parseFloat(newItem.pricePerKg || 0) !==
+        parseFloat(oldItem.pricePerKg || 0);
 
       if (
         styleChanged ||
@@ -1108,9 +1107,7 @@ async function updatePoItems(
 ) {
   return Promise.all(
     poItems.map(async (itemDetails) => {
-      const qty = itemDetails?.qty
-        ? Math.round(parseFloat(itemDetails.qty))
-        : null;
+      const qty = itemDetails?.qty ? parseFloat(itemDetails.qty) : null;
       if (itemDetails.id) {
         return await tx.poItems.update({
           where: { id: parseInt(itemDetails.id) },
@@ -1122,13 +1119,13 @@ async function updatePoItems(
             uomId: itemDetails?.uomId ? parseInt(itemDetails.uomId) : null,
             hsnId: itemDetails?.hsnId ? parseInt(itemDetails.hsnId) : null,
             qty,
-            price: itemDetails?.price ? parseInt(itemDetails.price) : null,
+            price: itemDetails?.price ? parseFloat(itemDetails.price) : null,
             discountType: itemDetails?.discountType ?? undefined,
             discountValue: itemDetails?.discountValue
-              ? parseInt(itemDetails.discountValue)
+              ? parseFloat(itemDetails.discountValue)
               : null,
             taxPercent: itemDetails?.taxPercent
-              ? parseInt(itemDetails.taxPercent)
+              ? parseFloat(itemDetails.taxPercent)
               : null,
             itemGroupId: itemDetails?.itemGroupId
               ? parseInt(itemDetails.itemGroupId)
@@ -1148,7 +1145,7 @@ async function updatePoItems(
               ? parseInt(itemDetails.totalPackets)
               : null,
             pricePerKg: itemDetails?.pricePerKg
-              ? parseInt(itemDetails.pricePerKg)
+              ? parseFloat(itemDetails.pricePerKg)
               : null,
             quoteVersion: isNewVersion
               ? currentQuoteVersion + 1
@@ -1165,13 +1162,13 @@ async function updatePoItems(
             uomId: itemDetails?.uomId ? parseInt(itemDetails.uomId) : null,
             hsnId: itemDetails?.hsnId ? parseInt(itemDetails.hsnId) : null,
             qty,
-            price: itemDetails?.price ? parseInt(itemDetails.price) : null,
+            price: itemDetails?.price ? parseFloat(itemDetails.price) : null,
             discountType: itemDetails?.discountType ?? undefined,
             discountValue: itemDetails?.discountValue
-              ? parseInt(itemDetails.discountValue)
+              ? parseFloat(itemDetails.discountValue)
               : null,
             taxPercent: itemDetails?.taxPercent
-              ? parseInt(itemDetails.taxPercent)
+              ? parseFloat(itemDetails.taxPercent)
               : null,
             quoteVersion: isNewVersion
               ? currentQuoteVersion + 1
@@ -1194,7 +1191,7 @@ async function updatePoItems(
               ? parseInt(itemDetails.totalPackets)
               : null,
             pricePerKg: itemDetails?.pricePerKg
-              ? parseInt(itemDetails.pricePerKg)
+              ? parseFloat(itemDetails.pricePerKg)
               : null,
           },
         });
@@ -1235,7 +1232,7 @@ async function createNewVersionItems(
           ? parseFloat(temp.weightPerPacket)
           : null,
         totalPackets: temp.totalPackets ? parseInt(temp.totalPackets) : null,
-        pricePerKg: temp.pricePerKg ? parseInt(temp.pricePerKg) : null,
+        pricePerKg: temp.pricePerKg ? parseFloat(temp.pricePerKg) : null,
       })),
   });
 }

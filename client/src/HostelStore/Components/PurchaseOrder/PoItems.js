@@ -186,10 +186,21 @@ const PoItems = ({
 
   const deleteRow = (rowIndex) => {
     setPoItems((currentRows) => {
+      const parsedIndex = parseInt(rowIndex);
+      const targetRow = currentRows[parsedIndex];
+
       if (currentRows.length > 1) {
-        return currentRows.filter((_, index) => index !== parseInt(rowIndex));
+        return currentRows.filter((_, index) => index !== parsedIndex);
       }
-      return currentRows;
+      return [
+        createPurchaseOrderRow(
+          id
+            ? isNewVersion
+              ? "New"
+              : effectiveQuoteVersion
+            : effectiveQuoteVersion,
+        ),
+      ];
     });
   };
 
@@ -543,6 +554,11 @@ const PoItems = ({
           getRowClassName={(_, index) =>
             `${index % 2 === 0 ? "bg-white" : "bg-gray-100"} border border-blue-gray-200 cursor-pointer h-6`
           }
+          onRowContextMenu={(item, index, event) => {
+            if (!readOnly) {
+              handleRightClick(event, item.originalIndex);
+            }
+          }}
           renderRow={(item, index) => {
             const row = item.row;
             const rowIndex = item.originalIndex;
@@ -763,6 +779,7 @@ const PoItems = ({
                 >
                   <input
                     type="number"
+                    step="any"
                     min="0"
                     className="w-full bg-transparent px-1 text-right table-data-input disabled:bg-transparent"
                     onFocus={(event) => {
@@ -805,6 +822,7 @@ const PoItems = ({
                 >
                   <input
                     type="number"
+                    step="any"
                     min="0"
                     className="w-full bg-transparent px-1 text-right table-data-input disabled:bg-transparent"
                     onFocus={(event) => {
@@ -896,41 +914,52 @@ const PoItems = ({
       </div>
 
       {contextMenu ? (
-        <div
-          style={{
-            position: "fixed",
-            top: `${contextMenu.mouseY - 20}px`,
-            left: `${contextMenu.mouseX + 20}px`,
-            boxShadow: "0px 0px 5px rgba(0,0,0,0.3)",
-            padding: "8px",
-            borderRadius: "4px",
-            zIndex: 1000,
-          }}
-          className="bg-gray-100"
-          onMouseLeave={handleCloseContextMenu}
-        >
-          <div className="flex flex-col gap-1">
-            <button
-              className="text-black text-[12px] text-left rounded px-1"
-              onClick={() => {
-                deleteRow(contextMenu.rowId);
-                deleteSelectedRows();
-                handleCloseContextMenu();
-              }}
-            >
-              Delete
-            </button>
-            <button
-              className="text-black text-[12px] text-left rounded px-1"
-              onClick={() => {
-                handleDeleteAllRows();
-                handleCloseContextMenu();
-              }}
-            >
-              Delete All
-            </button>
+        <>
+          <div
+            className="fixed inset-0 z-[999]"
+            onClick={handleCloseContextMenu}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              handleCloseContextMenu();
+            }}
+          />
+          <div
+            style={{
+              position: "fixed",
+              top: `${Math.min(contextMenu.mouseY, window.innerHeight - 80)}px`,
+              left: `${Math.min(contextMenu.mouseX, window.innerWidth - 120)}px`,
+              boxShadow:
+                "0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1)",
+              padding: "4px",
+              borderRadius: "4px",
+              zIndex: 1000,
+            }}
+            className="bg-white border border-gray-300 min-w-[100px]"
+          >
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                className="text-black hover:bg-gray-100 text-[12px] text-left rounded px-2 py-1 transition-colors"
+                onClick={() => {
+                  deleteRow(contextMenu.rowId);
+                  handleCloseContextMenu();
+                }}
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                className="text-black hover:bg-gray-100 text-[12px] text-left rounded px-2 py-1 transition-colors"
+                onClick={() => {
+                  handleDeleteAllRows();
+                  handleCloseContextMenu();
+                }}
+              >
+                Delete All
+              </button>
+            </div>
           </div>
-        </div>
+        </>
       ) : null}
     </>
   );
