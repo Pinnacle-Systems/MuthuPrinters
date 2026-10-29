@@ -73,6 +73,7 @@ model Company {
   bank                Bank[]
   machines            Machine[]
   ItemSubGroup        ItemSubGroup[]
+  rateQuotations      RateQuotation[]
 }
 
 model Subscription {
@@ -136,6 +137,7 @@ model Branch {
   Packing               Packing[]
   PackingControlPanel   PackingControlPanel[]
   SalesBillEntry        SalesBillEntry[]
+  rateQuotations        RateQuotation[]
 }
 
 model UserOnBranch {
@@ -252,6 +254,8 @@ model User {
   SalesReturnUpdatedBy     SalesReturn[]        @relation(name: "updatedBy")
   SalesBillEntryCreatedBy  SalesBillEntry[]     @relation(name: "createdBy")
   SalesBillEntryUpdatedBy  SalesBillEntry[]     @relation(name: "updatedBy")
+  RateQuotationCreatedBy   RateQuotation[]      @relation("rateQuotationCreatedBy")
+  RateQuotationUpdatedBy   RateQuotation[]      @relation("rateQuotationUpdatedBy")
 }
 
 model Employee {
@@ -326,6 +330,7 @@ model FinYear {
   purchaseInwards       PurchaseInward[]
   purchaseInwardReturns PurchaseInwardReturn[]
   purchaseCancels       PurchaseCancel[]
+  rateQuotations        RateQuotation[]
 }
 
 model EmployeeCategory {
@@ -543,6 +548,7 @@ model Party {
   SalesDelivery            SalesDelivery[]           @relation(name: "deliveryTo")
   SalesOrderDeliveryTo     SalesOrder[]              @relation(name: "deliveryTo")
   SalesBillDeliveryTo      SalesBillEntry[]          @relation(name: "deliveryTo")
+  rateQuotations           RateQuotation[]
 }
 
 model PartyBranch {
@@ -1113,6 +1119,7 @@ model StyleItem {
   PackingItems           PackingItems[]
   SalesReturnItems       SalesReturnItems[]
   SalesBillEntryItems    SalesBillEntryItems[]
+  rateQuotationItems     RateQuotationItems[]
 }
 
 model DeliveryChallan {
@@ -1348,6 +1355,7 @@ model Hsn {
   PackingItems           PackingItems[]
   SalesReturnItems       SalesReturnItems[]
   SalesBillEntryItems    SalesBillEntryItems[]
+  rateQuotationItems     RateQuotationItems[]
 }
 
 model BranchType {
@@ -1871,6 +1879,7 @@ model ItemGroup {
   SalesDeliveryItems     SalesDeliveryItems[]
   SalesReturnItems       SalesReturnItems[]
   SalesBillEntryItems    SalesBillEntryItems[]
+  rateQuotationItems     RateQuotationItems[]
 }
 
 model SizeTemplate {
@@ -3068,6 +3077,7 @@ model ItemSubGroup {
   SalesDeliveryItems   SalesDeliveryItems[]
   SalesReturnItems     SalesReturnItems[]
   SalesBillEntryItems  SalesBillEntryItems[]
+  rateQuotationItems   RateQuotationItems[]
 }
 
 model SalesOrder {
@@ -3459,4 +3469,42 @@ model MobileNotification {
   isViewed  Boolean?
   machineId Int?
   machine   Machine?  @relation(fields: [machineId], references: [id])
+}
+
+model RateQuotation {
+  id                 Int                  @id @default(autoincrement())
+  docId              String               @unique
+  docDate            DateTime?
+  userDate           DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  createdBy          User?                @relation("rateQuotationCreatedBy", fields: [createdById], references: [id])
+  createdById        Int?
+  updatedBy          User?                @relation("rateQuotationUpdatedBy", fields: [updatedById], references: [id])
+  updatedById        Int?
+  Branch             Branch?              @relation(fields: [branchId], references: [id])
+  branchId           Int?
+  Company            Company?             @relation(fields: [companyId], references: [id])
+  companyId          Int?
+  finYear            FinYear?             @relation(fields: [finYearId], references: [id])
+  finYearId          Int?
+  customer           Party?               @relation(fields: [customerId], references: [id])
+  customerId         Int?
+  rateQuotationItems RateQuotationItems[]
+}
+
+model RateQuotationItems {
+  id              Int           @id @default(autoincrement())
+  RateQuotation   RateQuotation @relation(fields: [rateQuotationId], references: [id], onDelete: Cascade)
+  rateQuotationId Int
+  itemGroupId     Int?
+  ItemGroup       ItemGroup?    @relation(fields: [itemGroupId], references: [id])
+  itemSubGroupId  Int?
+  ItemSubGroup    ItemSubGroup? @relation(fields: [itemSubGroupId], references: [id])
+  styleItemId     Int?
+  StyleItem       StyleItem?    @relation(fields: [styleItemId], references: [id])
+  hsnId           Int?
+  Hsn             Hsn?          @relation(fields: [hsnId], references: [id])
+  price           Float?
+  taxPercent      Float?
 }

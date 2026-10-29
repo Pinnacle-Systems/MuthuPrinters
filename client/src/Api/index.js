@@ -74,6 +74,7 @@ export const PROCESS_BILL_API = "processBill";
 export const SALES_DELIVERY_API = "salesDelivery";
 export const SALES_ORDER_API = "salesOrder";
 export const PACKING_API = "packing";
-export const PACKING_CONTROL = "packingControl"
-export const SALES_BILL_ENTRY_API = "salesBillEntry"
+export const PACKING_CONTROL = "packingControl";
+export const SALES_BILL_ENTRY_API = "salesBillEntry";
 
+export const RATE_QUOTATION_API = "rateQuotation";
