@@ -599,53 +599,53 @@ const ProformaInvoiceItems = ({
         </div>
       </Modal>
 
-      <div className="w-full h-full overflow-y-auto bg-white">
-        <table className=" table-fixed min-h-full bg-white w-full">
-          <thead className="bg-gray-200 text-gray-800 sticky top-0 z-10 text-[12px]">
+      <div className="w-full h-full overflow-auto bg-white">
+        <table className="w-full table-fixed border-separate border-spacing-0 border-t border-l border-gray-300 bg-white">
+          <thead className="sticky top-0 z-20 text-[12px]">
             <tr>
-              <th className="w-10 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-10 px-1 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 S.No
               </th>
-              <th className="w-36 px-2 py-2 text-center font-medium border border-gray-300">
+              <th className="w-36 px-2 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 Item Group
               </th>
-              <th className="w-36 px-2 py-2 text-center font-medium border border-gray-300">
+              <th className="w-36 px-2 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 Item Sub Group
               </th>
-              <th className="flex-1 px-2 py-2 text-center font-medium border border-gray-300">
+              <th className="w-72 px-2 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 Description of Goods<span className="text-red-500">*</span>
               </th>
-              <th className="w-28 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-28 px-1 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 HSN
               </th>
-              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-24 px-1 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 UOM
               </th>
-              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-24 px-1 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 Qty<span className="text-red-500">*</span>
               </th>
-              <th className="w-32 px-2 py-2 text-center font-medium border border-gray-300 ">
+              <th className="w-32 px-2 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 Label Width
               </th>
-              <th className="w-24 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-24 px-1 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 Dozen
               </th>
-              <th className="w-28 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-28 px-1 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 Price {isCurrencySymbol && `(${isCurrencySymbol})`}
                 <span className="text-red-500">*</span>
               </th>
-              <th className="w-28 px-1 py-2 text-center font-medium border border-gray-300">
+              <th className="w-28 px-1 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 Gross
               </th>
               {!isCustomerExport && (
-                <th className="w-12 px-1 py-2 text-center font-medium border border-gray-300">
+                <th className="w-12 px-1 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                   Tax
                 </th>
               )}
-              <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
+              <th className="w-16 px-2 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 Breakup
               </th>
-              <th className="w-16 px-2 py-2 text-center font-medium border border-gray-300">
+              <th className="w-12 px-1 py-2 text-center font-medium border-b border-r border-gray-300 bg-gray-200 sticky top-0">
                 Actions
               </th>
             </tr>
@@ -662,10 +662,10 @@ const ProformaInvoiceItems = ({
                     }
                   }}
                 >
-                  <td className="text-[11px] text-center border border-gray-300">
+                  <td className="text-[11px] text-center border-b border-r border-gray-300">
                     {index + 1}
                   </td>
-                  <td className="border border-gray-300 text-[11px] items-center">
+                  <td className="border-b border-r border-gray-300 text-[11px] items-center">
                     <FxSelectWithAdd
                       value={item.itemGroupId}
                       onChange={(val) =>
@@ -681,7 +681,7 @@ const ProformaInvoiceItems = ({
                       addNewModalWidth="w-[38%] h-[50%]"
                     />
                   </td>
-                  <td className="border border-gray-300 text-[11px] items-center">
+                  <td className="border-b border-r border-gray-300 text-[11px] items-center">
                     <FxSelectWithAdd
                       value={item.itemSubGroupId}
                       onChange={(val) =>
@@ -701,7 +701,7 @@ const ProformaInvoiceItems = ({
                       addNewModalWidth="w-[38%] h-[50%]"
                     />
                   </td>
-                  <td className="border border-gray-300">
+                  <td className="border-b border-r border-gray-300">
                     <FxSelectWithAdd
                       value={item.styleItemId}
                       onChange={(val) =>
@@ -726,23 +726,24 @@ const ProformaInvoiceItems = ({
                       nextRef={termsRef}
                     />
                   </td>
-                  <td className="border border-gray-300 text-[11px] px-2">
+                  <td className="border-b border-r border-gray-300 text-[11px] px-2">
                     <span className="">
                       {findFromList(item.hsnId, hsnList?.data, "name") || ""}
                     </span>
                   </td>
-                  <td className="border border-gray-300 text-[11px] px-2 text-left">
+                  <td className="border-b border-r border-gray-300 text-[11px] px-2 text-left">
                     <span>
                       {findFromList(item.uomId, uomList?.data, "name") || ""}
                     </span>
                   </td>
-                  <td className="text-[11px] border border-gray-300 text-right pr-2 font-medium">
+                  <td className="text-[11px] border-b border-r border-gray-300 text-right pr-2 font-medium">
                     {item.qty ? Number(item.qty) : ""}
                   </td>
-                  <td className="text-[11px] border border-gray-300 text-left pl-2">
+                  <td className="grid-editable-cell text-[11px] border-b border-r border-gray-300 text-left h-6 py-0">
                     <input
                       type="text"
-                      className="text-left w-full table-data-input"
+                      className="w-full h-full bg-transparent px-2 text-left border-0 outline-none focus:outline-none focus:ring-0 focus:border-0 !border-0 !outline-none !shadow-none disabled:bg-transparent text-[11px] leading-tight"
+                      style={{ border: "none", outline: "none", boxShadow: "none" }}
                       value={item?.labelWidth || ""}
                       onChange={(e) =>
                         handleInputChange(e.target.value, index, "labelWidth")
@@ -750,10 +751,11 @@ const ProformaInvoiceItems = ({
                       readOnly={readOnly}
                     />
                   </td>
-                  <td className="text-[11px] border border-gray-300 text-right">
+                  <td className="grid-editable-cell text-[11px] border-b border-r border-gray-300 text-right h-6 py-0">
                     <input
                       type="number"
-                      className="text-right px-1 w-full table-data-input"
+                      className="w-full h-full bg-transparent px-1 text-right border-0 outline-none focus:outline-none focus:ring-0 focus:border-0 !border-0 !outline-none !shadow-none disabled:bg-transparent text-[11px] leading-tight"
+                      style={{ border: "none", outline: "none", boxShadow: "none" }}
                       value={
                         focusedField === `dozen-${index}`
                           ? (item?.dozen ?? "")
@@ -780,50 +782,49 @@ const ProformaInvoiceItems = ({
                       disabled={true}
                     />
                   </td>
-                  <td className="text-[11px] border border-gray-300 text-right">
-                    <div className="relative w-full">
-                      <input
-                        type={
-                          focusedField === `price-${index}` ? "number" : "text"
+                  <td className="grid-editable-cell text-[11px] border-b border-r border-gray-300 text-right h-6 py-0">
+                    <input
+                      type={
+                        focusedField === `price-${index}` ? "number" : "text"
+                      }
+                      step="0.01"
+                      className="w-full h-full bg-transparent px-2 text-right border-0 outline-none focus:outline-none focus:ring-0 focus:border-0 !border-0 !outline-none !shadow-none disabled:bg-transparent text-[11px] leading-tight"
+                      style={{ border: "none", outline: "none", boxShadow: "none" }}
+                      value={
+                        focusedField === `price-${index}`
+                          ? (item.price ?? "")
+                          : item.price
+                            ? formatCurrencyAmount(
+                                item.price,
+                                currencyCode || isCurrencySymbol,
+                              )
+                            : ""
+                      }
+                      onChange={(e) =>
+                        handleInputChange(e.target.value, index, "price")
+                      }
+                      readOnly={readOnly}
+                      onFocus={(e) => {
+                        e.target.select();
+                        setFocusedField(`price-${index}`);
+                      }}
+                      onBlur={(e) => {
+                        const num = parseFloat(e.target.value);
+                        handleInputChange(
+                          num ? Number(num).toFixed(2) : "",
+                          index,
+                          "price",
+                        );
+                        setFocusedField(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && index === items.length - 1) {
+                          addRow();
                         }
-                        step="0.01"
-                        className="text-right px-3 w-full table-data-input"
-                        value={
-                          focusedField === `price-${index}`
-                            ? (item.price ?? "")
-                            : item.price
-                              ? formatCurrencyAmount(
-                                  item.price,
-                                  currencyCode || isCurrencySymbol,
-                                )
-                              : ""
-                        }
-                        onChange={(e) =>
-                          handleInputChange(e.target.value, index, "price")
-                        }
-                        readOnly={readOnly}
-                        onFocus={(e) => {
-                          e.target.select();
-                          setFocusedField(`price-${index}`);
-                        }}
-                        onBlur={(e) => {
-                          const num = parseFloat(e.target.value);
-                          handleInputChange(
-                            num ? Number(num).toFixed(2) : "",
-                            index,
-                            "price",
-                          );
-                          setFocusedField(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && index === items.length - 1) {
-                            addRow();
-                          }
-                        }}
-                      />
-                    </div>
+                      }}
+                    />
                   </td>
-                  <td className="text-[11px] text-right px-1 border border-gray-300 bg-gray-50 bg-transparent gap-x-2">
+                  <td className="text-[11px] text-right px-1 border-b border-r border-gray-300 bg-gray-50 bg-transparent gap-x-2">
                     <span className="pr-1">
                       {isCurrencySymbol && item.styleItemId
                         ? ` ${isCurrencySymbol}`
@@ -838,7 +839,7 @@ const ProformaInvoiceItems = ({
                   </td>
 
                   {!isCustomerExport && (
-                    <td className="border border-gray-300 text-center text-[11px]">
+                    <td className="border-b border-r border-gray-300 text-center text-[11px]">
                       <button
                         disabled={!item.styleItemId}
                         className=" text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
@@ -859,7 +860,7 @@ const ProformaInvoiceItems = ({
                     </td>
                   )}
 
-                  <td className="border border-gray-300 text-center text-[11px]">
+                  <td className="border-b border-r border-gray-300 text-center text-[11px]">
                     <button
                       className=" text-indigo-600 w-full hover:text-indigo-800 disabled:text-gray-300 table-data-input"
                       onClick={() => setActiveModalRowIndex(index)}
@@ -869,7 +870,7 @@ const ProformaInvoiceItems = ({
                     </button>
                   </td>
 
-                  <td className="w-12 border border-gray-300 align-top pt-1 bg-gray-50">
+                  <td className="w-12 border-b border-r border-gray-300 align-top pt-1 bg-gray-50">
                     {!readOnly && (
                       <div className="flex items-center justify-center">
                         <button
@@ -887,35 +888,35 @@ const ProformaInvoiceItems = ({
               );
             })}
           </tbody>
-          <tfoot className="sticky bottom-0 z-10 shadow-[0_-1px_3px_rgba(0,0,0,0.1)]">
+          <tfoot className="sticky bottom-0 z-20 shadow-[0_-1px_3px_rgba(0,0,0,0.1)]">
             <tr className="bg-gray-200 h-7 font-bold text-gray-800 text-[12px]">
               <td
-                className="text-right px-2 border border-gray-300"
+                className="text-right px-2 border-b border-r border-gray-300 bg-gray-200 sticky bottom-0"
                 colSpan={6}
               >
                 Total
               </td>
-              <td className="text-right px-1 border border-gray-300">
+              <td className="text-right px-1 border-b border-r border-gray-300 bg-gray-200 sticky bottom-0">
                 {items
                   ?.reduce((sum, i) => sum + (parseFloat(i.qty) || 0), 0)
                   .toFixed(3)}
               </td>
               <td
-                className="text-right px-2 border border-gray-300"
+                className="text-right px-2 border-b border-r border-gray-300 bg-gray-200 sticky bottom-0"
                 colSpan={1}
               />
-              <td className="text-right px-1  border border-gray-300">
+              <td className="text-right px-1 border-b border-r border-gray-300 bg-gray-200 sticky bottom-0">
                 {items
                   ?.reduce((sum, i) => sum + (parseFloat(i.dozen) || 0), 0)
                   .toFixed(2)}
               </td>
-              <td className="text-right px-1  border border-gray-300">
+              <td className="text-right px-1 border-b border-r border-gray-300 bg-gray-200 sticky bottom-0">
                 {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
                 {items
                   ?.reduce((sum, i) => sum + (parseFloat(i.price) || 0), 0)
                   .toFixed(2)}
               </td>
-              <td className="text-right px-1 border border-gray-300 text-black">
+              <td className="text-right px-1 border-b border-r border-gray-300 bg-gray-200 sticky bottom-0 text-black">
                 {isCurrencySymbol ? ` ${isCurrencySymbol}` : ""}
                 {formatCurrencyAmount(
                   items?.reduce(
@@ -927,16 +928,16 @@ const ProformaInvoiceItems = ({
               </td>
               {!isCustomerExport && (
                 <td
-                  className="text-right px-2 border border-gray-300"
+                  className="text-right px-2 border-b border-r border-gray-300 bg-gray-200 sticky bottom-0"
                   colSpan={1}
                 />
               )}
               <td
-                className="text-right px-2 border border-gray-300"
+                className="text-right px-2 border-b border-r border-gray-300 bg-gray-200 sticky bottom-0"
                 colSpan={1}
               />
               <td
-                className="text-right px-2 border border-gray-300"
+                className="text-right px-2 border-b border-r border-gray-300 bg-gray-200 sticky bottom-0"
                 colSpan={1}
               />
             </tr>

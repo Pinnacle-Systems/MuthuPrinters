@@ -32,7 +32,7 @@ const RateQuotationReport = ({
     currentBranch?.data?.proformaInvoiceApprovalEnabled || false;
   const showApprovalColumn = isProformaEnabled && isApprovalEnabled;
 
-  const [updateProformaInvoice] = useUpdateRateQuotationMutation();
+  const [updateRateQuotation] = useUpdateRateQuotationMutation();
   const [approvingId, setApprovingId] = useState(null);
 
   const [dataPerPage, setDataPerPage] = useState("10");
@@ -289,7 +289,7 @@ const RateQuotationReport = ({
                               const fd = new FormData();
                               fd.append("approvalStatus", newStatus);
                               try {
-                                await updateProformaInvoice({
+                                await updateRateQuotation({
                                   id: item.id,
                                   body: fd,
                                 }).unwrap();

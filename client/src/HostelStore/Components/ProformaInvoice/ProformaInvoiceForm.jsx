@@ -133,7 +133,6 @@ const ProformaInvoiceForm = ({
   const [carriageTax, setCarriageTax] = useState("");
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
   const childRecord = useRef(0);
-  console.log(availableVersions, selectedQuoteVersion, "selectedQuoteVersion");
 
   const customerRef = useRef(null);
   const termsRef = useRef(null);
@@ -981,7 +980,7 @@ const ProformaInvoiceForm = ({
                   addNewLabel="+ Add New Customer"
                   childComponent={PartyMaster}
                   addNewModalWidth="w-[90%] h-[95%]"
-                  disabled={readOnly || childRecord.current > 0}
+                  disabled={readOnly || childRecord.current > 0 || id}
                   openOnFocus={true}
                   // autoFocus={true}
                   ref={customerRef}
@@ -1093,7 +1092,7 @@ const ProformaInvoiceForm = ({
   }, [supplierData]);
 
   const enrichedData = useMemo(() => {
-    const filteredItems = items.filter((i) => i.styleItemId);
+    const filteredItems = items?.filter((i) => i?.styleItemId);
     if (!filteredItems.length)
       return {
         items: [],
@@ -1199,7 +1198,7 @@ const ProformaInvoiceForm = ({
             valueContainerClassName: "w-full",
             renderValue: () => {
               const taxTotals = !isCustomerExport
-                ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
+                ? (enrichedData.slabBreakup || [])?.reduce((acc, curr) => {
                     const type = curr?.tax?.split(" ")[0];
                     acc[type] = (acc[type] || 0) + curr.amount;
                     return acc;
@@ -1268,7 +1267,7 @@ const ProformaInvoiceForm = ({
                         </div>
                       </div>
                     ) : (
-                      Object.keys(taxTotals).map((type) => (
+                      Object.keys(taxTotals)?.map((type) => (
                         <div
                           key={type}
                           className="flex items-center justify-between w-full max-w-[210px]"
@@ -1307,24 +1306,24 @@ const ProformaInvoiceForm = ({
 
                     <div className="flex items-center justify-between w-full max-w-[210px]">
                       <div className="flex justify-between w-[130px] text-slate-800 font-bold">
-                        <span>Net Amount</span>
+                        <span>Total Amount</span>
                         <span>:</span>
                       </div>
                       <span className="font-bold text-indigo-700 text-right w-[65px]">
                         {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                         {formatCurrencyAmount(
                           !isCustomerExport
-                            ? enrichedData.net
-                            : (enrichedData.items?.reduce(
+                            ? enrichedData?.net
+                            : (enrichedData?.items?.reduce(
                                 (sum, item) =>
-                                  sum + (parseFloat(item.amount) || 0),
+                                  sum + (parseFloat(item?.amount) || 0),
                                 0,
                               ) || 0) -
-                                (enrichedData.itemDiscount +
-                                  enrichedData.overallDiscount >
+                                (enrichedData?.itemDiscount +
+                                  enrichedData?.overallDiscount >
                                 0
-                                  ? enrichedData.itemDiscount +
-                                    enrichedData.overallDiscount
+                                  ? enrichedData?.itemDiscount +
+                                    enrichedData?.overallDiscount
                                   : 0),
                           currencyCode || isCurrencySymbol,
                         )}
@@ -1350,7 +1349,7 @@ const ProformaInvoiceForm = ({
 
                     <div className="flex items-center justify-between w-full max-w-[210px]">
                       <div className="flex justify-between w-[130px] text-slate-800 font-bold">
-                        <span>Grand Total</span>
+                        <span>Net Amount</span>
                         <span>:</span>
                       </div>
                       <span className="font-bold text-indigo-700 text-right w-[65px]">
@@ -1482,8 +1481,6 @@ const ProformaInvoiceForm = ({
       </div>
     </>
   );
-
-  console.log(items, "ITEMS");
 
   return (
     <>
