@@ -755,6 +755,7 @@ const SaleOrderForm = ({
       .map((i) => ({
         ...i,
         qty: i.orderQty,
+        isCustomerExport,
       }));
     if (!filteredItems.length)
       return {
@@ -766,7 +767,16 @@ const SaleOrderForm = ({
         roundOff: 0,
       };
 
-    return calculateTaxWithHSNBreakupAndInsertIntoPoItems(filteredItems, isSupplierOutside, discountType, discountValue, conversionType === "DOZEN" ? true : false,
+    return calculateTaxWithHSNBreakupAndInsertIntoPoItems(
+      filteredItems,
+      isSupplierOutside,
+      discountType,
+      discountValue,
+      conversionType === "DOZEN" ? true : false,
+      "qty",
+      null,
+      null,
+      isCustomerExport,
     );
   }, [
     orderItems,
@@ -774,6 +784,7 @@ const SaleOrderForm = ({
     discountType,
     discountValue,
     conversionType,
+    isCustomerExport,
   ]);
   const handleConversionChange = (newVal) => {
     setConversionType(newVal);

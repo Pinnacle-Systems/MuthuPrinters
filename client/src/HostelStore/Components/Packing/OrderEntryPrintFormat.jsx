@@ -1079,12 +1079,17 @@ const OrderEntryPrintFormat = ({
                         )}
                         {!isExport &&
                           totals?.roundOff !== 0 &&
-                          totals?.roundOff !== undefined && (
+                          totals?.roundOff !== undefined &&
+                          Number(totals?.roundOff) !== 0 && (
                             <View style={styles.summaryRow}>
                               <Text style={styles.summaryLabel}>Round Off</Text>
                               <Text style={styles.summaryColon}>:</Text>
                               <Text style={styles.summaryValue}>
-                                {totals?.roundOff > 0 ? "+" : ""}{" "}
+                                {Number(totals?.roundOff) < 0
+                                  ? "-"
+                                  : Number(totals?.roundOff) > 0
+                                  ? "+"
+                                  : ""}{" "}
                                 {currencySymbol}{" "}
                                 {formatCurrencyAmount(
                                   Math.abs(totals?.roundOff || 0),

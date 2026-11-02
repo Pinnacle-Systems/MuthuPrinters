@@ -133,7 +133,6 @@ const ProformaInvoiceForm = ({
   const [carriageTax, setCarriageTax] = useState("");
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
   const childRecord = useRef(0);
-  console.log(availableVersions, selectedQuoteVersion, "selectedQuoteVersion");
 
   const customerRef = useRef(null);
   const termsRef = useRef(null);
@@ -981,7 +980,7 @@ const ProformaInvoiceForm = ({
                   addNewLabel="+ Add New Customer"
                   childComponent={PartyMaster}
                   addNewModalWidth="w-[90%] h-[95%]"
-                  disabled={readOnly || childRecord.current > 0}
+                  disabled={readOnly || childRecord.current > 0 || id}
                   openOnFocus={true}
                   // autoFocus={true}
                   ref={customerRef}
@@ -1093,7 +1092,12 @@ const ProformaInvoiceForm = ({
   }, [supplierData]);
 
   const enrichedData = useMemo(() => {
-    const filteredItems = items.filter((i) => i.styleItemId);
+    const filteredItems = items
+      ?.filter((i) => i?.styleItemId)
+      ?.map((i) => ({
+        ...i,
+        isCustomerExport,
+      }));
     if (!filteredItems.length)
       return {
         items: [],
@@ -1112,8 +1116,19 @@ const ProformaInvoiceForm = ({
       discountType,
       discountValue,
       conversionType === "DOZEN" ? true : false,
+      "qty",
+      null,
+      null,
+      isCustomerExport,
     );
-  }, [items, isSupplierOutside, discountType, discountValue, conversionType]);
+  }, [
+    items,
+    isSupplierOutside,
+    discountType,
+    discountValue,
+    conversionType,
+    isCustomerExport,
+  ]);
 
   const versionDropdown = (
     <div className="flex items-center gap-2 ml-2">
@@ -1181,8 +1196,10 @@ const ProformaInvoiceForm = ({
           <span className="block text-center w-full">Summary</span>
         }
         termsRef={termsRef}
-        sectionColClass="md:col-span-4"
-        summaryColClass="md:col-span-4"
+        sectionColClass="md:col-span-2"
+        termsColClass="md:col-span-3"
+        remarksColClass="md:col-span-2"
+        summaryColClass="md:col-span-7"
         termValue={termsId}
         onTermChange={(value) => setTermsId(value)}
         termOptions={
@@ -1199,23 +1216,41 @@ const ProformaInvoiceForm = ({
             valueContainerClassName: "w-full",
             renderValue: () => {
               const taxTotals = !isCustomerExport
-                ? (enrichedData.slabBreakup || []).reduce((acc, curr) => {
+                ? (enrichedData.slabBreakup || [])?.reduce((acc, curr) => {
                     const type = curr?.tax?.split(" ")[0];
                     acc[type] = (acc[type] || 0) + curr.amount;
                     return acc;
                   }, {})
                 : {};
 
+              const totalTax = Object.values(taxTotals).reduce(
+                (sum, val) => sum + (Number(val) || 0),
+                0,
+              );
+              const taxable = Number(enrichedData.taxable || 0);
+              const totalAmount = Number((taxable + totalTax).toFixed(2));
+              const carriageAmt =
+                !isNaN(parseFloat(carriageFinalAmt)) && carriageFinalAmt !== ""
+                  ? parseFloat(carriageFinalAmt)
+                  : 0;
+              const subtotalBeforeRound = Number(
+                (totalAmount + carriageAmt).toFixed(2),
+              );
+              const netAmount = Math.round(subtotalBeforeRound);
+              const roundOff = Number(
+                (netAmount - subtotalBeforeRound).toFixed(2),
+              );
+
               return (
-                <div className="grid grid-cols-2 w-full gap-x-4 gap-y-1">
-                  {/* Left Column */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[auto_auto_auto_auto] w-full gap-x-4 lg:gap-x-6 gap-y-1 text-[12px] justify-between max-w-[760px] mx-auto">
+                  {/* Column 1: Discounts & Taxable Amount */}
                   <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex justify-between w-[95px] text-slate-800 shrink-0">
                         <span>Total Discount</span>
                         <span>:</span>
                       </div>
-                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                      <span className="font-medium text-slate-800 text-right min-w-[65px] shrink-0">
                         {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                         {formatCurrencyAmount(
                           enrichedData.itemDiscount +
@@ -1229,12 +1264,12 @@ const ProformaInvoiceForm = ({
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex justify-between w-[95px] text-slate-800 shrink-0">
                         <span>Taxable Amount</span>
                         <span>:</span>
                       </div>
-                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                      <span className="font-medium text-slate-800 text-right min-w-[65px] shrink-0">
                         {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                         {formatCurrencyAmount(
                           enrichedData.taxable || 0,
@@ -1242,133 +1277,140 @@ const ProformaInvoiceForm = ({
                         )}
                       </span>
                     </div>
+                  </div>
 
+                  {/* Column 2: Taxes (CGST / SGST / IGST) */}
+                  <div className="flex flex-col gap-1">
                     {taxTotals.CGST !== undefined &&
                     taxTotals.SGST !== undefined ? (
-                      <div className="flex items-center justify-between w-full max-w-[210px]">
-                        <div className="flex items-center gap-1">
-                          <span className="text-slate-800 w-[32px]">CGST</span>
-                          <span className="text-slate-800">:</span>
-                          <span className="font-medium text-slate-800">
+                      <>
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex justify-between w-[45px] text-slate-800 shrink-0">
+                            <span>CGST</span>
+                            <span>:</span>
+                          </div>
+                          <span className="font-medium text-slate-800 text-right min-w-[55px] shrink-0">
+                            {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                             {formatCurrencyAmount(
                               taxTotals.CGST,
                               currencyCode || isCurrencySymbol,
                             )}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-slate-800 w-[32px]">SGST</span>
-                          <span className="text-slate-800">:</span>
-                          <span className="font-medium text-slate-800 text-right">
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex justify-between w-[45px] text-slate-800 shrink-0">
+                            <span>SGST</span>
+                            <span>:</span>
+                          </div>
+                          <span className="font-medium text-slate-800 text-right min-w-[55px] shrink-0">
+                            {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                             {formatCurrencyAmount(
                               taxTotals.SGST,
                               currencyCode || isCurrencySymbol,
                             )}
                           </span>
                         </div>
-                      </div>
+                      </>
+                    ) : Object.keys(taxTotals).length > 0 ? (
+                      <>
+                        {Object.keys(taxTotals).map((type) => (
+                          <div
+                            key={type}
+                            className="flex items-center gap-1.5"
+                          >
+                            <div className="flex justify-between w-[45px] text-slate-800 shrink-0">
+                              <span>{type}</span>
+                              <span>:</span>
+                            </div>
+                            <span className="font-medium text-slate-800 text-right min-w-[55px] shrink-0">
+                              {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                              {formatCurrencyAmount(
+                                taxTotals[type],
+                                currencyCode || isCurrencySymbol,
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                        {Object.keys(taxTotals).length === 1 && (
+                          <div className="h-[18px]" />
+                        )}
+                      </>
                     ) : (
-                      Object.keys(taxTotals).map((type) => (
-                        <div
-                          key={type}
-                          className="flex items-center justify-between w-full max-w-[210px]"
-                        >
-                          <div className="flex justify-between w-[130px] text-slate-800">
-                            <span>{type}</span>
+                      <>
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex justify-between w-[45px] text-slate-800 shrink-0">
+                            <span>Tax</span>
                             <span>:</span>
                           </div>
-                          <span className="font-medium text-slate-800 text-right w-[65px]">
+                          <span className="font-medium text-slate-800 text-right min-w-[55px] shrink-0">
                             {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                             {formatCurrencyAmount(
-                              taxTotals[type],
+                              0,
                               currencyCode || isCurrencySymbol,
                             )}
                           </span>
                         </div>
-                      ))
+                        <div className="h-[18px]" />
+                      </>
                     )}
                   </div>
 
-                  {/* Right Column */}
+                  {/* Column 3: Total Amount & Carriage Charges */}
                   <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
-                        <span>Round Off</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex justify-between w-[105px] text-slate-800 shrink-0">
+                        <span>Total Amount</span>
                         <span>:</span>
                       </div>
-                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                      <span className="font-medium text-slate-800 text-right min-w-[55px] shrink-0">
                         {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                         {formatCurrencyAmount(
-                          enrichedData.roundOff || 0,
+                          totalAmount,
                           currencyCode || isCurrencySymbol,
                         )}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800 font-bold">
-                        <span>Net Amount</span>
-                        <span>:</span>
-                      </div>
-                      <span className="font-bold text-indigo-700 text-right w-[65px]">
-                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                        {formatCurrencyAmount(
-                          !isCustomerExport
-                            ? enrichedData.net
-                            : (enrichedData.items?.reduce(
-                                (sum, item) =>
-                                  sum + (parseFloat(item.amount) || 0),
-                                0,
-                              ) || 0) -
-                                (enrichedData.itemDiscount +
-                                  enrichedData.overallDiscount >
-                                0
-                                  ? enrichedData.itemDiscount +
-                                    enrichedData.overallDiscount
-                                  : 0),
-                          currencyCode || isCurrencySymbol,
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex justify-between w-[105px] text-slate-800 shrink-0">
                         <span>Carriage Charges</span>
                         <span>:</span>
                       </div>
-                      <span className="font-medium text-slate-800 text-right w-[65px]">
+                      <span className="font-medium text-slate-800 text-right min-w-[55px] shrink-0">
                         {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
-                        {!isNaN(parseFloat(carriageFinalAmt)) &&
-                        carriageFinalAmt !== ""
-                          ? formatCurrencyAmount(
-                              carriageFinalAmt,
-                              currencyCode || isCurrencySymbol,
-                            )
-                          : "0.00"}
+                        {formatCurrencyAmount(
+                          carriageAmt,
+                          currencyCode || isCurrencySymbol,
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Column 4: Round Off & Net Amount */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex justify-between w-[85px] text-slate-800 shrink-0">
+                        <span>Round Off</span>
+                        <span>:</span>
+                      </div>
+                      <span className="font-medium text-slate-800 text-right min-w-[65px] shrink-0">
+                        {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
+                        {formatCurrencyAmount(
+                          roundOff,
+                          currencyCode || isCurrencySymbol,
+                        )}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between w-full max-w-[210px]">
-                      <div className="flex justify-between w-[130px] text-slate-800 font-bold">
-                        <span>Grand Total</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex justify-between w-[85px] text-slate-800 font-bold shrink-0">
+                        <span>Net Amount</span>
                         <span>:</span>
                       </div>
-                      <span className="font-bold text-indigo-700 text-right w-[65px]">
+                      <span className="font-bold text-indigo-700 text-right min-w-[65px] shrink-0">
                         {isCurrencySymbol ? isCurrencySymbol : ""}{" "}
                         {formatCurrencyAmount(
-                          (!isCustomerExport
-                            ? enrichedData.net
-                            : (enrichedData.items?.reduce(
-                                (sum, item) =>
-                                  sum + (parseFloat(item.amount) || 0),
-                                0,
-                              ) || 0) -
-                              (enrichedData.itemDiscount +
-                                enrichedData.overallDiscount >
-                              0
-                                ? enrichedData.itemDiscount +
-                                  enrichedData.overallDiscount
-                                : 0)) + (parseFloat(carriageFinalAmt) || 0),
+                          netAmount,
                           currencyCode || isCurrencySymbol,
                         )}
                       </span>
@@ -1482,8 +1524,6 @@ const ProformaInvoiceForm = ({
       </div>
     </>
   );
-
-  console.log(items, "ITEMS");
 
   return (
     <>

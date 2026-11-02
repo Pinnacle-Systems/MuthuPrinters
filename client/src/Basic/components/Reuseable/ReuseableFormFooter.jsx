@@ -168,11 +168,11 @@ const ReusableFormFooter = ({
                         key={index}
                         className={[
                             "flex h-full flex-col rounded-md border border-slate-200 bg-white p-1.5 shadow-sm",
-                            stacked ? "" : sectionColClass,
+                            stacked ? "" : sec.colClass || sectionColClass,
                         ].join(" ")}
                     >
                         <div className="flex h-full flex-col gap-1">
-                            <div className="mb-1 flex items-center justify-between gap-2">
+                            <div className="mb-1 flex items-center justify-between gap-1 flex-wrap">
                                 <h2 className="text-[12px] font-bold text-slate-700">
                                     {sec.title}
                                 </h2>

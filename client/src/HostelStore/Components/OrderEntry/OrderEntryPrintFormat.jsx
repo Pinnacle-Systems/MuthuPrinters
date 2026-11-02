@@ -374,7 +374,6 @@ const OrderEntryPrintFormat = ({
   carriageFinalAmt,
 }) => {
   if (!data) return null;
-  console.log("data", data);
 
   const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
   let currencySymbol = isCurrencySymbol || currencyCode || "Rs.";
@@ -427,10 +426,18 @@ const OrderEntryPrintFormat = ({
   })();
 
   const taxableTotal = totals?.taxable || 0;
-
   const carriageCharge = parseFloat(carriageFinalAmt) || 0;
-  const grandTotalExport = taxableTotal + carriageCharge;
-  const netAmountDomestic = (totals?.net || 0) + carriageCharge;
+  const totalTaxAmt = !isExport
+    ? consolidatedTaxSlabs.reduce((s, b) => s + (b.amount || 0), 0)
+    : 0;
+  const totalAmount = parseFloat((taxableTotal + totalTaxAmt).toFixed(2));
+  const subtotalBeforeRound = parseFloat(
+    (totalAmount + carriageCharge).toFixed(2),
+  );
+  const finalNetAmount = Math.round(subtotalBeforeRound);
+  const roundOffAmt = parseFloat(
+    (finalNetAmount - subtotalBeforeRound).toFixed(2),
+  );
 
   const orderItems = (data?.orderItems || []).filter(
     (item) => item.styleItemId,
@@ -497,7 +504,11 @@ const OrderEntryPrintFormat = ({
         return (
           <View key={idx} style={{ marginBottom: 4 }}>
             {styleName ? (
-              <Text style={{ textAlign: "left", fontSize: 7, fontWeight: "bold" }}>{styleName}</Text>
+              <Text
+                style={{ textAlign: "left", fontSize: 7, fontWeight: "bold" }}
+              >
+                {styleName}
+              </Text>
             ) : null}
             {sizesText ? (
               <Text style={{ fontSize: 6.5, color: "#555", marginTop: 2 }}>
@@ -535,7 +546,6 @@ const OrderEntryPrintFormat = ({
     );
   };
   const bank = data?.Bank || {};
-  console.log(bank, "bank");
 
   const getAmountInWords = (intVal, decVal, currCode) => {
     const intWords = numberToWords
@@ -561,7 +571,7 @@ const OrderEntryPrintFormat = ({
     }
   };
 
-  const finalAmountForWords = isExport ? grandTotalExport : netAmountDomestic;
+  const finalAmountForWords = finalNetAmount;
   const netInt = Math.floor(finalAmountForWords);
   const netDecimal = Math.round((finalAmountForWords - netInt) * 100);
   const amountWords = getAmountInWords(netInt, netDecimal, currencyCode);
@@ -781,7 +791,7 @@ const OrderEntryPrintFormat = ({
                             fontSize: 7.5,
                             fontWeight: "bold",
                             color: "#1a1a2e",
-                            marginBottom: 2
+                            marginBottom: 2,
                           }}
                         >
                           {forceWrap(
@@ -1090,19 +1100,22 @@ const OrderEntryPrintFormat = ({
                             </Text>
                           </View>
                         )}
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>
-                            {isExport ? "Net Amount" : "Taxable Amount"}
-                          </Text>
-                          <Text style={styles.summaryColon}>:</Text>
-                          <Text style={styles.summaryValue}>
-                            {currencySymbol}{" "}
-                            {formatCurrencyAmount(
-                              taxableTotal,
-                              currencyCode || currencySymbol,
-                            )}
-                          </Text>
-                        </View>
+                        {!isExport && (
+                          <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>
+                              Taxable Amount
+                            </Text>
+                            <Text style={styles.summaryColon}>:</Text>
+                            <Text style={styles.summaryValue}>
+                              {currencySymbol}{" "}
+                              {formatCurrencyAmount(
+                                taxableTotal,
+                                currencyCode || currencySymbol,
+                              )}
+                            </Text>
+                          </View>
+                        )}
+
                         {!isExport &&
                           consolidatedTaxSlabs.map((slab) => (
                             <View key={slab.tax} style={styles.summaryRow}>
@@ -1119,35 +1132,18 @@ const OrderEntryPrintFormat = ({
                               </Text>
                             </View>
                           ))}
-                        {!isExport &&
-                          totals?.roundOff !== 0 &&
-                          totals?.roundOff !== undefined && (
-                            <View style={styles.summaryRow}>
-                              <Text style={styles.summaryLabel}>Round Off</Text>
-                              <Text style={styles.summaryColon}>:</Text>
-                              <Text style={styles.summaryValue}>
-                                {totals?.roundOff > 0 ? "+" : ""}{" "}
-                                {currencySymbol}{" "}
-                                {formatCurrencyAmount(
-                                  Math.abs(totals?.roundOff || 0),
-                                  currencyCode || currencySymbol,
-                                )}
-                              </Text>
-                            </View>
-                          )}
-                        {!isExport && (
-                          <View style={styles.summaryRow}>
-                            <Text style={[styles.summaryLabel, { fontFamily: "Helvetica-Bold" }]}>Net Amount</Text>
-                            <Text style={styles.summaryColon}>:</Text>
-                            <Text style={[styles.summaryValue, { fontFamily: "Helvetica-Bold" }]}>
-                              {currencySymbol}{" "}
-                              {formatCurrencyAmount(
-                                netAmountDomestic - carriageCharge,
-                                currencyCode || currencySymbol,
-                              )}
-                            </Text>
-                          </View>
-                        )}
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>Total Amount</Text>
+                          <Text style={styles.summaryColon}>:</Text>
+                          <Text style={styles.summaryValue}>
+                            {currencySymbol}{" "}
+                            {formatCurrencyAmount(
+                              totalAmount,
+                              currencyCode || currencySymbol,
+                            )}
+                          </Text>
+                        </View>
+
                         {carriageCharge > 0 && (
                           <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>
@@ -1163,6 +1159,21 @@ const OrderEntryPrintFormat = ({
                             </Text>
                           </View>
                         )}
+
+                        {roundOffAmt !== 0 && (
+                          <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>Round Off</Text>
+                            <Text style={styles.summaryColon}>:</Text>
+                            <Text style={styles.summaryValue}>
+                              {roundOffAmt < 0 ? "-" : "+"} {currencySymbol}{" "}
+                              {formatCurrencyAmount(
+                                Math.abs(roundOffAmt),
+                                currencyCode || currencySymbol,
+                              )}
+                            </Text>
+                          </View>
+                        )}
+
                         <View
                           style={[
                             styles.summaryRow,
@@ -1186,22 +1197,29 @@ const OrderEntryPrintFormat = ({
                               },
                             ]}
                           >
-                            Grand Total
+                            Net Amount
                           </Text>
                           <Text
-                            style={[styles.summaryColon, { color: "#ccc", fontFamily: "Helvetica-Bold" }]}
+                            style={[
+                              styles.summaryColon,
+                              { color: "#ccc", fontFamily: "Helvetica-Bold" },
+                            ]}
                           >
                             :
                           </Text>
                           <Text
                             style={[
                               styles.summaryValue,
-                              { fontSize: 9, color: "#fff", fontFamily: "Helvetica-Bold" },
+                              {
+                                fontSize: 9,
+                                color: "#fff",
+                                fontFamily: "Helvetica-Bold",
+                              },
                             ]}
                           >
                             {currencySymbol}{" "}
                             {formatCurrencyAmount(
-                              isExport ? grandTotalExport : netAmountDomestic,
+                              finalNetAmount,
                               currencyCode || currencySymbol,
                             )}
                           </Text>
@@ -1210,15 +1228,12 @@ const OrderEntryPrintFormat = ({
                     </View>
                   </View>
 
-                  {(isExport ? grandTotalExport : netAmountDomestic) > 0 && (
+                  {finalNetAmount > 0 && (
                     <View style={styles.wordsBar}>
                       <Text style={styles.wordsText}>
                         Amount in Words (
                         {(currencyCode || currencySymbol || "").trim()}
-                        ):{" "}
-                        <Text style={styles.wordsValue}>
-                          {amountWords}
-                        </Text>
+                        ): <Text style={styles.wordsValue}>{amountWords}</Text>
                       </Text>
                     </View>
                   )}

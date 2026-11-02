@@ -62,3 +62,5 @@ export { default as SalesDelivery } from "./SalesDelivery/SalesDelivery";
 export { default as Packing } from "./Packing/index";
 export { default as SaleOrder } from "./SaleOrder/index";
 export { default as OrderEntryReport } from "./OrderEntryReport/OrderEntryReport";
+
+export { default as RateQuotation } from "./RateQuotation/RateQuotation";

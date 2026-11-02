@@ -118,9 +118,11 @@ const PoSummary = ({
                 type="text"
                 name="value"
                 className="h-7 w-full text-right"
-                value={(isCustomerExport
+                value={(totals?.net !== undefined
+                  ? totals?.net
+                  : isCustomerExport
                   ? totals?.taxable
-                  : totals?.net
+                  : 0
                 ).toFixed(2)}
               />
             </td>
@@ -133,7 +135,7 @@ const PoSummary = ({
                 type="text"
                 name="value"
                 className="h-7 w-full text-right"
-                value={parseFloat(totals?.roundOff).toFixed(2)}
+                value={parseFloat(totals?.roundOff || 0).toFixed(2)}
               />
             </td>
           </tr>

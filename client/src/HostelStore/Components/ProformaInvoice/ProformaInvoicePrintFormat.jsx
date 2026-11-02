@@ -409,7 +409,6 @@ const ProformaInvoicePrintFormat = ({
   sizeList,
 }) => {
   if (!data) return null;
-  console.log(data, "data");
 
   const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
   let currencySymbol =
@@ -441,7 +440,6 @@ const ProformaInvoicePrintFormat = ({
       (i.pistyleBreakups && i.pistyleBreakups.length > 0) ||
       i.itemGroupId,
   );
-  console.log(allItems, "allItems");
 
   const renderStyleBreakups = (row) => {
     // Merge DB state and form state
@@ -536,13 +534,6 @@ const ProformaInvoicePrintFormat = ({
   );
   // ── DOMESTIC TAX: per-slab breakup (mirrors PurchaseOrderPrintFormat taxBox) ──
   // Each item carries taxPercent; group by slab, sum taxable + tax amounts
-  const taxableTotal = parseFloat(taxDetails?.taxable || 0);
-
-  const carriageCharge = parseFloat(carriageFinalAmt) || 0;
-  const grandTotal = isExport ? taxableTotal + carriageCharge : totalGross;
-
-  const totalTaxAmt = parseFloat(taxDetails?.net || 0) - taxableTotal;
-  const netAmount = parseFloat(taxDetails?.net || 0);
   const taxSlabBreakup = (taxDetails?.slabBreakup || [])?.filter(
     (s) => (s?.amount || 0) > 0,
   );
@@ -588,9 +579,21 @@ const ProformaInvoicePrintFormat = ({
     return [...combined, ...others];
   })();
 
-  const finalAmountForWords = isExport
-    ? grandTotal
-    : netAmount + carriageCharge;
+  const taxableTotal = parseFloat(taxDetails?.taxable || 0);
+  const carriageCharge = parseFloat(carriageFinalAmt) || 0;
+  const totalTaxAmt = !isExport
+    ? consolidatedTaxSlabs.reduce((s, b) => s + (b.amount || 0), 0)
+    : 0;
+  const totalAmount = parseFloat((taxableTotal + totalTaxAmt).toFixed(2));
+  const subtotalBeforeRound = parseFloat(
+    (totalAmount + carriageCharge).toFixed(2),
+  );
+  const finalNetAmount = Math.round(subtotalBeforeRound);
+  const roundOffAmt = parseFloat(
+    (finalNetAmount - subtotalBeforeRound).toFixed(2),
+  );
+
+  const finalAmountForWords = finalNetAmount;
   const netInt = Math.floor(finalAmountForWords);
   const netDecimal = Math.round((finalAmountForWords - netInt) * 100);
 
@@ -1210,18 +1213,21 @@ const ProformaInvoicePrintFormat = ({
                           </Text>
                         </View>
                       )}
-
-                      <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>Taxable Amount</Text>
-                        <Text style={styles.summaryColon}>:</Text>
-                        <Text style={styles.summaryValue}>
-                          {currencySymbol}{" "}
-                          {formatCurrencyAmount(
-                            taxableTotal,
-                            currencyCode || currencySymbol,
-                          )}
-                        </Text>
-                      </View>
+                      {!isExport && (
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>
+                            Taxable Amount
+                          </Text>
+                          <Text style={styles.summaryColon}>:</Text>
+                          <Text style={styles.summaryValue}>
+                            {currencySymbol}{" "}
+                            {formatCurrencyAmount(
+                              taxableTotal,
+                              currencyCode || currencySymbol,
+                            )}
+                          </Text>
+                        </View>
+                      )}
 
                       {!isExport &&
                         consolidatedTaxSlabs.map((slab) => (
@@ -1237,46 +1243,17 @@ const ProformaInvoicePrintFormat = ({
                             </Text>
                           </View>
                         ))}
-                      {!isExport && taxDetails?.roundOff !== 0 && (
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>Round Off</Text>
-                          <Text style={styles.summaryColon}>:</Text>
-                          <Text style={styles.summaryValue}>
-                            {taxDetails?.roundOff > 0 ? "+" : ""}
-                            {currencySymbol}{" "}
-                            {formatCurrencyAmount(
-                              Math.abs(taxDetails?.roundOff || 0),
-                              currencyCode || currencySymbol,
-                            )}
-                          </Text>
-                        </View>
-                      )}
-
-                      {!isExport && (
-                        <View style={styles.summaryRow}>
-                          <Text
-                            style={[
-                              styles.summaryLabel,
-                              { fontFamily: "Helvetica-Bold" },
-                            ]}
-                          >
-                            Net Amount
-                          </Text>
-                          <Text style={styles.summaryColon}>:</Text>
-                          <Text
-                            style={[
-                              styles.summaryValue,
-                              { fontFamily: "Helvetica-Bold" },
-                            ]}
-                          >
-                            {currencySymbol}{" "}
-                            {formatCurrencyAmount(
-                              netAmount,
-                              currencyCode || currencySymbol,
-                            )}
-                          </Text>
-                        </View>
-                      )}
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>Total Amount</Text>
+                        <Text style={styles.summaryColon}>:</Text>
+                        <Text style={styles.summaryValue}>
+                          {currencySymbol}{" "}
+                          {formatCurrencyAmount(
+                            totalAmount,
+                            currencyCode || currencySymbol,
+                          )}
+                        </Text>
+                      </View>
 
                       {carriageCharge > 0 && (
                         <View style={styles.summaryRow}>
@@ -1288,6 +1265,20 @@ const ProformaInvoicePrintFormat = ({
                             {currencySymbol}{" "}
                             {formatCurrencyAmount(
                               carriageCharge,
+                              currencyCode || currencySymbol,
+                            )}
+                          </Text>
+                        </View>
+                      )}
+
+                      {roundOffAmt !== 0 && (
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>Round Off</Text>
+                          <Text style={styles.summaryColon}>:</Text>
+                          <Text style={styles.summaryValue}>
+                            {roundOffAmt < 0 ? "-" : "+"} {currencySymbol}{" "}
+                            {formatCurrencyAmount(
+                              Math.abs(roundOffAmt),
                               currencyCode || currencySymbol,
                             )}
                           </Text>
@@ -1311,7 +1302,7 @@ const ProformaInvoicePrintFormat = ({
                             { color: "#ccc", fontFamily: "Helvetica-Bold" },
                           ]}
                         >
-                          Grand Total
+                          Net Amount
                         </Text>
                         <Text
                           style={[
@@ -1324,7 +1315,7 @@ const ProformaInvoicePrintFormat = ({
                         <Text style={[styles.summaryValue, { color: "#fff" }]}>
                           {currencySymbol}{" "}
                           {formatCurrencyAmount(
-                            isExport ? grandTotal : netAmount + carriageCharge,
+                            finalNetAmount,
                             currencyCode || currencySymbol,
                           )}
                         </Text>

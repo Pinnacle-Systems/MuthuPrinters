@@ -51,13 +51,6 @@ const OrderItems = ({
 
   /* ── Pad rows whenever orderItems arrives with fewer than DEFAULT_ROW_COUNT ── */
 
-  console.log(
-    activeModalRowIndex,
-    "activeStyleIndex",
-    orderItems?.[activeModalRowIndex]?.styleBreakup?.[activeStyleIndex]
-      ?.sizeBreakup,
-  );
-
   useEffect(() => {
     if (!Array.isArray(orderItems)) return;
     if (orderItems.length < DEFAULT_ROW_COUNT) {
@@ -759,14 +752,14 @@ const OrderItems = ({
                   <td className="border border-gray-300 text-[11px] text-right pt-1 pr-1 font-medium">
                     {row.orderQty ? Number(row.orderQty) : ""}
                   </td>
-                  <td className="border border-gray-300 text-[11px] text-left pt-1 pl-1 font-medium">
+                  <td className="grid-editable-cell text-[11px] border-b border-r border-gray-300 text-left h-6 py-0">
                     <input
                       type="text"
                       value={row.labelWidth || ""}
                       onChange={(e) =>
                         handleInputChange(e.target.value, index, "labelWidth")
                       }
-                      className="w-full text-left px-1 bg-transparent text-[11px] outline-none focus:bg-white"
+                      className="w-full h-full bg-transparent px-2 text-left border-0 outline-none focus:outline-none focus:ring-0 focus:border-0 !border-0 !outline-none !shadow-none disabled:bg-transparent text-[11px] leading-tight"
                       readOnly={readOnly || orderType === "AGAINSTPI"}
                     />
                   </td>
@@ -800,13 +793,13 @@ const OrderItems = ({
                       disabled={true}
                     />
                   </td>
-                  <td className="text-[11px] border border-gray-300 text-right pt-1 pr-1 font-medium">
+                  <td className="grid-editable-cell text-[11px] border-b border-r border-gray-300 text-right h-6 py-0">
                     <input
                       type={
                         focusedField === `price-${index}` ? "number" : "text"
                       }
                       step="0.01"
-                      className="text-right px-1 w-full table-data-input outline-none bg-transparent focus:bg-white"
+                      className="w-full h-full bg-transparent px-2 text-right border-0 outline-none focus:outline-none focus:ring-0 focus:border-0 !border-0 !outline-none !shadow-none disabled:bg-transparent text-[11px] leading-tight"
                       value={
                         focusedField === `price-${index}`
                           ? (row.price ?? "")

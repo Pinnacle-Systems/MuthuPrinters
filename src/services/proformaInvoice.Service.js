@@ -120,6 +120,9 @@ async function getPIList(req) {
   const data = await prisma.proformaInvoice.findMany({
     where: {
       branchId: branchId ? parseInt(branchId) : undefined,
+      orderEntries: {
+        none: {},
+      },
     },
     select: {
       id: true,
