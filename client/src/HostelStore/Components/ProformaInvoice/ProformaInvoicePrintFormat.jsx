@@ -409,7 +409,6 @@ const ProformaInvoicePrintFormat = ({
   sizeList,
 }) => {
   if (!data) return null;
-  console.log(data, "data");
 
   const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
   let currencySymbol =
@@ -441,7 +440,6 @@ const ProformaInvoicePrintFormat = ({
       (i.pistyleBreakups && i.pistyleBreakups.length > 0) ||
       i.itemGroupId,
   );
-  console.log(allItems, "allItems");
 
   const renderStyleBreakups = (row) => {
     // Merge DB state and form state

@@ -374,7 +374,6 @@ const OrderEntryPrintFormat = ({
   carriageFinalAmt,
 }) => {
   if (!data) return null;
-  console.log("data", data);
 
   const isExport = isExportProp ?? data?.customer?.isCustomerExport ?? false;
   let currencySymbol = isCurrencySymbol || currencyCode || "Rs.";
@@ -547,7 +546,6 @@ const OrderEntryPrintFormat = ({
     );
   };
   const bank = data?.Bank || {};
-  console.log(bank, "bank");
 
   const getAmountInWords = (intVal, decVal, currCode) => {
     const intWords = numberToWords

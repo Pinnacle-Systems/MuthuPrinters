@@ -149,7 +149,6 @@ const OrderEntryForm = ({
   const customerRef = useRef(null);
   const childRecord = useRef(0);
   const requirementRef = useRef(null);
-  console.log(childRecord.current, "childRecord.current");
 
   const [dispatchInvalidate] = useInvalidateTags();
   const { userId, finYearId, branchId, companyId } = getCommonParams();
@@ -1428,9 +1427,6 @@ const OrderEntryForm = ({
                             const res = await getPIById(
                               selectedValue?.id,
                             ).unwrap();
-                            {
-                              console.log("res", res);
-                            }
 
                             setTaxTemplateId(res?.data?.taxTemplateId || "");
                             setDiscountType(

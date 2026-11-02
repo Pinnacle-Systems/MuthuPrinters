@@ -51,13 +51,6 @@ const OrderItems = ({
 
   /* ── Pad rows whenever orderItems arrives with fewer than DEFAULT_ROW_COUNT ── */
 
-  console.log(
-    activeModalRowIndex,
-    "activeStyleIndex",
-    orderItems?.[activeModalRowIndex]?.styleBreakup?.[activeStyleIndex]
-      ?.sizeBreakup,
-  );
-
   useEffect(() => {
     if (!Array.isArray(orderItems)) return;
     if (orderItems.length < DEFAULT_ROW_COUNT) {
