@@ -528,7 +528,7 @@ const PurchaseOrderFormReport = ({
                   >
                     <div>Po Status</div>
                   </th>
-                  <th
+                  {/* <th
                     className=" px-3 w-36  font-medium text-[13px]  text-gray-900  text-center "
                     rowSpan={2}
                   >
@@ -547,7 +547,7 @@ const PurchaseOrderFormReport = ({
                     rowSpan={2}
                   >
                     <div>Approval Actions</div>
-                  </th>
+                  </th> */}
 
                   <th
                     className="w-14   px-3  font-medium text-[13px]  text-gray-900  text-center "
@@ -681,7 +681,7 @@ const PurchaseOrderFormReport = ({
                         <td className="py-1.5 text-left">
                           <StatusBadge status={dataObj?.status} />
                         </td>
-                        <td className="py-1.5 text-left">
+                        {/* <td className="py-1.5 text-left">
                           <ApprovalBadge
                             approvalStatus={dataObj?.approvalStatus}
                           />
@@ -691,11 +691,10 @@ const PurchaseOrderFormReport = ({
                           <div className="flex items-center justify-center gap-1.5 text-orange-700">
                             {dataObj?.approvalStatus?.remarks || "-"}
                           </div>
-                        </td>
+                        </td> */}
 
-                        <td className="px-2 py-1">
+                        {/* <td className="px-2 py-1">
                           <div className="flex items-center justify-center gap-1.5">
-                            {/* ↩️ Send Back — show when PENDING or APPROVED */}
                             {["PENDING"].includes(
                               dataObj?.approvalStatus?.status,
                             ) && (
@@ -712,7 +711,6 @@ const PurchaseOrderFormReport = ({
                               </Tooltip>
                             )}
 
-                            {/* ✅ Approve — show only when PENDING */}
                             {dataObj?.approvalStatus?.status === "PENDING" && (
                               <Tooltip title="Approve" arrow>
                                 <button
@@ -726,15 +724,13 @@ const PurchaseOrderFormReport = ({
                               </Tooltip>
                             )}
 
-                            {/* Already approved */}
-                            {/* {dataObj?.approvalStatus?.status ===
+                           {dataObj?.approvalStatus?.status ===
                                   "APPROVED" && (
                                   <span className="text-[10px] text-green-600 font-semibold px-1">
                                     ✅ Approved
                                   </span>
-                                )} */}
+                                )} 
 
-                            {/* Not configured — no approval setup */}
                             {dataObj?.approvalStatus?.status ===
                               "NOT_CONFIGURED" && (
                               <span className="text-[10px] text-gray-400 italic">
@@ -742,7 +738,7 @@ const PurchaseOrderFormReport = ({
                               </span>
                             )}
                           </div>
-                        </td>
+                        </td> */}
 
                         {rowActions && (
                           <td className="px-2 py-1">
