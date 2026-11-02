@@ -6,7 +6,8 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
   isDozen = false,
   qtyField = "qty",
   deliveryTaxValue,
-  deliveryTaxType
+  deliveryTaxType,
+  isCustomerExport = false
 ) {
   let roundTo = 2;
 
@@ -21,7 +22,15 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
     hsnBreakup: {},
   };
 
-  console.log(qtyField, "qtyFieldqtyField")
+  const actualQtyField = typeof qtyField === "string" ? qtyField : "qty";
+  const isExport = Boolean(
+    isCustomerExport ||
+    (typeof qtyField === "boolean" ? qtyField : false) ||
+    poItems?.isCustomerExport ||
+    poItems?.[0]?.isCustomerExport
+  );
+
+  console.log(actualQtyField, "qtyFieldqtyField")
   console.log(result?.slabBreakup, "slabBreakup")
 
 
@@ -32,7 +41,7 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
 
   // ---- Step 1: Base item calc ----
   items?.forEach((item) => {
-    const qty = Number(item?.[qtyField]) || 0;
+    const qty = Number(item?.[actualQtyField]) || 0;
     const dozen = Number(item?.dozen) || 0;
     const price = Number(item?.price) || 0;
     const taxPct = Number(item?.taxPercent) || 0;
@@ -79,16 +88,19 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
     const overallShare = overallDiscount * ratio;
     const finalTaxable = item._taxableBeforeOverall - overallShare;
 
+    const itemIsExport = isExport || Boolean(item?.isCustomerExport);
     let cgst = 0,
       sgst = 0,
       igst = 0;
     const taxType = item.taxType || (isSupplierOutside ? "IGST" : "CGST_SGST");
-    if (taxType === "IGST") {
-      igst = (finalTaxable * item._taxPct) / 100;
-    } else {
-      const half = item._taxPct / 2;
-      cgst = (finalTaxable * half) / 100;
-      sgst = (finalTaxable * half) / 100;
+    if (!itemIsExport) {
+      if (taxType === "IGST") {
+        igst = (finalTaxable * item._taxPct) / 100;
+      } else {
+        const half = item._taxPct / 2;
+        cgst = (finalTaxable * half) / 100;
+        sgst = (finalTaxable * half) / 100;
+      }
     }
 
     let net = finalTaxable + cgst + sgst + igst;
@@ -113,23 +125,25 @@ export function calculateTaxWithHSNBreakupAndInsertIntoPoItems(
     result.overallDiscount += overallShare;
     result.taxable += finalTaxable;
 
-    if (taxType === "IGST") {
-      const key = `IGST_${item._taxPct}`;
-      slabMap[key] = (slabMap[key] || 0) + igst;
+    if (!itemIsExport) {
+      if (taxType === "IGST") {
+        const key = `IGST_${item._taxPct}`;
+        slabMap[key] = (slabMap[key] || 0) + igst;
 
-      hsnMap[item._hsn] = hsnMap[item._hsn] || {};
-      hsnMap[item._hsn][key] = (hsnMap[item._hsn][key] || 0) + igst;
-    } else {
-      const half = item._taxPct / 2;
-      const cgstKey = `CGST_${half}`;
-      const sgstKey = `SGST_${half}`;
+        hsnMap[item._hsn] = hsnMap[item._hsn] || {};
+        hsnMap[item._hsn][key] = (hsnMap[item._hsn][key] || 0) + igst;
+      } else {
+        const half = item._taxPct / 2;
+        const cgstKey = `CGST_${half}`;
+        const sgstKey = `SGST_${half}`;
 
-      slabMap[cgstKey] = (slabMap[cgstKey] || 0) + cgst;
-      slabMap[sgstKey] = (slabMap[sgstKey] || 0) + sgst;
+        slabMap[cgstKey] = (slabMap[cgstKey] || 0) + cgst;
+        slabMap[sgstKey] = (slabMap[sgstKey] || 0) + sgst;
 
-      hsnMap[item._hsn] = hsnMap[item._hsn] || {};
-      hsnMap[item._hsn][cgstKey] = (hsnMap[item._hsn][cgstKey] || 0) + cgst;
-      hsnMap[item._hsn][sgstKey] = (hsnMap[item._hsn][sgstKey] || 0) + sgst;
+        hsnMap[item._hsn] = hsnMap[item._hsn] || {};
+        hsnMap[item._hsn][cgstKey] = (hsnMap[item._hsn][cgstKey] || 0) + cgst;
+        hsnMap[item._hsn][sgstKey] = (hsnMap[item._hsn][sgstKey] || 0) + sgst;
+      }
     }
   });
 

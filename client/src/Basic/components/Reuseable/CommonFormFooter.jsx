@@ -78,7 +78,17 @@ const CommonFormFooter = ({
   twoColumnRightSummary = false,
   rightSummaryTitle = "",
   termsTitle = "Terms & Conditions",
+  sectionColClass = "md:col-span-4",
+  termsColClass,
+  remarksColClass,
+  summaryColClass,
 }) => {
+  const resolvedTermsColClass =
+    termsColClass || sectionColClass || "md:col-span-4";
+  const resolvedRemarksColClass =
+    remarksColClass || sectionColClass || "md:col-span-4";
+  const resolvedSummaryColClass = summaryColClass || "md:col-span-4";
+
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const termsTextareaRef = React.useRef(null);
@@ -311,15 +321,15 @@ const CommonFormFooter = ({
           <div
             className={[
               "flex h-full flex-col rounded-md border border-slate-200 bg-white p-1.5 shadow-sm",
-              stacked ? "" : "md:col-span-4",
+              stacked ? "" : resolvedTermsColClass,
             ]
               .filter(Boolean)
               .join(" ")}
           >
             <div className="flex h-full flex-col gap-1">
-              <div className="mb-1 flex items-center justify-between gap-2">
+              <div className="mb-1 flex items-center justify-between gap-1 flex-wrap">
                 <h2 className="text-[12px] font-bold text-slate-700">
-                  Terms & Conditions
+                  {termsTitle || "Terms & Conditions"}
                 </h2>
                 {showTemplateControl ? (
                   <button
@@ -347,7 +357,7 @@ const CommonFormFooter = ({
         <div
           className={[
             "flex h-full flex-col rounded-md border border-slate-200 bg-white p-1.5 shadow-sm",
-            stacked ? "" : hideTerms ? "md:col-span-6" : "md:col-span-4",
+            stacked ? "" : hideTerms ? "md:col-span-6" : resolvedRemarksColClass,
           ]
             .filter(Boolean)
             .join(" ")}
@@ -405,7 +415,7 @@ const CommonFormFooter = ({
         <div
           className={[
             "grid grid-cols-1 gap-2",
-            stacked ? "" : hideTerms ? "md:col-span-6" : "md:col-span-4",
+            stacked ? "" : hideTerms ? "md:col-span-6" : resolvedSummaryColClass,
             stacked
               ? ""
               : hasLeftSummaryContent && hasRightSummaryContent

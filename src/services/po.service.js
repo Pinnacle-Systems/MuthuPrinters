@@ -1487,8 +1487,6 @@ async function getPoItems(req) {
       };
     });
 
-    console.log(data, "datacheck");
-
     // ✅ Filter logic:
     // No approval configured → ALL items pass (NOT_CONFIGURED)
     // Approval configured:
@@ -1502,8 +1500,6 @@ async function getPoItems(req) {
       const s = item.approvalStatus.status;
       return s === "APPROVED" || s === "NOT_CONFIGURED"; // ✅ NOT_CONFIGURED means no rule applies
     });
-
-    console.log(data, "afterfilterdatacheck");
   } else {
     data = await prisma.poItems.findMany({
       where: {

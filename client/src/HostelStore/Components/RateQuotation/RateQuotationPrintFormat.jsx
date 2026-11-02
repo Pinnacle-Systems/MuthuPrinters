@@ -1237,12 +1237,19 @@ const RateQuotationPrintFormat = ({
                             </Text>
                           </View>
                         ))}
-                      {!isExport && taxDetails?.roundOff !== 0 && (
+                      {!isExport &&
+                        taxDetails?.roundOff !== 0 &&
+                        taxDetails?.roundOff !== undefined &&
+                        Number(taxDetails?.roundOff) !== 0 && (
                         <View style={styles.summaryRow}>
                           <Text style={styles.summaryLabel}>Round Off</Text>
                           <Text style={styles.summaryColon}>:</Text>
                           <Text style={styles.summaryValue}>
-                            {taxDetails?.roundOff > 0 ? "+" : ""}
+                            {Number(taxDetails?.roundOff) < 0
+                              ? "-"
+                              : Number(taxDetails?.roundOff) > 0
+                              ? "+"
+                              : ""}{" "}
                             {currencySymbol}{" "}
                             {formatCurrencyAmount(
                               Math.abs(taxDetails?.roundOff || 0),
