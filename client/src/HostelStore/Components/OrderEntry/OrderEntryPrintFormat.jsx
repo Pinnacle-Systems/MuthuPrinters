@@ -505,7 +505,11 @@ const OrderEntryPrintFormat = ({
         return (
           <View key={idx} style={{ marginBottom: 4 }}>
             {styleName ? (
-              <Text style={{ textAlign: "left", fontSize: 7, fontWeight: "bold" }}>{styleName}</Text>
+              <Text
+                style={{ textAlign: "left", fontSize: 7, fontWeight: "bold" }}
+              >
+                {styleName}
+              </Text>
             ) : null}
             {sizesText ? (
               <Text style={{ fontSize: 6.5, color: "#555", marginTop: 2 }}>
@@ -789,7 +793,7 @@ const OrderEntryPrintFormat = ({
                             fontSize: 7.5,
                             fontWeight: "bold",
                             color: "#1a1a2e",
-                            marginBottom: 2
+                            marginBottom: 2,
                           }}
                         >
                           {forceWrap(
@@ -1098,19 +1102,22 @@ const OrderEntryPrintFormat = ({
                             </Text>
                           </View>
                         )}
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>
-                            {isExport ? "Net Amount" : "Taxable Amount"}
-                          </Text>
-                          <Text style={styles.summaryColon}>:</Text>
-                          <Text style={styles.summaryValue}>
-                            {currencySymbol}{" "}
-                            {formatCurrencyAmount(
-                              taxableTotal,
-                              currencyCode || currencySymbol,
-                            )}
-                          </Text>
-                        </View>
+                        {!isExport && (
+                          <View style={styles.summaryRow}>
+                            <Text style={styles.summaryLabel}>
+                              Taxable Amount
+                            </Text>
+                            <Text style={styles.summaryColon}>:</Text>
+                            <Text style={styles.summaryValue}>
+                              {currencySymbol}{" "}
+                              {formatCurrencyAmount(
+                                taxableTotal,
+                                currencyCode || currencySymbol,
+                              )}
+                            </Text>
+                          </View>
+                        )}
+
                         {!isExport &&
                           consolidatedTaxSlabs.map((slab) => (
                             <View key={slab.tax} style={styles.summaryRow}>
@@ -1160,8 +1167,7 @@ const OrderEntryPrintFormat = ({
                             <Text style={styles.summaryLabel}>Round Off</Text>
                             <Text style={styles.summaryColon}>:</Text>
                             <Text style={styles.summaryValue}>
-                              {roundOffAmt < 0 ? "-" : "+"}{" "}
-                              {currencySymbol}{" "}
+                              {roundOffAmt < 0 ? "-" : "+"} {currencySymbol}{" "}
                               {formatCurrencyAmount(
                                 Math.abs(roundOffAmt),
                                 currencyCode || currencySymbol,
@@ -1196,14 +1202,21 @@ const OrderEntryPrintFormat = ({
                             Net Amount
                           </Text>
                           <Text
-                            style={[styles.summaryColon, { color: "#ccc", fontFamily: "Helvetica-Bold" }]}
+                            style={[
+                              styles.summaryColon,
+                              { color: "#ccc", fontFamily: "Helvetica-Bold" },
+                            ]}
                           >
                             :
                           </Text>
                           <Text
                             style={[
                               styles.summaryValue,
-                              { fontSize: 9, color: "#fff", fontFamily: "Helvetica-Bold" },
+                              {
+                                fontSize: 9,
+                                color: "#fff",
+                                fontFamily: "Helvetica-Bold",
+                              },
                             ]}
                           >
                             {currencySymbol}{" "}
@@ -1222,10 +1235,7 @@ const OrderEntryPrintFormat = ({
                       <Text style={styles.wordsText}>
                         Amount in Words (
                         {(currencyCode || currencySymbol || "").trim()}
-                        ):{" "}
-                        <Text style={styles.wordsValue}>
-                          {amountWords}
-                        </Text>
+                        ): <Text style={styles.wordsValue}>{amountWords}</Text>
                       </Text>
                     </View>
                   )}

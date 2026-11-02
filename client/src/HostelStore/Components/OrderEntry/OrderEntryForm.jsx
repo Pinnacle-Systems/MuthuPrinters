@@ -143,7 +143,7 @@ const OrderEntryForm = ({
   const [deliveryId, setDeliveryId] = useState("");
   const [carriageTax, setCarriageTax] = useState("");
   const [carriageFinalAmt, setCarriageFinalAmt] = useState("");
-
+  const [piDocId, setPiDocId] = useState("");
   const dispatch = useDispatch();
   const qrRef = useRef(null);
   const customerRef = useRef(null);
@@ -257,6 +257,7 @@ const OrderEntryForm = ({
       setCarriageTax(data?.carriageTax?.toFixed(2) || "");
       setLoadingId(data?.loadingId || "");
       setDeliveryId(data?.deliveryId || "");
+      setPiDocId(data?.Proforma?.docId || "");
     },
     [id],
   );
@@ -1384,121 +1385,141 @@ const OrderEntryForm = ({
                     readOnly={readOnly}
                     disabled={childRecord.current > 0 || readOnly || id}
                   />
-                  <div className="w-32">
-                    <DropdownNew
-                      name="PI No"
-                      dataList={PIList?.data?.filter((item) =>
-                        id
-                          ? item?.customerId === customerId
-                          : isRepeatedPI
-                            ? item?.customerId === customerId && item?.hasBulk
-                            : item?.customerId === customerId && !item?.hasBulk,
-                      )}
-                      value={proFormaId}
-                      setValue={setProFormaId}
-                      required={orderType === "AGAINSTPI"}
-                      readOnly={
-                        childRecord.current > 0 ||
-                        readOnly ||
-                        orderType === "GENERAL"
-                      }
-                      disabled={
-                        childRecord.current > 0 ||
-                        readOnly ||
-                        orderType === "GENERAL" ||
-                        id
-                      }
-                      otherField={"docId"}
-                      beforeChange={async (selectedValue) => {
-                        if (!selectedValue) {
-                          setOrderItems(fillWithDefaultRows([]));
-                          return;
-                        }
+                  {id ? (
+                    <>
+                      <TextInput name="PI No" value={piDocId} readOnly={true} />
+                    </>
+                  ) : (
+                    <>
+                      {" "}
+                      <div className="w-32">
+                        <DropdownNew
+                          name="PI No"
+                          dataList={PIList?.data?.filter((item) =>
+                            id
+                              ? item?.customerId === customerId
+                              : isRepeatedPI
+                                ? item?.customerId === customerId &&
+                                  item?.hasBulk
+                                : item?.customerId === customerId &&
+                                  !item?.hasBulk,
+                          )}
+                          value={proFormaId}
+                          setValue={setProFormaId}
+                          required={orderType === "AGAINSTPI"}
+                          readOnly={
+                            childRecord.current > 0 ||
+                            readOnly ||
+                            orderType === "GENERAL"
+                          }
+                          disabled={
+                            childRecord.current > 0 ||
+                            readOnly ||
+                            orderType === "GENERAL" ||
+                            id
+                          }
+                          otherField={"docId"}
+                          beforeChange={async (selectedValue) => {
+                            if (!selectedValue) {
+                              setOrderItems(fillWithDefaultRows([]));
+                              return;
+                            }
 
-                        const res = await getPIById(selectedValue?.id).unwrap();
-                        {
-                          console.log("res", res);
-                        }
+                            const res = await getPIById(
+                              selectedValue?.id,
+                            ).unwrap();
+                            {
+                              console.log("res", res);
+                            }
 
-                        setTaxTemplateId(res?.data?.taxTemplateId || "");
-                        setDiscountType(
-                          res?.data?.discountType || "Percentage",
-                        );
-                        setDiscountValue(res?.data?.discountValue || 0);
-                        setConversionType(res?.data?.conversionType || "DOZEN");
-                        if (res?.data?.termsId) setTermsId(res.data.termsId);
-                        if (res?.data?.termsAndCondition)
-                          setTermsAndCondition(res.data.termsAndCondition);
-                        if (res?.data?.deliveryDate)
-                          setDeliveryDate(
-                            moment
-                              .utc(res.data.deliveryDate)
-                              .format("YYYY-MM-DD"),
-                          );
-                        if (res?.data?.remarks) setRemarks(res.data.remarks);
+                            setTaxTemplateId(res?.data?.taxTemplateId || "");
+                            setDiscountType(
+                              res?.data?.discountType || "Percentage",
+                            );
+                            setDiscountValue(res?.data?.discountValue || 0);
+                            setConversionType(
+                              res?.data?.conversionType || "DOZEN",
+                            );
+                            if (res?.data?.termsId)
+                              setTermsId(res.data.termsId);
+                            if (res?.data?.termsAndCondition)
+                              setTermsAndCondition(res.data.termsAndCondition);
+                            if (res?.data?.deliveryDate)
+                              setDeliveryDate(
+                                moment
+                                  .utc(res.data.deliveryDate)
+                                  .format("YYYY-MM-DD"),
+                              );
+                            if (res?.data?.remarks)
+                              setRemarks(res.data.remarks);
 
-                        setPayTermId(res?.data?.payTermId || "");
-                        setBankId(res?.data?.bankId || "");
-                        setCurrencyId(res?.data?.currencyId || "");
-                        setWeightInKg(res?.data?.weightInKg || "");
-                        setCarriageCharge(res?.data?.carriageCharge || "");
-                        setLoadingId(res?.data?.loadingId || "");
-                        setDeliveryId(res?.data?.deliveryId || "");
-                        setCarriageTax(res?.data?.carriageTax || "");
-                        const targetVersion =
-                          res?.data?.quoteVersion ||
-                          (res?.data?.items?.length
-                            ? Math.max(
-                                ...res.data.items.map(
-                                  (i) => i.quoteVersion || 1,
-                                ),
-                              )
-                            : 1);
+                            setPayTermId(res?.data?.payTermId || "");
+                            setBankId(res?.data?.bankId || "");
+                            setCurrencyId(res?.data?.currencyId || "");
+                            setWeightInKg(res?.data?.weightInKg || "");
+                            setCarriageCharge(res?.data?.carriageCharge || "");
+                            setLoadingId(res?.data?.loadingId || "");
+                            setDeliveryId(res?.data?.deliveryId || "");
+                            setCarriageTax(res?.data?.carriageTax || "");
+                            const targetVersion =
+                              res?.data?.quoteVersion ||
+                              (res?.data?.items?.length
+                                ? Math.max(
+                                    ...res.data.items.map(
+                                      (i) => i.quoteVersion || 1,
+                                    ),
+                                  )
+                                : 1);
 
-                        const targetItems = (res?.data?.items || []).filter(
-                          (item) => (item.quoteVersion || 1) === targetVersion,
-                        );
+                            const targetItems = (res?.data?.items || []).filter(
+                              (item) =>
+                                (item.quoteVersion || 1) === targetVersion,
+                            );
 
-                        const mappedItems =
-                          targetItems
-                            .sort((a, b) => a.id - b.id)
-                            .map((item) => ({
-                              styleItemId: item.styleItemId,
-                              orderQty: item.qty || "",
-                              piQty: Number(item.qty) || 0,
-                              sizeId: item.sizeId || "",
-                              uomId: item.uomId || "",
-                              gsmId: item.gsmId || "",
-                              hsnId: item.hsnId || "",
-                              labelWidth: item.labelWidth || "",
-                              price: item.price || "",
-                              amount: item.amount || "",
-                              dozen: item.dozen || "",
-                              discountType: item.discountType || "",
-                              discountValue: item.discountValue || "",
-                              taxPercent: item.taxPercent || "",
-                              taxType: item.taxType || "",
-                              styleBreakup:
-                                item?.PIStyleBreakup?.length > 0
-                                  ? item.PIStyleBreakup.map((st) => ({
-                                      styleId: st.styleId || "",
-                                      sizeBreakup:
-                                        st.PISizeBreakup?.length > 0
-                                          ? st.PISizeBreakup.map((sz) => ({
-                                              sizeId: sz.sizeId || "",
-                                              qty: sz.qty || "",
-                                            }))
-                                          : [{ sizeId: "", qty: "" }],
-                                    }))
-                                  : [],
-                              itemGroupId: item.StyleItem?.itemGroupId,
-                              itemSubGroupId: item.StyleItem?.itemSubGroupId,
-                            })) || [];
+                            const mappedItems =
+                              targetItems
+                                .sort((a, b) => a.id - b.id)
+                                .map((item) => ({
+                                  styleItemId: item.styleItemId,
+                                  orderQty: item.qty || "",
+                                  piQty: Number(item.qty) || 0,
+                                  sizeId: item.sizeId || "",
+                                  uomId: item.uomId || "",
+                                  gsmId: item.gsmId || "",
+                                  hsnId: item.hsnId || "",
+                                  labelWidth: item.labelWidth || "",
+                                  price: item.price || "",
+                                  amount: item.amount || "",
+                                  dozen: item.dozen || "",
+                                  discountType: item.discountType || "",
+                                  discountValue: item.discountValue || "",
+                                  taxPercent: item.taxPercent || "",
+                                  taxType: item.taxType || "",
+                                  styleBreakup:
+                                    item?.PIStyleBreakup?.length > 0
+                                      ? item.PIStyleBreakup.map((st) => ({
+                                          styleId: st.styleId || "",
+                                          sizeBreakup:
+                                            st.PISizeBreakup?.length > 0
+                                              ? st.PISizeBreakup.map((sz) => ({
+                                                  sizeId: sz.sizeId || "",
+                                                  qty: sz.qty || "",
+                                                }))
+                                              : [{ sizeId: "", qty: "" }],
+                                        }))
+                                      : [],
+                                  itemGroupId: item.StyleItem?.itemGroupId,
+                                  itemSubGroupId:
+                                    item.StyleItem?.itemSubGroupId,
+                                })) || [];
 
-                        setOrderItems(fillWithDefaultRows(mappedItems));
-                      }}
-                    />
-                  </div>
+                            setOrderItems(fillWithDefaultRows(mappedItems));
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
+
                   <DropdownInput
                     name="Production Type"
                     options={productionTypes}
@@ -1573,7 +1594,6 @@ const OrderEntryForm = ({
               </div>
             </div>
             {/* Other Details */}
-            {console.log(orderItems, "orderItemsorderItems")}
 
             <div className="border border-slate-200 p-1.5 bg-white rounded-md shadow-sm">
               <h2 className="text-[10px] font-bold text-gray-500 mb-1 uppercase border-b pb-0.5">

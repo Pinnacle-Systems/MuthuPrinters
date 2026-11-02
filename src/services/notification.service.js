@@ -145,7 +145,6 @@ async function getNotifications(req) {
       createdAt: "desc",
     },
   });
-  console.log(notifications, "notifications");
 
   return {
     statusCode: 0,

@@ -1215,18 +1215,21 @@ const ProformaInvoicePrintFormat = ({
                           </Text>
                         </View>
                       )}
-
-                      <View style={styles.summaryRow}>
-                        <Text style={styles.summaryLabel}>Taxable Amount</Text>
-                        <Text style={styles.summaryColon}>:</Text>
-                        <Text style={styles.summaryValue}>
-                          {currencySymbol}{" "}
-                          {formatCurrencyAmount(
-                            taxableTotal,
-                            currencyCode || currencySymbol,
-                          )}
-                        </Text>
-                      </View>
+                      {!isExport && (
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>
+                            Taxable Amount
+                          </Text>
+                          <Text style={styles.summaryColon}>:</Text>
+                          <Text style={styles.summaryValue}>
+                            {currencySymbol}{" "}
+                            {formatCurrencyAmount(
+                              taxableTotal,
+                              currencyCode || currencySymbol,
+                            )}
+                          </Text>
+                        </View>
+                      )}
 
                       {!isExport &&
                         consolidatedTaxSlabs.map((slab) => (
@@ -1275,8 +1278,7 @@ const ProformaInvoicePrintFormat = ({
                           <Text style={styles.summaryLabel}>Round Off</Text>
                           <Text style={styles.summaryColon}>:</Text>
                           <Text style={styles.summaryValue}>
-                            {roundOffAmt < 0 ? "-" : "+"}{" "}
-                            {currencySymbol}{" "}
+                            {roundOffAmt < 0 ? "-" : "+"} {currencySymbol}{" "}
                             {formatCurrencyAmount(
                               Math.abs(roundOffAmt),
                               currencyCode || currencySymbol,
